@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 0.0.0.9000
 
 * Initial version. `inla_vanilla()` approximates the posterior of any
   log-posterior written on an unconstrained scale with the INLAvaan pipeline:
