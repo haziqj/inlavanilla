@@ -35,7 +35,7 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## Architecture
 
-Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, marginals = c("skewnormal", "gaussian"), verbose = TRUE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `marginals`, `verbose` and `control` must be named in full and data arguments cannot partially match them. `marginals` is checked by `check_choice()`, which accepts exact values only.
+Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, marginals = c("skewnormal", "gaussian"), verbose = TRUE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `marginals`, `verbose` and `control` must be named in full and data arguments cannot partially match them. `marginals` is checked by `check_choice()`, which accepts unambiguous abbreviations in any case (`"skew"`, `"Gauss"`), as `match.arg()` does, but raises the package's own error.
 
 - **Input.** The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included; `...` is passed through as in `optim()`.
 - **No transform layer in v1.** Natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`), so keep the engine free of transform logic.

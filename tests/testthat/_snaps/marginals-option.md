@@ -1,7 +1,7 @@
-# marginals takes one of two values, in full
+# marginals takes one of two values, or an abbreviation
 
     Code
-      inla_vanilla(lp_reg, init_reg, marginals = "skew", verbose = FALSE)
+      inla_vanilla(lp_reg, init_reg, marginals = "laplace", verbose = FALSE)
     Condition
       Error:
       ! `marginals` must be one of "skewnormal" or "gaussian".
