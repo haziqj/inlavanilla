@@ -97,7 +97,7 @@
 ---
 
     Code
-      print(summary(fit_novb))
+      print(summary(fit_reg_novb))
     Output
       -- INLAvanilla summary ---------------------------------------------------------
       
