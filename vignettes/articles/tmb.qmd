@@ -374,9 +374,9 @@ numbers mean and how to compare models with them.
 
 ## References
 
-Bollen, K. A. (1989). *Structural Equations with Latent Variables*. Wiley.
+Bollen, K. A. (1989). *Structural equations with latent variables*. Wiley.
+<https://doi.org/10.1002/9781118619179>
 
-Kristensen, K., Nielsen, A., Berg, C. W., Skaug, H. and Bell, B. M. (2016).
+Kristensen, K., Nielsen, A., Berg, C. W., Skaug, H., & Bell, B. M. (2016).
 TMB: Automatic differentiation and Laplace approximation. *Journal of
-Statistical Software*, 70(5), 1–21.
-[doi:10.18637/jss.v070.i05](https://doi.org/10.18637/jss.v070.i05).
+Statistical Software*, *70*(5), 1–21. <https://doi.org/10.18637/jss.v070.i05>

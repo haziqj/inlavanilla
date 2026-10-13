@@ -53,7 +53,7 @@ scanned density relative to its peak (flagged above 0.05), and
 \code{sn_vs_vb}, the gap between the
 skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 target the posterior mean, so they should agree closely (to
-\eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026a). A gap above
+\eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4). A gap above
 0.1 SDs is flagged: the posterior is far from Gaussian along that
 parameter, and either approximation may be off.
 \item \strong{Scan-end mass.} \code{scan_end_mass}, the mass each fitted skew-normal
@@ -77,7 +77,7 @@ With \code{marginals = "gaussian"} there are no scans, so only the VB shift is
 reported.
 }
 \references{
-Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for
-structural equation models using integrated nested Laplace approximations.
-\doi{10.48550/arXiv.2603.25690}
+Jamil, H., & Rue, H. (2026). \emph{Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations}. arXiv. \url{https://doi.org/10.48550/arXiv.2603.25690}
 }

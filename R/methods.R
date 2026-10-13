@@ -57,7 +57,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   `sn_vs_vb`, the gap between the
 #'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 #'   target the posterior mean, so they should agree closely (to
-#'   \eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026a). A gap above
+#'   \eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4). A gap above
 #'   0.1 SDs is flagged: the posterior is far from Gaussian along that
 #'   parameter, and either approximation may be off.
 #'
@@ -91,9 +91,9 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   timing.
 #'
 #' @references
-#' Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for
-#' structural equation models using integrated nested Laplace approximations.
-#' \doi{10.48550/arXiv.2603.25690}
+#' Jamil, H., & Rue, H. (2026). *Approximate Bayesian inference for
+#' structural equation models using integrated nested Laplace
+#' approximations*. arXiv. <https://doi.org/10.48550/arXiv.2603.25690>
 #' @export
 summary.inla_vanilla <- function(
   object,

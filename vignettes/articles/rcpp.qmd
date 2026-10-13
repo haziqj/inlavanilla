@@ -662,6 +662,7 @@ zero for small variances, which lifts the posterior mode above the maximum
 likelihood estimate. The long left tail then puts the posterior mean below
 the mode.
 
-## Reference
+## References
 
-Bollen, K. A. (1989). *Structural Equations with Latent Variables*. Wiley.
+Bollen, K. A. (1989). *Structural equations with latent variables*. Wiley.
+<https://doi.org/10.1002/9781118619179>
