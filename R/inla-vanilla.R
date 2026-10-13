@@ -1,0 +1,488 @@
+#' INLA-style posterior approximation for any log-posterior
+#'
+#' Approximates the posterior of a parameter vector from its log density alone.
+#' `inla_vanilla()` runs the approximation pipeline of INLAvaan with no latent
+#' field and nothing model-specific:
+#'
+#' 1. **Joint Gaussian (Laplace).** The posterior mode \eqn{\vartheta^*} and
+#'    the inverse Hessian \eqn{\Omega} there give a Gaussian approximation
+#'    \eqn{N(\vartheta^*, \Omega)} and the Laplace estimate of the log marginal
+#'    likelihood.
+#' 2. **VB mean correction.** The Gaussian is recentred at
+#'    \eqn{\tilde\vartheta = \vartheta^* + \hat\delta}, the mean that maximises
+#'    its expected log-posterior, with the covariance unchanged.
+#' 3. **Skew-normal marginals.** For each parameter, the log-posterior is
+#'    scanned along the conditional mode path of the Gaussian, corrected for the
+#'    changing volume of the other parameters, and fitted by a skew-normal
+#'    \eqn{SN(\hat\xi_j, \hat\omega_j, \hat\alpha_j)}.
+#' 4. **Gaussian copula draws.** [sampling()] couples the skew-normal marginals
+#'    through the correlations of \eqn{\Omega}.
+#'
+#' @section Writing `logpost`:
+#' The approximation works on an unconstrained scale: every parameter must be
+#' free to take any real value. Reparameterise anything constrained, for
+#' example a standard deviation \eqn{\sigma > 0} as \eqn{\log\sigma}, a
+#' probability as its logit, or a correlation as its Fisher \eqn{z}. Means and
+#' regression coefficients need no change.
+#'
+#' `logpost` is then the log density **of the parameters you pass**. When a
+#' prior is stated on the natural scale, include the log-Jacobian of the
+#' transformation: with \eqn{\vartheta = \log\sigma} and a prior
+#' \eqn{p(\sigma)}, the prior term is \eqn{\log p(e^\vartheta) + \vartheta}.
+#' Leaving it out targets a different posterior, not a worse approximation of
+#' the same one, and nothing downstream can detect it.
+#'
+#' The choice of parameterisation also sets the quality of the approximation,
+#' since each parameter gets its own skew-normal on the scale you choose.
+#' Scales on which the posterior is close to Gaussian (log standard
+#' deviations, Fisher-\eqn{z} correlations, logits) work best. Natural-scale or
+#' derived quantities are available through `sampling(fit, fun = ...)`.
+#'
+#' The log marginal likelihood is an estimate of \eqn{\log p(y)} only when
+#' `logpost` returns the full \eqn{\log p(y, \vartheta)}, including every
+#' normalising constant of the likelihood and the prior. Otherwise it is off by
+#' the missing constants.
+#'
+#' @section Gradients:
+#' `grad` is optional. Without it, derivatives come from finite differences
+#' of `logpost`, which costs more calls as the number of parameters grows.
+#' With it, the fit is faster and more accurate. A supplied `grad` is checked
+#' against finite differences at `init`, with a warning if the two disagree.
+#' Any R function works for either, including compiled code (Rcpp, TMB,
+#' RTMB). For a TMB object, which minimises, pass `function(x) -obj$fn(x)` and
+#' `function(x) -as.vector(obj$gr(x))`.
+#'
+#' @section Control:
+#' `control` is a list with any of:
+#' * `n_grid`: number of grid points per skew-normal scan, spread over
+#'   \eqn{\pm 4} posterior SDs (default `21`).
+#' * `log_threshold`: grid points whose log-posterior falls more than this
+#'   below the maximum are ignored in the skew-normal fit (default `-6`).
+#' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
+#'   tolerance in posterior SDs (default `1e-3`) for the VB correction.
+#' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
+#'   `iter.max` and `eval.max` default to `1000` and `2000`.
+#'
+#' @param logpost A function `logpost(theta, ...)` returning the log-posterior
+#'   density (up to a constant) at the named numeric vector `theta`, on the
+#'   unconstrained scale. See the section on writing `logpost`.
+#' @param init A named numeric vector of starting values. Its length sets the
+#'   number of parameters and its names label them; unnamed values are called
+#'   `theta[1]`, `theta[2]`, ....
+#' @param grad Optional function `grad(theta, ...)` returning the gradient of
+#'   `logpost` as a numeric vector. When `NULL` (the default), finite
+#'   differences are used.
+#' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
+#'   the log marginal likelihood, and the skew-normal means are checked against
+#'   it (see [summary.inla_vanilla()]).
+#' @param verbose Logical. Show progress? Default `TRUE`.
+#' @param control A list of tuning parameters; see the section on control.
+#' @param ... Further arguments passed to `logpost` and `grad`, as in
+#'   [stats::optim()].
+#'
+#' @returns An object of class `inla_vanilla`, with methods for [print()],
+#'   [summary()], [plot()] and [sampling()]. It is a list holding, among
+#'   other things:
+#'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
+#'   * `mode`, `cov`: the Laplace mode and covariance.
+#'   * `mean_vb`: the VB-corrected mean.
+#'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
+#'     parameter.
+#'   * `logml`: the log marginal likelihood.
+#'
+#' @references
+#' Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural
+#' equation models using integrated nested Laplace approximations.
+#' \doi{10.48550/arXiv.2603.25690}
+#'
+#' Jamil, H. and Rue, H. (2026). Implementation and workflows for INLA-based
+#' approximate Bayesian structural equation modelling.
+#' \doi{10.48550/arXiv.2604.00671}
+#'
+#' @seealso [sampling()] for posterior draws and derived quantities,
+#'   [summary.inla_vanilla()] for diagnostics.
+#'
+#' @examples
+#' # Normal data with unknown mean and standard deviation, on the scale
+#' # (mu, log sigma)
+#' set.seed(1)
+#' y <- rnorm(30, mean = 5, sd = 2)
+#'
+#' logpost <- function(theta, y) {
+#'   mu <- theta[["mu"]]
+#'   sigma <- exp(theta[["log_sigma"]])
+#'   sum(dnorm(y, mu, sigma, log = TRUE)) +
+#'     dnorm(mu, 0, 10, log = TRUE) + # prior on mu
+#'     dexp(sigma, rate = 1, log = TRUE) + # prior on sigma ...
+#'     theta[["log_sigma"]] # ... and its Jacobian
+#' }
+#'
+#' fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
+#' fit
+#'
+#' # The posterior of sigma itself, through the draws
+#' sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
+#' quantile(sigma, c(0.025, 0.5, 0.975))
+#' @export
+inla_vanilla <- function(
+  logpost,
+  init,
+  grad = NULL,
+  vb = TRUE,
+  verbose = TRUE,
+  control = list(),
+  ...
+) {
+  t_start <- elapsed()
+  call <- match.call()
+
+  check_function(logpost, "logpost")
+  if (!is.null(grad)) {
+    check_function(grad, "grad")
+  }
+  init <- check_init(init)
+  check_flag(vb, "vb")
+  check_flag(verbose, "verbose")
+  ctrl <- vanilla_control(control)
+  m <- length(init)
+  parnames <- names(init)
+
+  prog <- progress_new(verbose)
+
+  # The engine calls these wrappers, which name the parameters, pass on `...`
+  # and count the calls.
+  n_lp <- 0L
+  n_gr <- 0L
+  lp <- function(x) {
+    names(x) <- parnames
+    n_lp <<- n_lp + 1L
+    if (prog$calls && n_lp %% 16L == 0L) {
+      progress_tick(prog, set = n_lp)
+    }
+    v <- logpost(x, ...)
+    if (is.na(v)) -Inf else v
+  }
+  gr <- if (is.null(grad)) {
+    NULL
+  } else {
+    function(x) {
+      names(x) <- parnames
+      n_gr <<- n_gr + 1L
+      as.numeric(grad(x, ...))
+    }
+  }
+
+  check_logpost_at_init(logpost, init, ...)
+  if (!is.null(grad)) {
+    check_grad_at_init(grad, lp, init, ...)
+  }
+
+  # 1a. Joint Gaussian -------------------------------------------------------
+  t0 <- elapsed()
+  progress_start(prog, "Finding the posterior mode")
+  lap <- laplace_fit(lp, gr, init, ctrl)
+  if (lap$opt$convergence != 0L) {
+    cli::cli_warn(c(
+      "The optimiser did not report convergence.",
+      "i" = "{.fn nlminb} says: {.val {lap$opt$message}}.",
+      "i" = "Try other starting values, or raise {.code iter.max} in
+             {.code control$nlminb}."
+    ))
+  }
+  # Gradient at the mode in whitened units: how far, in posterior SDs, the
+  # optimiser stopped short.
+  g_mode <- if (is.null(gr)) {
+    fd_grad(lp, lap$mode, h = 1e-3 * sqrt(diag(lap$Sigma)))
+  } else {
+    gr(lap$mode)
+  }
+  grad_mode <- max(abs(crossprod(lap$L, g_mode)))
+  t_laplace <- elapsed() - t0
+  progress_done(
+    prog,
+    paste0(
+      "Found the posterior mode in ",
+      hl(lap$opt$iterations),
+      " iteration",
+      if (lap$opt$iterations == 1L) "" else "s"
+    ),
+    t_laplace
+  )
+
+  # Derivatives for the later stages: the user's gradient, or central
+  # differences stepping a thousandth of a posterior SD.
+  sds <- sqrt(diag(lap$Sigma))
+  gr_vb <- if (is.null(gr)) {
+    function(x) fd_grad(lp, x, h = 1e-3 * sds)
+  } else {
+    gr
+  }
+
+  # 1b. VB mean correction ---------------------------------------------------
+  t0 <- elapsed()
+  vbc <- NULL
+  if (vb) {
+    progress_start(prog, "Applying the VB mean correction")
+    vbc <- vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
+    progress_done(
+      prog,
+      paste0(
+        "VB mean correction, max shift ",
+        hl(paste0(format(signif(max(abs(vbc$shift) / sds), 2)), sd_unit()))
+      ),
+      elapsed() - t0
+    )
+  }
+  t_vb <- elapsed() - t0
+  shift <- if (vb) vbc$shift else stats::setNames(numeric(m), parnames)
+
+  # 2. Skew-normal marginals -------------------------------------------------
+  t0 <- elapsed()
+  progress_start(prog, "Fitting skew-normal marginals", total = m)
+  sn <- fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
+  t_marginals <- elapsed() - t0
+  progress_done(
+    prog,
+    paste0(
+      "Fitted ",
+      hl(m),
+      " skew-normal marginal",
+      if (m == 1L) "" else "s"
+    ),
+    t_marginals
+  )
+
+  mean_vb <- lap$mode + shift
+  logml <- lap$logml + if (vb) vbc$kld else 0
+  mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
+
+  diagnostics <- list(
+    optim = list(
+      convergence = lap$opt$convergence,
+      message = lap$opt$message,
+      iterations = lap$opt$iterations,
+      grad_mode = grad_mode
+    ),
+    vb = if (vb) {
+      list(
+        iterations = vbc$iterations,
+        fallback = vbc$fallback,
+        kld = vbc$kld
+      )
+    },
+    marginals = data.frame(
+      vb_shift = shift / sds,
+      sn_vs_vb = (mom$mean - mean_vb) / sds,
+      alpha = sn[, "alpha"],
+      gamma1 = sn[, "gamma1"],
+      nmad = sn[, "nmad"],
+      row.names = parnames
+    )
+  )
+
+  out <- new_inla_vanilla(
+    sn = sn[, c("xi", "omega", "alpha"), drop = FALSE],
+    mode = lap$mode,
+    cov = lap$Sigma,
+    mean_vb = mean_vb,
+    logml = logml,
+    logml_laplace = lap$logml,
+    diagnostics = diagnostics,
+    counts = c(logpost = n_lp, grad = n_gr),
+    timing = c(
+      laplace = t_laplace,
+      vb = t_vb,
+      marginals = t_marginals,
+      total = elapsed() - t_start
+    ),
+    vb = vb,
+    has_grad = !is.null(grad),
+    call = call
+  )
+  out
+}
+
+new_inla_vanilla <- function(
+  sn,
+  mode,
+  cov,
+  mean_vb,
+  logml,
+  logml_laplace,
+  diagnostics,
+  counts,
+  timing,
+  vb,
+  has_grad,
+  call
+) {
+  structure(
+    list(
+      summary = sn_summary(sn),
+      sn = sn,
+      mode = mode,
+      cov = cov,
+      mean_vb = mean_vb,
+      logml = logml,
+      logml_laplace = logml_laplace,
+      diagnostics = diagnostics,
+      counts = counts,
+      timing = timing,
+      vb = vb,
+      has_grad = has_grad,
+      call = call
+    ),
+    class = "inla_vanilla"
+  )
+}
+
+# Posterior summary table from the skew-normal marginals: moments in closed
+# form, quantiles by inversion, and the mode numerically.
+sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975)) {
+  m <- nrow(sn)
+  mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
+  qq <- matrix(NA_real_, m, length(probs))
+  md <- numeric(m)
+  for (j in seq_len(m)) {
+    qq[j, ] <- qsnorm(probs, sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
+    md[j] <- sn_mode(sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
+  }
+  tab <- cbind(mom$mean, mom$sd, qq, md)
+  dimnames(tab) <- list(
+    rownames(sn),
+    c("Mean", "SD", format_probs(probs), "Mode")
+  )
+  tab
+}
+
+format_probs <- function(probs) {
+  paste0(formatC(100 * probs, format = "fg", digits = 3), "%")
+}
+
+vanilla_control <- function(control) {
+  defaults <- list(
+    n_grid = 21L,
+    log_threshold = -6,
+    vb_maxit = 25L,
+    vb_tol = 1e-3,
+    nlminb = list()
+  )
+  if (!is.list(control)) {
+    cli::cli_abort("{.arg control} must be a list.")
+  }
+  unknown <- setdiff(names(control), names(defaults))
+  if (
+    length(unknown) > 0L || (length(control) > 0L && is.null(names(control)))
+  ) {
+    cli::cli_abort(c(
+      "Unknown {.arg control} entr{?y/ies}: {.val {unknown}}.",
+      "i" = "Valid entries are {.val {names(defaults)}}."
+    ))
+  }
+  ctrl <- utils::modifyList(defaults, control)
+  ctrl$nlminb <- utils::modifyList(
+    list(iter.max = 1000L, eval.max = 2000L),
+    ctrl$nlminb
+  )
+  if (
+    !is.numeric(ctrl$n_grid) ||
+      length(ctrl$n_grid) != 1L ||
+      ctrl$n_grid < 7
+  ) {
+    cli::cli_abort(
+      "{.code control$n_grid} must be a single number of at least 7."
+    )
+  }
+  if (
+    !is.numeric(ctrl$log_threshold) ||
+      length(ctrl$log_threshold) != 1L ||
+      ctrl$log_threshold >= 0
+  ) {
+    cli::cli_abort(
+      "{.code control$log_threshold} must be a single negative number."
+    )
+  }
+  ctrl
+}
+
+check_function <- function(f, arg) {
+  if (!is.function(f)) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a function, not {.obj_type_friendly {f}}."
+    )
+  }
+}
+
+check_flag <- function(x, arg) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    cli::cli_abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
+  }
+}
+
+check_init <- function(init) {
+  if (!is.numeric(init) || length(init) == 0L) {
+    cli::cli_abort(
+      "{.arg init} must be a non-empty numeric vector, not {.obj_type_friendly {init}}."
+    )
+  }
+  if (!all(is.finite(init))) {
+    cli::cli_abort("{.arg init} must contain only finite values.")
+  }
+  nms <- names(init)
+  if (is.null(nms)) {
+    nms <- paste0("theta[", seq_along(init), "]")
+  } else if (any(is.na(nms) | nms == "")) {
+    cli::cli_abort("{.arg init} must be fully named, or not named at all.")
+  } else if (anyDuplicated(nms)) {
+    cli::cli_abort(
+      "{.arg init} has duplicated names: {.val {unique(nms[duplicated(nms)])}}."
+    )
+  }
+  stats::setNames(as.numeric(init), nms)
+}
+
+check_logpost_at_init <- function(logpost, init, ...) {
+  v <- logpost(init, ...)
+  if (!is.numeric(v) || length(v) != 1L) {
+    cli::cli_abort(c(
+      "{.arg logpost} must return a single number.",
+      "x" = "{.code logpost(init)} returned {.obj_type_friendly {v}} of length {length(v)}."
+    ))
+  }
+  if (!is.finite(v)) {
+    cli::cli_abort(c(
+      "{.arg logpost} is not finite at {.arg init}.",
+      "x" = "{.code logpost(init)} returned {.val {v}}.",
+      "i" = "Start inside the support of the posterior, and check that every
+             parameter is on an unconstrained scale."
+    ))
+  }
+  invisible(v)
+}
+
+check_grad_at_init <- function(grad, lp, init, ...) {
+  g <- grad(init, ...)
+  if (!is.numeric(g) || length(g) != length(init)) {
+    cli::cli_abort(c(
+      "{.arg grad} must return a numeric vector of length {length(init)}.",
+      "x" = "{.code grad(init)} returned {.obj_type_friendly {g}} of length {length(g)}."
+    ))
+  }
+  if (!all(is.finite(g))) {
+    cli::cli_abort("{.arg grad} is not finite at {.arg init}.")
+  }
+  g_fd <- fd_grad(lp, init, h = 1e-5 * pmax(1, abs(init)))
+  bad <- abs(g - g_fd) > 1e-3 * (1 + abs(g_fd))
+  if (any(bad)) {
+    worst <- which.max(abs(g - g_fd) / (1 + abs(g_fd)))
+    cli::cli_warn(c(
+      "{.arg grad} does not match finite differences of {.arg logpost} at
+       {.arg init}.",
+      "x" = "For {.field {names(init)[worst]}}: {.arg grad} gives
+             {.val {signif(g[worst], 4)}}, finite differences give
+             {.val {signif(g_fd[worst], 4)}}.",
+      "i" = "A wrong gradient gives a wrong mode and wrong marginals."
+    ))
+  }
+  invisible(g)
+}
