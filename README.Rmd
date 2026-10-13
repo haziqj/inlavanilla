@@ -24,7 +24,7 @@ options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
 <!-- [![CRAN status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla) -->
 <!-- badges: end -->
 
-*INLA-style skew-normal marginals for any log-posterior.*
+> INLA-style skew-normal marginals for any log-posterior.
 
 If you can write down the log-likelihood plus the log-prior, `{inlavanilla}`
 gives you approximate Bayesian inference for the parameters of your model:
