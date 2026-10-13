@@ -25,9 +25,12 @@ options(cli.num_colors = 1)
 
 *INLA-style skew-normal marginals for any log-posterior.*
 
-Give `{inlavanilla}` a log-posterior and it returns an approximate posterior,
-in milliseconds for small models: no sampler, no tuning. It runs the approximation pipeline of
-[INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
+If you can write down an unnormalised log-posterior, the log-likelihood plus
+the log-prior, `{inlavanilla}` gives you approximate Bayesian inference:
+posterior marginals, posterior draws and the marginal likelihood. There is no
+sampler and no tuning, and small models take milliseconds. It runs the
+approximation pipeline of [INLAvaan](https://inlavaan.haziqj.ml/) with
+nothing model-specific:
 
 1. a **Laplace approximation** at the posterior mode, with the Laplace
    estimate of the log marginal likelihood;
