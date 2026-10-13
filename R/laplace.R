@@ -53,7 +53,7 @@ laplace_fit <- function(lp, gr, init, ctrl) {
         "i" = "The optimiser may have stopped short of the mode, or the
                posterior may be improper or not identified.",
         "i" = "Optimiser message: {.val {opt$message}}."
-      ),
+      )
     )
   }
   m <- length(init)
