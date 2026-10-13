@@ -1,18 +1,42 @@
 Package: inlavanilla
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Title: INLA-Style Skew-Normal Marginals for Any Log-Posterior
+Version: 0.1.0
+Authors@R: c(
+    person("Haziq", "Jamil", , "haziq.jamil@gmail.com", role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0000-0003-3298-1010")),
+    person("Håvard", "Rue", role = "ctb",
+           comment = c(ORCID = "0000-0002-0222-1881", "Statistical and computational methodology")),
+    person("Thomas", "Luu", role = "cph",
+           comment = "Skew-normal quantile approximation (Apache License 2.0)")
+  )
+Description: Approximates a posterior distribution from its log density alone,
+    using the approximation pipeline of the 'INLAvaan' package (Jamil and Rue,
+    2026a) <doi:10.48550/arXiv.2603.25690>, an adaptation of the Integrated
+    Nested Laplace Approximation (Rue et al., 2009)
+    <doi:10.1111/j.1467-9868.2008.00700.x>, with no latent field and nothing
+    model-specific. A Laplace approximation with a variational Bayes mean
+    correction gives the log marginal likelihood, a skew-normal is fitted to
+    each parameter's marginal by scanning the log-posterior, and a Gaussian
+    copula couples the marginals for posterior draws. See also Jamil and Rue
+    (2026b) <doi:10.48550/arXiv.2604.00671>.
 License: GPL (>= 3)
-Suggests: 
+URL: http://haziqj.ml/inlavanilla/, https://github.com/haziqj/inlavanilla
+BugReports: https://github.com/haziqj/inlavanilla/issues
+Depends:
+    R (>= 4.1.0)
+Imports:
+    cli (>= 3.6.0),
+    graphics,
+    grDevices,
+    stats,
+    utils
+Suggests:
+    knitr,
+    quarto,
     testthat (>= 3.0.0)
+VignetteBuilder:
+    quarto
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
-URL: http://haziqj.ml/inlavanilla/
-LinkingTo: 
-    Rcpp
-Imports: 
-    Rcpp
+Config/roxygen2/version: 8.1.0
