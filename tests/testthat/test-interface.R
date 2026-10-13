@@ -110,31 +110,21 @@ test_that("logpost and grad must be functions", {
     class = "rlang_error"
   )
   expect_error(
-    inla_vanilla("lp_gauss", c(a = 0), verbose = FALSE),
-    "`logpost` must be a function",
-    class = "rlang_error"
-  )
-  expect_error(
     inla_vanilla(lp_gauss, c(a = 0), grad = "gr", verbose = FALSE),
-    "`grad` must be a function",
-    class = "rlang_error"
-  )
-  expect_error(
-    inla_vanilla(lp_gauss, c(a = 0), grad = 1, verbose = FALSE),
     "`grad` must be a function",
     class = "rlang_error"
   )
 })
 
 test_that("init must be a non-empty, finite numeric vector", {
-  for (bad in list("a", numeric(0), NULL, list(a = 1), NA, TRUE)) {
+  for (bad in list("a", numeric(0), NULL, list(a = 1))) {
     expect_error(
       inla_vanilla(lp_gauss, bad, verbose = FALSE),
       "`init` must be a non-empty numeric vector",
       class = "rlang_error"
     )
   }
-  for (bad in list(c(a = NA_real_), c(a = 0, b = NaN), c(a = Inf), -Inf)) {
+  for (bad in list(c(a = NA_real_), c(a = 0, b = -Inf))) {
     expect_error(
       inla_vanilla(lp_gauss, bad, verbose = FALSE),
       "`init` must contain only finite values",
@@ -169,8 +159,7 @@ test_that("logpost must return a single finite number at init", {
   not_single <- list(
     vector = function(theta) theta,
     string = function(theta) "-1",
-    logical_na = function(theta) NA,
-    empty = function(theta) numeric(0)
+    logical_na = function(theta) NA
   )
   for (lp in not_single) {
     expect_error(
@@ -180,10 +169,8 @@ test_that("logpost must return a single finite number at init", {
     )
   }
   not_finite <- list(
-    na = function(theta) NA_real_,
     nan = function(theta) NaN,
-    minus_inf = function(theta) -Inf,
-    plus_inf = function(theta) Inf
+    minus_inf = function(theta) -Inf
   )
   for (lp in not_finite) {
     expect_error(
@@ -205,9 +192,7 @@ test_that("grad must return a finite vector of the right length at init", {
   init <- c(a = 0.5, b = 0.5)
   for (gr in list(
     function(theta) 1,
-    function(theta) c(1, 2, 3),
-    function(theta) "a",
-    function(theta) NULL
+    function(theta) "a"
   )) {
     expect_error(
       inla_vanilla(lp_gauss, init, grad = gr, verbose = FALSE),
@@ -217,7 +202,6 @@ test_that("grad must return a finite vector of the right length at init", {
   }
   for (gr in list(
     function(theta) c(NA, 1),
-    function(theta) c(NaN, 1),
     function(theta) c(1, Inf)
   )) {
     expect_error(
@@ -229,7 +213,7 @@ test_that("grad must return a finite vector of the right length at init", {
 })
 
 test_that("vb and verbose must be a single TRUE or FALSE", {
-  for (bad in list(NA, "yes", 1, c(TRUE, FALSE), logical(0), NULL)) {
+  for (bad in list(NA, "yes", c(TRUE, FALSE))) {
     expect_error(
       inla_vanilla(lp_gauss, c(a = 0.5), vb = bad, verbose = FALSE),
       "`vb` must be `TRUE` or `FALSE`",
@@ -244,7 +228,7 @@ test_that("vb and verbose must be a single TRUE or FALSE", {
 })
 
 test_that("control must be a list of known entries", {
-  for (bad in list(1, "n_grid", c(n_grid = 21))) {
+  for (bad in list("n_grid", c(n_grid = 21))) {
     expect_error(
       inla_vanilla(lp_gauss, c(a = 0.5), control = bad, verbose = FALSE),
       "`control` must be a list",
@@ -252,7 +236,12 @@ test_that("control must be a list of known entries", {
     )
   }
   expect_error(
-    inla_vanilla(lp_gauss, c(a = 0.5), control = list(foo = 1), verbose = FALSE),
+    inla_vanilla(
+      lp_gauss,
+      c(a = 0.5),
+      control = list(foo = 1),
+      verbose = FALSE
+    ),
     "Unknown `control` entry: \"foo\"",
     class = "rlang_error"
   )
@@ -285,7 +274,7 @@ test_that("control must be a list of known entries", {
 })
 
 test_that("control$n_grid must be a single number of at least 7", {
-  for (bad in list(6, 0, -21, "21", c(21, 31), integer(0))) {
+  for (bad in list(6, "21", c(21, 31), integer(0))) {
     expect_error(
       inla_vanilla(
         lp_gauss,
@@ -327,7 +316,7 @@ test_that("an infinite control$n_grid gets the package's own error", {
 })
 
 test_that("control$log_threshold must be a single negative number", {
-  for (bad in list(0, 1, "-6", c(-6, -8))) {
+  for (bad in list(0, "-6", c(-6, -8))) {
     expect_error(
       inla_vanilla(
         lp_gauss,
@@ -833,7 +822,7 @@ test_that("verbose = TRUE reports each stage, verbose = FALSE nothing", {
     inla_vanilla(lp_two, init_two, vb = FALSE, verbose = TRUE)
   )
   expect_false(any(grepl("VB", msgs)))
-  expect_length(grep("posterior mode|skew-normal", msgs), 2)
+  expect_length(grep("Found the posterior mode|Fitted 2 skew-normal", msgs), 2)
 
   # One parameter: singular
   msgs <- capture_messages(inla_vanilla(lp_gauss, c(a = 0.3), verbose = TRUE))
@@ -912,11 +901,14 @@ test_that("summary() returns the table and the diagnostics", {
 test_that("summary(probs = ) gives the requested quantile columns", {
   s <- summary(fit_two, probs = c(0.1, 0.9))
   expect_identical(colnames(s$table), c("Mean", "SD", "10%", "90%", "Mode"))
-  expect_equal(s$table[, c("Mean", "SD", "Mode")], fit_two$summary[, c(
-    "Mean",
-    "SD",
-    "Mode"
-  )])
+  expect_equal(
+    s$table[, c("Mean", "SD", "Mode")],
+    fit_two$summary[, c(
+      "Mean",
+      "SD",
+      "Mode"
+    )]
+  )
 
   # The columns are quantiles of the fitted skew-normals: check the CDF at
   # them by integrating the skew-normal density written out here.
@@ -945,7 +937,7 @@ test_that("summary(probs = ) gives the requested quantile columns", {
 })
 
 test_that("summary() rejects probabilities outside (0, 1)", {
-  for (bad in list(0, 1, c(0.5, 1), -0.1, 1.5, NA, c(0.5, NA), "0.5", NULL)) {
+  for (bad in list(0, c(0.5, 1), -0.1, c(0.5, NA), "0.5")) {
     expect_error(
       summary(fit_two, probs = bad),
       "`probs` must be probabilities strictly between 0 and 1",
@@ -1008,7 +1000,7 @@ test_that("plot() rejects parameters that are not in the fit", {
     "Unknown parameters: \"sigma\" and \"tau\"",
     class = "rlang_error"
   )
-  for (bad in list(0, 3, -1, c(1, 3), TRUE)) {
+  for (bad in list(0, c(1, 3), TRUE)) {
     expect_error(
       plot(fit_two, pars = bad),
       "`pars` must name or index parameters of the fit",

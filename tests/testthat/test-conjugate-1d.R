@@ -355,7 +355,11 @@ test_that("the exact references agree with numerical quadrature", {
     s <- 1 / sqrt(model$laplace_H)
     expected_grad <- integrate(
       function(z) {
-        vapply(z, function(zi) model$grad(c(theta = model$vb_mean + s * zi)), 1) *
+        vapply(
+          z,
+          function(zi) model$grad(c(theta = model$vb_mean + s * zi)),
+          1
+        ) *
           dnorm(z)
       },
       -12,
@@ -477,33 +481,34 @@ test_that("a Gaussian posterior is recovered exactly at small and large scales",
 # posterior SD is 2.9e4, and the search starts from the prior mean, 4.3
 # posterior SDs below the mode. Nothing here is extreme for data in natural
 # units. A fit with a well-scaled mode search (control$nlminb$scale = 1 / 3e4)
-# has mode error 2e-15 SDs, curvature error 2e-6 and log marginal likelihood
-# error 9e-7, within the tolerances used below.
-house_prices <- normal_model(
-  y = c(
-    237400,
-    318400,
-    216400,
-    459500,
-    333000,
-    218000,
-    348700,
-    373800,
-    357600,
-    269500,
-    451200,
-    339000
-  ),
-  sigma = 1e5,
-  m0 = 2e5,
-  s0 = 2e5
-)
+# has mode error 2e-15 SDs, quantile error 2e-8 SDs, curvature error 2e-6 and
+# log marginal likelihood error 9e-7, within the tolerances used below.
+house_y <- 100 *
+  c(2374, 3184, 2164, 4595, 3330, 2180, 3487, 3738, 3576, 2695, 4512, 3390)
+house_prices <- normal_model(house_y, sigma = 1e5, m0 = 2e5, s0 = 2e5)
+
+# The mode and the summary first, so that a failure reads clearly, then
+# everything else once those are right
+expect_house_prices_exact <- function(fit) {
+  err <- approx_errors(fit, house_prices)
+  expect_lt(abs(err$mode_laplace), 1e-5)
+  expect_lt(err$quantile_sn, 1e-6)
+  if (abs(err$mode_laplace) < 1e-5 && err$quantile_sn < 1e-6) {
+    expect_exact_gaussian(
+      fit,
+      house_prices,
+      mode_tol = 1e-5,
+      laplace_tol = 1e-5
+    )
+  }
+}
 
 test_that("a Gaussian posterior in dollars is recovered exactly with finite differences", {
   # Fails (package bug): the first pass of the finite-difference Hessian steps
   # a fixed 1e-4, where the second difference of logpost is pure rounding
   # error (H h^2 is 1e-17 against |logpost| eps of 3e-14), so the rough
-  # Hessian is often not positive definite and inla_vanilla() aborts.
+  # Hessian is often not positive definite and inla_vanilla() aborts with
+  # "The Hessian at the posterior mode is not positive definite".
   fit <- NULL
   expect_no_error(
     fit <- inla_vanilla(
@@ -513,7 +518,7 @@ test_that("a Gaussian posterior in dollars is recovered exactly with finite diff
     )
   )
   if (!is.null(fit)) {
-    expect_exact_gaussian(fit, house_prices, mode_tol = 1e-5, laplace_tol = 1e-5)
+    expect_house_prices_exact(fit)
   }
 })
 
@@ -521,16 +526,16 @@ test_that("a Gaussian posterior in dollars is recovered exactly with an analytic
   # Fails (package bug): nlminb() starts from an identity Hessian, so its first
   # step is the raw gradient, 1.5e-4 dollars against a posterior SD of 2.9e4,
   # and it stops at once with "X-convergence (3)". inla_vanilla() reports
-  # success, the whitened gradient at the "mode" (diagnostics$optim$grad_mode)
-  # is 4.3 SDs, and with the scan centred 4.3 SDs from the mode the summary
-  # quantiles are off by 2 SDs.
+  # success with no warning, although the whitened gradient at the "mode"
+  # (diagnostics$optim$grad_mode) is 4.3 SDs. The scan is then centred 4.3
+  # SDs from the mode, and the summary quantiles are off by 2 SDs.
   fit <- inla_vanilla(
     house_prices$logpost,
     init = c(mu = 2e5),
     grad = house_prices$grad,
     verbose = FALSE
   )
-  expect_exact_gaussian(fit, house_prices, mode_tol = 1e-5, laplace_tol = 1e-5)
+  expect_house_prices_exact(fit)
 })
 
 test_that("the default summary of a Gaussian posterior matches its exact quantiles", {
