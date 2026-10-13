@@ -14,7 +14,7 @@ coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app
 <!-- [![CRAN status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla) -->
 <!-- badges: end -->
 
-*INLA-style skew-normal marginals for any log-posterior.*
+> INLA-style skew-normal marginals for any log-posterior.
 
 If you can write down the log-likelihood plus the log-prior,
 `{inlavanilla}` gives you approximate Bayesian inference for the
