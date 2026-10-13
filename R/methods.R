@@ -65,8 +65,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   puts outside the scanned window (the mode \eqn{\pm 4} Laplace SDs),
 #'   where the marginal is extrapolated, as INLAvaan's `diagnostics()`
 #'   reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
-#'   10^{-5}}, and well-fitted marginals usually sit between \eqn{10^{-3}}
-#'   and \eqn{10^{-2}}. It is flagged above 0.05.
+#'   10^{-5}}; the larger it is, the more of the marginal is extrapolated.
+#'   It is flagged above 0.05.
 #'
 #' Some problems also raise one warning at the end of the fit, of class
 #' `inlavanilla_diagnostics_warning`: heavy tails, an NMAD above 0.1, a
