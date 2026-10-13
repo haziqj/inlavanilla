@@ -66,6 +66,12 @@
 #' Pareto-smoothed importance sampling on copula draws:
 #' `loo::loo(sampling(fit, 4000, fun = loglik, ...))`.
 #'
+#' @section Silent fits:
+#' On a fit made with `silent = TRUE`, `loo()` and `waic()` print nothing and
+#' raise no warnings, their own or those of `loglik`; the warnings are kept
+#' in the result's `warnings`, and a fallback to first order shows in `order`
+#' and `first_order_units`.
+#'
 #' @section Comparing models:
 #' The results have the layout of the loo package's objects, so
 #' `loo::loo_compare()` compares fits to the same units. By hand, with `d`
@@ -199,9 +205,22 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
   calls <- 0L
   last_x <- theta
   n <- NA_integer_
+  # Warnings from loglik are recorded once each and, for a silent fit,
+  # muffled
+  silent <- isTRUE(fit$silent)
+  seen <- character()
+  on_warning <- function(w) {
+    msg <- warning_text(w)
+    if (!msg %in% seen) {
+      seen <<- c(seen, msg)
+    }
+    if (silent) {
+      tryInvokeRestart("muffleWarning")
+    }
+  }
 
   pb <- NULL
-  if (!isTRUE(fit$silent)) {
+  if (!silent) {
     pb <- cli::cli_progress_bar(
       "Differentiating loglik",
       total = n_calls,
@@ -216,17 +235,20 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     if (!is.null(pb)) {
       cli::cli_progress_update(id = pb)
     }
-    v <- tryCatch(loglik(x), error = function(e) {
-      where <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
-      abort(
-        c(
-          "{.arg loglik} failed.",
-          "i" = "The parameter value was {where}."
-        ),
-        parent = e,
-        call = NULL
-      )
-    })
+    v <- withCallingHandlers(
+      tryCatch(loglik(x), error = function(e) {
+        where <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
+        abort(
+          c(
+            "{.arg loglik} failed.",
+            "i" = "The parameter value was {where}."
+          ),
+          parent = e,
+          call = NULL
+        )
+      }),
+      warning = on_warning
+    )
     if (is.matrix(v) && ncol(v) == 1L) {
       v <- v[, 1L]
     }
@@ -333,7 +355,8 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     k_max = k_max,
     k_min = k_min,
     theta = theta,
-    calls = calls
+    calls = calls,
+    loglik_warnings = seen
   )
 }
 
@@ -356,7 +379,7 @@ loo_from_taylor <- function(tp, silent = FALSE) {
   cpo_ok <- !is.na(tp$log_cpo_2)
   lpd_ok <- !is.na(tp$lpd_2)
   second <- all(cpo_ok)
-  warnings <- character(0)
+  warnings <- tp$loglik_warnings
   bad <- unit_labels(tp, which(!cpo_ok))
   if (!second) {
     n_bad <- length(bad)
@@ -413,7 +436,7 @@ loo_from_taylor <- function(tp, silent = FALSE) {
 waic_from_taylor <- function(tp, silent = FALSE) {
   lpd_ok <- !is.na(tp$lpd_2)
   second <- all(lpd_ok)
-  warnings <- character(0)
+  warnings <- tp$loglik_warnings
   bad <- unit_labels(tp, which(!lpd_ok))
   if (!second) {
     msg <- c(
