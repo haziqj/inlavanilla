@@ -1,6 +1,8 @@
 url: http://haziqj.ml/inlavanilla/
 template:
   bootstrap: 5
+  # MathJax, as Quarto uses, rather than pkgdown's default MathML
+  math-rendering: mathjax
 
 articles:
 - title: Get started

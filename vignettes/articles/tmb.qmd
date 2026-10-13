@@ -35,7 +35,7 @@ log-posterior in R and in C++. Here we write it as a TMB template.
 #| label: packages
 #| message: false
 library(inlavanilla)
-library(lavaan)
+data(PoliticalDemocracy, package = "lavaan")
 ```
 
 ## Data and parameters
@@ -223,14 +223,13 @@ obj <- TMB::MakeADFun(
 all.equal(unname(obj$par), unname(init))
 ```
 
-### A check against lavaan
+### A check against INLAvaan
 
-At lavaan's maximum likelihood estimates, the 75 pointwise log-likelihoods
-should equal lavaan's casewise ones. We map the estimates to the
-unconstrained scale, and ask the template for its `REPORT()`ed values there:
+INLAvaan fits the same model, with the same parameterisation and priors. As
+in the Rcpp article, we put its posterior mode in our order:
 
 ```{r}
-#| label: lavaan
+#| label: inlavaan
 model <- "
   ind60 =~ x1 + x2 + x3
   dem60 =~ y1 + a*y2 + b*y3 + c*y4
@@ -243,28 +242,37 @@ model <- "
   y4 ~~ y8
   y6 ~~ y8
 "
-fit_ml <- sem(model, PoliticalDemocracy, meanstructure = TRUE)
-est <- coef(fit_ml)
-est <- est[!duplicated(names(est))] # a, b and c appear twice
+fit_inlavaan <- INLAvaan::asem(
+  model,
+  PoliticalDemocracy,
+  meanstructure = TRUE,
+  verbose = FALSE
+)
+int <- INLAvaan::get_inlavaan_internal(fit_inlavaan)
 
 lv <- c("ind60", "dem60", "dem65")
-var_ml <- est[paste0(c(lv, ov), "~~", c(lv, ov))]
-sd_ml <- sqrt(var_ml[-(1:3)])
-names(sd_ml) <- ov
-rho_ml <- est[paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])] /
-  (sd_ml[cov_pairs[, 1]] * sd_ml[cov_pairs[, 2]])
-
-theta_ml <- c(
-  est[paste0(ov, "~1")],
-  est[c("ind60=~x2", "ind60=~x3", "a", "b", "c")],
-  est[c("dem60~ind60", "dem65~ind60", "dem65~dem60")],
-  log(var_ml),
-  atanh(rho_ml)
+inlavaan_names <- c(
+  paste0(ov, "~1"),
+  "ind60=~x2",
+  "ind60=~x3",
+  "a",
+  "b",
+  "c",
+  "dem60~ind60",
+  "dem65~ind60",
+  "dem65~dem60",
+  paste0(c(lv, ov), "~~", c(lv, ov)),
+  paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])
 )
-names(theta_ml) <- parnames
+at <- match(inlavaan_names, names(int$coefficients))
+theta_inlavaan <- setNames(int$theta_star_novbc[at], parnames)
+```
 
-loglik_ml <- obj$report(theta_ml)$loglik
-max(abs(loglik_ml - lavInspect(fit_ml, "loglik.casewise")))
+There, the template's objective should equal the one INLAvaan minimised:
+
+```{r}
+#| label: inlavaan-check
+c(TMB = obj$fn(theta_inlavaan), INLAvaan = int$opt$objective)
 ```
 
 ## Fitting
@@ -317,7 +325,10 @@ fit
 ```
 
 This agrees with the Rcpp article's fit, which uses the same log-posterior,
-to within about $10^{-4}$ posterior SDs.
+to within about $10^{-4}$ posterior SDs. The two checks flagged by
+`summary()` are the scan-path bend, for several parameters, and the gap
+between the skew-normal and VB means of `logv_dem65`; the
+[Rcpp article](rcpp.html) discusses both.
 
 ```{r}
 #| label: plot
@@ -330,8 +341,8 @@ plot(fit, pars = paste0("z_", cov_pairs[, 1], "_", cov_pairs[, 2]))
 
 The parameters are on the unconstrained scale, and `sampling()` with `fun`
 maps its draws back. Here are the residual correlations $\rho = \tanh z$ and
-the disturbance variance of `dem65`, next to lavaan's maximum likelihood
-estimates.
+the disturbance variance of `dem65`, next to the posterior medians from
+INLAvaan's own copula draws, which are on the natural scale.
 
 ```{r}
 #| label: natural
@@ -341,18 +352,22 @@ natural <- sampling(fit, nsamp = 10000, fun = function(theta) {
   names(rho) <- paste0("rho_", cov_pairs[, 1], "_", cov_pairs[, 2])
   c(rho, psi_dem65 = exp(theta[["logv_dem65"]]))
 })
+draws <- INLAvaan::sampling(fit_inlavaan, nsamp = 10000)
+v <- function(x) draws[, paste0(x, "~~", x)]
+rho <- draws[, paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])] /
+  sqrt(v(cov_pairs[, 1]) * v(cov_pairs[, 2]))
 round(
   cbind(
     t(apply(natural, 2, quantile, c(0.025, 0.5, 0.975))),
-    ML = c(rho_ml, var_ml[["dem65~~dem65"]])
+    INLAvaan = c(apply(rho, 2, median), median(v("dem65")))
   ),
   3
 )
 ```
 
-The correlations agree closely with maximum likelihood. The disturbance
-variance of `dem65` is small and poorly determined, with a long right tail on
-this scale.
+The medians agree with INLAvaan's, up to the Monte Carlo error of the two
+sets of draws. The disturbance variance of `dem65` is small and poorly
+determined, with a long right tail on this scale.
 
 ### Leave-one-out cross-validation
 
@@ -367,12 +382,36 @@ loo_sem <- loo(fit, function(theta) obj$report(theta)$loglik)
 loo_sem
 ```
 
+INLAvaan's `loo()` uses the same deterministic expansion (Alhyari et al.,
+2026), with its own per-case log-likelihoods:
+
+```{r}
+#| label: loo-inlavaan
+loo_inlavaan <- INLAvaan::loo(fit_inlavaan)
+round(
+  rbind(
+    ours = loo_sem$estimates[, "Estimate"],
+    INLAvaan = loo_inlavaan$estimates[, "Estimate"]
+  ),
+  2
+)
+```
+
+The two agree to well within the standard error. They differ a little because
+each expands about its own VB-corrected mean, and the two VB corrections take
+their expectations with different rules.
+
 With 39 parameters this takes $39^2 + 39 + 1$, or 1,561, evaluations of the
 template, each giving all 75 terms. See
 [Model comparison with LOO and WAIC](model-comparison.html) for what the
 numbers mean and how to compare models with them.
 
 ## References
+
+Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). *Deterministic
+leave-one-cluster-out cross-validation for multilevel Bayesian models*
+(arXiv:2609.00670 [stat.ME]). arXiv.
+<https://doi.org/10.48550/arXiv.2609.00670>
 
 Bollen, K. A. (1989). *Structural equations with latent variables*. Wiley.
 <https://doi.org/10.1002/9781118619179>

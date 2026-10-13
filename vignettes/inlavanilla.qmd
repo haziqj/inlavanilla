@@ -101,12 +101,14 @@ fit <- inla_vanilla(logpost, init, X = X, y = y)
 fit
 ```
 
-The table summarises each parameter's skew-normal marginal: the mean,
-standard deviation, quantiles and mode. Each step of the fit reports as it
-finishes, with the time it took. `verbose = TRUE` adds a full diagnostic of
-each step, and `silent = TRUE` prints nothing at all, as in a simulation; the
-warnings it would have shown are kept in `fit$warnings`. The fits below use
-`silent = TRUE`.
+The header names the approximation: skew-normal marginals, with the VB mean
+correction. The table summarises each parameter's skew-normal marginal: the
+mean, standard deviation, quantiles and mode. The last line says that
+`summary()` flags one of its checks; we come to it below. Each step of the
+fit reports as it finishes, with the time it took. `verbose = TRUE` adds a
+full diagnostic of each step, and `silent = TRUE` prints nothing at all, as
+in a simulation; the warnings it would have shown are kept in `fit$warnings`.
+The fits below use `silent = TRUE`.
 
 `summary()` adds the quartiles and diagnostics for each stage:
 
@@ -256,10 +258,11 @@ With both, the fit is the Laplace approximation alone.
 fit_fast <- function(...) {
   inla_vanilla(logpost, init, X = X, y = y, silent = TRUE, ...)
 }
+# Named as the header of print() names them
 fits <- list(
-  `skew-normal + VB` = fit,
-  `skew-normal` = fit_fast(vb = FALSE),
-  `Gaussian + VB` = fit_fast(marginals = "gaussian"),
+  `Skew-normal + VB` = fit,
+  `Skew-normal` = fit_fast(vb = FALSE),
+  `Laplace + VB` = fit_fast(marginals = "gaussian"),
   Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
 )
 round(t(sapply(fits, function(f) {

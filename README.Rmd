@@ -20,10 +20,11 @@ options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![R-CMD-check](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml)
 [![Codecov test coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app.codecov.io/gh/haziqj/inlavanilla)
+[![Dependencies](https://img.shields.io/badge/dependencies-1%2F1-67ac09)](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
 <!-- [![CRAN status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla) -->
 <!-- badges: end -->
 
-*INLA-style skew-normal marginals for any log-posterior.*
+> INLA-style skew-normal marginals for any log-posterior.
 
 If you can write down the log-likelihood plus the log-prior, `{inlavanilla}`
 gives you approximate Bayesian inference for the parameters of your model:
@@ -70,7 +71,7 @@ response rate $p$, the posterior is $\text{Beta}(4, 18)$: skewed, and bounded
 at zero.
 
 `inla_vanilla()` works on an unconstrained scale, so we write the
-log-posterior in terms of $\vartheta = \operatorname{logit} p$. The prior is
+log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
 stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$:
 
 ```{r example}
