@@ -10,6 +10,7 @@
 ^lab$
 ^vignettes/\.quarto$
 ^vignettes/.*_files$
+^vignettes/articles$
 ^\.quarto$
 ^CLAUDE\.md$
 ^\.claude$

@@ -15,3 +15,6 @@
 * The VB correction (`vb`) and the skew-normal marginals (`marginals =
   "skewnormal"` or `"gaussian"`) can each be switched off, down to the
   Laplace approximation alone.
+* Two website articles, "Speeding up with Rcpp" and "Using TMB", fit a
+  structural equation model with 39 parameters from a log-posterior written
+  in R, in C++ with an analytic gradient, and as a TMB template.
