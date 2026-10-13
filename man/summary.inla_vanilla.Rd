@@ -4,7 +4,7 @@
 \alias{summary.inla_vanilla}
 \title{Summarise an INLAvanilla fit}
 \usage{
-\method{summary}{inla_vanilla}(object, probs = c(0.025, 0.25, 0.5, 0.75, 0.975), ...)
+\method{summary}{inla_vanilla}(object, probs = c(0.025, 0.5, 0.975), ...)
 }
 \arguments{
 \item{object}{An object of class \code{inla_vanilla}.}
