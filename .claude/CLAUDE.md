@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`inlavanilla` (styled "INLAvanilla" in prose) is a small, pure-R package that exports `inla_vanilla()` and `sampling()`, with S3 `print`, `summary` and `plot` methods. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline and the test plan. Test posteriors with a natural-scale closed form (e.g. the beta–binomial) are written as unconstrained `logpost`s with the Jacobian included, and compared through `sampling(fit, fun = ...)` or the ϑ-scale density. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
+`inlavanilla` (styled "INLAvanilla" in prose) is a small, pure-R package that exports `inla_vanilla()`, `sampling()`, `loo()` and `waic()`, with S3 `print`, `summary` and `plot` methods. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline and the test plan. Test posteriors with a natural-scale closed form (e.g. the beta–binomial) are written as unconstrained `logpost`s with the Jacobian included, and compared through `sampling(fit, fun = ...)` or the ϑ-scale density. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
 
-Tagline: *INLA-style skew-normal marginals for any log-posterior.* The package runs the INLAvaan approximation pipeline on any user-supplied log-density, with no latent field and nothing SEM-specific.
+Tagline: *INLA-style skew-normal marginals for any log-posterior.* The package runs the INLAvaan approximation pipeline on any user-supplied log-density, with no latent field and nothing SEM-specific. The README and vignette open with the package owner's wording: "If you can write down the log-likelihood plus the log-prior, `{inlavanilla}` gives you approximate Bayesian inference for the parameters of your model."
 
 ## Commands
 
@@ -35,11 +35,11 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## Architecture
 
-Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, verbose = TRUE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `verbose` and `control` must be named in full and data arguments cannot partially match them.
+Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, marginals = c("skewnormal", "gaussian"), verbose = FALSE, silent = FALSE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `marginals`, `verbose`, `silent` and `control` must be named in full and data arguments cannot partially match them. `marginals` is checked by `check_choice()`, which accepts unambiguous abbreviations in any case (`"skew"`, `"Gauss"`), as `match.arg()` does, but raises the package's own error. `inla_vanilla()` checks the arguments and sets up the condition handlers; the stages run in the internal `vanilla_fit()`.
 
 - **Input.** The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included; `...` is passed through as in `optim()`.
 - **No transform layer in v1.** Natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`), so keep the engine free of transform logic.
-- **Wrappers.** `inla_vanilla()` binds `...` once in `logpost_x()` and `grad_x()`, then wraps them in closures (`lp`, `gr`) that name the parameters, count calls, record the last parameter value and tick progress. Every stage receives these closures, never the user functions. Never forward `...` to internal helpers, because a user's data argument could partially match one of their formals (the same applies to `fun` in `sampling()`). `with_context()` reports an error from `logpost` or `grad` with the stage and the parameter value.
+- **Wrappers.** `inla_vanilla()` binds `...` once in `logpost_x()` and `grad_x()`, and `vanilla_fit()` wraps them in closures (`lp`, `gr`) that name the parameters, count calls, record the last parameter value and tick progress. Every stage receives these closures, never the user functions. Never forward `...` to internal helpers, because a user's data argument could partially match one of their formals (the same applies to `fun` in `sampling()`). `with_context()` reports an error from `logpost` or `grad` with the stage and the parameter value.
 
 The stages run in order, one file each:
 
@@ -56,18 +56,29 @@ The stages run in order, one file each:
    - The volume correction has two routes that must agree: `gamma1_grad()` is INLAvaan's shortcut, using the gradient; `gamma1_lp()` uses second differences of `logpost` when there is no gradient, at O(m) calls per parameter instead of O(m²).
    - The marginals are scanned around the mode ϑ*, so VB does not move them.
    - `scan_bend()` computes the diagnostic `bend`: the log-density, in nats, that the straight scan misses at ±2 SDs, from one Newton step in the other parameters. `summary()` flags it above 0.1. It catches the documented small-n narrowing.
-   - The scan is a fixed ±4 SDs, as in INLAvaan. `tails` records a scan whose ends stay above `log_threshold`. Extending the scan into heavy tails was tried and rejected, because it hurt the fit in other cases.
+   - `marginals = "gaussian"` skips this stage: `sn` holds the Gaussian marginals N(mean_vb, Σ_jj) as skew-normals with `alpha = 0`, the scan diagnostics are `NA`, and `print()`, `summary()`, `plot()` and `sampling()` branch on `is_gaussian()` or `alpha == 0`. VB and the marginals are independent switches, not a ladder: VB never moves the skew-normal marginals.
+   - The scan is a fixed ±4 SDs, as in INLAvaan. `tails` records a scan whose ends stay above `log_threshold`. `scan_end_mass()` gives INLAvaan's `scan_end_mass`, the fitted mass outside that window; `summary()` flags it above 0.05.
+   - `R/diagnostics.R`: `warn_diagnostics()` raises one `inlavanilla_diagnostics_warning` at the end of `vanilla_fit()` (before the fit object is built, so `fit$warnings` records it) when a marginal is clearly off: heavy `tails`, NMAD > 0.1, `scan_end_mass` > 0.05, VB shift > 1 SD or the VB fallback (`warn_levels`, INLAvaan's levels). `bend` and the SN-VB gap are flagged in `summary()` only. Healthy fits in every document must stay silent. Extending the scan into heavy tails was tried and rejected, because it hurt the fit in other cases.
 4. **Copula draws** (`R/sampling.R`). `sampling()` is an S3 generic, matching INLAvaan's exported `sampling()`. Draws go through `sn_score_map()`, a spline from normal scores to skew-normal quantiles; do not use `qsnorm_fast()` directly, because it is only a starting value, accurate to about 5e-2.
 
 Supporting files:
 
 - **Skew-normal utilities** (`R/skew-normal.R`, `R/qsnorm-fast.R`): ported from INLAvaan. The Apache-licensed `qsnorm_fast()` keeps its attribution header. All of them are internal.
 - **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout.
-- **Progress** (`R/progress.R`): each stage has a cli progress bar that appears only after 0.5 s, and ends with a plain styled `message()` line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path.
+- **LOO and WAIC** (`R/loo.R`): `loo(fit, loglik, ...)` and `waic()`, the deterministic second-order Taylor method of Alhyari, Jamil, Montcho and Rue (2026, arXiv:2609.00670), as in INLAvaan: no refits and no draws.
+  - `loglik(theta, ...)` returns one log-likelihood term per unit; `logpost` is their sum plus the log-prior, and the fit never sees `loglik`.
+  - `taylor_pointwise()` takes each unit's score and Hessian by central differences in the whitened coordinates of N(mean_vb, Σ), 0.01 SD apart: m² + m + 1 calls of `loglik`. If any unit's leverage k (an eigenvalue of −ΣH_u) reaches 1, every unit falls back to first order, with a warning; there is no mixing of orders.
+  - The results have the loo package's layout (classes `loo` and `waic`, `estimates`, `pointwise` with one `elpd_*` column), so `loo::loo_compare()` works with no dependency. The methods are also registered on loo's generics (`loo_x_inla_vanilla()`, `waic_x_inla_vanilla()`), and `loo.default()` and `waic.default()` forward other objects to loo when it is installed.
+  - The generics take `object` first, not `x`, so data named `x` reaches `loglik`. They follow `fit$silent`, for `loglik`'s own warnings too, and record each distinct warning in the result's `warnings`.
+- **Progress** (`R/progress.R`): three output levels, held in the `prog` environment from `progress_new()`.
+  - Default (`verbose = FALSE, silent = FALSE`): each stage has a cli progress bar that appears after the user's `cli.progress_show_after` seconds, or 0.5 s when that option is unset (never override a value the user set: setup chunks of rendered documents use it to keep bars out), and ends with a plain styled `message()` line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path, and keep the default path free of anything built only for `verbose`.
+  - `verbose = TRUE`: the `report_*()` functions add indented grey detail lines under each stage, behind `if (prog$detail)`. They use only what the fit has already computed (`lap$restart`, `lap$hessian`, `vbc$history`, the call counters), never further calls of `logpost` or `grad`.
+  - `silent = TRUE`: nothing is printed, and the handlers in `inla_vanilla()` muffle every warning and message raised during the fit. `verbose = TRUE, silent = TRUE` is an error.
+  - Whatever the level, the handler records each distinct warning in `prog$warnings`, which becomes `fit$warnings`, as plain text: `warn()` attaches its message unwrapped and uncoloured as `text`. The fit also stores `verbose` and `silent`.
 - **Errors and warnings**: raise them with `abort()` and `warn()` (`R/utils.R`), which format with cli and signal with base R, giving the classes `inlavanilla_error` and `inlavanilla_warning`. Do not use `cli::cli_abort()` or `cli::cli_warn()`: they call rlang, which cli only suggests.
 - **Non-ASCII output**: user-visible non-ASCII characters (σ, ·) go through `sd_unit()` and `sep_dot()`, which fall back to ASCII. R source files must stay ASCII.
 
-Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
+Out of scope for v0.1: factor scores, PPP and DIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
 
 ## Source-of-truth rules for the maths
 
@@ -84,6 +95,7 @@ The tests are described as "the main point of the package." They use closed-form
 - Imports should stay limited to base packages (stats, graphics, utils) plus cli, which the user requires for messages and progress bars. Do not add numDeriv, sn or Rcpp.
 - The license is GPL (>= 3).
 - Add a `NEWS.md` bullet for user-facing changes, as `CONTRIBUTING.md` asks.
+- Write references and in-text citations in APA 7 style, by hand, in roxygen, the README and the vignettes: "Jamil, H., & Rue, H. (2026a). *Title in sentence case* (arXiv:2603.25690 [stat.ME]). arXiv. <https://doi.org/...>" (the arXiv identifier and primary category in brackets after the title, as Zotero's APA style gives; escape the square brackets as `\[stat.ME\]` in roxygen), cited as "(Jamil & Rue, 2026a)" or "Jamil and Rue (2026a)". The a/b suffixes appear only where both 2026 papers are cited. In roxygen use `--` for page ranges (it renders as an en dash) and `<https://doi.org/...>` rather than `\doi{}`. `DESCRIPTION` keeps CRAN's `<doi:...>` form.
 - The vignette (`vignettes/inlavanilla.qmd`) is Quarto, as in INLAvaan; CI installs Quarto, and R-CMD-check installs the package itself so that Quarto's R session finds it on Windows.
 
 ## Coding principles

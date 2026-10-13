@@ -15,10 +15,13 @@ coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app
 
 *INLA-style skew-normal marginals for any log-posterior.*
 
-Give `{inlavanilla}` a log-posterior and it returns an approximate
-posterior, in milliseconds for small models: no sampler, no tuning. It
-runs the approximation pipeline of
-[INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
+If you can write down the log-likelihood plus the log-prior,
+`{inlavanilla}` gives you approximate Bayesian inference for the
+parameters of your model: posterior marginals and draws, the marginal
+likelihood, and leave-one-out cross-validation. There is no sampler and
+no tuning, and small models take milliseconds. It runs the approximation
+pipeline of [INLAvaan](https://inlavaan.haziqj.ml/) with nothing
+model-specific:
 
 1.  a **Laplace approximation** at the posterior mode, with the Laplace
     estimate of the log marginal likelihood;
@@ -27,6 +30,15 @@ runs the approximation pipeline of
 3.  **skew-normal marginals**, one per parameter, fitted to scans of the
     log-posterior;
 4.  **Gaussian copula draws** for any function of the parameters.
+
+Stages 2 and 3 are optional and independent: `vb = FALSE` skips the VB
+correction, and `marginals = "gaussian"` keeps the Gaussian marginals
+instead of scanning for skew-normal ones. With both, you get the Laplace
+approximation alone.
+
+Give `loo()` or `waic()` the log-likelihood as one term per observation,
+and they estimate the model’s predictive accuracy from the fit alone,
+with no refits and no draws.
 
 The package is pure R and small. Its only dependency outside base R is
 [cli](https://cli.r-lib.org/).
@@ -63,11 +75,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [29ms]
-#> ✔ VB mean correction, max shift 0.17σ [36ms]
-#> ✔ Fitted 1 skew-normal marginal [66ms]
+#> ✔ Found the posterior mode in 6 iterations [27ms]
+#> ✔ VB mean correction, max shift 0.17σ [34ms]
+#> ✔ Fitted 1 skew-normal marginal [75ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
@@ -111,11 +123,12 @@ quantities and model comparison.
 
 ## References
 
-Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for
+Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
-approximations.
-[arXiv:2603.25690](https://doi.org/10.48550/arXiv.2603.25690).
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
 
-Jamil, H. and Rue, H. (2026). Implementation and workflows for
-INLA-based approximate Bayesian structural equation modelling.
-[arXiv:2604.00671](https://doi.org/10.48550/arXiv.2604.00671).
+Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling*
+(arXiv:2604.00671 \[stat.CO\]). arXiv.
+<https://doi.org/10.48550/arXiv.2604.00671>

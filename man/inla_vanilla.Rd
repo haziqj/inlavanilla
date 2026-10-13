@@ -10,7 +10,9 @@ inla_vanilla(
   grad = NULL,
   ...,
   vb = TRUE,
-  verbose = TRUE,
+  marginals = c("skewnormal", "gaussian"),
+  verbose = FALSE,
+  silent = FALSE,
   control = list()
 )
 }
@@ -30,15 +32,28 @@ differences are used.}
 
 \item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
 data. As in \code{\link[stats:optim]{stats::optim()}} and \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the
-gradient, and the arguments after them (\code{vb}, \code{verbose}, \code{control}) must
-be given by their full names, so data arguments cannot partially match
-them.}
+gradient, and the arguments after them (\code{vb}, \code{marginals}, \code{verbose},
+\code{silent}, \code{control}) must be given by their full names, so data
+arguments cannot partially match them. The arguments before them can be
+matched, as in \code{optim()}: a data argument named \code{g} or \code{gr} would be
+taken as \code{grad}, so give it a longer name.}
 
 \item{vb}{Logical. Apply the VB mean correction? Default \code{TRUE}. It enters
 the log marginal likelihood, and the skew-normal means are checked against
 it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
 
-\item{verbose}{Logical. Show progress? Default \code{TRUE}.}
+\item{marginals}{The marginal of each parameter: \code{"skewnormal"} (the
+default) fits a skew-normal to a scan of the log-posterior; \code{"gaussian"}
+uses the Gaussian marginal of the Laplace approximation, centred at the
+VB mean when \code{vb = TRUE}, with no scans. Abbreviations such as \code{"skew"}
+and \code{"gauss"} work too.}
+
+\item{verbose}{Logical. Print a full diagnostic of each stage under its
+progress line? Default \code{FALSE}. See the section on output.}
+
+\item{silent}{Logical. Print nothing at all, and muffle the warnings and
+messages raised during the fit? Default \code{FALSE}. The warnings are still
+recorded in \code{fit$warnings}. Cannot be combined with \code{verbose = TRUE}.}
 
 \item{control}{A list of tuning parameters; see the section on control.}
 }
@@ -51,8 +66,12 @@ other things:
 \item \code{mode}, \code{cov}: the Laplace mode and covariance.
 \item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = FALSE}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
-parameter.
+parameter (with \code{alpha = 0} for Gaussian marginals).
+\item \code{vb}, \code{marginals}, \code{verbose}, \code{silent}: the settings the fit used.
 \item \code{logml}: the log marginal likelihood.
+\item \code{warnings}: the messages of the warnings raised during the fit, as a
+character vector of plain text, each message once (empty when there
+were none). They are recorded whether or not \code{silent} is \code{TRUE}.
 }
 }
 \description{
@@ -74,6 +93,16 @@ changing volume of the other parameters, and fitted by a skew-normal
 \item \strong{Gaussian copula draws.} \code{\link[=sampling]{sampling()}} couples the skew-normal marginals
 through the correlations of \eqn{\Omega}.
 }
+
+Stages 2 and 3 are optional and independent of each other. \code{vb = FALSE}
+skips the VB correction, which leaves the marginals unchanged (they are
+scanned around the mode) but gives the Laplace log marginal likelihood.
+\code{marginals = "gaussian"} skips the scans and uses the Gaussian's own
+marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at the VB mean
+(or at the mode when \code{vb = FALSE}); \code{\link[=sampling]{sampling()}} then draws from the joint
+Gaussian. So \verb{vb = FALSE, marginals = "gaussian"} is the Laplace
+approximation alone, and \code{marginals = "gaussian"} alone is the Laplace
+approximation with the VB correction.
 }
 \section{Writing \code{logpost}}{
 
@@ -117,8 +146,22 @@ changing volume of the other parameters enters only to first order. When a
 parameter's spread depends strongly on another, poorly determined
 parameter, its marginal comes out too narrow, by a factor that vanishes as
 O(1/n). Examples are a regression coefficient or a mean when the noise SD
-is uncertain. For a normal mean with unknown variance the SD is about 11\\%
-too small at n = 12, 3\\% at n = 50, and under 1\\% at n = 200.
+is uncertain. For a normal mean with unknown variance the SD is about 11\%
+too small at n = 12, 3\% at n = 50, and under 1\% at n = 200.
+
+A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
+structural equation model with 39 parameters and n = 75, the data could not
+keep two residual variances away from zero, so on the log scale their
+posteriors had a long, exponential left tail, set by the prior. Checked
+against MCMC, those two skew-normal marginals were less than half as wide
+as the posterior, with the 2.5\% quantile about 2 posterior SDs too high;
+the other 37 were within 7\% in SD. On the variance scale, where the tail
+near zero is compressed, the two were much closer: means 0.2 posterior SDs
+too high and SDs 10 to 15\% too small. INLAvaan's marginals of this model
+are the same as inlavanilla's. The \code{bend} diagnostic of
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged both, but its size does not say how far
+off a marginal is, and the \code{tails} check, which looks only 4 Laplace SDs
+out, missed them.
 }
 
 \section{Gradients}{
@@ -132,7 +175,9 @@ beyond a handful of parameters: at m = 20 a fit makes on the order of
 50,000 calls. With \code{grad}, the VB correction takes 2m^2 + 1 gradient calls
 per sweep instead, and the fit is faster and more accurate. For more than
 about 10 parameters, supply \code{grad}, or set \code{vb = FALSE} to skip the VB
-correction (and its term in the log marginal likelihood).
+correction (and its term in the log marginal likelihood): the skew-normal
+marginals do not depend on it. \code{marginals = "gaussian"} saves the calls of
+the scans.
 
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -154,8 +199,57 @@ below the maximum are ignored in the skew-normal fit (default \code{-6}).
 \item \code{vb_maxit}, \code{vb_tol}: iteration limit (default \code{25}) and convergence
 tolerance in posterior SDs (default \code{1e-3}) for the VB correction.
 \item \code{nlminb}: a list of \code{\link[stats:nlminb]{stats::nlminb()}} controls for the mode search.
-\code{iter.max} and \code{eval.max} default to \code{1000} and \code{2000}.
+\code{iter.max} and \code{eval.max} default to \code{1000} and \code{2000}, and \code{trace = 1}
+prints its iterations.
 }
+}
+
+\section{Output}{
+
+By default each stage prints one line as it finishes, with the time it
+took, and shows a progress bar while it runs for longer than half a
+second, or than the option \code{cli.progress_show_after} when it is set. In
+knitr or Quarto documents, where a bar cannot redraw in place, a larger
+\code{cli.progress_show_after} in the setup chunk keeps bars out of the output.
+Warnings, such as a mode that was not reached or a gradient that does not
+match \code{logpost}, are signalled as usual.
+
+\code{verbose = TRUE} adds a full diagnostic of the fit, in grey lines under
+each stage. It reports what the fit computes anyway, with no further calls
+of \code{logpost} or \code{grad}:
+\itemize{
+\item Before the mode search: the parameters, where the derivatives come from,
+\code{logpost} at \code{init}, and for a supplied \code{grad} its largest relative
+discrepancy from finite differences there.
+\item The mode: the message, iterations and evaluations of \code{\link[stats:nlminb]{stats::nlminb()}},
+and whether it was restarted with the parameters rescaled; the
+log-posterior and the whitened gradient at the mode; how the Hessian was
+taken (and, for a supplied \code{grad}, the asymmetry of its Jacobian); the
+largest posterior correlation and the smallest eigenvalue of the
+correlation matrix, which is near zero when some combination of the
+parameters is poorly identified; and the Laplace log marginal likelihood.
+\item The VB correction: the largest step, in posterior SDs, at each
+fixed-point iteration, whether Anderson acceleration or the fallback
+optimiser was used, the largest shift, and the term it adds to the log
+marginal likelihood.
+\item The marginals: the shape, NMAD, bend, tails and volume correction
+\code{gamma1} of each parameter, with the values that
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.
+\item The calls of \code{logpost} and \code{grad} in each stage, and in all, with the
+total time.
+}
+
+For the iteration trace of \code{\link[stats:nlminb]{stats::nlminb()}} itself, pass
+\code{control = list(nlminb = list(trace = 1))}.
+
+\code{silent = TRUE} prints nothing, for simulations and other repeated fits:
+no progress bars and no stage lines, and every warning and message raised
+during the fit, including those of \code{logpost} and \code{grad}, is muffled.
+Errors are still raised. Output printed with \code{\link[=cat]{cat()}} or \code{\link[=print]{print()}}, by
+\code{logpost}, \code{grad} or the trace of \code{\link[stats:nlminb]{stats::nlminb()}}, is not captured.
+
+Whatever the level, the warnings raised during the fit are recorded in
+\code{fit$warnings}, so that a simulation can check them afterwards.
 }
 
 \examples{
@@ -179,15 +273,33 @@ fit
 # The posterior of sigma itself, through the draws
 sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
 quantile(sigma, c(0.025, 0.5, 0.975))
+
+# A full diagnostic of each stage
+fit <- inla_vanilla(
+  logpost,
+  init = c(mu = 0, log_sigma = 0),
+  y = y,
+  verbose = TRUE
+)
+
+# Nothing printed, as in a simulation; any warnings are kept in the fit
+fit <- inla_vanilla(
+  logpost,
+  init = c(mu = 0, log_sigma = 0),
+  y = y,
+  silent = TRUE
+)
+fit$warnings
 }
 \references{
-Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural
-equation models using integrated nested Laplace approximations.
-\doi{10.48550/arXiv.2603.25690}
+Jamil, H., & Rue, H. (2026a). \emph{Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations} (arXiv:2603.25690 [stat.ME]). arXiv.
+\url{https://doi.org/10.48550/arXiv.2603.25690}
 
-Jamil, H. and Rue, H. (2026). Implementation and workflows for INLA-based
-approximate Bayesian structural equation modelling.
-\doi{10.48550/arXiv.2604.00671}
+Jamil, H., & Rue, H. (2026b). \emph{Implementation and workflows for INLA-based
+approximate Bayesian structural equation modelling} (arXiv:2604.00671
+[stat.CO]). arXiv. \url{https://doi.org/10.48550/arXiv.2604.00671}
 }
 \seealso{
 \code{\link[=sampling]{sampling()}} for posterior draws and derived quantities,

@@ -225,4 +225,32 @@ narrow by a factor that vanishes as O(1/n).
     log-determinant at each point) brings it to -1%, at about 10 times the
     cost of the marginal stage.
 
-See `lab/DESIGN.md` and `lab/scan-path-prototype.R` in inlavanilla.
+- **Bollen's Political Democracy SEM (39 parameters, n = 75), the model of
+  INLAvaan's SEM article with a mean structure, default priors:** checked
+  against HMC (4 chains of 10,000 draws, R-hat 1.000) and against full
+  Laplace marginals on a wide grid, which agree with each other.
+  - The log residual variance of `x2` and the log disturbance variance of
+    `dem65` have skew-normal SDs of 0.38 and 0.46 times the posterior SD.
+    Their 2.5% quantiles are -3.46 against -6.98 and -3.60 against -7.34,
+    two or more posterior SDs off; the upper quantiles agree.
+  - Cause: the data cannot keep these variances away from zero, so on the
+    log scale the left tail is exponential, with slope 0.50: the
+    `gamma(1,.5)[sd]` prior with its Jacobian. A skew-normal cannot follow
+    it, and the scan (4 Laplace SDs) stops before the tail flattens.
+  - On the variance scale, the scale INLAvaan reports, the error is moderate.
+    Against Stan NUTS on an independently written model with INLAvaan's
+    default priors (`lab/poldem.stan` in inlavanilla), INLAvaan's own summary
+    has x2~~x2 mean 0.132 against 0.114 (0.23 posterior SDs), SD 0.066
+    against 0.077, 2.5% quantile 0.031 against 0.001; dem65~~dem65 mean 0.273
+    against 0.236 (0.17 SDs). The other 37 parameters: means within 0.09 SDs,
+    SD ratios 0.93-1.01. A validation against MCMC on the natural scale with
+    a tolerance of about 0.25 SDs would pass this model.
+  - The other 37 parameters are within 7% in SD (median 3%), 0.08 SDs in the
+    mean and 0.21 SDs in the quantiles.
+  - inlavanilla's fit matches INLAvaan's here (modes within 2e-4 SDs, log
+    marginal likelihood -1686.85 against -1686.86), so INLAvaan's marginals
+    of these two parameters will be off the same way. Worth checking any
+    validation against MCMC on the log scale, where it shows most.
+
+See `lab/DESIGN.md`, `lab/scan-path-prototype.R`, `lab/sem-marginal-check.R`
+and `lab/sem-hmc.R` in inlavanilla.

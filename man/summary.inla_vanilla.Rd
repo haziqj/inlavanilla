@@ -38,7 +38,7 @@ fixed-point iteration failed and the fallback optimiser ran: both mean
 the posterior is far from the Laplace Gaussian.
 \item \strong{Tails.} Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
 \code{tails} is \code{FALSE} (and flagged) when the density at an end of the scan
-is still over 5\\% of its peak: the Laplace SD badly understates a heavy
+is still over 5\% of its peak: the Laplace SD badly understates a heavy
 tail there, and the skew-normal extrapolates it.
 \item \strong{Scan path.} \code{bend} is the log-density, in nats, that the straight
 scan misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
@@ -53,15 +53,32 @@ scanned density relative to its peak (flagged above 0.05), and
 \code{sn_vs_vb}, the gap between the
 skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 target the posterior mean, so they should agree closely (to
-\eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026a). A gap above
+\eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4). A gap above
 0.1 SDs is flagged: the posterior is far from Gaussian along that
 parameter, and either approximation may be off.
+\item \strong{Scan-end mass.} \code{scan_end_mass}, the mass each fitted skew-normal
+puts outside the scanned window (the mode \eqn{\pm 4} Laplace SDs),
+where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
+reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
+  10^{-5}}; the larger it is, the more of the marginal is extrapolated.
+It is flagged above 0.05.
 }
 
+Some problems also raise one warning at the end of the fit, of class
+\code{inlavanilla_diagnostics_warning}: heavy tails, an NMAD above 0.1, a
+scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
+levels match INLAvaan's fit-time warning; the flags here are more
+sensitive. With \code{silent = TRUE} the warning is only recorded in
+\code{fit$warnings}. \code{vignette("diagnostics", package = "inlavanilla")}
+explains every check with examples.
+
 With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
+With \code{marginals = "gaussian"} there are no scans, so only the VB shift is
+reported.
 }
 \references{
-Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for
-structural equation models using integrated nested Laplace approximations.
-\doi{10.48550/arXiv.2603.25690}
+Jamil, H., & Rue, H. (2026). \emph{Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations} (arXiv:2603.25690 [stat.ME]). arXiv.
+\url{https://doi.org/10.48550/arXiv.2603.25690}
 }

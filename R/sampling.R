@@ -6,6 +6,10 @@
 #' \eqn{z \sim N(0, R)}, maps it to uniforms \eqn{u_j = \Phi(z_j)} and then to
 #' each parameter's skew-normal quantile, \eqn{\vartheta_j = Q_j(u_j)}.
 #'
+#' For a fit with `marginals = "gaussian"` this is a draw from the joint
+#' Gaussian \eqn{N(\tilde\vartheta, \Omega)}, centred at the VB mean (or at
+#' the mode when `vb = FALSE`).
+#'
 #' Draws never call the log-posterior, so they are cheap: large `nsamp` costs
 #' little. Use `fun` for natural-scale or derived quantities, such as
 #' `exp(log_sigma)` or a covariance matrix built from several parameters.
@@ -17,7 +21,9 @@
 #'   fixed length (named, ideally). When `NULL`, the parameters themselves are
 #'   returned.
 #' @param ... For the `inla_vanilla` method, further arguments passed to
-#'   `fun`.
+#'   `fun`. As in [stats::optim()], a name that abbreviates `nsamp` or `fun`
+#'   would be taken as that argument: a data argument named `n` would set the
+#'   number of draws. Give such data a longer name, or wrap it in `fun`.
 #'
 #' @returns A numeric matrix with one row per draw: the parameters on the
 #'   unconstrained scale, or the values of `fun`.
@@ -31,7 +37,7 @@
 #'     dnorm(theta[["mu"]], 0, 10, log = TRUE) +
 #'     dexp(sigma, log = TRUE) + theta[["log_sigma"]]
 #' }
-#' fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, verbose = FALSE)
+#' fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 #'
 #' draws <- sampling(fit, nsamp = 2000)
 #' head(draws)
@@ -65,9 +71,14 @@ sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
   z <- matrix(stats::rnorm(nsamp * m), nsamp, m) %*% U
   theta <- matrix(0, nsamp, m, dimnames = list(NULL, rownames(sn)))
   for (j in seq_len(m)) {
-    # z -> Q_j(Phi(z)), the skew-normal quantile of each normal score
-    map <- sn_score_map(sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
-    theta[, j] <- map(z[, j])
+    if (sn[j, "alpha"] == 0) {
+      # a Gaussian marginal: the quantile map is linear
+      theta[, j] <- sn[j, "xi"] + sn[j, "omega"] * z[, j]
+    } else {
+      # z -> Q_j(Phi(z)), the skew-normal quantile of each normal score
+      map <- sn_score_map(sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
+      theta[, j] <- map(z[, j])
+    }
   }
   if (is.null(fun)) {
     return(theta)

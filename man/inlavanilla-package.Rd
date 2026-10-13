@@ -6,7 +6,7 @@
 \alias{inlavanilla-package}
 \title{inlavanilla: INLA-Style Skew-Normal Marginals for Any Log-Posterior}
 \description{
-Approximates a posterior distribution from its log density alone, using the approximation pipeline of the 'INLAvaan' package (Jamil and Rue, 2026a) \doi{10.48550/arXiv.2603.25690}, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) \doi{10.1111/j.1467-9868.2008.00700.x}, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) \doi{10.48550/arXiv.2604.00671}.
+Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the 'INLAvaan' package (Jamil & Rue, 2026a) \doi{10.48550/arXiv.2603.25690}, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) \doi{10.1111/j.1467-9868.2008.00700.x}, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) \doi{10.48550/arXiv.2604.00671}. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) \doi{10.48550/arXiv.2609.00670}.
 }
 \seealso{
 Useful links:

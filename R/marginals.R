@@ -153,6 +153,24 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   out
 }
 
+# The mass each fitted marginal puts outside the window that was scanned to
+# fit it, mode +- 4 Laplace SDs: there the skew-normal is extrapolated, so
+# when this is large the outer quantiles are the ones to distrust. This is
+# INLAvaan's `scan_end_mass` (in its diagnostics()). A Gaussian marginal
+# gives 2 pnorm(-4) = 6.3e-5; larger values mean more of the marginal is
+# extrapolated. summary() flags it, and the fit warns, above 0.05.
+scan_end_mass <- function(sn, mode, sds) {
+  lo <- psnorm(mode - 4 * sds, sn[, "xi"], sn[, "omega"], sn[, "alpha"])
+  hi <- psnorm(
+    mode + 4 * sds,
+    sn[, "xi"],
+    sn[, "omega"],
+    sn[, "alpha"],
+    lower_tail = FALSE
+  )
+  unname(lo + hi)
+}
+
 # How far the straight scan path misses the conditional mode of the other
 # parameters. At scan points t (near +-2 posterior SDs), one Newton step in
 # the other parameters, with the Laplace curvature, would raise the
