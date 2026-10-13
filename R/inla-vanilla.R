@@ -611,7 +611,11 @@ check_grad_at_init <- function(grad, lp, init) {
       "{.arg grad} is not finite at {.arg init}.",
     )
   }
-  g_fd <- fd_grad(lp, init, h = 1e-5 * pmax(1, abs(init)))
+  # Steps from the local curvature scale, so the check holds for posterior
+  # SDs far from 1; a fixed step where the curvature search fails
+  scales <- fd_scales(lp, init, lp(init))
+  h <- ifelse(attr(scales, "ok"), 1e-3 * scales, 1e-5 * pmax(1, abs(init)))
+  g_fd <- fd_grad(lp, init, h = h)
   bad <- abs(g - g_fd) > 1e-3 * (1 + abs(g_fd))
   if (any(bad)) {
     worst <- which.max(abs(g - g_fd) / (1 + abs(g_fd)))
