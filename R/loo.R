@@ -77,7 +77,9 @@
 #'   terms, one per observation or independent unit, at the named parameter
 #'   vector `theta` (on the scale of `logpost`). Their sum plus the log-prior
 #'   is `logpost`. Names, if any, label the units.
-#' @param ... Further arguments passed to `loglik`, such as the data.
+#' @param ... Further arguments passed to `loglik`, such as the data. As in
+#'   [stats::optim()], a name that abbreviates `object` or `loglik` (such as
+#'   `l`) would be taken as that argument, so give such data a longer name.
 #'
 #' @returns `loo()` returns an object of class `inla_vanilla_loo`, which also
 #'   has class `loo`: a list with

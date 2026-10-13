@@ -18,7 +18,9 @@ waic(object, ...)
 \arguments{
 \item{object}{An object of class \code{inla_vanilla}.}
 
-\item{...}{Further arguments passed to \code{loglik}, such as the data.}
+\item{...}{Further arguments passed to \code{loglik}, such as the data. As in
+\code{\link[stats:optim]{stats::optim()}}, a name that abbreviates \code{object} or \code{loglik} (such as
+\code{l}) would be taken as that argument, so give such data a longer name.}
 
 \item{loglik}{A function \code{loglik(theta, ...)} returning the log-likelihood
 terms, one per observation or independent unit, at the named parameter
