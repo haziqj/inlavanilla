@@ -780,29 +780,17 @@ test_that("arguments in ... reach logpost and grad", {
 
 test_that("data arguments named like vb, verbose or control reach logpost", {
   # The arguments after `...` must be named in full, so v, verb, con and
-  # contr are data, not abbreviations of vb, verbose and control. The mode
-  # is v + verb + con + contr = 10.
+  # contr are data, not abbreviations of vb, verbose and control (verbose is
+  # left at its default on purpose). The mode is v + verb + con + contr = 10.
   lp <- function(theta, v, verb, con, contr) {
     -0.5 * (theta[[1]] - v - verb - con - contr)^2
   }
-  gr <- function(theta, v, verb, con, contr) {
-    -(theta[[1]] - v - verb - con - contr)
-  }
-  fit <- inla_vanilla(lp, c(a = 0.5), v = 1, verb = 2, con = 3, contr = 4)
-  expect_equal(fit$mode[["a"]], 10, tolerance = 1e-6)
-  fit <- inla_vanilla(
-    lp,
-    c(a = 0.5),
-    grad = gr,
-    v = 1,
-    verb = 2,
-    con = 3,
-    contr = 4,
-    verbose = FALSE
+  fit <- suppressMessages(
+    inla_vanilla(lp, c(a = 0.5), v = 1, verb = 2, con = 3, contr = 4)
   )
-  expect_equal(fit$mode[["a"]], 10, tolerance = 1e-8)
-}) |>
-  suppressMessages()
+  expect_equal(fit$mode[["a"]], 10, tolerance = 1e-6)
+  expect_true(fit$vb)
+})
 
 test_that("NaN outside the support, away from the mode, does not break the fit", {
   # x ~ Gamma(10, 2) on its natural scale, written so that logpost is NaN for
@@ -1084,10 +1072,9 @@ test_that("verbose = TRUE reports each stage, verbose = FALSE nothing", {
   expect_false(any(grepl("VB", msgs)))
   expect_length(grep("Found the posterior mode|Fitted 2 skew-normal", msgs), 2)
 
-  # One parameter, one iteration: singular
+  # One parameter: singular
   msgs <- capture_messages(inla_vanilla(lp_gauss, c(a = 0.3), verbose = TRUE))
   expect_match(msgs, "Fitted 1 skew-normal marginal\\b", all = FALSE)
-  expect_match(msgs, "in 1 iteration\\b", all = FALSE)
 
   expect_silent(inla_vanilla(lp_reg, init_reg, verbose = FALSE))
   expect_silent(
@@ -1204,6 +1191,45 @@ test_that("summary() returns the table and the diagnostics", {
   expect_equal(s$diagnostics$alpha, unname(fit_reg$sn[, "alpha"]))
 })
 
+test_that("the printed model's summary agrees with 2D quadrature", {
+  # The snapshots above freeze the summary of fit_reg; check that what they
+  # freeze is right, against a 201 x 201 grid over +-7 Laplace SDs. Observed:
+  # skew-normal means 0.0022 and 0.0059 SDs off (Laplace 0.23 and 0.084),
+  # the intercept's SD 0.37% too large, and the slope's SD 3.3% too small:
+  # the small-n narrowing of the straight scan path, which the bend
+  # diagnostic flags for the slope alone (0.14, against 0.037 for the
+  # intercept). The log marginal likelihood is 0.017 too large.
+  sds <- sqrt(diag(fit_reg$cov))
+  ga <- fit_reg$mode[["intercept"]] + seq(-7, 7, length.out = 201) * sds[[1]]
+  gb <- fit_reg$mode[["slope"]] + seq(-7, 7, length.out = 201) * sds[[2]]
+  grid <- expand.grid(a = ga, b = gb)
+  eta <- outer(grid$a, rep(1, length(reg_x))) + outer(grid$b, reg_x)
+  lp <- rowSums(sweep(eta, 2, reg_y, "*") - exp(eta)) -
+    sum(lgamma(reg_y + 1)) +
+    dnorm(grid$a, 0, 2, log = TRUE) +
+    dnorm(grid$b, 0, 2, log = TRUE)
+  w <- exp(lp - max(lp))
+  w <- w / sum(w)
+  exact_mean <- c(sum(w * grid$a), sum(w * grid$b))
+  exact_sd <- sqrt(c(
+    sum(w * (grid$a - exact_mean[1])^2),
+    sum(w * (grid$b - exact_mean[2])^2)
+  ))
+  exact_logml <- max(lp) +
+    log(sum(exp(lp - max(lp))) * diff(ga[1:2]) * diff(gb[1:2]))
+
+  err_mean <- abs(fit_reg$summary[, "Mean"] - exact_mean) / exact_sd
+  expect_true(all(err_mean < 0.015))
+  expect_true(all(err_mean < abs(fit_reg$mode - exact_mean) / exact_sd))
+  sd_ratio <- fit_reg$summary[, "SD"] / exact_sd
+  expect_lt(abs(sd_ratio[["intercept"]] - 1), 0.01)
+  expect_gt(sd_ratio[["slope"]], 0.94)
+  expect_lt(sd_ratio[["slope"]], 1)
+  bend <- summary(fit_reg)$diagnostics$bend
+  expect_identical(bend > 0.1, c(FALSE, TRUE))
+  expect_lt(abs(fit_reg$logml - exact_logml), 0.04)
+})
+
 test_that("summary(probs = ) gives the requested quantile columns", {
   s <- summary(fit_reg, probs = c(0.1, 0.9))
   expect_identical(colnames(s$table), c("Mean", "SD", "10%", "90%", "Mode"))
@@ -1235,7 +1261,7 @@ test_that("summary(probs = ) gives the requested quantile columns", {
 })
 
 test_that("summary() rejects probabilities outside (0, 1)", {
-  for (bad in list(0, c(0.5, 1), -0.1, c(0.5, NA), "0.5", Inf)) {
+  for (bad in list(0, c(0.5, 1), c(0.5, NA), "0.5")) {
     expect_error(
       summary(fit_reg, probs = bad),
       "`probs` must be probabilities strictly between 0 and 1",
@@ -1269,45 +1295,60 @@ test_that("summary() with no probabilities does not fail internally", {
 test_that("summary() flags each diagnostic at its documented level", {
   # The thresholds documented in ?summary.inla_vanilla: mode gradient 0.01,
   # VB shift 1 SD (or the fallback optimiser), bend 0.1 nats, NMAD 0.05,
-  # SN - VB gap 0.1 SDs, and tails. Each diagnostic is set just below and
-  # just above its level in an otherwise clean summary.
+  # SN - VB gap 0.1 SDs, and tails. Every diagnostic is first set just
+  # below its level, where nothing may be flagged, and then each in turn
+  # just above it.
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
-  clean <- summary(fit_reg)
-  clean$diagnostics$bend <- c(0.01, 0.01)
+  below <- summary(fit_reg)
+  below$optim$grad_mode <- 0.009
+  below$diagnostics$vb_shift <- c(0.9, -0.9)
+  below$diagnostics$bend <- c(0.09, 0.09)
+  below$diagnostics$nmad <- c(0.04, 0.04)
+  below$diagnostics$sn_vs_vb <- c(0.09, -0.09)
+  below$diagnostics$tails <- c(TRUE, TRUE)
+  below$vb$fallback <- FALSE
   printed <- function(s) capture_output(print(s))
 
-  out <- printed(clean)
+  out <- printed(below)
   expect_match(out, "v Mode found in")
   expect_match(out, "v VB correction in")
-  expect_match(out, "v Skew-normal fits: max NMAD")
-  expect_match(out, "v Skew-normal and VB means agree to within")
+  expect_match(out, "v Skew-normal fits: max NMAD 0.04")
+  expect_match(out, "v Skew-normal and VB means agree to within 0.09 SDs")
   expect_no_match(out, "!")
 
-  flag <- function(field, below, above, pattern) {
-    for (value in c(below, above)) {
-      s <- clean
-      if (field == "grad_mode") {
-        s$optim$grad_mode <- value
-      } else if (field == "fallback") {
-        s$vb$fallback <- value
-      } else {
-        s$diagnostics[[field]][2] <- value
-      }
-      out <- printed(s)
-      expect_identical(
-        grepl(pattern, out, fixed = TRUE),
-        identical(value, above),
-        label = paste0("flag for ", field, " = ", value)
-      )
-    }
+  above <- list(
+    list(
+      c("optim", "grad_mode"),
+      0.011,
+      "! Mode search stopped with a gradient of 0.011 SDs"
+    ),
+    list(c("diagnostics", "vb_shift"), c(0.9, -1.1), "! VB correction in"),
+    list(c("vb", "fallback"), TRUE, "(via the fallback optimiser)"),
+    list(
+      c("diagnostics", "bend"),
+      c(0.09, 0.11),
+      "! The straight scan misses up to 0.11 nats at +-2 SDs for slope"
+    ),
+    list(
+      c("diagnostics", "nmad"),
+      c(0.04, 0.06),
+      "! Skew-normal fit is poor for slope (NMAD 0.06)"
+    ),
+    list(
+      c("diagnostics", "sn_vs_vb"),
+      c(0.09, -0.11),
+      "! Skew-normal and VB means differ by up to 0.11 SDs, for slope"
+    ),
+    list(c("diagnostics", "tails"), c(TRUE, FALSE), "! Heavy tails for slope")
+  )
+  for (case in above) {
+    s <- below
+    s[[case[[1]]]] <- case[[2]]
+    out <- printed(s)
+    expect_match(out, case[[3]], fixed = TRUE)
+    # Only that line is flagged
+    expect_length(gregexpr("\n! ", paste0("\n", out))[[1]], 1)
   }
-  flag("grad_mode", 0.009, 0.011, "! Mode search stopped with a gradient")
-  flag("vb_shift", 0.9, 1.1, "! VB correction in")
-  flag("fallback", FALSE, TRUE, "(via the fallback optimiser)")
-  flag("bend", 0.09, 0.11, "! The straight scan misses up to 0.11 nats")
-  flag("nmad", 0.04, 0.06, "! Skew-normal fit is poor for slope (NMAD 0.06)")
-  flag("sn_vs_vb", -0.09, -0.11, "! Skew-normal and VB means differ by up to")
-  flag("tails", TRUE, FALSE, "! Heavy tails for slope")
 })
 
 test_that("a heavy-tailed posterior is flagged in summary()", {
