@@ -143,10 +143,10 @@ test_that("a heavy-tailed posterior warns once at the end of the fit", {
 test_that("summary() flags a scan-end mass above 0.05", {
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
   fit <- inla_vanilla(lp_reg, init_reg, silent = TRUE)
-  out <- capture_output(print(summary(fit)))
+  out <- capture_output(print(summary(fit)), width = 200)
   expect_no_match(out, "beyond the scanned window")
   fit$diagnostics$marginals$scan_end_mass[2] <- 0.2
-  out <- capture_output(print(summary(fit)))
+  out <- capture_output(print(summary(fit)), width = 200)
   expect_match(
     out,
     "The skew-normal for slope puts up to 0.2 of its mass beyond the scanned window"

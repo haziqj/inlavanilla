@@ -155,7 +155,8 @@
       
       v Mode found in <n> iteration(s) (gradient <g> SDs).
       v VB correction in <n> iteration(s): max shift 0.24 SDs.
-      ! The straight scan misses up to 0.14 nats at +-2 SDs for slope: the marginal may be too narrow.
+      ! The straight scan misses up to 0.14 nats at +-2 SDs for slope: the marginal
+        may be too narrow.
       v Skew-normal fits: max NMAD 0.015.
       v Skew-normal and VB means agree to within 0.0069 SDs.
       
@@ -181,7 +182,8 @@
       
       v Mode found in <n> iteration(s) (gradient <g> SDs).
       i No VB correction (vb = FALSE).
-      ! The straight scan misses up to 0.14 nats at +-2 SDs for slope: the marginal may be too narrow.
+      ! The straight scan misses up to 0.14 nats at +-2 SDs for slope: the marginal
+        may be too narrow.
       v Skew-normal fits: max NMAD 0.015.
       
       Log marginal likelihood: -16.277

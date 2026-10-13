@@ -238,7 +238,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_line()
 
   vb_term <- x$logml - x$logml_laplace
-  cli::cat_line(
+  cat_wrap(paste0(
     cli::style_bold("Log marginal likelihood: "),
     cli::col_cyan(format(round(x$logml, 3), nsmall = 3)),
     if (!is.null(x$vb)) {
@@ -250,13 +250,13 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         ")"
       )
     }
-  )
+  ))
   calls <- paste0(x$counts[["logpost"]], " logpost")
   if (x$has_grad) {
     calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
   }
   tm <- x$timing
-  cli::cat_line(
+  cat_wrap(
     cli::col_grey(
       calls,
       " calls in ",
@@ -431,16 +431,39 @@ cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
   pad <- function(s, w) {
     vapply(seq_along(s), function(i) formatC(s[i], width = w[i]), "")
   }
-  header <- paste0(
-    strrep(" ", rw),
-    paste0("  ", cli::style_bold(pad(heads, widths)), collapse = "")
-  )
-  cli::cat_line(header)
-  for (i in seq_len(nrow(cells))) {
+  # Split the columns into blocks that fit the console width, as print() does
+  # for a wide matrix
+  avail <- cli::console_width() - rw
+  block <- integer(length(widths))
+  b <- 1L
+  used <- 0
+  for (j in seq_along(widths)) {
+    if (used > 0 && used + widths[j] + 2 > avail) {
+      b <- b + 1L
+      used <- 0
+    }
+    block[j] <- b
+    used <- used + widths[j] + 2
+  }
+  for (b in unique(block)) {
+    cols <- block == b
+    if (b > 1) {
+      cli::cat_line()
+    }
     cli::cat_line(
-      cli::col_cyan(formatC(rn[i], width = -rw)),
-      paste0("  ", pad(cells[i, ], widths), collapse = "")
+      strrep(" ", rw),
+      paste0(
+        "  ",
+        cli::style_bold(pad(heads[cols], widths[cols])),
+        collapse = ""
+      )
     )
+    for (i in seq_len(nrow(cells))) {
+      cli::cat_line(
+        cli::col_cyan(formatC(rn[i], width = -rw)),
+        paste0("  ", pad(cells[i, cols], widths[cols]), collapse = "")
+      )
+    }
   }
 }
 
@@ -452,7 +475,13 @@ cat_status <- function(type, msg, .envir = parent.frame()) {
     fail = cli::col_red(cli::symbol$cross),
     info = cli::col_cyan(cli::symbol$info)
   )
-  cli::cat_line(sym, " ", cli::format_inline(msg, .envir = .envir))
+  cat_wrap(paste(sym, cli::format_inline(msg, .envir = .envir)), exdent = 2)
+}
+
+# Write a line wrapped to the console width, with continuation lines indented
+# by `exdent` spaces. cli::console_width() follows options(width) in knitr.
+cat_wrap <- function(text, exdent = 0) {
+  cli::cat_line(cli::ansi_strwrap(text, exdent = exdent))
 }
 
 # Whether a fit has Gaussian marginals (marginals = "gaussian").

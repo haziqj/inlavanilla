@@ -1621,6 +1621,23 @@ test_that("print(summary()) shows marginals, diagnostics and the evidence", {
   expect_identical(res$value, s)
 })
 
+test_that("print(summary()) fits the console width", {
+  testthat::local_reproducible_output(crayon = FALSE)
+  probs <- c(0.01, 0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975, 0.99)
+  s <- summary(fit_reg, probs = probs)
+  out <- strsplit(capture_output(print(s), width = 40), "\n")[[1]]
+  expect_lte(max(nchar(out)), 40)
+  # The table splits into column blocks, each with its own header
+  heads <- c("Mean", "SD", paste0(100 * probs, "%"), "Mode")
+  for (h in heads) {
+    expect_true(any(grepl(h, out, fixed = TRUE)), label = h)
+  }
+  expect_gt(sum(grepl("^intercept ", out)), 2)
+  # A status line wraps with a hanging indent
+  i <- grep("^! The straight scan", out)
+  expect_match(out[i + 1], "^  [^ ]")
+})
+
 test_that("printed output is plain ASCII unless the console shows UTF-8", {
   fit_text <- function() {
     c(
@@ -1813,7 +1830,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$optim$message <- "relative convergence (4)"
   below$vb$iterations <- 3L
   flagged <- function(s) {
-    lines <- strsplit(capture_output(print(s)), "\n")[[1]]
+    lines <- strsplit(capture_output(print(s), width = 200), "\n")[[1]]
     grep("^! ", lines, value = TRUE)
   }
 
