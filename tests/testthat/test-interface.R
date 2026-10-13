@@ -71,14 +71,11 @@ fit_reg_novb <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
 # Helpers ---------------------------------------------------------------------
 
 # Make printed output stable between runs and platforms. Timings (12ms, 1.2s)
-# vary, and the rule above print(fit) is padded with dashes to a fixed width,
-# so the number of dashes varies with the width of the time. The numbers of
-# calls and iterations follow the optimiser's path, which floating-point
-# differences between platforms could change, and the gradient at the mode is
-# at the level of finite-difference noise.
+# vary. The numbers of calls and iterations follow the optimiser's path, which
+# floating-point differences between platforms could change, and the gradient
+# at the mode is at the level of finite-difference noise.
 scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
-  x <- gsub("-+ <time> --", "-- <time> --", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
   x <- gsub("gradient [-+0-9.e]+ SDs", "gradient <g> SDs", x)
@@ -1013,7 +1010,7 @@ test_that("a one-parameter model works end to end", {
   expect_lt(abs(fit$logml - exact_logml), 0.008)
 
   out <- capture_output(print(fit))
-  expect_match(out, "1 parameter[^s]")
+  expect_match(out, "theta[1]", fixed = TRUE)
   out <- capture_output(print(summary(fit)))
   expect_match(out, "theta[1]", fixed = TRUE)
   # No scan-path bend with one parameter
@@ -1504,14 +1501,62 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   out <- capture_output(res <- withVisible(print(fit_reg)))
   expect_false(res$visible)
   expect_identical(res$value, fit_reg)
-  expect_match(out, "2 parameters")
-  expect_match(out, "VB-corrected")
+  # The rule names the approximation, not the time it took
+  expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ VB --\n")
+  expect_no_match(out, "[0-9](ms|s)\\b|parameters")
   # The log marginal likelihood shown is fit$logml, to 2 decimals
   expect_match(out, format(round(fit_reg$logml, 2), nsmall = 2), fixed = TRUE)
 
   out <- capture_output(print(fit_reg_novb))
-  expect_no_match(out, "VB-corrected")
-  expect_match(out, "skew-normal marginals")
+  expect_match(out, "^-- INLAvanilla -+ Skew-normal --\n")
+  expect_match(
+    capture_output(print(summary(fit_reg_novb))),
+    "-- Skew-normal --"
+  )
+})
+
+test_that("print() points to the fit's warnings and to flagged checks", {
+  testthat::local_reproducible_output(width = 80, crayon = FALSE)
+  # A Gaussian posterior: no warnings and no flags, so the output ends with
+  # the log marginal likelihood
+  fit_ok <- inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), silent = TRUE)
+  out <- capture_output(print(fit_ok))
+  expect_match(out, "Log marginal likelihood: [-0-9.]+$")
+
+  fit <- fit_ok
+  fit$warnings <- c("first", "second")
+  out <- capture_output(print(fit))
+  expect_match(
+    out,
+    "! 2 warnings during the fit, kept in `$warnings`.",
+    fixed = TRUE
+  )
+  expect_no_match(out, "flagged")
+
+  # One line for any number of flagged checks, counted as summary() flags
+  # them
+  fit <- fit_ok
+  fit$diagnostics$marginals$bend[1] <- 0.5
+  out <- capture_output(print(fit))
+  expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
+  expect_no_match(out, "warning")
+  fit$diagnostics$marginals$nmad[2] <- 0.07
+  fit$diagnostics$marginals$tails[2] <- FALSE
+  out <- capture_output(print(fit))
+  expect_match(out, "! 3 checks flagged by `summary()`.", fixed = TRUE)
+  lines <- strsplit(capture_output(print(summary(fit))), "\n")[[1]]
+  expect_length(grep("^! ", lines), 3)
+
+  # The small Poisson regression: summary() flags the bend of the slope
+  out <- capture_output(print(fit_reg))
+  expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
+
+  # A heavy-tailed posterior: its warning and its flags
+  lp <- function(theta) dt(theta[[1]], 1, log = TRUE)
+  fit <- inla_vanilla(lp, c(theta = 0.1), silent = TRUE)
+  out <- capture_output(print(fit))
+  expect_match(out, "! 1 warning during the fit", fixed = TRUE)
+  expect_match(out, "checks flagged by `summary()`", fixed = TRUE)
 })
 
 test_that("print() rounds each row to three significant figures of its SD", {
@@ -1597,14 +1642,14 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     testthat::local_reproducible_output(unicode = FALSE)
     out <- fit_text()
     expect_false(any(grepl("[^\001-\177]", out, useBytes = TRUE)))
-    expect_match(out, "2 parameters, skew-normal marginals", all = FALSE)
+    expect_match(out, "-- INLAvanilla -+ Skew-normal \\+ VB --", all = FALSE)
     expect_match(out, "max shift [0-9.e-]+ SD", all = FALSE)
     expect_match(out, "Largest shift [0-9.e-]+ SD", all = FALSE)
   })
   local({
     testthat::local_reproducible_output(unicode = TRUE)
     out <- fit_text()
-    expect_match(out, "2 parameters \u00b7 skew-normal", all = FALSE)
+    expect_match(out, "\u2500 INLAvanilla \u2500+ Skew-normal", all = FALSE)
     expect_match(out, "max shift [0-9.e-]+\u03c3", all = FALSE)
     expect_match(out, "Largest shift [0-9.e-]+\u03c3", all = FALSE)
   })

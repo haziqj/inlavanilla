@@ -1,19 +1,9 @@
 #' @export
 print.inla_vanilla <- function(x, digits = 3, ...) {
-  m <- nrow(x$sn)
   cli::cat_rule(
     left = cli::style_bold("INLAvanilla"),
-    right = cli::col_grey(format_time(x$timing[["total"]])),
+    right = cli::col_grey(method_label(is_gaussian(x), isTRUE(x$vb))),
     line_col = "cyan"
-  )
-  cli::cat_line(
-    cli::col_grey(
-      m,
-      if (m == 1L) " parameter" else " parameters",
-      sep_dot(),
-      if (is_gaussian(x)) "Gaussian marginals" else "skew-normal marginals",
-      if (isTRUE(x$vb)) paste0(sep_dot(), "VB-corrected") else ""
-    )
   )
   cli::cat_line()
   cat_table(x$summary, digits = digits, scale = x$summary[, "SD"])
@@ -22,6 +12,23 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
     cli::style_bold("Log marginal likelihood: "),
     cli::col_cyan(format(round(x$logml, 2), nsmall = 2))
   )
+  # Whether to trust the table: shown only when something is off
+  n_warnings <- length(x$warnings)
+  if (n_warnings > 0L) {
+    cat_status(
+      "warn",
+      "{n_warnings} warning{?s} during the fit, kept in {.code $warnings}."
+    )
+  }
+  n_flagged <- sum(check_flags(
+    x$diagnostics$marginals,
+    x$diagnostics$optim,
+    x$diagnostics$vb,
+    is_gaussian(x)
+  ))
+  if (n_flagged > 0L) {
+    cat_status("warn", "{n_flagged} check{?s} flagged by {.fn summary}.")
+  }
   invisible(x)
 }
 
@@ -73,8 +80,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
 #' levels match INLAvaan's fit-time warning; the flags here are more
 #' sensitive. With `silent = TRUE` the warning is only recorded in
-#' `fit$warnings`. `vignette("diagnostics", package = "inlavanilla")`
-#' explains every check with examples.
+#' `fit$warnings`. Printing the fit ends with a line for its warnings and one
+#' counting the checks flagged here, each shown only when there are any.
+#' `vignette("diagnostics", package = "inlavanilla")` explains every check
+#' with examples.
 #'
 #' With `vb = FALSE` there is no VB mean, and the VB columns are left out.
 #' With `marginals = "gaussian"` there are no scans, so only the VB shift is
@@ -127,6 +136,7 @@ summary.inla_vanilla <- function(
 print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
     left = cli::style_bold("INLAvanilla summary"),
+    right = cli::col_grey(method_label(is_gaussian(x), !is.null(x$vb))),
     line_col = "cyan"
   )
   cli::cat_line()
@@ -149,7 +159,8 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   }
 
   opt <- x$optim
-  if (opt$grad_mode < 1e-2) {
+  flags <- check_flags(diag, opt, x$vb, gaussian)
+  if (!flags[["mode"]]) {
     cat_status(
       "ok",
       "Mode found in {opt$iterations} iteration{?s} (gradient {fmt_num(opt$grad_mode)} SDs)."
@@ -165,7 +176,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     max_shift <- max(abs(diag$vb_shift))
     how <- if (x$vb$fallback) " (via the fallback optimiser)" else ""
     cat_status(
-      if (x$vb$fallback || max_shift > 1) "warn" else "ok",
+      if (flags[["vb"]]) "warn" else "ok",
       "VB correction in {x$vb$iterations} iteration{?s}{how}: max shift {fmt_num(max_shift)} SDs."
     )
   } else {
@@ -179,21 +190,21 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     )
   }
   sem <- diag$scan_end_mass
-  if (!gaussian && !is.null(sem) && any(sem > 0.05, na.rm = TRUE)) {
+  if (flags[["scan_end_mass"]]) {
     beyond <- rownames(diag)[!is.na(sem) & sem > 0.05]
     cat_status(
       "warn",
       "The skew-normal for {.field {beyond}} puts up to {fmt_num(max(sem, na.rm = TRUE))} of its mass beyond the scanned window: its outer quantiles are extrapolated."
     )
   }
-  if (!gaussian && !all(diag$tails)) {
+  if (flags[["tails"]]) {
     cat_status(
       "warn",
       "Heavy tails for {.field {rownames(diag)[!diag$tails]}}: the density is still over 5% of its peak 4 Laplace SDs out, and the skew-normal extrapolates beyond."
     )
   }
   bent <- !gaussian & diag$bend > 0.1
-  if (any(bent)) {
+  if (flags[["bend"]]) {
     cat_status(
       "warn",
       "The straight scan misses up to {fmt_num(max(diag$bend))} nats at +-2 SDs for {.field {rownames(diag)[bent]}}: the marginal may be too narrow."
@@ -203,7 +214,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   max_gap <- max(abs(diag$sn_vs_vb))
   if (gaussian) {
     # nothing was scanned or fitted
-  } else if (max_nmad > 0.05) {
+  } else if (flags[["nmad"]]) {
     cat_status(
       "warn",
       "Skew-normal fit is poor for {.field {rownames(diag)[which.max(diag$nmad)]}} (NMAD {fmt_num(max_nmad)})."
@@ -212,7 +223,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status("ok", "Skew-normal fits: max NMAD {fmt_num(max_nmad)}.")
   }
   if (!is.null(x$vb) && !gaussian) {
-    if (max_gap > 0.1) {
+    if (flags[["sn_vs_vb"]]) {
       cat_status(
         "warn",
         "Skew-normal and VB means differ by up to {fmt_num(max_gap)} SDs, for {.field {rownames(diag)[which.max(abs(diag$sn_vs_vb))]}}."
@@ -449,12 +460,34 @@ is_gaussian <- function(x) {
   identical(x$marginals, "gaussian")
 }
 
-# Separator and the posterior-SD unit, in plain ASCII where the output cannot
-# show UTF-8.
-sep_dot <- function() {
-  if (cli::is_utf8_output()) " \u00b7 " else ", "
+# The approximation, as the headers of print() and summary() name it: the
+# marginals, and "+ VB" when the VB correction ran. Gaussian marginals are
+# those of the Laplace approximation (centred at the VB mean with VB).
+method_label <- function(gaussian, vb) {
+  paste0(if (gaussian) "Laplace" else "Skew-normal", if (vb) " + VB")
 }
 
+# The checks that summary() flags, each TRUE when flagged: the mode, the VB
+# correction, and, for skew-normal marginals, the scan-end mass, the tails,
+# the scan-path bend, the NMAD and the SN-VB gap. `vb` is the VB diagnostics,
+# NULL when no VB correction ran. print() counts them. A missing value is
+# not a flag.
+check_flags <- function(diag, optim, vb, gaussian) {
+  sn <- !gaussian
+  sem <- diag$scan_end_mass
+  flags <- list(
+    mode = optim$grad_mode >= 1e-2,
+    vb = !is.null(vb) && (vb$fallback || max(abs(diag$vb_shift)) > 1),
+    scan_end_mass = sn && !is.null(sem) && any(sem > 0.05, na.rm = TRUE),
+    tails = sn && !all(diag$tails),
+    bend = sn && any(diag$bend > 0.1),
+    nmad = sn && max(diag$nmad) > 0.05,
+    sn_vs_vb = sn && !is.null(vb) && max(abs(diag$sn_vs_vb)) > 0.1
+  )
+  vapply(flags, isTRUE, logical(1))
+}
+
+# The posterior-SD unit, in plain ASCII where the output cannot show UTF-8.
 sd_unit <- function() {
   if (cli::is_utf8_output()) "\u03c3" else " SD"
 }
