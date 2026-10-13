@@ -11,7 +11,9 @@
   pointwise log-likelihood `loglik(theta, ...)`, by the deterministic
   second-order Taylor approximation of Alhyari et al. (2026): no refits and no
   draws. The results work with `loo::loo_compare()`. A new vignette,
-  "Model comparison with LOO and WAIC", shows how.
+  "Model comparison with LOO and WAIC", shows how. Both follow the fit's
+  `silent`, for the warnings of `loglik` too, and pass any other object on to
+  the loo package's functions of the same name.
 * The VB correction (`vb`) and the skew-normal marginals (`marginals =
   "skewnormal"` or `"gaussian"`) can each be switched off, down to the
   Laplace approximation alone.
@@ -37,3 +39,6 @@
   scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback, at
   INLAvaan's levels. Healthy fits stay silent. A new vignette,
   "Diagnostics", explains every check.
+* The check of a user `grad` also compares it with finite differences one
+  curvature scale from `init`, so a gradient that is wrong by a constant
+  factor is caught even when `init` is at the mode.
