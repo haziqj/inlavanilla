@@ -147,7 +147,12 @@ parameter's spread depends strongly on another, poorly determined
 parameter, its marginal comes out too narrow, by a factor that vanishes as
 O(1/n). Examples are a regression coefficient or a mean when the noise SD
 is uncertain. For a normal mean with unknown variance the SD is about 11\\%
-too small at n = 12, 3\\% at n = 50, and under 1\\% at n = 200.
+too small at n = 12, 3\\% at n = 50, and under 1\\% at n = 200. In a
+structural equation model with 39 parameters and n = 75, the marginal of a
+small, poorly determined disturbance variance (on the log scale) came out
+about 25\\% too narrow. The \code{bend} diagnostic of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}
+flags parameters at risk, but its size does not rank how much too narrow
+they are.
 }
 
 \section{Gradients}{
