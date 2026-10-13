@@ -56,6 +56,34 @@ owen_t <- function(h, a) {
   sgn * ifelse(big, 0.5 * qh + 0.5 * qah - qh * qah - t_red, t_red)
 }
 
+# Gauss-Laguerre nodes and weights for int_0^Inf e^-u f(u) du (Golub-Welsch),
+# for the light tail below.
+gauss_laguerre <- function(n) {
+  i <- seq_len(n - 1)
+  J <- diag(2 * seq_len(n) - 1)
+  J[cbind(i, i + 1)] <- i
+  J[cbind(i + 1, i)] <- i
+  e <- eigen(J, symmetric = TRUE)
+  list(x = e$values, w = e$vectors[1, ]^2)
+}
+gl_laguerre <- gauss_laguerre(40L)
+
+# Log of the light tail of SN(0, 1, a), a > 0: log F(-h) for h > 0. Since
+# T(h, Inf) = Q(h) / 2, F(-h) = Q(h) - 2 T(h, a) is the integral
+#   (1 / pi) int_a^Inf exp(-h^2 (1 + x^2) / 2) / (1 + x^2) dx,
+# which psnorm() can only reach as a difference of nearly equal numbers. With
+# x = a + u / (h^2 a) it is exp(-h^2 (1 + a^2) / 2) / (pi h^2 a) times
+#   int_0^Inf e^-u exp(-u^2 / (2 h^2 a^2)) / (1 + (a + u / (h^2 a))^2) du,
+# a smooth integrand for Gauss-Laguerre once h a is a few units or more.
+log_sn_light_tail <- function(h, a) {
+  ha <- h * a
+  # One row per point: exp(-u^2 / (2 h^2 a^2)) / (1 + x^2), x = a + u / (h^2 a)
+  e <- exp(-0.5 * outer(1 / ha^2, gl_laguerre$x^2))
+  x <- a + outer(1 / (h * ha), gl_laguerre$x)
+  g <- e / (1 + x^2)
+  -h^2 * (1 + a^2) / 2 - log(pi * h * ha) + log(as.numeric(g %*% gl_laguerre$w))
+}
+
 # Skew-normal distribution function F(q) = Phi(z) - 2 T(z, alpha), with
 # z = (q - xi) / omega. The upper tail is computed by reflection,
 # 1 - F(z; alpha) = F(-z; -alpha), so a small tail probability never comes
@@ -121,24 +149,46 @@ qsn_std_logtail <- function(logp, alpha, upper) {
   upper <- rep_len(upper, n)
   p <- exp(logp)
   q <- .qsn_std_fast(ifelse(upper, 1 - p, p), alpha)
-  q[!is.finite(q)] <- ifelse(upper, 8, -8)[!is.finite(q)]
+  # qsnorm_fast() breaks down below p of about 1e-12 (0 or +-Inf). Start
+  # there from the Gaussian tail behaviour instead: on the heavy side the
+  # density is about 2 phi(q), on the light side it decays like
+  # phi(q sqrt(1 + alpha^2)).
+  far <- logp < -27 | !is.finite(q)
+  if (any(far)) {
+    heavy <- (alpha >= 0) == upper
+    r <- ifelse(
+      heavy,
+      sqrt(pmax(-2 * (logp - log(2)), 0)),
+      sqrt(pmax(-2 * logp, 0) / (1 + alpha^2))
+    )
+    q[far] <- ifelse(upper, r, -r)[far]
+  }
   active <- seq_len(n)
   for (it in 1:30) {
     qi <- q[active]
     up <- upper[active]
-    tail <- numeric(length(active))
+    ai <- alpha[active]
+    log_tail <- numeric(length(active))
     if (any(!up)) {
-      tail[!up] <- psnorm(qi[!up], 0, 1, alpha[active][!up])
+      log_tail[!up] <- log(psnorm(qi[!up], 0, 1, ai[!up]))
     }
     if (any(up)) {
-      tail[up] <- psnorm(qi[up], 0, 1, alpha[active][up], lower_tail = FALSE)
+      log_tail[up] <- log(psnorm(qi[up], 0, 1, ai[up], lower_tail = FALSE))
     }
-    f <- dsnorm(qi, 0, 1, alpha[active])
+    # Deep in the light tail, compute the tail directly (no cancellation)
+    h <- ifelse(up, qi, -qi)
+    a_light <- ifelse(up, -ai, ai)
+    light <- h > 0 & a_light > 0 & h * a_light > 4
+    if (any(light)) {
+      log_tail[light] <- log_sn_light_tail(h[light], a_light[light])
+    }
+    f <- dsnorm(qi, 0, 1, ai)
     # d/dq log F = f / F and d/dq log(1 - F) = -f / (1 - F)
-    step <- (log(tail) - logp[active]) * tail / ifelse(up, -f, f)
-    # A tail that underflows means q is far out: step back towards the centre
+    step <- (log_tail - logp[active]) * exp(log_tail) / ifelse(up, -f, f)
+    # A tail that underflows means q is far out: step back towards the
+    # centre (q - step moves up for a lower tail, down for an upper one)
     bad <- !is.finite(step)
-    step[bad] <- ifelse(up[bad], -1, 1)
+    step[bad] <- ifelse(up[bad], 1, -1)
     step <- pmax(pmin(step, 1), -1)
     q[active] <- qi - step
     active <- active[abs(step) > 1e-10 * (1 + abs(qi))]
@@ -183,16 +233,19 @@ sn_moments <- function(xi, omega, alpha) {
 
 # Mode of SN(xi, omega, alpha). It has no closed form, but it lies between xi
 # and the mean, so a bracket one SD wider on each side always contains it.
+# The search runs on the standardised scale: optimize()'s tolerance includes
+# a term relative to |x|, which would swamp the scale when |xi| >> omega.
 sn_mode <- function(xi, omega, alpha) {
-  mom <- sn_moments(xi, omega, alpha)
-  lo <- min(xi, mom$mean) - mom$sd
-  hi <- max(xi, mom$mean) + mom$sd
-  stats::optimize(
-    function(x) dsnorm(x, xi, omega, alpha, log = TRUE),
+  mom <- sn_moments(0, 1, alpha)
+  lo <- min(0, mom$mean) - mom$sd
+  hi <- max(0, mom$mean) + mom$sd
+  z <- stats::optimize(
+    function(x) dsnorm(x, 0, 1, alpha, log = TRUE),
     interval = c(lo, hi),
     maximum = TRUE,
-    tol = 1e-8 * (hi - lo)
+    tol = 1e-10
   )$maximum
+  xi + omega * z
 }
 
 mills_ratio <- function(u) {
