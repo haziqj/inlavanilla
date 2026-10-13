@@ -60,9 +60,8 @@ the response rate $p$, the posterior is $\text{Beta}(4, 18)$: skewed,
 and bounded at zero.
 
 `inla_vanilla()` works on an unconstrained scale, so we write the
-log-posterior in terms of $\vartheta = \operatorname{logit} p$. The
-prior is stated for $p$, so it carries the Jacobian
-$dp / d\vartheta = p(1 - p)$:
+log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
+stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$:
 
 ``` r
 library(inlavanilla)
@@ -75,11 +74,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [27ms]
-#> ✔ VB mean correction, max shift 0.17σ [34ms]
-#> ✔ Fitted 1 skew-normal marginal [75ms]
+#> ✔ Found the posterior mode in 6 iterations [22ms]
+#> ✔ VB mean correction, max shift 0.17σ [23ms]
+#> ✔ Fitted 1 skew-normal marginal [57ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 108ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode

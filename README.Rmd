@@ -70,7 +70,7 @@ response rate $p$, the posterior is $\text{Beta}(4, 18)$: skewed, and bounded
 at zero.
 
 `inla_vanilla()` works on an unconstrained scale, so we write the
-log-posterior in terms of $\vartheta = \operatorname{logit} p$. The prior is
+log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
 stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$:
 
 ```{r example}
