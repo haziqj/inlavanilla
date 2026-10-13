@@ -127,21 +127,21 @@
     Code
       print(fit_reg)
     Output
-      -- INLAvanilla -- <time> --
-      2 parameters, skew-normal marginals, VB-corrected
+      -- INLAvanilla --------------------------------------------- Skew-normal + VB --
       
                   Mean     SD    2.5%    50%  97.5%   Mode
       intercept  0.582  0.286  -0.025  0.598  1.098  0.632
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Log marginal likelihood: -16.25
+      ! 1 check flagged by `summary()`.
 
 # print(summary()) shows marginals, diagnostics and the evidence
 
     Code
       print(summary(fit_reg))
     Output
-      -- INLAvanilla summary ---------------------------------------------------------
+      -- INLAvanilla summary ------------------------------------- Skew-normal + VB --
       
       Posterior marginals
                   Mean     SD    2.5%    25%    50%    75%  97.5%   Mode
@@ -167,7 +167,7 @@
     Code
       print(summary(fit_reg_novb))
     Output
-      -- INLAvanilla summary ---------------------------------------------------------
+      -- INLAvanilla summary ------------------------------------------ Skew-normal --
       
       Posterior marginals
                   Mean     SD    2.5%    25%    50%    75%  97.5%   Mode

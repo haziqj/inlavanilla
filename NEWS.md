@@ -42,3 +42,8 @@
 * The check of a user `grad` also compares it with finite differences one
   curvature scale from `init`, so a gradient that is wrong by a constant
   factor is caught even when `init` is at the mode.
+* `print()` names the approximation on its header rule ("Skew-normal + VB",
+  "Skew-normal", "Laplace + VB" or "Laplace"), as `summary()` now does,
+  instead of the run time, which `summary()` still reports. It ends with a
+  line when the fit raised warnings and one when `summary()` flags any check,
+  so a fit run with `silent = TRUE` does not look clean when it is not.
