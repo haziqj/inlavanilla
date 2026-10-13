@@ -410,8 +410,9 @@ expect_exact_gaussian <- function(fit, model, mode_tol, laplace_tol = 1e-10) {
   diag <- summary(fit)$diagnostics
 
   # Laplace: observed mode error 6e-7 SDs with finite differences and 1e-15
-  # with the gradient; curvature relative error 3e-11; log marginal likelihood
-  # 1e-11.
+  # with the gradient; curvature relative error 4e-12 with the gradient and,
+  # with finite differences, 4e-11 on x86-64 and 1e-10 on macOS ARM64, whose
+  # rounding differs; log marginal likelihood 2e-11.
   expect_lt(abs(err$mode_laplace), mode_tol)
   expect_lt(abs(err$curvature), laplace_tol)
   expect_lt(abs(err$logml_laplace), laplace_tol)
@@ -444,7 +445,7 @@ expect_exact_gaussian <- function(fit, model, mode_tol, laplace_tol = 1e-10) {
 
 test_that("a Gaussian posterior is recovered exactly with finite differences", {
   fit <- inla_vanilla(normal$logpost, init = c(mu = 0), silent = TRUE)
-  expect_exact_gaussian(fit, normal, mode_tol = 2e-6)
+  expect_exact_gaussian(fit, normal, mode_tol = 2e-6, laplace_tol = 1e-9)
 })
 
 test_that("a Gaussian posterior is recovered exactly with an analytic gradient", {

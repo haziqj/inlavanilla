@@ -405,9 +405,9 @@ alpha_wide <- c(-20, -5, -2, -1.5, -0.5, 0.3, 0.5, 1.5, 2, 5, 20)
 test_that("qsnorm_fast and qsnorm are exact where the quantile has a closed form", {
   # alpha = 0 is N(xi, omega^2); alpha = 1 has F = Phi^2 and alpha = -1 has
   # 1 - F = Phi(-z)^2. Each reference is written in its well-conditioned
-  # tail. Observed, in units of omega: qsnorm <= 2.2e-14; qsnorm_fast
-  # <= 1.7e-11, since it takes qnorm(sqrt(p)), which is ill-conditioned near
-  # p = 1.
+  # tail. Observed, in units of omega: qsnorm <= 2.2e-14 on x86-64 and
+  # 8e-14 on macOS ARM64, whose rounding differs; qsnorm_fast <= 1.7e-11,
+  # since it takes qnorm(sqrt(p)), which is ill-conditioned near p = 1.
   xi <- 0.4
   omega <- 1.7
   ref_pos <- xi +
@@ -424,7 +424,7 @@ test_that("qsnorm_fast and qsnorm are exact where the quantile has a closed form
         stats::qnorm(p_wide / (1 + sqrt(1 - p_wide)), lower.tail = FALSE),
         stats::qnorm(sqrt(1 - p_wide))
       )
-  for (case in list(list(qsnorm_fast, 5e-11), list(qsnorm, 6e-14))) {
+  for (case in list(list(qsnorm_fast, 5e-11), list(qsnorm, 2e-13))) {
     qfun <- case[[1]]
     tol <- case[[2]]
     expect_equal(
