@@ -126,9 +126,11 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
 # and 1, a few calls per coordinate. A fixed step fails at the extremes: for
 # a posterior SD of 1e4 the second difference at h = 1e-4 drowns in rounding
 # error, and for an SD of 1e-6 it measures far beyond the quadratic region.
+# The attribute `ok` marks the coordinates where the search succeeded.
 fd_scales <- function(fn, x, f0) {
   m <- length(x)
   s <- numeric(m)
+  ok <- logical(m)
   for (i in seq_len(m)) {
     h <- 1e-4 * max(1, abs(x[[i]]))
     drop <- NA_real_
@@ -145,9 +147,12 @@ fd_scales <- function(fn, x, f0) {
         break
       }
     }
+    ok[i] <- is.finite(drop) && drop >= 1e-3 && drop <= 1
     s[i] <- if (is.finite(drop) && drop > 0) h / sqrt(2 * drop) else h
   }
-  s
+  # `ok` is FALSE where no step gave a drop in the window, such as where the
+  # log-posterior is not locally concave
+  structure(s, ok = ok)
 }
 
 chol_or_null <- function(H) {
