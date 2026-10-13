@@ -1660,12 +1660,11 @@ test_that("summary() returns the table and the diagnostics", {
   expect_s3_class(s, "summary.inla_vanilla")
   expect_identical(
     colnames(s$table),
-    c("Mean", "SD", "2.5%", "25%", "50%", "75%", "97.5%", "Mode")
+    c("Mean", "SD", "2.5%", "50%", "97.5%", "Mode")
   )
   expect_identical(rownames(s$table), names(init_reg))
-  # The default columns agree with fit$summary
-  shared <- colnames(fit_reg$summary)
-  expect_equal(s$table[, shared], fit_reg$summary)
+  # The default table is fit$summary
+  expect_equal(s$table, fit_reg$summary)
   expect_s3_class(s$diagnostics, "data.frame")
   expect_identical(
     names(s$diagnostics),

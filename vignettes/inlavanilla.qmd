@@ -110,7 +110,7 @@ full diagnostic of each step, and `silent = TRUE` prints nothing at all, as
 in a simulation; the warnings it would have shown are kept in `fit$warnings`.
 The fits below use `silent = TRUE`.
 
-`summary()` adds the quartiles and diagnostics for each stage:
+`summary()` adds diagnostics for each stage:
 
 ```{r}
 #| label: summary
