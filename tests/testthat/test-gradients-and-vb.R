@@ -842,6 +842,11 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D poster
   fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, verbose = FALSE)
   sds <- sqrt(diag(fit$cov))
   expect_lt(stats::cov2cor(fit$cov)[1, 2], -0.5) # correlated parameters
+  # The reference holds q's covariance at fit$cov, so check that against the
+  # inverse of the analytic Hessian at the mode first (observed 1.6e-10
+  # relative to the SDs): the reference must not inherit an error from it.
+  sigma_exact <- solve(-mod$hessian(fit$mode))
+  expect_lt(max(abs(fit$cov - sigma_exact) / outer(sds, sds)), 5e-10)
   ref <- vb_reference(mod$grad, fit$mode, fit$cov)
 
   vb_err <- max_sd_diff(fit$mean_vb, ref, sds)
@@ -851,6 +856,82 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D poster
 
   fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
   expect_lt(max_sd_diff(fit_fd$mean_vb, ref, sds), 7.5e-4) # observed 2.7e-4
+})
+
+# inla_vanilla() with only the gradient check at init silenced. That check
+# steps 1e-5 whatever the scale of the parameter, so it warns about a correct
+# gradient when the posterior SDs are small (see the test after the next
+# one). Every other warning still gets through.
+fit_past_init_check <- function(logpost, init, grad) {
+  withCallingHandlers(
+    inla_vanilla(logpost, init, grad = grad, verbose = FALSE),
+    inlavanilla_warning = function(w) {
+      if (grepl("does not match finite differences", conditionMessage(w))) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+}
+
+test_that("the VB shift in posterior SDs does not depend on the scale of the parameters", {
+  # theta = scale * beta for the 2D Poisson regression, so the posterior SDs
+  # run from 2e-5 to 3e3. The fixed-point step, its convergence test and the
+  # fallback trigger are all measured in posterior SDs, and the
+  # finite-difference steps scale with them, so the shift in SDs should not
+  # change and the iteration should not fall back.
+  mod <- poisson_regression_model(2)
+  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, verbose = FALSE)
+  fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
+  shift_sd <- function(f) (f$mean_vb - f$mode) / sqrt(diag(f$cov))
+  ref_sd <- (vb_reference(mod$grad, fit$mode, fit$cov) - fit$mode) /
+    sqrt(diag(fit$cov))
+
+  for (scale in list(c(1e-4, 1e-4), c(1e4, 1e4), c(1e-4, 1e4))) {
+    lp_scaled <- function(theta) mod$logpost(theta / scale)
+    gr_scaled <- function(theta) mod$grad(theta / scale) / scale
+    for (gr in list(gr_scaled, NULL)) {
+      fit_scaled <- fit_past_init_check(lp_scaled, mod$init, grad = gr)
+      expect_false(fit_scaled$diagnostics$vb$fallback)
+      # Against the exact VB shift, as for the unscaled model (observed
+      # 1.6e-4 to 2.7e-4 SDs)
+      expect_lt(max(abs(shift_sd(fit_scaled) - ref_sd)), 7.5e-4)
+      if (scale[[1]] == scale[[2]]) {
+        # A common scale changes nothing but rounding: observed 7.3e-7 SDs
+        # with the gradient, 1.6e-7 without
+        base <- if (is.null(gr)) fit_fd else fit
+        expect_lt(max(abs(shift_sd(fit_scaled) - shift_sd(base))), 2e-6)
+        expect_identical(
+          fit_scaled$diagnostics$vb$iterations,
+          base$diagnostics$vb$iterations
+        )
+      }
+      # With scales 1e8 apart the shift moves by 9.6e-5 SDs and takes one
+      # more iteration: the Anderson secant uses inner products of the raw
+      # steps, so the path, and where it stops within vb_tol = 1e-3 SDs,
+      # depends on the relative scales. Hence no tighter check there.
+    }
+  }
+})
+
+test_that("a correct gradient passes the check at init when the posterior SD is small", {
+  # The Poisson-gamma posterior on theta = 1e-4 log(lambda), whose posterior
+  # SD is 5.3e-5, with its exact gradient. The check at init takes central
+  # differences with a step of 1e-5 (0.19 posterior SDs here) whatever the
+  # scale, and their truncation error, 1.3%, exceeds its threshold of 0.1%,
+  # so it warns that a correct gradient is wrong ("grad gives -5000, finite
+  # differences give -5067"). The Laplace stage handles this scale (see the
+  # test above); the check should too.
+  mod <- poisson_gamma_model(y = c(2, 0, 1), a = 0.5, b = 1)
+  lp_scaled <- function(theta) mod$logpost(theta / 1e-4)
+  gr_scaled <- function(theta) mod$grad(theta / 1e-4) / 1e-4
+  expect_equal(
+    gr_scaled(c(t = 2e-5)),
+    (lp_scaled(c(t = 2e-5 + 1e-9)) - lp_scaled(c(t = 2e-5 - 1e-9))) / 2e-9,
+    tolerance = 1e-6
+  )
+  expect_no_warning(
+    inla_vanilla(lp_scaled, c(t = 0), grad = gr_scaled, verbose = FALSE)
+  )
 })
 
 test_that("the degree-5 rule gives the exact VB shift for a degree-6 polynomial log-posterior", {
@@ -977,7 +1058,11 @@ test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
   expect_identical(fit_vb$summary, fit_lap$summary)
 })
 
-test_that("the VB term of the log marginal likelihood is never negative", {
+test_that("the VB term of the log marginal likelihood is positive and uses the exact Hessian", {
+  # The term is 0.5 shift' H shift, a KL divergence, so it is never negative.
+  # Here H is the analytic Hessian at the mode rather than the package's
+  # finite differences, on models that take the fixed point and the fallback
+  # (the Poisson-gamma), with and without a gradient.
   models <- list(
     normal_model(),
     poisson_regression_model(2),
@@ -985,8 +1070,20 @@ test_that("the VB term of the log marginal likelihood is never negative", {
     poisson_gamma_model(y = 0, a = 0.5, b = 1)
   )
   for (mod in models) {
-    fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, verbose = FALSE)
-    expect_gte(fit$logml - fit$logml_laplace, 0)
+    for (gr in list(mod$grad, NULL)) {
+      fit <- inla_vanilla(mod$logpost, mod$init, grad = gr, verbose = FALSE)
+      shift <- fit$mean_vb - fit$mode
+      kld <- 0.5 * drop(shift %*% -mod$hessian(fit$mode) %*% shift)
+      expect_gt(kld, 0.03) # observed 0.033 to 0.23
+      expect_gt(fit$logml - fit$logml_laplace, 0)
+      # Observed relative errors up to 3.3e-9 with the gradient and 1.7e-5
+      # without, where the Hessian comes from second differences
+      expect_equal(
+        fit$logml - fit$logml_laplace,
+        kld,
+        tolerance = if (is.null(gr)) 5e-5 else 1e-8
+      )
+    }
   }
 })
 
