@@ -42,7 +42,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   the posterior is far from the Laplace Gaussian.
 #' * **Tails.** Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
 #'   `tails` is `FALSE` (and flagged) when the density at an end of the scan
-#'   is still over 5\% of its peak: the Laplace SD badly understates a heavy
+#'   is still over 5% of its peak: the Laplace SD badly understates a heavy
 #'   tail there, and the skew-normal extrapolates it.
 #' * **Scan path.** `bend` is the log-density, in nats, that the straight
 #'   scan misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step

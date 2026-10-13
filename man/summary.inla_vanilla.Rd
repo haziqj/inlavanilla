@@ -38,7 +38,7 @@ fixed-point iteration failed and the fallback optimiser ran: both mean
 the posterior is far from the Laplace Gaussian.
 \item \strong{Tails.} Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
 \code{tails} is \code{FALSE} (and flagged) when the density at an end of the scan
-is still over 5\\% of its peak: the Laplace SD badly understates a heavy
+is still over 5\% of its peak: the Laplace SD badly understates a heavy
 tail there, and the skew-normal extrapolates it.
 \item \strong{Scan path.} \code{bend} is the log-density, in nats, that the straight
 scan misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
