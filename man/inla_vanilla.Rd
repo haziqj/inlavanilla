@@ -42,7 +42,8 @@ it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
 \item{marginals}{The marginal of each parameter: \code{"skewnormal"} (the
 default) fits a skew-normal to a scan of the log-posterior; \code{"gaussian"}
 uses the Gaussian marginal of the Laplace approximation, centred at the
-VB mean when \code{vb = TRUE}, with no scans.}
+VB mean when \code{vb = TRUE}, with no scans. Abbreviations such as \code{"skew"}
+and \code{"gauss"} work too.}
 
 \item{verbose}{Logical. Show progress? Default \code{TRUE}.}
 

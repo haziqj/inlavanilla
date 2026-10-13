@@ -125,7 +125,8 @@
 #' @param marginals The marginal of each parameter: `"skewnormal"` (the
 #'   default) fits a skew-normal to a scan of the log-posterior; `"gaussian"`
 #'   uses the Gaussian marginal of the Laplace approximation, centred at the
-#'   VB mean when `vb = TRUE`, with no scans.
+#'   VB mean when `vb = TRUE`, with no scans. Abbreviations such as `"skew"`
+#'   and `"gauss"` work too.
 #' @param verbose Logical. Show progress? Default `TRUE`.
 #' @param control A list of tuning parameters; see the section on control.
 #'
@@ -581,16 +582,21 @@ check_flag <- function(x, arg) {
   }
 }
 
-# One of `choices`, given in full; the whole vector (the default) means the
-# first. Unlike match.arg(), no partial matching and the package's own error.
+# One of `choices` (lower case), or an unambiguous abbreviation of one in any
+# case, as with match.arg(): "skew" and "Gauss" both work. The whole vector
+# (the default) means the first. The package's own error otherwise.
 check_choice <- function(x, choices, arg) {
   if (identical(x, choices)) {
     return(choices[[1L]])
   }
-  if (!is.character(x) || length(x) != 1L || is.na(x) || !x %in% choices) {
+  i <- NA_integer_
+  if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) {
+    i <- pmatch(tolower(x), choices)
+  }
+  if (is.na(i)) {
     abort("{.arg {arg}} must be one of {.or {.val {choices}}}.")
   }
-  x
+  choices[[i]]
 }
 
 check_init <- function(init, verbose = TRUE) {

@@ -43,10 +43,30 @@ scrub_output <- function(x) {
   x
 }
 
-test_that("marginals takes one of two values, in full", {
+test_that("marginals takes one of two values, or an abbreviation", {
   expect_identical(fit_sn_vb$marginals, "skewnormal")
   expect_identical(fit_g_vb$marginals, "gaussian")
-  for (bad in list("skew", "Gaussian", "gauss", NA_character_, 1, TRUE, NULL)) {
+  # Unambiguous abbreviations, in any case, as with match.arg()
+  choices <- c("skewnormal", "gaussian")
+  for (ok in c("skew", "s", "SKEW", "Skewnormal")) {
+    expect_identical(check_choice(ok, choices, "marginals"), "skewnormal")
+  }
+  for (ok in c("gaus", "gauss", "g", "Gaussian")) {
+    expect_identical(check_choice(ok, choices, "marginals"), "gaussian")
+  }
+  fit <- inla_vanilla(lp_reg, init_reg, marginals = "gauss", verbose = FALSE)
+  expect_identical(fit$marginals, "gaussian")
+  expect_identical(fit$summary, fit_g_vb$summary)
+  for (bad in list(
+    "laplace",
+    "normal",
+    "",
+    "skewed",
+    NA_character_,
+    1,
+    TRUE,
+    NULL
+  )) {
     expect_error(
       inla_vanilla(lp_reg, init_reg, marginals = bad, verbose = FALSE),
       "`marginals` must be one of \"skewnormal\" or \"gaussian\"",
@@ -65,7 +85,7 @@ test_that("marginals takes one of two values, in full", {
   )
   expect_snapshot(
     error = TRUE,
-    inla_vanilla(lp_reg, init_reg, marginals = "skew", verbose = FALSE)
+    inla_vanilla(lp_reg, init_reg, marginals = "laplace", verbose = FALSE)
   )
 })
 
