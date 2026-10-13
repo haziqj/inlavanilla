@@ -50,6 +50,7 @@ Nothing at present.
     | Full Laplace: exact conditional mode and conditional log-determinant at each scan point | −1.0% |
 
     So the bent path accounts for about two thirds of the gap, and the linear volume correction for the rest.
+  - **Decision.** Keep the CMP and the shortcut volume correction, which make the method fast. Document the limit in the Accuracy section of `?inla_vanilla`, and flag it with the cheap `bend` diagnostic: two gradient calls per parameter, flagged above 0.1 nats.
   - The full-Laplace remedy is INLA's "Laplace strategy" for marginals. It needs a conditional optimisation and a conditional Hessian at each of the 21 scan points: about 21(m + 3) gradient calls per parameter, against 2m + 2 now, so roughly 10× the cost of the marginal stage. It is a change of method and needs a decision.
   - In this example the SN − VB diagnostic flagged log σ (0.13 SDs). That gap came from the VB mean being off, not the skew-normal, so the diagnostic is documented as "either may be off".
 

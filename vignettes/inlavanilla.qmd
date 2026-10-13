@@ -118,6 +118,10 @@ summary(fit)
 * **SN - VB** compares the skew-normal mean with the VB-corrected mean, in
   posterior SDs. Both estimate the posterior mean, so they should agree; a
   large gap means the posterior is far from Gaussian and either may be off.
+* **Bend** is the log-density, in nats, that each scan misses 2 SDs out,
+  because it runs along a straight line while the other parameters'
+  conditional mode bends away from it. Above 0.1 it is flagged, as here for
+  the intercept: its marginal may be a little too narrow.
 
 ### Seeing the skew
 
@@ -177,9 +181,10 @@ colnames(compare) <- c("2.5%", "50%", "97.5%")
 round(compare, 2)
 ```
 
-The skew-normal intervals track the exact ones closely. The Laplace intervals
-are symmetric about the mode, so they cut the long tails short and miss
-values on the far side.
+The skew-normal intervals track the exact ones closely. The intercept's is a
+little narrow, as its bend flag warned. The Laplace intervals are symmetric
+about the mode, so they cut the long tails short and miss values on the far
+side.
 
 The grid also gives the exact log marginal likelihood:
 
