@@ -13,7 +13,9 @@ sampling(object, ...)
 \item{object}{An object to draw from.}
 
 \item{...}{For the \code{inla_vanilla} method, further arguments passed to
-\code{fun}.}
+\code{fun}. As in \code{\link[stats:optim]{stats::optim()}}, a name that abbreviates \code{nsamp} or \code{fun}
+would be taken as that argument: a data argument named \code{n} would set the
+number of draws. Give such data a longer name, or wrap it in \code{fun}.}
 
 \item{nsamp}{Number of draws.}
 
@@ -34,6 +36,10 @@ skew-normal marginals of the fit are coupled through the correlation matrix
 each parameter's skew-normal quantile, \eqn{\vartheta_j = Q_j(u_j)}.
 }
 \details{
+For a fit with \code{marginals = "gaussian"} this is a draw from the joint
+Gaussian \eqn{N(\tilde\vartheta, \Omega)}, centred at the VB mean (or at
+the mode when \code{vb = FALSE}).
+
 Draws never call the log-posterior, so they are cheap: large \code{nsamp} costs
 little. Use \code{fun} for natural-scale or derived quantities, such as
 \code{exp(log_sigma)} or a covariance matrix built from several parameters.
@@ -47,7 +53,7 @@ logpost <- function(theta, y) {
     dnorm(theta[["mu"]], 0, 10, log = TRUE) +
     dexp(sigma, log = TRUE) + theta[["log_sigma"]]
 }
-fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, verbose = FALSE)
+fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 
 draws <- sampling(fit, nsamp = 2000)
 head(draws)
