@@ -169,9 +169,14 @@ fit_skew_normal <- function(x, y, threshold_log_drop = -6, temp = 1) {
   omega_init <- sd_hat / sqrt(1 - 2 * root^2 / pi)
   xi_init <- mean_hat - omega_init * root * sqrt(2 / pi)
 
-  # Fitting weights do not depend on the parameters, so compute them once
+  # Fitting weights do not depend on the parameters, so compute them once.
+  # Points below the threshold have zero weight and are dropped from the fit.
+  keep <- y >= threshold_log_drop | rank(-y, ties.method = "first") <= 5
+  x_all <- x
+  y_all <- y
+  x <- x[keep]
+  y <- y[keep]
   w <- exp(temp * y)
-  w[y < threshold_log_drop] <- 0
   w <- w / sum(w)
 
   # Parameters: location, log inverse scale, shape, log-constant
@@ -254,9 +259,9 @@ fit_skew_normal <- function(x, y, threshold_log_drop = -6, temp = 1) {
   alpha_hat <- fit$par[3]
   logC_hat <- fit$par[4]
 
-  # Normalised max abs deviation (NMAD) of the fitted density
-  expy <- exp(y)
-  fity <- dsnorm(x, xi_hat, omega_hat, alpha_hat, logC_hat)
+  # Normalised max abs deviation (NMAD) of the fitted density, over all points
+  expy <- exp(y_all)
+  fity <- dsnorm(x_all, xi_hat, omega_hat, alpha_hat, logC_hat)
 
   list(
     xi = xi_hat,

@@ -16,6 +16,21 @@ fd_grad <- function(fn, x, h) {
   g
 }
 
+# One-sided (forward) difference gradient of a scalar function: m + 1 calls
+# of `fn`, or m when f(x) is supplied. Its error is O(h), half a step times
+# the curvature, so callers should correct for it (see inla_vanilla()).
+fd_grad_forward <- function(fn, x, h, f0 = fn(x)) {
+  m <- length(x)
+  h <- rep_len(h, m)
+  g <- numeric(m)
+  for (j in seq_len(m)) {
+    xp <- x
+    xp[j] <- x[j] + h[j]
+    g[j] <- (fn(xp) - f0) / h[j]
+  }
+  g
+}
+
 # Central-difference Jacobian of a gradient function: 2m calls of `gr`.
 fd_jacobian <- function(gr, x, h) {
   m <- length(x)
