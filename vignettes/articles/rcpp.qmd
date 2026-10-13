@@ -593,7 +593,10 @@ Here the warning is borne out. Checked against MCMC, the marginals of
 the 2.5% quantile of `logv_dem65` at −3.6 against −7.3. The data cannot rule
 out a variance near zero, so on the log scale the posterior has a long
 exponential left tail, held back only by the prior, and a skew-normal cannot
-follow it. The other 37 marginals agree with MCMC to within 7% in SD.
+follow it. On the variance scale, where the tail near zero is compressed, the
+error is much smaller: the posterior means of the two variances are 0.2
+posterior SDs too high. The other 37 marginals agree with MCMC to within 7% in
+SD.
 
 ```{r}
 #| label: plot
