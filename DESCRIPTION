@@ -9,8 +9,8 @@ Authors@R: c(
     person("Thomas", "Luu", role = "cph",
            comment = "Skew-normal quantile approximation (Apache License 2.0)")
   )
-Description: Approximates a posterior distribution from its log density alone,
-    using the approximation pipeline of the 'INLAvaan' package (Jamil and Rue,
+Description: Performs approximate Bayesian inference from an unnormalised
+    log-posterior alone, using the approximation pipeline of the 'INLAvaan' package (Jamil and Rue,
     2026a) <doi:10.48550/arXiv.2603.25690>, an adaptation of the Integrated
     Nested Laplace Approximation (Rue et al., 2009)
     <doi:10.1111/j.1467-9868.2008.00700.x>, with no latent field and nothing

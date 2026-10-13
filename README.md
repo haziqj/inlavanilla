@@ -15,9 +15,11 @@ coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app
 
 *INLA-style skew-normal marginals for any log-posterior.*
 
-Give `{inlavanilla}` a log-posterior and it returns an approximate
-posterior, in milliseconds for small models: no sampler, no tuning. It
-runs the approximation pipeline of
+If you can write down an unnormalised log-posterior, the log-likelihood
+plus the log-prior, `{inlavanilla}` gives you approximate Bayesian
+inference: posterior marginals, posterior draws and the marginal
+likelihood. There is no sampler and no tuning, and small models take
+milliseconds. It runs the approximation pipeline of
 [INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
 
 1.  a **Laplace approximation** at the posterior mode, with the Laplace
@@ -63,11 +65,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [29ms]
+#> ✔ Found the posterior mode in 6 iterations [30ms]
 #> ✔ VB mean correction, max shift 0.17σ [36ms]
-#> ✔ Fitted 1 skew-normal marginal [66ms]
+#> ✔ Fitted 1 skew-normal marginal [71ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 146ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
