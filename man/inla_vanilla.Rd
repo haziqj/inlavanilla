@@ -146,18 +146,18 @@ changing volume of the other parameters enters only to first order. When a
 parameter's spread depends strongly on another, poorly determined
 parameter, its marginal comes out too narrow, by a factor that vanishes as
 O(1/n). Examples are a regression coefficient or a mean when the noise SD
-is uncertain. For a normal mean with unknown variance the SD is about 11\\%
-too small at n = 12, 3\\% at n = 50, and under 1\\% at n = 200.
+is uncertain. For a normal mean with unknown variance the SD is about 11\%
+too small at n = 12, 3\% at n = 50, and under 1\% at n = 200.
 
 A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could not
 keep two residual variances away from zero, so on the log scale their
 posteriors had a long, exponential left tail, set by the prior. Checked
 against MCMC, those two skew-normal marginals were less than half as wide
-as the posterior, with the 2.5\\% quantile about 2 posterior SDs too high;
-the other 37 were within 7\\% in SD. On the variance scale, where the tail
+as the posterior, with the 2.5\% quantile about 2 posterior SDs too high;
+the other 37 were within 7\% in SD. On the variance scale, where the tail
 near zero is compressed, the two were much closer: means 0.2 posterior SDs
-too high and SDs 10--15\\% too small. INLAvaan's marginals of this model
+too high and SDs 10 to 15\% too small. INLAvaan's marginals of this model
 are the same as inlavanilla's. The \code{bend} diagnostic of
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged both, but its size does not say how far
 off a marginal is, and the \code{tails} check, which looks only 4 Laplace SDs
