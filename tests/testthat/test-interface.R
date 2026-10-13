@@ -1157,26 +1157,40 @@ test_that("by default each stage prints one line, and nothing else", {
   expect_match(msgs, "Fitted 1 skew-normal marginal\\b", all = FALSE)
 })
 
-test_that("progress bars are drawn only in a dynamic terminal", {
-  # Elsewhere (knitr and Quarto, Rscript writing to a log file) cli prints
-  # each update of a bar as a line of its own: in a rendered document,
-  # several "Applying the VB mean correction 31792 calls" lines.
-  # cli::is_dynamic_tty() decides, and follows the cli.dynamic option. (A
-  # test that knits a document cannot catch the spill reliably: cli prints
-  # those lines only on some fits.)
-  old <- options(cli.dynamic = TRUE)
+test_that("progress bars follow the user's cli.progress_show_after", {
+  # A knitr or Quarto setup chunk sets the option to keep bars, which cannot
+  # redraw in place there, out of the document, so the package must not
+  # override it: it sets half a second only when the option is unset, and
+  # restores the option afterwards. cli reads the delay when a bar is
+  # created, so that is when it is recorded here.
+  seen <- NULL
+  create_bar <- cli::cli_progress_bar
+  local_mocked_bindings(
+    cli_progress_bar = function(...) {
+      seen <<- c(seen, getOption("cli.progress_show_after", NA))
+      create_bar(...)
+    },
+    .package = "cli"
+  )
+  old <- options(cli.progress_show_after = NULL)
   on.exit(options(old))
-  expect_true(progress_new(show = TRUE)$bars)
-  expect_false(progress_new(show = FALSE)$bars)
-  options(cli.dynamic = FALSE)
-  expect_false(progress_new(show = TRUE)$bars)
 
-  # So only the stage lines are printed, even when the bars, if drawn, would
-  # show at once (the user's cli.progress_show_after is respected)
-  options(cli.progress_show_after = 0)
-  msgs <- capture_messages(inla_vanilla(lp_reg, init_reg))
-  expect_length(msgs, 3)
-  expect_no_match(msgs, "Finding the posterior mode|Applying the VB|Fitting")
+  # Unset: half a second for each of the three stages, then unset again
+  suppressMessages(inla_vanilla(lp_reg, init_reg))
+  expect_identical(seen, rep(0.5, 3))
+  expect_null(getOption("cli.progress_show_after"))
+
+  # Set by the user: kept
+  seen <- NULL
+  options(cli.progress_show_after = 2)
+  suppressMessages(inla_vanilla(lp_reg, init_reg))
+  expect_identical(seen, rep(2, 3))
+  expect_identical(getOption("cli.progress_show_after"), 2)
+
+  # No bars at all under silent = TRUE
+  seen <- NULL
+  inla_vanilla(lp_reg, init_reg, silent = TRUE)
+  expect_null(seen)
 })
 
 test_that("verbose = TRUE adds detail lines under the stage lines", {

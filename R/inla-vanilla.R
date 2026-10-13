@@ -112,12 +112,12 @@
 #'
 #' @section Output:
 #' By default each stage prints one line as it finishes, with the time it
-#' took. In a terminal or the RStudio console, a stage that runs for longer
-#' than half a second (or the option `cli.progress_show_after`, if set) also
-#' shows a progress bar; in knitr and Quarto documents, or with output
-#' redirected to a file, there are no bars, only the stage lines. Warnings,
-#' such as a mode that was not reached or a gradient that does not match
-#' `logpost`, are signalled as usual.
+#' took, and shows a progress bar while it runs for longer than half a
+#' second, or than the option `cli.progress_show_after` when it is set. In
+#' knitr or Quarto documents, where a bar cannot redraw in place, a larger
+#' `cli.progress_show_after` in the setup chunk keeps bars out of the output.
+#' Warnings, such as a mode that was not reached or a gradient that does not
+#' match `logpost`, are signalled as usual.
 #'
 #' `verbose = TRUE` adds a full diagnostic of the fit, in grey lines under
 #' each stage. It reports what the fit computes anyway, with no further calls

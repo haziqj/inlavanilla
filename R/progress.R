@@ -1,10 +1,10 @@
 # Progress reporting, at three levels: `silent = TRUE` shows nothing, the
 # default shows one line per stage, and `verbose = TRUE` adds indented grey
-# detail lines under each one. In a dynamic terminal each stage also gets a
-# cli spinner or progress bar, which appears only when the stage runs for
-# longer than `cli.progress_show_after` seconds (half a second unless the
-# user has set it). Each stage ends with one coloured line. The lines are
-# built directly from cli's styles rather than through its glue-based
+# detail lines under each one. Each stage gets a cli spinner or progress bar,
+# which appears only when the stage runs for longer than the user's
+# `cli.progress_show_after` seconds, or half a second when that option is
+# unset (cli's own default is 2), and ends with one coloured line. The lines
+# are built directly from cli's styles rather than through its glue-based
 # formatters, which cost a few milliseconds a call: as long as a whole fit of
 # a small model. The detail lines are only built when they are shown.
 
@@ -14,7 +14,6 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p <- new.env(parent = emptyenv())
   p$show <- show
   p$detail <- show && detail
-  p$bars <- show && progress_bars_ok()
   p$frame <- frame
   p$id <- NULL
   p$calls <- FALSE # whether the log-posterior wrapper should tick the bar
@@ -22,19 +21,13 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p
 }
 
-# Progress bars only where they can redraw in place: a terminal, or the
-# RStudio console. Elsewhere (knitr and Quarto, Rscript writing to a log
-# file) cli prints each update as a new line, and only the stage lines are
-# wanted. cli::is_dynamic_tty() checks the stream cli's bars write to, and
-# follows the `cli.dynamic` option and the R_CLI_DYNAMIC variable.
-progress_bars_ok <- function() {
-  cli::is_dynamic_tty()
-}
-
 # Start a stage. With `total`, a bar over that many items; without, a spinner
-# that counts log-posterior calls.
+# that counts log-posterior calls. The delay is set while the bar is created
+# (cli reads it then) and the option is restored afterwards. A user's own
+# setting is kept, so a knitr or Quarto setup chunk can keep bars, which
+# cannot redraw in place there, out of the document.
 progress_start <- function(p, msg, total = NA) {
-  if (!p$bars) {
+  if (!p$show) {
     return(invisible(p))
   }
   old <- options(
