@@ -702,8 +702,17 @@ gp_sn_exp_moment <- function(t) {
     rel.tol = 1e-12
   )$value
 }
-gp_mean_sn <- gp_sn_exp_moment(1)
-gp_sd_sn <- sqrt(gp_sn_exp_moment(2) - gp_mean_sn^2)
+gp_moments_sn <- vapply(1:4, gp_sn_exp_moment, numeric(1))
+gp_mean_sn <- gp_moments_sn[1]
+gp_sd_sn <- sqrt(gp_moments_sn[2] - gp_mean_sn^2)
+# Kurtosis of exp(theta) under the skew-normal, from the raw moments: 4.52,
+# against 3 + 6 / S = 4.2 for the exact gamma. The Monte Carlo SEs of the
+# draws use it, since the draws come from this distribution.
+gp_kurt_sn <- (gp_moments_sn[4] -
+  4 * gp_mean_sn * gp_moments_sn[3] +
+  6 * gp_mean_sn^2 * gp_moments_sn[2] -
+  3 * gp_mean_sn^4) /
+  gp_sd_sn^4
 
 test_that("the skew-normal for log(lambda) gives near-exact gamma quantiles and moments", {
   # No Monte Carlo here. Observed: quantile errors at most 0.013 exact SDs
@@ -742,24 +751,19 @@ test_that("exp() of gamma-Poisson draws matches the exact gamma posterior", {
   # Against the exact gamma, within the approximation tolerance plus Monte
   # Carlo error, and closer than the Laplace lognormal at every quantile.
   # Observed: largest error 0.027 exact SDs.
-  se <- quantile_se(
-    probs,
-    n_big,
-    dgamma(gp_q_exact, shape = gp_S, rate = gp_R)
-  )
   err_draws <- abs(q_emp - gp_q_exact)
-  expect_true(all(err_draws < gp_tol_sn * gp_sd_exact + z_mc * se))
+  expect_true(all(err_draws < gp_tol_sn * gp_sd_exact + z_mc * se_sn))
   expect_true(all(err_draws < abs(gp_q_laplace - gp_q_exact)))
 
   # Mean and SD of lambda. The Monte Carlo SE of the mean is SD / sqrt(n),
-  # and of the SD, SD sqrt((kurtosis - 1) / (4 n)) with the gamma kurtosis
-  # 3 + 6 / S. Observed: 1.2 and 1.2 SEs from the skew-normal's mean and SD,
-  # 0.9 and 0.5 SEs from the exact values, and closer to them than the
-  # Laplace lognormal's (0.24 and 0.16 SDs off).
+  # and of the SD, SD sqrt((kurtosis - 1) / (4 n)), both from the
+  # skew-normal's moments (over 1000 seeds these z-scores have SD 1.00 and
+  # 1.01). Observed: 1.2 and 1.2 SEs from the skew-normal's mean and SD, 0.9
+  # and 0.5 SEs from the exact values, and closer to them than the Laplace
+  # lognormal's (0.24 and 0.16 SDs off).
   mean_exact <- gp_S / gp_R
-  kurt <- 3 + 6 / gp_S
-  se_mean <- gp_sd_exact / sqrt(n_big)
-  se_sd <- gp_sd_exact * sqrt((kurt - 1) / (4 * n_big))
+  se_mean <- gp_sd_sn / sqrt(n_big)
+  se_sd <- gp_sd_sn * sqrt((gp_kurt_sn - 1) / (4 * n_big))
   expect_lt(abs(mean(lambda) - gp_mean_sn), z_mc * se_mean)
   expect_lt(abs(sd(lambda) - gp_sd_sn), z_mc * se_sd)
   expect_lt(

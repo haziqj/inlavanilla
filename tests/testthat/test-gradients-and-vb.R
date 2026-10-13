@@ -130,6 +130,21 @@ normal_model <- function() {
         sum(y - mu) / s2 - mu / 100,
         -n + sum((y - mu)^2) / s2 - exp(log_sigma) + 1
       )
+    },
+    hessian = function(theta) {
+      mu <- theta[["mu"]]
+      log_sigma <- theta[["log_sigma"]]
+      s2 <- exp(2 * log_sigma)
+      h12 <- -2 * sum(y - mu) / s2
+      matrix(
+        c(
+          -n / s2 - 1 / 100,
+          h12,
+          h12,
+          -2 * sum((y - mu)^2) / s2 - exp(log_sigma)
+        ),
+        2
+      )
     }
   )
 }
@@ -219,6 +234,7 @@ poisson_gamma_model <- function(y, a, b) {
         theta[[1]]
     },
     grad = function(theta) A - B * exp(theta[[1]]),
+    hessian = function(theta) matrix(-B * exp(theta[[1]])),
     vb_exact = function(s) log(A / B) - s^2 / 2,
     vb_rule = function(s) log(A / B) - log(2 / 3 + cosh(sqrt(3) * s) / 3)
   )
