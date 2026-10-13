@@ -33,7 +33,10 @@ gl_owen <- gauss_legendre_01(48L)
 # Owen's T(h, a) = (2 pi)^-1 int_0^a exp(-h^2 (1 + x^2) / 2) / (1 + x^2) dx,
 # vectorised over h and a. It is reduced to h >= 0 and 0 <= a <= 1 by the
 # symmetries T(-h, a) = T(h, a), T(h, -a) = -T(h, a) and, for a > 1,
-# T(h, a) = Phi(h)/2 + Phi(ah)/2 - Phi(h) Phi(ah) - T(ah, 1/a). On the
+# T(h, a) = Q(h)/2 + Q(ah)/2 - Q(h) Q(ah) - T(ah, 1/a), with Q(x) = 1 - Phi(x).
+# (INLAvaan writes the last identity with Phi; it is the same algebraically,
+# but as a difference of numbers close to one it loses the relative accuracy
+# of small values of T, which the heavy tail of psnorm() needs.) On the
 # reduced range 48 Gauss-Legendre nodes give about 1e-15 absolute accuracy.
 owen_t <- function(h, a) {
   n <- max(length(h), length(a))
@@ -48,15 +51,16 @@ owen_t <- function(h, a) {
   X <- outer(aa, gl_owen$x)
   G <- exp(-0.5 * hh^2 * (1 + X^2)) / (1 + X^2)
   t_red <- as.numeric(G %*% gl_owen$w) * aa / (2 * pi)
-  ph <- stats::pnorm(h)
-  pah <- stats::pnorm(ah)
-  sgn * ifelse(big, 0.5 * ph + 0.5 * pah - ph * pah - t_red, t_red)
+  qh <- stats::pnorm(h, lower.tail = FALSE)
+  qah <- stats::pnorm(ah, lower.tail = FALSE)
+  sgn * ifelse(big, 0.5 * qh + 0.5 * qah - qh * qah - t_red, t_red)
 }
 
 # Skew-normal distribution function F(q) = Phi(z) - 2 T(z, alpha), with
 # z = (q - xi) / omega. The upper tail is computed by reflection,
 # 1 - F(z; alpha) = F(-z; -alpha), so a small tail probability never comes
-# out as the difference of two numbers close to one.
+# out as the difference of two numbers close to one. It is 0 and 1 at -Inf
+# and Inf, and NA for a non-positive or missing scale.
 psnorm <- function(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE) {
   n <- max(length(q), length(xi), length(omega), length(alpha))
   q <- rep_len(q, n)
@@ -68,26 +72,104 @@ psnorm <- function(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE) {
     z <- -z
     alpha <- -alpha
   }
-  ok <- is.finite(z) & is.finite(alpha) & omega > 0
+  valid <- !is.na(z) & is.finite(alpha) & !is.na(omega) & omega > 0
+  ok <- valid & is.finite(z)
   out <- rep(NA_real_, n)
   out[ok] <- stats::pnorm(z[ok]) - 2 * owen_t(z[ok], alpha[ok])
   out[ok] <- pmin(pmax(out[ok], 0), 1)
+  out[valid & z == -Inf] <- 0
+  out[valid & z == Inf] <- 1
   out
 }
 
-# Skew-normal quantiles to near machine precision: the fast approximation of
-# qsnorm_fast() (relative error below about 1e-7) polished by two Newton steps
-# on psnorm(). Used for the reported quantiles; the copula draws use
-# qsnorm_fast() directly, where its accuracy is ample.
+# Skew-normal quantiles, solved to near machine precision. Each probability
+# is turned into the log of its smaller tail, and qsn_std_logtail() solves for
+# the standardised quantile.
 qsnorm <- function(p, xi = 0, omega = 1, alpha = 0) {
-  q <- qsnorm_fast(p, xi = xi, omega = omega, alpha = alpha)
-  for (i in 1:2) {
-    f <- dsnorm(q, xi = xi, omega = omega, alpha = alpha)
-    step <- (psnorm(q, xi = xi, omega = omega, alpha = alpha) - p) / f
-    ok <- is.finite(step) & f > 0
-    q[ok] <- q[ok] - step[ok]
+  n <- max(length(p), length(xi), length(omega), length(alpha))
+  p <- rep_len(p, n)
+  xi <- rep_len(xi, n)
+  omega <- rep_len(omega, n)
+  alpha <- rep_len(alpha, n)
+  out <- rep(NA_real_, n)
+  ok <- !is.na(p) & p >= 0 & p <= 1 & is.finite(alpha) & omega > 0
+  out[ok & p == 0] <- -Inf
+  out[ok & p == 1] <- Inf
+  mid <- which(ok & p > 0 & p < 1)
+  if (length(mid) > 0L) {
+    upper <- p[mid] > 0.5
+    logp <- ifelse(upper, log1p(-p[mid]), log(p[mid]))
+    z <- qsn_std_logtail(logp, alpha[mid], upper)
+    out[mid] <- xi[mid] + omega[mid] * z
+  }
+  out
+}
+
+# Standardised skew-normal quantile from the log of a tail probability: solves
+# log F(q) = logp, or log(1 - F(q)) = logp where `upper` is TRUE, for
+# SN(0, 1, alpha). Newton's method on the log scale, from qsnorm_fast(). The
+# skew-normal is log-concave, so log F and log(1 - F) are concave and
+# monotone, and Newton's method converges monotonically from any start; steps
+# are capped at one unit as a safeguard. Working on the log of the smaller
+# tail keeps far-tail quantiles accurate. Deep in the light tail (tail
+# probabilities around 1e-12 and below), psnorm() loses relative accuracy to
+# cancellation and the iteration stops at the 30-step cap, still accurate to
+# well within the noise of the distribution function there.
+qsn_std_logtail <- function(logp, alpha, upper) {
+  n <- length(logp)
+  alpha <- rep_len(alpha, n)
+  upper <- rep_len(upper, n)
+  p <- exp(logp)
+  q <- .qsn_std_fast(ifelse(upper, 1 - p, p), alpha)
+  q[!is.finite(q)] <- ifelse(upper, 8, -8)[!is.finite(q)]
+  active <- seq_len(n)
+  for (it in 1:30) {
+    qi <- q[active]
+    up <- upper[active]
+    tail <- numeric(length(active))
+    if (any(!up)) {
+      tail[!up] <- psnorm(qi[!up], 0, 1, alpha[active][!up])
+    }
+    if (any(up)) {
+      tail[up] <- psnorm(qi[up], 0, 1, alpha[active][up], lower_tail = FALSE)
+    }
+    f <- dsnorm(qi, 0, 1, alpha[active])
+    # d/dq log F = f / F and d/dq log(1 - F) = -f / (1 - F)
+    step <- (log(tail) - logp[active]) * tail / ifelse(up, -f, f)
+    # A tail that underflows means q is far out: step back towards the centre
+    bad <- !is.finite(step)
+    step[bad] <- ifelse(up[bad], -1, 1)
+    step <- pmax(pmin(step, 1), -1)
+    q[active] <- qi - step
+    active <- active[abs(step) > 1e-10 * (1 + abs(qi))]
+    if (length(active) == 0L) {
+      break
+    }
   }
   q
+}
+
+# The map z -> Q(Phi(z)) from normal scores to the quantiles of
+# SN(xi, omega, alpha), for the copula draws. It is smooth and close to
+# linear, so a cubic spline through knots solved by qsn_std_logtail() at
+# z = -7, ..., 7 reproduces it to within 1e-6 posterior SDs (5e-7 at
+# |alpha| = 20, far less for mild skewness), at the cost of one spline
+# evaluation per draw. Beyond the knots, a probability of 3e-12, it continues
+# linearly.
+sn_score_map <- function(xi, omega, alpha, zmax = 7, n_knots = 141L) {
+  zk <- seq(-zmax, zmax, length.out = n_knots)
+  logp <- stats::pnorm(-abs(zk), log.p = TRUE)
+  qk <- xi + omega * qsn_std_logtail(logp, alpha, upper = zk > 0)
+  sp <- stats::splinefun(zk, qk, method = "fmm")
+  slope <- sp(c(-zmax, zmax), deriv = 1)
+  function(z) {
+    out <- sp(z)
+    lo <- z < -zmax
+    hi <- z > zmax
+    out[lo] <- qk[1] + slope[1] * (z[lo] + zmax)
+    out[hi] <- qk[n_knots] + slope[2] * (z[hi] - zmax)
+    out
+  }
 }
 
 # Mean and standard deviation of SN(xi, omega, alpha), in closed form.
@@ -129,11 +211,12 @@ mills_ratio <- function(u) {
 # temperature fixed rather than estimated. `y` should be normalised so that
 # max(y) = 0.
 fit_skew_normal <- function(x, y, threshold_log_drop = -6, temp = 1) {
-  # Trapezoidal integration weights, for moment-based starting values
+  # Trapezoidal integration weights, for moment-based starting values. (The
+  # INLAvaan original gives the second point half its weight, which skews the
+  # starting values of a symmetric scan.)
   n <- length(x)
-  w_int <- numeric(n)
-  w_int[1] <- 0.5 * (x[2] - x[1])
-  w_int[-1] <- 0.5 * (c(diff(x[-1]), 0) + c(0, diff(x[-n])))
+  dx <- diff(x)
+  w_int <- 0.5 * (c(dx, 0) + c(0, dx))
 
   p <- exp(y)
   m0 <- sum(w_int * p)
@@ -248,12 +331,21 @@ fit_skew_normal <- function(x, y, threshold_log_drop = -6, temp = 1) {
              H14, H24, H34, H44), nrow = 4, byrow = TRUE)
   }
 
-  fit <- stats::nlminb(
-    c(xi_init, log(1 / omega_init), alpha_init, 0),
-    ob,
-    gr,
-    hs
-  )
+  # Fit from the moment-based start and from its mirror image (the opposite
+  # skew), and keep the better fit. The shape is weakly identified near zero,
+  # where a skew-normal differs from a shifted Gaussian only at third order,
+  # so a start with the wrong sign of skew can stall at alpha = 0 when the
+  # skewness of a truncated scan is mild.
+  d0 <- if (abs(root) < 0.2) 0.5 else root
+  starts <- lapply(c(d0, -d0), function(d) {
+    om <- sd_hat / sqrt(1 - 2 * d^2 / pi)
+    c(mean_hat - om * d * sqrt(2 / pi), log(1 / om), d / sqrt(1 - d^2), 0)
+  })
+  if (abs(root) >= 0.2) {
+    starts[[1]] <- c(xi_init, log(1 / omega_init), alpha_init, 0)
+  }
+  fits <- lapply(starts, function(st) stats::nlminb(st, ob, gr, hs))
+  fit <- fits[[which.min(vapply(fits, `[[`, 0, "objective"))]]
   xi_hat <- fit$par[1]
   omega_hat <- exp(-fit$par[2])
   alpha_hat <- fit$par[3]

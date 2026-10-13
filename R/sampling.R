@@ -65,12 +65,9 @@ sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
   z <- matrix(stats::rnorm(nsamp * m), nsamp, m) %*% U
   theta <- matrix(0, nsamp, m, dimnames = list(NULL, rownames(sn)))
   for (j in seq_len(m)) {
-    theta[, j] <- qsnorm_fast(
-      stats::pnorm(z[, j]),
-      xi = sn[j, "xi"],
-      omega = sn[j, "omega"],
-      alpha = sn[j, "alpha"]
-    )
+    # z -> Q_j(Phi(z)), the skew-normal quantile of each normal score
+    map <- sn_score_map(sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
+    theta[, j] <- map(z[, j])
   }
   if (is.null(fun)) {
     return(theta)
