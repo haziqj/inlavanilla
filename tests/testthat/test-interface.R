@@ -2062,3 +2062,22 @@ test_that("scan_end_mass is the fitted mass outside the scanned window", {
   out <- capture_output(print(summary(fit_reg)))
   expect_no_match(out, "mass")
 })
+
+test_that("silent = TRUE copes with conditions that have no muffle restart", {
+  # signalCondition() sets up no muffle restart. The handlers once called
+  # invokeRestart(), which made such a condition an error that stopped the
+  # fit. No handler can muffle it, so it carries on to testthat's, which
+  # leaves warnings alone under a negative `warn`; at top level, where
+  # nothing handles it, nothing prints.
+  lp <- function(theta) {
+    signalCondition(simpleMessage("note\n"))
+    signalCondition(simpleWarning("bare warning"))
+    -0.5 * sum(theta^2)
+  }
+  old <- options(warn = -1)
+  on.exit(options(old), add = TRUE)
+  fit <- inla_vanilla(lp, c(a = 0.3), silent = TRUE)
+  options(old)
+  expect_s3_class(fit, "inla_vanilla")
+  expect_identical(fit$warnings, "bare warning")
+})
