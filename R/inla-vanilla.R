@@ -102,16 +102,16 @@
 #' @param grad Optional function `grad(theta, ...)` returning the gradient of
 #'   `logpost` as a numeric vector. When `NULL` (the default), finite
 #'   differences are used.
+#' @param ... Further arguments passed to `logpost` and `grad`, such as the
+#'   data. As in [stats::optim()] and [stats::nlminb()], they come after the
+#'   gradient, and the arguments after them (`vb`, `verbose`, `control`) must
+#'   be given by their full names, so data arguments cannot partially match
+#'   them.
 #' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
 #'   the log marginal likelihood, and the skew-normal means are checked against
 #'   it (see [summary.inla_vanilla()]).
 #' @param verbose Logical. Show progress? Default `TRUE`.
 #' @param control A list of tuning parameters; see the section on control.
-#' @param ... Further arguments passed to `logpost` and `grad`, such as the
-#'   data. The arguments after `...` must be given by their full names, so
-#'   data arguments are never captured by partial matching.
-#'
-
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
 #'   [summary()], [plot()] and [sampling()]. It is a list holding, among
@@ -160,8 +160,8 @@
 inla_vanilla <- function(
   logpost,
   init,
-  ...,
   grad = NULL,
+  ...,
   vb = TRUE,
   verbose = TRUE,
   control = list()
@@ -387,6 +387,7 @@ inla_vanilla <- function(
       gamma1 = sn[, "gamma1"],
       nmad = sn[, "nmad"],
       tails = as.logical(sn[, "tails"]),
+      bend = sn[, "bend"],
       row.names = parnames
     )
   )

@@ -7,8 +7,8 @@
 inla_vanilla(
   logpost,
   init,
-  ...,
   grad = NULL,
+  ...,
   vb = TRUE,
   verbose = TRUE,
   control = list()
@@ -24,13 +24,15 @@ number of parameters and its names label them; unnamed values are called
 \code{theta[1]}, \code{theta[2]}, ..., and a repeated name is numbered in the same
 way.}
 
-\item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
-data. The arguments after \code{...} must be given by their full names, so
-data arguments are never captured by partial matching.}
-
 \item{grad}{Optional function \code{grad(theta, ...)} returning the gradient of
 \code{logpost} as a numeric vector. When \code{NULL} (the default), finite
 differences are used.}
+
+\item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
+data. As in \code{\link[stats:optim]{stats::optim()}} and \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the
+gradient, and the arguments after them (\code{vb}, \code{verbose}, \code{control}) must
+be given by their full names, so data arguments cannot partially match
+them.}
 
 \item{vb}{Logical. Apply the VB mean correction? Default \code{TRUE}. It enters
 the log marginal likelihood, and the skew-normal means are checked against
