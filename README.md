@@ -16,9 +16,9 @@ coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app
 *INLA-style skew-normal marginals for any log-posterior.*
 
 Give `{inlavanilla}` a log-posterior and it returns an approximate
-posterior in milliseconds: no sampler, no tuning. It runs the
-approximation pipeline of [INLAvaan](https://inlavaan.haziqj.ml/) with
-nothing model-specific:
+posterior, in milliseconds for small models: no sampler, no tuning. It
+runs the approximation pipeline of
+[INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
 
 1.  a **Laplace approximation** at the posterior mode, with the Laplace
     estimate of the log marginal likelihood;
@@ -63,11 +63,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [20ms]
-#> ✔ VB mean correction, max shift 0.17σ [24ms]
-#> ✔ Fitted 1 skew-normal marginal [60ms]
+#> ✔ Found the posterior mode in 6 iterations [29ms]
+#> ✔ VB mean correction, max shift 0.17σ [36ms]
+#> ✔ Fitted 1 skew-normal marginal [66ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 110ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
@@ -81,13 +81,14 @@ approximate posterior, and its `fun` argument maps each draw back to
 $p$, or to any other quantity of interest:
 
 ``` r
+set.seed(1)
 p <- sampling(fit, nsamp = 1e5, fun = function(theta) plogis(theta[["logit_p"]]))
 rbind(
   inlavanilla = quantile(p, c(0.025, 0.5, 0.975)),
   exact = qbeta(c(0.025, 0.5, 0.975), 4, 18)
 )
 #>                   2.5%       50%     97.5%
-#> inlavanilla 0.05514177 0.1719064 0.3636271
+#> inlavanilla 0.05443460 0.1723549 0.3645844
 #> exact       0.05446357 0.1720895 0.3634240
 ```
 

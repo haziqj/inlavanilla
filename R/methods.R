@@ -41,9 +41,9 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   fixed-point iteration failed and the fallback optimiser ran: both mean
 #'   the posterior is far from the Laplace Gaussian.
 #' * **Tails.** Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
-#'   `tails` is `FALSE` when the log-posterior had not yet fallen below
-#'   `control$log_threshold` at an end of the scan: the Laplace SD understates
-#'   a heavy tail there, and the skew-normal extrapolates it.
+#'   `tails` is `FALSE` (and flagged) when the density at an end of the scan
+#'   is still over 5\% of its peak: the Laplace SD badly understates a heavy
+#'   tail there, and the skew-normal extrapolates it.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and the
 #'   scanned density relative to its peak (flagged above 0.05), and
 #'   `sn_vs_vb`, the gap between the
@@ -147,7 +147,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   if (!all(diag$tails)) {
     cat_status(
       "warn",
-      "The scan of {.field {rownames(diag)[!diag$tails]}} ended above the log threshold: heavy tails, which the skew-normal extrapolates."
+      "Heavy tails for {.field {rownames(diag)[!diag$tails]}}: the density is still over 5% of its peak 4 Laplace SDs out, and the skew-normal extrapolates beyond."
     )
   }
   max_nmad <- max(diag$nmad)
