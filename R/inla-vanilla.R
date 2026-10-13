@@ -77,8 +77,11 @@
 #'   it (see [summary.inla_vanilla()]).
 #' @param verbose Logical. Show progress? Default `TRUE`.
 #' @param control A list of tuning parameters; see the section on control.
-#' @param ... Further arguments passed to `logpost` and `grad`, as in
-#'   [stats::optim()].
+#' @param ... Further arguments passed to `logpost` and `grad`, such as the
+#'   data. The arguments after `...` must be given by their full names, so
+#'   data arguments are never captured by partial matching.
+#'
+
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
 #'   [summary()], [plot()] and [sampling()]. It is a list holding, among
@@ -127,11 +130,11 @@
 inla_vanilla <- function(
   logpost,
   init,
+  ...,
   grad = NULL,
   vb = TRUE,
   verbose = TRUE,
-  control = list(),
-  ...
+  control = list()
 ) {
   t_start <- elapsed()
   call <- match.call()
@@ -153,13 +156,21 @@ inla_vanilla <- function(
   # and count the calls.
   n_lp <- 0L
   n_gr <- 0L
+  last_x <- init
+  # The user's functions with `...` bound once here: forwarding `...` to
+  # internal helpers would let a data argument such as `g` partially match
+  # one of their formals.
+  logpost_x <- function(x) logpost(x, ...)
+  grad_x <- if (is.null(grad)) NULL else function(x) grad(x, ...)
   lp <- function(x) {
     names(x) <- parnames
+    last_x <<- x
     n_lp <<- n_lp + 1L
     if (prog$calls && n_lp %% 16L == 0L) {
       progress_tick(prog, set = n_lp)
     }
-    v <- logpost(x, ...)
+    # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
+    v <- logpost_x(x)[[1L]]
     if (is.na(v)) -Inf else v
   }
   gr <- if (is.null(grad)) {
@@ -167,38 +178,71 @@ inla_vanilla <- function(
   } else {
     function(x) {
       names(x) <- parnames
+      last_x <<- x
       n_gr <<- n_gr + 1L
-      as.numeric(grad(x, ...))
+      as.numeric(grad_x(x))
     }
   }
+  # An error inside logpost or grad stops the fit; say where it happened
+  # and at which parameter value.
+  with_context <- function(stage, expr) {
+    tryCatch(expr, error = function(e) {
+      if (inherits(e, "inlavanilla_error")) {
+        stop(e)
+      }
+      at <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
+      abort(
+        c(
+          "The fit stopped with an error while {stage}.",
+          "i" = "The last parameter value tried was {at}.",
+          "i" = "If {.arg logpost} cannot be evaluated somewhere, return
+                 {.code -Inf} there instead of failing."
+        ),
+        parent = e,
+        call = quote(inla_vanilla())
+      )
+    })
+  }
 
-  check_logpost_at_init(logpost, init, ...)
+  with_context(
+    "evaluating logpost at init",
+    check_logpost_at_init(logpost_x, init)
+  )
   if (!is.null(grad)) {
-    check_grad_at_init(grad, lp, init, ...)
+    with_context(
+      "evaluating grad at init",
+      check_grad_at_init(grad_x, lp, init)
+    )
   }
 
   # 1a. Joint Gaussian -------------------------------------------------------
   t0 <- elapsed()
   progress_start(prog, "Finding the posterior mode")
-  lap <- laplace_fit(lp, gr, init, ctrl)
-  # Gradient at the mode in whitened units: how far, in posterior SDs, a
-  # Newton step would still move the mode. This, not nlminb()'s return code,
-  # decides whether to warn: without a gradient nlminb() can report "false
-  # convergence" at an accurate mode, and it can report success short of one.
-  g_mode <- if (is.null(gr)) {
-    fd_grad(lp, lap$mode, h = 1e-3 * sqrt(diag(lap$Sigma)))
-  } else {
-    gr(lap$mode)
+  lap <- with_context(
+    "finding the posterior mode",
+    laplace_fit(lp, gr, init, ctrl)
+  )
+  if (!is.null(grad) && lap$asymmetry > 1e-3) {
+    warn(c(
+      "{.arg grad} does not look like the gradient of {.arg logpost}.",
+      "x" = "Its Jacobian at the mode is not symmetric (relative asymmetry
+             {signif(lap$asymmetry, 2)}), as the Hessian of a function must
+             be.",
+      "i" = "A wrong gradient gives a wrong mode and wrong marginals."
+    ))
   }
-  grad_mode <- max(abs(crossprod(lap$L, g_mode)))
+  # The whitened gradient at the mode (how far, in posterior SDs, a Newton
+  # step would still move it), not nlminb()'s return code, decides whether to
+  # warn: without a gradient nlminb() can report "false convergence" at an
+  # accurate mode, and it can report success short of one.
+  grad_mode <- lap$grad_mode
   if (!is.finite(grad_mode) || grad_mode > 1e-2) {
-    cli::cli_warn(c(
+    warn(c(
       "The posterior mode may be inaccurate.",
       "x" = "The gradient there is {signif(grad_mode, 2)} posterior SDs
              (whitened); it should be close to zero.",
       "i" = "{.fn nlminb} says: {.val {lap$opt$message}}.",
-      "i" = "Try other starting values, supply {.arg grad}, or raise
-             {.code iter.max} in {.code control$nlminb}."
+      "i" = "Try other starting values, or supply {.arg grad}."
     ))
   }
   t_laplace <- elapsed() - t0
@@ -235,7 +279,10 @@ inla_vanilla <- function(
   vbc <- NULL
   if (vb) {
     progress_start(prog, "Applying the VB mean correction")
-    vbc <- vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
+    vbc <- with_context(
+      "applying the VB mean correction",
+      vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
+    )
     progress_done(
       prog,
       paste0(
@@ -251,7 +298,10 @@ inla_vanilla <- function(
   # 2. Skew-normal marginals -------------------------------------------------
   t0 <- elapsed()
   progress_start(prog, "Fitting skew-normal marginals", total = m)
-  sn <- fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
+  sn <- with_context(
+    "fitting the skew-normal marginals",
+    fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
+  )
   t_marginals <- elapsed() - t0
   progress_done(
     prog,
@@ -288,6 +338,7 @@ inla_vanilla <- function(
       alpha = sn[, "alpha"],
       gamma1 = sn[, "gamma1"],
       nmad = sn[, "nmad"],
+      tails = as.logical(sn[, "tails"]),
       row.names = parnames
     )
   )
@@ -381,13 +432,13 @@ vanilla_control <- function(control) {
     nlminb = list()
   )
   if (!is.list(control)) {
-    cli::cli_abort("{.arg control} must be a list.")
+    abort("{.arg control} must be a list.")
   }
   unknown <- setdiff(names(control), names(defaults))
   if (
     length(unknown) > 0L || (length(control) > 0L && is.null(names(control)))
   ) {
-    cli::cli_abort(c(
+    abort(c(
       "Unknown {.arg control} entr{?y/ies}: {.val {unknown}}.",
       "i" = "Valid entries are {.val {names(defaults)}}."
     ))
@@ -402,7 +453,7 @@ vanilla_control <- function(control) {
       length(ctrl$n_grid) != 1L ||
       ctrl$n_grid < 7
   ) {
-    cli::cli_abort(
+    abort(
       "{.code control$n_grid} must be a single number of at least 7."
     )
   }
@@ -411,7 +462,7 @@ vanilla_control <- function(control) {
       length(ctrl$log_threshold) != 1L ||
       ctrl$log_threshold >= 0
   ) {
-    cli::cli_abort(
+    abort(
       "{.code control$log_threshold} must be a single negative number."
     )
   }
@@ -420,7 +471,7 @@ vanilla_control <- function(control) {
 
 check_function <- function(f, arg) {
   if (!is.function(f)) {
-    cli::cli_abort(
+    abort(
       "{.arg {arg}} must be a function, not {.obj_type_friendly {f}}."
     )
   }
@@ -428,67 +479,75 @@ check_function <- function(f, arg) {
 
 check_flag <- function(x, arg) {
   if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    cli::cli_abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
+    abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
   }
 }
 
 check_init <- function(init) {
   if (!is.numeric(init) || length(init) == 0L) {
-    cli::cli_abort(
+    abort(
       "{.arg init} must be a non-empty numeric vector, not {.obj_type_friendly {init}}."
     )
   }
   if (!all(is.finite(init))) {
-    cli::cli_abort("{.arg init} must contain only finite values.")
+    abort("{.arg init} must contain only finite values.")
   }
   nms <- names(init)
   if (is.null(nms)) {
     nms <- paste0("theta[", seq_along(init), "]")
   } else if (any(is.na(nms) | nms == "")) {
-    cli::cli_abort("{.arg init} must be fully named, or not named at all.")
+    abort("{.arg init} must be fully named, or not named at all.")
   } else if (anyDuplicated(nms)) {
-    cli::cli_abort(
+    abort(
       "{.arg init} has duplicated names: {.val {unique(nms[duplicated(nms)])}}."
     )
   }
   stats::setNames(as.numeric(init), nms)
 }
 
-check_logpost_at_init <- function(logpost, init, ...) {
-  v <- logpost(init, ...)
+check_logpost_at_init <- function(logpost, init) {
+  v <- logpost(init)
   if (!is.numeric(v) || length(v) != 1L) {
-    cli::cli_abort(c(
-      "{.arg logpost} must return a single number.",
-      "x" = "{.code logpost(init)} returned {.obj_type_friendly {v}} of length {length(v)}."
-    ))
+    abort(
+      c(
+        "{.arg logpost} must return a single number.",
+        "x" = "{.code logpost(init)} returned {.obj_type_friendly {v}} of length {length(v)}."
+      )
+    )
   }
   if (!is.finite(v)) {
-    cli::cli_abort(c(
-      "{.arg logpost} is not finite at {.arg init}.",
-      "x" = "{.code logpost(init)} returned {.val {v}}.",
-      "i" = "Start inside the support of the posterior, and check that every
+    abort(
+      c(
+        "{.arg logpost} is not finite at {.arg init}.",
+        "x" = "{.code logpost(init)} returned {.val {v}}.",
+        "i" = "Start inside the support of the posterior, and check that every
              parameter is on an unconstrained scale."
-    ))
+      )
+    )
   }
   invisible(v)
 }
 
-check_grad_at_init <- function(grad, lp, init, ...) {
-  g <- grad(init, ...)
+check_grad_at_init <- function(grad, lp, init) {
+  g <- grad(init)
   if (!is.numeric(g) || length(g) != length(init)) {
-    cli::cli_abort(c(
-      "{.arg grad} must return a numeric vector of length {length(init)}.",
-      "x" = "{.code grad(init)} returned {.obj_type_friendly {g}} of length {length(g)}."
-    ))
+    abort(
+      c(
+        "{.arg grad} must return a numeric vector of length {length(init)}.",
+        "x" = "{.code grad(init)} returned {.obj_type_friendly {g}} of length {length(g)}."
+      )
+    )
   }
   if (!all(is.finite(g))) {
-    cli::cli_abort("{.arg grad} is not finite at {.arg init}.")
+    abort(
+      "{.arg grad} is not finite at {.arg init}.",
+    )
   }
   g_fd <- fd_grad(lp, init, h = 1e-5 * pmax(1, abs(init)))
   bad <- abs(g - g_fd) > 1e-3 * (1 + abs(g_fd))
   if (any(bad)) {
     worst <- which.max(abs(g - g_fd) / (1 + abs(g_fd)))
-    cli::cli_warn(c(
+    warn(c(
       "{.arg grad} does not match finite differences of {.arg logpost} at
        {.arg init}.",
       "x" = "For {.field {names(init)[worst]}}: {.arg grad} gives

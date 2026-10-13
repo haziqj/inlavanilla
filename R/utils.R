@@ -105,3 +105,32 @@ format_time <- function(s) {
 elapsed <- function() {
   proc.time()[["elapsed"]]
 }
+
+# Errors and warnings, formatted by cli but raised with base R. cli_abort()
+# and cli_warn() go through rlang, which cli only suggests, so they could
+# fail where rlang is not installed. Conditions carry the class
+# "inlavanilla_error" or "inlavanilla_warning". An error raised while another
+# is being handled keeps it as `parent`, and its message is appended.
+abort <- function(
+  message,
+  class = NULL,
+  parent = NULL,
+  call = NULL,
+  .envir = parent.frame()
+) {
+  msg <- cli::format_error(message, .envir = .envir)
+  if (!is.null(parent)) {
+    msg <- paste0(msg, "\nCaused by error: ", conditionMessage(parent))
+  }
+  stop(structure(
+    class = c(class, "inlavanilla_error", "error", "condition"),
+    list(message = msg, call = call, parent = parent)
+  ))
+}
+
+warn <- function(message, .envir = parent.frame()) {
+  warning(structure(
+    class = c("inlavanilla_warning", "warning", "condition"),
+    list(message = cli::format_warning(message, .envir = .envir), call = NULL)
+  ))
+}

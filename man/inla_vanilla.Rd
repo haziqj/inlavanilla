@@ -7,11 +7,11 @@
 inla_vanilla(
   logpost,
   init,
+  ...,
   grad = NULL,
   vb = TRUE,
   verbose = TRUE,
-  control = list(),
-  ...
+  control = list()
 )
 }
 \arguments{
@@ -22,6 +22,10 @@ unconstrained scale. See the section on writing \code{logpost}.}
 \item{init}{A named numeric vector of starting values. Its length sets the
 number of parameters and its names label them; unnamed values are called
 \code{theta[1]}, \code{theta[2]}, ....}
+
+\item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
+data. The arguments after \code{...} must be given by their full names, so
+data arguments are never captured by partial matching.}
 
 \item{grad}{Optional function \code{grad(theta, ...)} returning the gradient of
 \code{logpost} as a numeric vector. When \code{NULL} (the default), finite
@@ -34,9 +38,6 @@ it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
 \item{verbose}{Logical. Show progress? Default \code{TRUE}.}
 
 \item{control}{A list of tuning parameters; see the section on control.}
-
-\item{...}{Further arguments passed to \code{logpost} and \code{grad}, as in
-\code{\link[stats:optim]{stats::optim()}}.}
 }
 \value{
 An object of class \code{inla_vanilla}, with methods for \code{\link[=print]{print()}},

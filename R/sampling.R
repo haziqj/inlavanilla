@@ -52,7 +52,7 @@ sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
   if (
     !is.numeric(nsamp) || length(nsamp) != 1L || !is.finite(nsamp) || nsamp < 1
   ) {
-    cli::cli_abort("{.arg nsamp} must be a single positive number.")
+    abort("{.arg nsamp} must be a single positive number.")
   }
   nsamp <- as.integer(nsamp)
   if (!is.null(fun)) {
@@ -72,26 +72,39 @@ sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
   if (is.null(fun)) {
     return(theta)
   }
-  apply_draws(theta, fun, ...)
+  # Bind `...` here rather than forwarding it, so an argument meant for `fun`
+  # cannot partially match a formal of apply_draws()
+  fun_x <- function(t) fun(t, ...)
+  apply_draws(theta, fun_x)
 }
 
 # Apply `fun` to each row of `theta` (passed as a named vector) and bind the
 # results into a matrix.
-apply_draws <- function(theta, fun, ...) {
-  first <- fun(theta[1, ], ...)
+apply_draws <- function(theta, fun) {
+  first <- fun(theta[1, ])
   if (!is.numeric(first) && !is.logical(first)) {
-    cli::cli_abort(
+    abort(
       "{.arg fun} must return a numeric vector, not {.obj_type_friendly {first}}."
     )
   }
   k <- length(first)
   if (k == 0L) {
-    cli::cli_abort("{.arg fun} returned an empty vector.")
+    abort("{.arg fun} returned an empty vector.")
   }
   n <- nrow(theta)
   rest <- vapply(
     seq_len(n)[-1],
-    function(i) as.numeric(fun(theta[i, ], ...)),
+    function(i) {
+      v <- fun(theta[i, ])
+      if (length(v) != k) {
+        abort(
+          "{.arg fun} returned {length(v)} value{?s} for draw {i}, but {k}
+           for the first draw; it must return the same length every time.",
+          call = NULL
+        )
+      }
+      as.numeric(v)
+    },
     numeric(k)
   )
   # vapply() gives k x (n - 1), or a vector when k = 1; rows are draws
