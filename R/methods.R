@@ -31,23 +31,29 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' scale of `logpost`, together with diagnostics of each stage of the
 #' approximation.
 #'
-#' The diagnostics are:
-#' * **Mode.** Whether [stats::nlminb()] converged, and the largest gradient
-#'   at the mode in whitened units (posterior SDs); a value well above zero
-#'   means the optimiser stopped short.
+#' The diagnostics, and the levels at which they are flagged, are:
+#' * **Mode.** The largest gradient at the mode in whitened units: how far, in
+#'   posterior SDs, a Newton step would still move it. The mode is accepted
+#'   when this is below 0.01, whatever the return code of [stats::nlminb()],
+#'   whose message is shown otherwise.
 #' * **VB correction.** The shift of each mean from the mode, in posterior
-#'   SDs.
+#'   SDs (`vb_shift`). It is flagged when it exceeds 1 SD, or when the
+#'   fixed-point iteration failed and the fallback optimiser ran: both mean
+#'   the posterior is far from the Laplace Gaussian.
 #' * **Tails.** Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
 #'   `tails` is `FALSE` when the log-posterior had not yet fallen below
 #'   `control$log_threshold` at an end of the scan: the Laplace SD understates
 #'   a heavy tail there, and the skew-normal extrapolates it.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and the
-#'   scanned density relative to its peak, and `sn_vs_vb`, the gap between the
+#'   scanned density relative to its peak (flagged above 0.05), and
+#'   `sn_vs_vb`, the gap between the
 #'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 #'   target the posterior mean, so they should agree closely (to
-#'   \eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026). A large gap
-#'   means the posterior is far from Gaussian along that parameter, where
-#'   either approximation may be off.
+#'   \eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026a). A gap above
+#'   0.1 SDs is flagged: the posterior is far from Gaussian along that
+#'   parameter, and either approximation may be off.
+#'
+#' With `vb = FALSE` there is no VB mean, and the VB columns are left out.
 #'
 #' @param object An object of class `inla_vanilla`.
 #' @param probs Probabilities for the reported quantiles.
@@ -58,6 +64,11 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   `logml_laplace`), the per-parameter diagnostics `diagnostics`, and
 #'   details of the optimiser, the VB correction, the number of calls and the
 #'   timing.
+#'
+#' @references
+#' Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for
+#' structural equation models using integrated nested Laplace approximations.
+#' \doi{10.48550/arXiv.2603.25690}
 #' @export
 summary.inla_vanilla <- function(
   object,
@@ -98,8 +109,14 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 
   cli::cat_line(cli::style_bold("Diagnostics"))
   diag <- x$diagnostics
-  dtab <- as.matrix(diag[, c("vb_shift", "sn_vs_vb", "alpha", "nmad")])
-  colnames(dtab) <- c("VB shift", "SN - VB", "Shape", "NMAD")
+  cols <- c("vb_shift", "sn_vs_vb", "alpha", "nmad")
+  heads <- c("VB shift", "SN - VB", "Shape", "NMAD")
+  if (is.null(x$vb)) {
+    cols <- cols[3:4]
+    heads <- heads[3:4]
+  }
+  dtab <- as.matrix(diag[, cols, drop = FALSE])
+  colnames(dtab) <- heads
   cat_table(dtab, digits = 2, by_cell = TRUE)
   cli::cat_line()
 
@@ -120,7 +137,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     max_shift <- max(abs(diag$vb_shift))
     how <- if (x$vb$fallback) " (via the fallback optimiser)" else ""
     cat_status(
-      "ok",
+      if (x$vb$fallback || max_shift > 1) "warn" else "ok",
       "VB correction in {x$vb$iterations} iteration{?s}{how}: max shift {fmt_num(max_shift)} SDs."
     )
   } else {
@@ -204,7 +221,9 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 #' @param pars Parameters to plot, by name or position. Defaults to all.
 #' @param laplace Logical. Overlay the Laplace (Gaussian) marginals? Default
 #'   `TRUE`.
-#' @param ... Further graphical parameters passed to [graphics::plot()].
+#' @param ... Further graphical parameters passed to [graphics::plot()] for
+#'   each panel, such as `xlab` or `main`; they replace the defaults (the
+#'   parameter name as the title, no axis labels, no y axis).
 #'
 #' @returns `x`, invisibly.
 #' @export
@@ -248,19 +267,22 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
     tt <- seq(lims[1], lims[2], length.out = 400)
     f_sn <- dsnorm(tt, sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
     f_lap <- stats::dnorm(tt, x$mode[j], lap_sd)
-    graphics::plot(
-      tt,
-      f_sn,
-      type = "n",
-      ylim = c(0, max(f_sn, if (laplace) f_lap) * 1.05),
-      main = rownames(sn)[j],
-      font.main = 1,
-      xlab = "",
-      ylab = "",
-      yaxt = "n",
-      bty = "n",
-      ...
+    args <- utils::modifyList(
+      list(
+        x = tt,
+        y = f_sn,
+        type = "n",
+        ylim = c(0, max(f_sn, if (laplace) f_lap) * 1.05),
+        main = rownames(sn)[j],
+        font.main = 1,
+        xlab = "",
+        ylab = "",
+        yaxt = "n",
+        bty = "n"
+      ),
+      list(...)
     )
+    do.call(graphics::plot, args)
     graphics::polygon(
       c(tt, rev(tt)),
       c(f_sn, numeric(length(tt))),

@@ -14,7 +14,9 @@
 \item{laplace}{Logical. Overlay the Laplace (Gaussian) marginals? Default
 \code{TRUE}.}
 
-\item{...}{Further graphical parameters passed to \code{\link[graphics:plot]{graphics::plot()}}.}
+\item{...}{Further graphical parameters passed to \code{\link[graphics:plot]{graphics::plot()}} for
+each panel, such as \code{xlab} or \code{main}; they replace the defaults (the
+parameter name as the title, no axis labels, no y axis).}
 }
 \value{
 \code{x}, invisibly.

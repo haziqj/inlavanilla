@@ -55,8 +55,9 @@ progress_tick <- function(p, set = NULL) {
   }
 }
 
-# End a stage with a tick, `text`, and the time it took.
-progress_done <- function(p, text, secs) {
+# End a stage with a tick (or a yellow ! when `ok` is FALSE), `text`, and the
+# time it took.
+progress_done <- function(p, text, secs, ok = TRUE) {
   if (!p$verbose) {
     return(invisible(p))
   }
@@ -66,7 +67,7 @@ progress_done <- function(p, text, secs) {
   p$id <- NULL
   p$calls <- FALSE
   message(
-    cli::col_green(cli::symbol$tick),
+    if (ok) cli::col_green(cli::symbol$tick) else cli::col_yellow("!"),
     " ",
     text,
     " ",
