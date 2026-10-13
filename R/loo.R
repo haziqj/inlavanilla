@@ -92,6 +92,10 @@
 #' @param ... Further arguments passed to `loglik`, such as the data. As in
 #'   [stats::optim()], a name that abbreviates `object` or `loglik` (such as
 #'   `l`) would be taken as that argument, so give such data a longer name.
+#'   If the loo package is attached after inlavanilla, its generics
+#'   `loo(x, ...)` and `waic(x, ...)` are the ones called, and they take an
+#'   argument named `x` as the fit: then do not name data `x`, or call
+#'   `inlavanilla::loo()`.
 #'
 #' @returns `loo()` returns an object of class `inla_vanilla_loo`, which also
 #'   has class `loo`: a list with
@@ -126,17 +130,19 @@
 #' @examples
 #' # Poisson counts: is a log-linear trend better than a constant rate?
 #' y <- c(2, 3, 6, 7, 8, 9, 10, 12, 15)
-#' x <- seq_along(y) - 5
+#' time <- seq_along(y) - 5
 #'
-#' loglik <- function(theta, x, y) {
-#'   dpois(y, exp(theta[["a"]] + theta[["b"]] * x), log = TRUE)
+#' loglik <- function(theta, time, y) {
+#'   dpois(y, exp(theta[["a"]] + theta[["b"]] * time), log = TRUE)
 #' }
 #' logprior <- function(theta) sum(dnorm(theta, 0, 5, log = TRUE))
-#' logpost <- function(theta, x, y) sum(loglik(theta, x, y)) + logprior(theta)
+#' logpost <- function(theta, time, y) {
+#'   sum(loglik(theta, time, y)) + logprior(theta)
+#' }
 #'
-#' fit <- inla_vanilla(logpost, c(a = 0, b = 0), x = x, y = y)
-#' loo(fit, loglik, x = x, y = y)
-#' waic(fit, loglik, x = x, y = y)
+#' fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
+#' loo(fit, loglik, time = time, y = y)
+#' waic(fit, loglik, time = time, y = y)
 #' @export
 loo <- function(object, ...) {
   UseMethod("loo")
