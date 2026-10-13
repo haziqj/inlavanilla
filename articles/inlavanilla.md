@@ -63,7 +63,7 @@ coef(summary(glm(am ~ scale(wt) + scale(hp), binomial, data = mtcars)))
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 needs a function of the parameter vector that returns the log-posterior
 density, up to a constant. We give each coefficient a weakly informative
-$`N(0, 2.5^2)`$ prior. Regression coefficients can take any real value,
+\\N(0, 2.5^2)\\ prior. Regression coefficients can take any real value,
 so they need no reparameterisation.
 
 ``` r
@@ -85,12 +85,11 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [7ms]
-#> ✔ VB mean correction, max shift 0.43σ [18ms]
-#> ✔ Fitted 3 skew-normal marginals [11ms]
+#> ✔ Found the posterior mode in 10 iterations [4ms]
+#> ✔ VB mean correction, max shift 0.43σ [10ms]
+#> ✔ Fitted 3 skew-normal marginals [6ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────────────────────── 41ms ──
-#> 3 parameters · skew-normal marginals · VB-corrected
+#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
 #>         Mean     SD    2.5%     50%  97.5%    Mode
 #> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
@@ -98,10 +97,14 @@ fit
 #> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
 #> 
 #> Log marginal likelihood: -11.62
+#> ! 1 check flagged by `summary()`.
 ```
 
-The table summarises each parameter’s skew-normal marginal: the mean,
-standard deviation, quantiles and mode. Each step of the fit reports as
+The header names the approximation: skew-normal marginals, with the VB
+mean correction. The table summarises each parameter’s skew-normal
+marginal: the mean, standard deviation, quantiles and mode. The last
+line says that [`summary()`](https://rdrr.io/r/base/summary.html) flags
+one of its checks; we come to it below. Each step of the fit reports as
 it finishes, with the time it took. `verbose = TRUE` adds a full
 diagnostic of each step, and `silent = TRUE` prints nothing at all, as
 in a simulation; the warnings it would have shown are kept in
@@ -113,7 +116,7 @@ and diagnostics for each stage:
 ``` r
 
 summary(fit)
-#> ── INLAvanilla summary ─────────────────────────────────────────────────────────
+#> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
 #> 
 #> Posterior marginals
 #>         Mean     SD    2.5%     25%     50%     75%  97.5%    Mode
@@ -134,13 +137,13 @@ summary(fit)
 #> ✔ Skew-normal and VB means agree to within 0.076 SDs.
 #> 
 #> Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)
-#> 511 logpost calls in 41ms (mode 7ms, VB 18ms, marginals 12ms)
+#> 511 logpost calls in 24ms (mode 4ms, VB 11ms, marginals 6ms)
 ```
 
 - **VB shift** is how far the VB mean correction moved each mean from
   the mode, in posterior SDs. The weight coefficient moves by nearly
   half an SD: the posterior is far from symmetric.
-- **Shape** is the skew-normal’s shape parameter $`\alpha`$; zero means
+- **Shape** is the skew-normal’s shape parameter \\\alpha\\; zero means
   symmetric.
 - **NMAD** measures how well the skew-normal fits the scanned
   log-posterior (the largest gap relative to the peak); small is good.
@@ -274,7 +277,7 @@ grad <- function(theta, X, y) {
 }
 fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
-#> [1] 1.813216e-06
+#> [1] 1.813245e-06
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 #>                    logpost grad
 #> finite_differences     511    0
@@ -300,10 +303,11 @@ marginals. With both, the fit is the Laplace approximation alone.
 fit_fast <- function(...) {
   inla_vanilla(logpost, init, X = X, y = y, silent = TRUE, ...)
 }
+# Named as the header of print() names them
 fits <- list(
-  `skew-normal + VB` = fit,
-  `skew-normal` = fit_fast(vb = FALSE),
-  `Gaussian + VB` = fit_fast(marginals = "gaussian"),
+  `Skew-normal + VB` = fit,
+  `Skew-normal` = fit_fast(vb = FALSE),
+  `Laplace + VB` = fit_fast(marginals = "gaussian"),
   Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
 )
 round(t(sapply(fits, function(f) {
@@ -314,9 +318,9 @@ round(t(sapply(fits, function(f) {
   )
 })), 2)
 #>                  calls  logml  Mean  2.5% 97.5%
-#> skew-normal + VB   511 -11.62 -5.12 -8.00 -2.72
-#> skew-normal        207 -11.71 -5.12 -8.00 -2.72
-#> Gaussian + VB      400 -11.62 -5.05 -7.51 -2.59
+#> Skew-normal + VB   511 -11.62 -5.12 -8.00 -2.72
+#> Skew-normal        207 -11.71 -5.12 -8.00 -2.72
+#> Laplace + VB       400 -11.62 -5.05 -7.51 -2.59
 #> Laplace             96 -11.71 -4.51 -6.97 -2.05
 ```
 
@@ -341,7 +345,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008175
+#> [1,] -0.7657929 -5.309342 0.3008176
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```
@@ -414,8 +418,8 @@ log_bf
 A log Bayes factor of 1.4 favours the model with horsepower, by a factor
 of about 4.
 
-The log marginal likelihood estimates $`\log p(y)`$ only when `logpost`
-returns the full $`\log p(y, \vartheta)`$, with every normalising
+The log marginal likelihood estimates \\\log p(y)\\ only when `logpost`
+returns the full \\\log p(y, \vartheta)\\, with every normalising
 constant of the likelihood and the prior. Here
 [`dbinom()`](https://rdrr.io/r/stats/Binomial.html) and
 [`dnorm()`](https://rdrr.io/r/stats/Normal.html) include theirs.
@@ -430,16 +434,16 @@ log-likelihood as one term per observation and use
 The approximation works on an unconstrained scale: each parameter must
 be free to take any real value. Reparameterise anything constrained,
 such as a standard deviation as its log, a probability as its logit, or
-a correlation as its Fisher $`z`$. The parameterisation also matters for
+a correlation as its Fisher \\z\\. The parameterisation also matters for
 accuracy, since each parameter’s skew-normal lives on the scale you
 choose, and scales on which the posterior is closer to Gaussian work
 better.
 
 `logpost` is then the log density of the parameters you pass. A prior
 stated on the natural scale needs the log-Jacobian of the
-transformation. For the share of manual cars $`p`$, with a uniform
-prior, on the logit scale $`\vartheta = \operatorname{logit} p`$, the
-Jacobian is $`dp / d\vartheta = p(1 - p)`$:
+transformation. For the share of manual cars \\p\\, with a uniform
+prior, on the logit scale \\\vartheta = \operatorname{logit} p\\, the
+Jacobian is \\dp / d\vartheta = p(1 - p)\\:
 
 ``` r
 

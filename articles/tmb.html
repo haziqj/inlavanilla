@@ -6,7 +6,13 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Using TMB • inlavanilla</title>
-<script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
+  window.MathJax = {
+    chtml: {
+      fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
+    }
+  };
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -79,7 +85,7 @@
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lavaan.ugent.be" class="external-link">lavaan</a></span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">PoliticalDemocracy</span>, package <span class="op">=</span> <span class="st">"lavaan"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <section class="level2"><h2 id="data-and-parameters">Data and parameters<a class="anchor" aria-label="anchor" href="#data-and-parameters"></a>
 </h2>
@@ -117,20 +123,20 @@
 <td style="text-align: left;"><code>nu</code></td>
 <td style="text-align: right;">11</td>
 <td style="text-align: left;">intercepts</td>
-<td style="text-align: left;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msup><mn>32</mn><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N(0, 32^2)</annotation></semantics></math></td>
+<td style="text-align: left;"><span class="math inline">\(N(0, 32^2)\)</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><code>lam</code></td>
 <td style="text-align: right;">5</td>
 <td style="text-align: left;">loadings of <code>x2</code>, <code>x3</code>, and <code>a</code>, <code>b</code>, <code>c</code>
 </td>
-<td style="text-align: left;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msup><mn>10</mn><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N(0, 10^2)</annotation></semantics></math></td>
+<td style="text-align: left;"><span class="math inline">\(N(0, 10^2)\)</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><code>beta</code></td>
 <td style="text-align: right;">3</td>
 <td style="text-align: left;">regressions</td>
-<td style="text-align: left;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msup><mn>10</mn><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">N(0, 10^2)</annotation></semantics></math></td>
+<td style="text-align: left;"><span class="math inline">\(N(0, 10^2)\)</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><code>logv_lv</code></td>
@@ -138,21 +144,21 @@
 <td style="text-align: left;">log variance of <code>ind60</code>, log disturbance variances of <code>dem60</code> and <code>dem65</code>
 </td>
 <td style="text-align: left;">
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Gamma</mtext><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mrow><mtext mathvariant="normal">rate </mtext><mspace width="0.333em"></mspace></mrow><mn>0.5</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{Gamma}(1, \text{rate } 0.5)</annotation></semantics></math> on the SD</td>
+<span class="math inline">\(\text{Gamma}(1, \text{rate } 0.5)\)</span> on the SD</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><code>logv_ov</code></td>
 <td style="text-align: right;">11</td>
 <td style="text-align: left;">log residual variances</td>
 <td style="text-align: left;">
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Gamma</mtext><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mrow><mtext mathvariant="normal">rate </mtext><mspace width="0.333em"></mspace></mrow><mn>0.5</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{Gamma}(1, \text{rate } 0.5)</annotation></semantics></math> on the SD</td>
+<span class="math inline">\(\text{Gamma}(1, \text{rate } 0.5)\)</span> on the SD</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><code>z</code></td>
 <td style="text-align: right;">6</td>
-<td style="text-align: left;">residual correlations <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ρ</mi><annotation encoding="application/x-tex">\rho</annotation></semantics></math> on the atanh scale</td>
+<td style="text-align: left;">residual correlations <span class="math inline">\(\rho\)</span> on the atanh scale</td>
 <td style="text-align: left;">
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Beta</mtext><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{Beta}(1, 1)</annotation></semantics></math> on <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>ρ</mi><mo>+</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo><mi>/</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">(\rho + 1)/2</annotation></semantics></math>
+<span class="math inline">\(\text{Beta}(1, 1)\)</span> on <span class="math inline">\((\rho + 1)/2\)</span>
 </td>
 </tr>
 </tbody>
@@ -294,9 +300,9 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="va">par</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">init</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
-<section class="level3"><h3 id="a-check-against-lavaan">A check against lavaan<a class="anchor" aria-label="anchor" href="#a-check-against-lavaan"></a>
+<section class="level3"><h3 id="a-check-against-inlavaan">A check against INLAvaan<a class="anchor" aria-label="anchor" href="#a-check-against-inlavaan"></a>
 </h3>
-<p>At lavaan’s maximum likelihood estimates, the 75 pointwise log-likelihoods should equal lavaan’s casewise ones. We map the estimates to the unconstrained scale, and ask the template for its <code>REPORT()</code>ed values there:</p>
+<p>INLAvaan fits the same model, with the same parameterisation and priors. As in the Rcpp article, we put its posterior mode in our order:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
@@ -311,47 +317,55 @@
 <span><span class="st">  y4 ~~ y8</span></span>
 <span><span class="st">  y6 ~~ y8</span></span>
 <span><span class="st">"</span></span>
-<span><span class="va">fit_ml</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/lavaan/man/sem.html" class="external-link">sem</a></span><span class="op">(</span><span class="va">model</span>, <span class="va">PoliticalDemocracy</span>, meanstructure <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit_ml</span><span class="op">)</span></span>
-<span><span class="va">est</span> <span class="op">&lt;-</span> <span class="va">est</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/duplicated.html" class="external-link">duplicated</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">est</span><span class="op">)</span><span class="op">)</span><span class="op">]</span> <span class="co"># a, b and c appear twice</span></span>
+<span><span class="va">fit_inlavaan</span> <span class="op">&lt;-</span> <span class="fu">INLAvaan</span><span class="fu">::</span><span class="fu"><a href="https://inlavaan.haziqj.ml/reference/asem.html" class="external-link">asem</a></span><span class="op">(</span></span>
+<span>  <span class="va">model</span>,</span>
+<span>  <span class="va">PoliticalDemocracy</span>,</span>
+<span>  meanstructure <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">int</span> <span class="op">&lt;-</span> <span class="fu">INLAvaan</span><span class="fu">::</span><span class="fu"><a href="https://inlavaan.haziqj.ml/reference/get_inlavaan_internal.html" class="external-link">get_inlavaan_internal</a></span><span class="op">(</span><span class="va">fit_inlavaan</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">lv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ind60"</span>, <span class="st">"dem60"</span>, <span class="st">"dem65"</span><span class="op">)</span></span>
-<span><span class="va">var_ml</span> <span class="op">&lt;-</span> <span class="va">est</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lv</span>, <span class="va">ov</span><span class="op">)</span>, <span class="st">"~~"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lv</span>, <span class="va">ov</span><span class="op">)</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="va">sd_ml</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">var_ml</span><span class="op">[</span><span class="op">-</span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">sd_ml</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">ov</span></span>
-<span><span class="va">rho_ml</span> <span class="op">&lt;-</span> <span class="va">est</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"~~"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">]</span> <span class="op">/</span></span>
-<span>  <span class="op">(</span><span class="va">sd_ml</span><span class="op">[</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">*</span> <span class="va">sd_ml</span><span class="op">[</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">theta_ml</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="va">est</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">ov</span>, <span class="st">"~1"</span><span class="op">)</span><span class="op">]</span>,</span>
-<span>  <span class="va">est</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ind60=~x2"</span>, <span class="st">"ind60=~x3"</span>, <span class="st">"a"</span>, <span class="st">"b"</span>, <span class="st">"c"</span><span class="op">)</span><span class="op">]</span>,</span>
-<span>  <span class="va">est</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dem60~ind60"</span>, <span class="st">"dem65~ind60"</span>, <span class="st">"dem65~dem60"</span><span class="op">)</span><span class="op">]</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">var_ml</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/Hyperbolic.html" class="external-link">atanh</a></span><span class="op">(</span><span class="va">rho_ml</span><span class="op">)</span></span>
+<span><span class="va">inlavaan_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">ov</span>, <span class="st">"~1"</span><span class="op">)</span>,</span>
+<span>  <span class="st">"ind60=~x2"</span>,</span>
+<span>  <span class="st">"ind60=~x3"</span>,</span>
+<span>  <span class="st">"a"</span>,</span>
+<span>  <span class="st">"b"</span>,</span>
+<span>  <span class="st">"c"</span>,</span>
+<span>  <span class="st">"dem60~ind60"</span>,</span>
+<span>  <span class="st">"dem65~ind60"</span>,</span>
+<span>  <span class="st">"dem65~dem60"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lv</span>, <span class="va">ov</span><span class="op">)</span>, <span class="st">"~~"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lv</span>, <span class="va">ov</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"~~"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">theta_ml</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">parnames</span></span>
-<span></span>
-<span><span class="va">loglik_ml</span> <span class="op">&lt;-</span> <span class="va">obj</span><span class="op">$</span><span class="fu">report</span><span class="op">(</span><span class="va">theta_ml</span><span class="op">)</span><span class="op">$</span><span class="va">loglik</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">loglik_ml</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/pkg/lavaan/man/lavInspect.html" class="external-link">lavInspect</a></span><span class="op">(</span><span class="va">fit_ml</span>, <span class="st">"loglik.casewise"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 7.81597e-14</span></span></code></pre></div>
+<span><span class="va">at</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">inlavaan_names</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">int</span><span class="op">$</span><span class="va">coefficients</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">theta_inlavaan</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">int</span><span class="op">$</span><span class="va">theta_star_novbc</span><span class="op">[</span><span class="va">at</span><span class="op">]</span>, <span class="va">parnames</span><span class="op">)</span></span></code></pre></div>
+</div>
+<p>There, the template’s objective should equal the one INLAvaan minimised:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>TMB <span class="op">=</span> <span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">theta_inlavaan</span><span class="op">)</span>, INLAvaan <span class="op">=</span> <span class="va">int</span><span class="op">$</span><span class="va">opt</span><span class="op">$</span><span class="va">objective</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      TMB INLAvaan </span></span>
+<span><span class="co">#&gt; 1655.078 1655.078</span></span></code></pre></div>
 </div>
 </section></section><section class="level2"><h2 id="fitting">Fitting<a class="anchor" aria-label="anchor" href="#fitting"></a>
 </h2>
 <p>TMB’s <code>fn</code> returns the negative log-posterior and <code>gr</code> its gradient as a one-row matrix, so we negate both and flatten the gradient. With <code>init</code> as the starting values, the parameters keep our names; <code>obj$par</code> would also do, and its repeated names (<code>nu</code>, <code>nu</code>, …) would be numbered.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span>,</span>
 <span>  <span class="va">init</span>,</span>
 <span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 91 iterations [53ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [2.0s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [714ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 90 iterations [28ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [1.2s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [367ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> checks the gradient against finite differences at <code>init</code>, and would warn if it disagreed. The calls, and the time per call in microseconds:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">time_per_call</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">f</span>, <span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">elapsed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span></span>
 <span>    <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -362,22 +376,21 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit</span><span class="op">$</span><span class="va">counts</span></span>
 <span><span class="co">#&gt; logpost    grad </span></span>
-<span><span class="co">#&gt;    1537   15541</span></span>
+<span><span class="co">#&gt;    1539   15540</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  fn <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span>,</span>
 <span>  gr <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;  fn  gr </span></span>
-<span><span class="co">#&gt;  59 145</span></span></code></pre></div>
+<span><span class="co">#&gt;   fn   gr </span></span>
+<span><span class="co">#&gt; 32.5 84.0</span></span></code></pre></div>
 </div>
 <p>A gradient costs a few evaluations of the objective, against 40 for finite differences. Without it, the VB correction alone would take over 120,000 evaluations per sweep. A hand-written gradient, as in the Rcpp article, can be faster still, but it has to be derived and checked; TMB’s needs neither.</p>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
 </h2>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────────────────── 2.8s ──</span></span>
-<span><span class="co">#&gt; 39 parameters · skew-normal marginals · VB-corrected</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                     Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; nu_x1             5.0538  0.0846  4.8880  5.0538  5.2195  5.0538</span></span>
@@ -408,7 +421,7 @@
 <span><span class="co">#&gt; logv_y1            0.685   0.246   0.181   0.692   1.146   0.708</span></span>
 <span><span class="co">#&gt; logv_y2            2.065   0.178   1.719   2.063   2.418   2.060</span></span>
 <span><span class="co">#&gt; logv_y3            1.655   0.196   1.277   1.653   2.044   1.649</span></span>
-<span><span class="co">#&gt; logv_y4            1.207   0.231   0.732   1.214   1.641   1.229</span></span>
+<span><span class="co">#&gt; logv_y4            1.207   0.231   0.733   1.214   1.641   1.229</span></span>
 <span><span class="co">#&gt; logv_y5            0.902   0.211   0.487   0.903   1.314   0.904</span></span>
 <span><span class="co">#&gt; logv_y6            1.643   0.181   1.290   1.642   2.001   1.640</span></span>
 <span><span class="co">#&gt; logv_y7            1.320   0.209   0.909   1.320   1.727   1.321</span></span>
@@ -420,11 +433,12 @@
 <span><span class="co">#&gt; z_y4_y8            0.108   0.133  -0.158   0.109   0.365   0.112</span></span>
 <span><span class="co">#&gt; z_y6_y8            0.328   0.123   0.086   0.328   0.569   0.329</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1686.85</span></span></code></pre></div>
+<span><span class="co">#&gt; Log marginal likelihood: -1686.85</span></span>
+<span><span class="co">#&gt; ! 2 checks flagged by `summary()`.</span></span></code></pre></div>
 </div>
-<p>This agrees with the Rcpp article’s fit, which uses the same log-posterior, to within about <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mn>10</mn><mrow><mi>−</mi><mn>4</mn></mrow></msup><annotation encoding="application/x-tex">10^{-4}</annotation></semantics></math> posterior SDs.</p>
+<p>This agrees with the Rcpp article’s fit, which uses the same log-posterior, to within about <span class="math inline">\(10^{-4}\)</span> posterior SDs. The two checks flagged by <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> are the scan-path bend, for several parameters, and the gap between the skew-normal and VB means of <code>logv_dem65</code>; the <a href="rcpp.html">Rcpp article</a> discusses both.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"z_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -435,37 +449,41 @@
 </div>
 <section class="level3"><h3 id="on-the-natural-scale">On the natural scale<a class="anchor" aria-label="anchor" href="#on-the-natural-scale"></a>
 </h3>
-<p>The parameters are on the unconstrained scale, and <code><a href="../reference/sampling.html">sampling()</a></code> with <code>fun</code> maps its draws back. Here are the residual correlations <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ρ</mi><mo>=</mo><mrow><mi mathvariant="normal">tanh</mi><mo>⁡</mo></mrow><mi>z</mi></mrow><annotation encoding="application/x-tex">\rho = \tanh z</annotation></semantics></math> and the disturbance variance of <code>dem65</code>, next to lavaan’s maximum likelihood estimates.</p>
+<p>The parameters are on the unconstrained scale, and <code><a href="../reference/sampling.html">sampling()</a></code> with <code>fun</code> maps its draws back. Here are the residual correlations <span class="math inline">\(\rho = \tanh z\)</span> and the disturbance variance of <code>dem65</code>, next to the posterior medians from INLAvaan’s own copula draws, which are on the natural scale.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="va">natural</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">rho</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Hyperbolic.html" class="external-link">tanh</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"z_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">rho</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"rho_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">rho</span>, psi_dem65 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logv_dem65"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu">INLAvaan</span><span class="fu">::</span><span class="fu"><a href="https://inlavaan.haziqj.ml/reference/sampling.html" class="external-link">sampling</a></span><span class="op">(</span><span class="va">fit_inlavaan</span>, nsamp <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
+<span><span class="va">v</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">draws</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"~~"</span>, <span class="va">x</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">rho</span> <span class="op">&lt;-</span> <span class="va">draws</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"~~"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">]</span> <span class="op">/</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu">v</span><span class="op">(</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">*</span> <span class="fu">v</span><span class="op">(</span><span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">natural</span>, <span class="fl">2</span>, <span class="va">quantile</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    ML <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">rho_ml</span>, <span class="va">var_ml</span><span class="op">[[</span><span class="st">"dem65~~dem65"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>    INLAvaan <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">rho</span>, <span class="fl">2</span>, <span class="va">median</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="fu">v</span><span class="op">(</span><span class="st">"dem65"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="fl">3</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;             2.5%   50% 97.5%    ML</span></span>
-<span><span class="co">#&gt; rho_y1_y5 -0.024 0.288 0.528 0.281</span></span>
-<span><span class="co">#&gt; rho_y2_y4  0.039 0.276 0.475 0.291</span></span>
-<span><span class="co">#&gt; rho_y2_y6  0.153 0.345 0.520 0.356</span></span>
-<span><span class="co">#&gt; rho_y3_y7 -0.084 0.184 0.421 0.169</span></span>
-<span><span class="co">#&gt; rho_y4_y8 -0.158 0.109 0.347 0.111</span></span>
-<span><span class="co">#&gt; rho_y6_y8  0.080 0.315 0.509 0.338</span></span>
-<span><span class="co">#&gt; psi_dem65  0.028 0.234 0.739 0.164</span></span></code></pre></div>
+<span><span class="co">#&gt;             2.5%   50% 97.5% INLAvaan</span></span>
+<span><span class="co">#&gt; rho_y1_y5 -0.024 0.288 0.528    0.286</span></span>
+<span><span class="co">#&gt; rho_y2_y4  0.039 0.276 0.475    0.274</span></span>
+<span><span class="co">#&gt; rho_y2_y6  0.153 0.345 0.520    0.345</span></span>
+<span><span class="co">#&gt; rho_y3_y7 -0.084 0.184 0.421    0.184</span></span>
+<span><span class="co">#&gt; rho_y4_y8 -0.158 0.109 0.347    0.111</span></span>
+<span><span class="co">#&gt; rho_y6_y8  0.080 0.315 0.509    0.317</span></span>
+<span><span class="co">#&gt; psi_dem65  0.028 0.234 0.739    0.230</span></span></code></pre></div>
 </div>
-<p>The correlations agree closely with maximum likelihood. The disturbance variance of <code>dem65</code> is small and poorly determined, with a long right tail on this scale.</p>
+<p>The medians agree with INLAvaan’s, up to the Monte Carlo error of the two sets of draws. The disturbance variance of <code>dem65</code> is small and poorly determined, with a long right tail on this scale.</p>
 </section><section class="level3"><h3 id="leave-one-out-cross-validation">Leave-one-out cross-validation<a class="anchor" aria-label="anchor" href="#leave-one-out-cross-validation"></a>
 </h3>
 <p><code>obj$report()</code> evaluates the template at any parameter value without recording derivatives, and returns the 75 pointwise log-likelihoods: the <code>loglik</code> that <code><a href="../reference/loo.html">loo()</a></code> needs. It leaves out one country at a time, from this one fit:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">loo_sem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/loo.html">loo</a></span><span class="op">(</span><span class="va">fit</span>, <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">report</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">$</span><span class="va">loglik</span><span class="op">)</span></span>
 <span><span class="va">loo_sem</span></span>
 <span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────────── 75 units ──</span></span>
@@ -477,9 +495,26 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit 35.</span></span></code></pre></div>
 </div>
-<p>With 39 parameters this takes <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>39</mn><mn>2</mn></msup><mo>+</mo><mn>39</mn><mo>+</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">39^2 + 39 + 1</annotation></semantics></math>, or 1,561, evaluations of the template, each giving all 75 terms. See <a href="model-comparison.html">Model comparison with LOO and WAIC</a> for what the numbers mean and how to compare models with them.</p>
+<p>INLAvaan’s <code><a href="../reference/loo.html">loo()</a></code> uses the same deterministic expansion (Alhyari et al., 2026), with its own per-case log-likelihoods:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">loo_inlavaan</span> <span class="op">&lt;-</span> <span class="fu">INLAvaan</span><span class="fu">::</span><span class="fu"><a href="https://inlavaan.haziqj.ml/reference/loo.html" class="external-link">loo</a></span><span class="op">(</span><span class="va">fit_inlavaan</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>    ours <span class="op">=</span> <span class="va">loo_sem</span><span class="op">$</span><span class="va">estimates</span><span class="op">[</span>, <span class="st">"Estimate"</span><span class="op">]</span>,</span>
+<span>    INLAvaan <span class="op">=</span> <span class="va">loo_inlavaan</span><span class="op">$</span><span class="va">estimates</span><span class="op">[</span>, <span class="st">"Estimate"</span><span class="op">]</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  <span class="fl">2</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;          elpd_loo p_loo   looic</span></span>
+<span><span class="co">#&gt; ours     -1588.83 38.60 3177.66</span></span>
+<span><span class="co">#&gt; INLAvaan -1588.96 38.77 3177.92</span></span></code></pre></div>
+</div>
+<p>The two agree to well within the standard error. They differ a little because each expands about its own VB-corrected mean, and the two VB corrections take their expectations with different rules.</p>
+<p>With 39 parameters this takes <span class="math inline">\(39^2 + 39 + 1\)</span>, or 1,561, evaluations of the template, each giving all 75 terms. See <a href="model-comparison.html">Model comparison with LOO and WAIC</a> for what the numbers mean and how to compare models with them.</p>
 </section></section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
+<p>Alhyari, M., Jamil, H., Montcho, H., &amp; Rue, H. (2026). <em>Deterministic leave-one-cluster-out cross-validation for multilevel Bayesian models</em> (arXiv:2609.00670 [stat.ME]). arXiv. <a href="https://doi.org/10.48550/arXiv.2609.00670" class="external-link uri">https://doi.org/10.48550/arXiv.2609.00670</a></p>
 <p>Bollen, K. A. (1989). <em>Structural equations with latent variables</em>. Wiley. <a href="https://doi.org/10.1002/9781118619179" class="external-link uri">https://doi.org/10.1002/9781118619179</a></p>
 <p>Kristensen, K., Nielsen, A., Berg, C. W., Skaug, H., &amp; Bell, B. M. (2016). TMB: Automatic differentiation and Laplace approximation. <em>Journal of Statistical Software</em>, <em>70</em>(5), 1–21. <a href="https://doi.org/10.18637/jss.v070.i05" class="external-link uri">https://doi.org/10.18637/jss.v070.i05</a></p>
 </section><script id="quarto-html-after-body" type="application/javascript">

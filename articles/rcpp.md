@@ -2,8 +2,8 @@
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 calls `logpost` many times, and the count grows quickly with the number
-of parameters $`m`$. Without a gradient, the VB correction alone needs
-$`(m + 1)(2m^2 + 1)`$ calls per sweep. That is 76 calls for 3
+of parameters \\m\\. Without a gradient, the VB correction alone needs
+\\(m + 1)(2m^2 + 1)\\ calls per sweep. That is 76 calls for 3
 parameters, and 121,720 for 39. Two things help: a faster `logpost`, and
 a gradient.
 
@@ -19,7 +19,7 @@ differentiation.
 ``` r
 
 library(inlavanilla)
-library(lavaan)
+data(PoliticalDemocracy, package = "lavaan")
 ```
 
 ## The model
@@ -27,7 +27,8 @@ library(lavaan)
 The `PoliticalDemocracy` data in lavaan come from Bollen (1989). For 75
 developing countries they hold three indicators of industrialisation in
 1960 (`x1`–`x3`), and the same four indicators of political democracy in
-1960 (`y1`–`y4`) and 1965 (`y5`–`y8`). In lavaan syntax, the model is:
+1960 (`y1`–`y4`) and 1965 (`y5`–`y8`). In the lavaan syntax that
+INLAvaan takes, the model is:
 
 ``` r
 
@@ -54,18 +55,17 @@ residuals of the same indicator in the two years are correlated, as are
 those of `y2` with `y4` and `y6` with `y8`.
 
 With a mean structure, the 11 indicators of each country are normal with
-mean $`\nu`$ and covariance
+mean \\\nu\\ and covariance
 
-``` math
-\Sigma = \Lambda (I - B)^{-1} \Psi (I - B)^{-\top} \Lambda^\top + \Theta,
-```
+\\ \Sigma = \Lambda (I - B)^{-1} \Psi (I - B)^{-\top} \Lambda^\top +
+\Theta, \\
 
-where $`\nu`$ holds the 11 intercepts, $`\Lambda`$ ($`11 \times 3`$) the
-loadings, $`B`$ ($`3 \times 3`$) the regressions among the latent
-variables, $`\Psi`$ the diagonal matrix of the variance of `ind60` and
-the disturbance variances of `dem60` and `dem65`, and $`\Theta`$
-($`11 \times 11`$) the residual covariances. The log-likelihood is the
-sum of 75 multivariate normal log-densities.
+where \\\nu\\ holds the 11 intercepts, \\\Lambda\\ (\\11 \times 3\\) the
+loadings, \\B\\ (\\3 \times 3\\) the regressions among the latent
+variables, \\\Psi\\ the diagonal matrix of the variance of `ind60` and
+the disturbance variances of `dem60` and `dem65`, and \\\Theta\\ (\\11
+\times 11\\) the residual covariances. The log-likelihood is the sum of
+75 multivariate normal log-densities.
 
 ## Parameters and priors
 
@@ -77,32 +77,32 @@ with `INLAvaan::asem(model, PoliticalDemocracy, meanstructure = TRUE)`:
 
 | Parameters | Number | Unconstrained scale | Prior |
 |:---|---:|:---|:---|
-| Intercepts $`\nu`$ | 11 | as they are | $`N(0, 32^2)`$ |
-| Loadings (`x2`, `x3`, `a`, `b`, `c`) | 5 | as they are | $`N(0, 10^2)`$ |
-| Regressions | 3 | as they are | $`N(0, 10^2)`$ |
-| Variances (3 latent, 11 residual) | 14 | $`\ell = \log \sigma^2`$ | $`\text{Gamma}(1, \text{rate } 0.5)`$ on $`\sigma`$ |
-| Residual covariances | 6 | $`z = \operatorname{atanh} \rho`$ | $`\text{Beta}(1, 1)`$ on $`(\rho + 1)/2`$ |
+| Intercepts \\\nu\\ | 11 | as they are | \\N(0, 32^2)\\ |
+| Loadings (`x2`, `x3`, `a`, `b`, `c`) | 5 | as they are | \\N(0, 10^2)\\ |
+| Regressions | 3 | as they are | \\N(0, 10^2)\\ |
+| Variances (3 latent, 11 residual) | 14 | \\\ell = \log \sigma^2\\ | \\\text{Gamma}(1, \text{rate } 0.5)\\ on \\\sigma\\ |
+| Residual covariances | 6 | \\z = \operatorname{atanh} \rho\\ | \\\text{Beta}(1, 1)\\ on \\(\rho + 1)/2\\ |
 
-A residual covariance enters through its correlation $`\rho`$, as
-$`\theta_{ij} = \rho \sqrt{\theta_{ii} \theta_{jj}}`$, and both its
-parameter $`z`$ and its prior refer to $`\rho`$.
+A residual covariance enters through its correlation \\\rho\\, as
+\\\theta\_{ij} = \rho \sqrt{\theta\_{ii} \theta\_{jj}}\\, and both its
+parameter \\z\\ and its prior refer to \\\rho\\.
 
 Two of the priors are on a different scale from the parameter, so
 `logpost` needs their log-Jacobians:
 
-- A variance’s prior is on its standard deviation
-  $`\sigma = e^{\ell / 2}`$, and $`d\sigma / d\ell = \sigma / 2`$. Its
-  term in the log-posterior is $`\log p(\sigma) + \log(\sigma / 2)`$.
-- A correlation’s prior is on $`\rho = \tanh z`$, and
-  $`d\rho / dz = 1 - \rho^2`$. The Beta(1, 1) prior on $`(\rho + 1)/2`$
-  is the uniform density $`1/2`$ on $`(-1, 1)`$, so the term is
-  $`\log(1/2) + \log(1 - \rho^2)`$.
+- A variance’s prior is on its standard deviation \\\sigma = e^{\ell /
+  2}\\, and \\d\sigma / d\ell = \sigma / 2\\. Its term in the
+  log-posterior is \\\log p(\sigma) + \log(\sigma / 2)\\.
+- A correlation’s prior is on \\\rho = \tanh z\\, and \\d\rho / dz = 1 -
+  \rho^2\\. The Beta(1, 1) prior on \\(\rho + 1)/2\\ is the uniform
+  density \\1/2\\ on \\(-1, 1)\\, so the term is \\\log(1/2) + \log(1 -
+  \rho^2)\\.
 
 The normal priors are on the parameters themselves and need none.
 
 ## The log-posterior in R
 
-The data, ordered as the rows of $`\Lambda`$, and the names of the 39
+The data, ordered as the rows of \\\Lambda\\, and the names of the 39
 parameters. `logv_` marks a log variance and `z_` a residual correlation
 on the atanh scale.
 
@@ -130,7 +130,7 @@ parnames <- c(
 )
 ```
 
-The free entries of $`\Lambda`$, $`B`$ and $`\Theta`$, as matrix
+The free entries of \\\Lambda\\, \\B\\ and \\\Theta\\, as matrix
 indices, and the element of the parameter vector that fills each. The
 loadings `a`, `b` and `c` fill two entries each.
 
@@ -207,35 +207,52 @@ init <- c(
 names(init) <- parnames
 ```
 
-### A check against lavaan
+### A check against INLAvaan
 
-At lavaan’s maximum likelihood estimates, our log-likelihood should
-equal lavaan’s. We map the estimates to the unconstrained scale:
+INLAvaan fits the same model, with the same parameterisation and priors:
 
 ``` r
 
-fit_ml <- sem(model, PoliticalDemocracy, meanstructure = TRUE)
-est <- coef(fit_ml)
-est <- est[!duplicated(names(est))] # a, b and c appear twice
+fit_inlavaan <- INLAvaan::asem(
+  model,
+  PoliticalDemocracy,
+  meanstructure = TRUE,
+  verbose = FALSE
+)
+int <- INLAvaan::get_inlavaan_internal(fit_inlavaan)
+```
+
+Its parameters are ours, in another order and under lavaan’s names. Here
+is its posterior mode in our order:
+
+``` r
 
 lv <- c("ind60", "dem60", "dem65")
-var_ml <- est[paste0(c(lv, ov), "~~", c(lv, ov))]
-sd_ml <- sqrt(var_ml[-(1:3)])
-names(sd_ml) <- ov
-cov_ml <- est[paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])]
-
-theta_ml <- c(
-  est[paste0(ov, "~1")],
-  est[c("ind60=~x2", "ind60=~x3", "a", "b", "c")],
-  est[c("dem60~ind60", "dem65~ind60", "dem65~dem60")],
-  log(var_ml),
-  atanh(cov_ml / (sd_ml[cov_pairs[, 1]] * sd_ml[cov_pairs[, 2]]))
+inlavaan_names <- c(
+  paste0(ov, "~1"),
+  "ind60=~x2",
+  "ind60=~x3",
+  "a",
+  "b",
+  "c",
+  "dem60~ind60",
+  "dem65~ind60",
+  "dem65~dem60",
+  paste0(c(lv, ov), "~~", c(lv, ov)),
+  paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])
 )
-names(theta_ml) <- parnames
+at <- match(inlavaan_names, names(int$coefficients))
+theta_inlavaan <- setNames(int$theta_star_novbc[at], parnames)
+```
 
-c(ours = sum(loglik_r(theta_ml, Y)), lavaan = logLik(fit_ml))
-#>      ours    lavaan 
-#> -1548.818 -1548.818
+There, our log-posterior should equal INLAvaan’s, which its optimiser
+minimised as the negative:
+
+``` r
+
+c(ours = logpost_r(theta_inlavaan, Y), INLAvaan = -int$opt$objective)
+#>      ours  INLAvaan 
+#> -1655.078 -1655.078
 ```
 
 ### How long R takes
@@ -254,7 +271,7 @@ time_per_call <- function(f, n) {
 }
 us_r <- time_per_call(function() logpost_r(init, Y), n = 1000)
 us_r
-#> [1] 139
+#> [1] 50
 ```
 
 With `vb = FALSE`,
@@ -265,16 +282,16 @@ skew-normal marginals:
 ``` r
 
 fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = FALSE)
-#> ✔ Found the posterior mode in 83 iterations [867ms]
-#> ✔ Fitted 39 skew-normal marginals [1.0s]
+#> ✔ Found the posterior mode in 80 iterations [396ms]
+#> ✔ Fitted 39 skew-normal marginals [521ms]
 fit_r$counts
 #> logpost    grad 
-#>   14295       0
+#>   14055       0
 ```
 
-These two stages take 14,295 calls. The VB correction would add far
-more: it evaluates the gradient at $`2m^2 + 1 = 3{,}043`$ points per
-sweep, and without `grad` each gradient costs $`m + 1 = 40`$ calls, over
+These two stages take 14,055 calls. The VB correction would add far
+more: it evaluates the gradient at \\2m^2 + 1 = 3{,}043\\ points per
+sweep, and without `grad` each gradient costs \\m + 1 = 40\\ calls, over
 a few sweeps. We come back to the cost of a full fit below.
 
 ## The log-posterior in C++
@@ -384,39 +401,35 @@ double logpost_cpp(const Map<VectorXd> theta, const Map<MatrixXd> Y) {
 ### The gradient
 
 The gradient follows from the chain rule, and costs about as much as the
-log-likelihood itself. Write $`D`$ for the $`n \times 11`$ matrix of
-data minus $`\nu`$ and $`\Omega = \Sigma^{-1}`$. The derivative of the
-log-likelihood is $`\Omega D^\top \mathbf{1}`$ with respect to $`\nu`$,
+log-likelihood itself. Write \\D\\ for the \\n \times 11\\ matrix of
+data minus \\\nu\\ and \\\Omega = \Sigma^{-1}\\. The derivative of the
+log-likelihood is \\\Omega D^\top \mathbf{1}\\ with respect to \\\nu\\,
 and
 
-``` math
-G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
-```
+\\ G = \tfrac{1}{2} \left( \Omega D^\top D \\ \Omega - n \Omega \right)
+\\
 
-with respect to $`\Sigma`$. Through
-$`\Sigma = \Lambda M \Lambda^\top + \Theta`$, with $`A = (I - B)^{-1}`$
-and $`M = A \Psi A^\top`$, the derivatives with respect to the model
-matrices are
+with respect to \\\Sigma\\. Through \\\Sigma = \Lambda M \Lambda^\top +
+\Theta\\, with \\A = (I - B)^{-1}\\ and \\M = A \Psi A^\top\\, the
+derivatives with respect to the model matrices are
 
-``` math
-\frac{\partial \ell}{\partial \Lambda} = 2 G \Lambda M, \qquad
-\frac{\partial \ell}{\partial B} = 2 A^\top \Lambda^\top G \Lambda M, \qquad
-\frac{\partial \ell}{\partial \Psi} = A^\top \Lambda^\top G \Lambda A,
-```
+\\ \frac{\partial \ell}{\partial \Lambda} = 2 G \Lambda M, \qquad
+\frac{\partial \ell}{\partial B} = 2 A^\top \Lambda^\top G \Lambda M,
+\qquad \frac{\partial \ell}{\partial \Psi} = A^\top \Lambda^\top G
+\Lambda A, \\
 
-and $`G_{ii}`$ for a residual variance $`\theta_{ii}`$ and $`2 G_{ij}`$
-for a residual covariance. A loading held equal across years sums its
-two entries. On the unconstrained scale, a log variance multiplies its
-derivative by the variance. A residual covariance
-$`\theta_{ij} = \rho \sqrt{\theta_{ii} \theta_{jj}}`$ moves with $`z`$,
-through
-$`d\theta_{ij} / dz = (1 - \rho^2) \sqrt{\theta_{ii} \theta_{jj}}`$, and
-with both log variances, through
-$`d\theta_{ij} / d\ell_i = \theta_{ij} / 2`$.
+and \\G\_{ii}\\ for a residual variance \\\theta\_{ii}\\ and \\2
+G\_{ij}\\ for a residual covariance. A loading held equal across years
+sums its two entries. On the unconstrained scale, a log variance
+multiplies its derivative by the variance. A residual covariance
+\\\theta\_{ij} = \rho \sqrt{\theta\_{ii} \theta\_{jj}}\\ moves with
+\\z\\, through \\d\theta\_{ij} / dz = (1 - \rho^2) \sqrt{\theta\_{ii}
+\theta\_{jj}}\\, and with both log variances, through \\d\theta\_{ij} /
+d\ell_i = \theta\_{ij} / 2\\.
 
-The log-prior adds $`-\vartheta / s^2`$ for each normal prior,
-$`1/2 - \sigma / 4`$ for each log variance and $`-2\rho`$ for each
-correlation. We append the gradient to the same file:
+The log-prior adds \\-\vartheta / s^2\\ for each normal prior, \\1/2 -
+\sigma / 4\\ for each log variance and \\-2\rho\\ for each correlation.
+We append the gradient to the same file:
 
 ``` cpp
 // Gradient of logpost_cpp() with respect to theta
@@ -473,24 +486,24 @@ Rcpp::sourceCpp(cpp_file)
 ```
 
 The C++ log-posterior should match the R one to rounding error, at the
-starting values, at lavaan’s estimates and at some random points:
+starting values, at INLAvaan’s posterior mode and at some random points:
 
 ``` r
 
 set.seed(1)
 points <- c(
-  list(init, theta_ml),
+  list(init, theta_inlavaan),
   replicate(4, init + rnorm(39, sd = 0.3), simplify = FALSE)
 )
 vapply(points, function(th) logpost_cpp(th, Y) - logpost_r(th, Y), 0)
-#> [1] -4.547474e-13  2.273737e-13  0.000000e+00 -2.273737e-13  0.000000e+00
+#> [1] -4.547474e-13  0.000000e+00  0.000000e+00 -2.273737e-13  0.000000e+00
 #> [6] -4.547474e-13
-max(abs(loglik_cpp(theta_ml, Y) - loglik_r(theta_ml, Y)))
+max(abs(loglik_cpp(theta_inlavaan, Y) - loglik_r(theta_inlavaan, Y)))
 #> [1] 7.105427e-15
 ```
 
 The gradient should match central differences of the R log-posterior, up
-to their own error, about $`10^{-8}`$ relative:
+to their own error, about \\10^{-8}\\ relative:
 
 ``` r
 
@@ -512,7 +525,7 @@ vapply(
   },
   0
 )
-#> [1] 1.461419e-08 1.228863e-08 9.214642e-09 7.379461e-09 3.295428e-09
+#> [1] 1.461419e-08 2.310907e-08 9.214642e-09 7.379461e-09 5.716762e-09
 #> [6] 6.734287e-09
 ```
 
@@ -526,10 +539,10 @@ us_cpp <- time_per_call(function() logpost_cpp(init, Y), n = 10000)
 us_grad <- time_per_call(function() grad_cpp(init, Y), n = 10000)
 c(R = us_r, `C++` = us_cpp, `C++ gradient` = us_grad)
 #>            R          C++ C++ gradient 
-#>        139.0          9.0         11.7
+#>         50.0          5.0          6.7
 ```
 
-The C++ log-posterior is about 15 times faster than the R one, and the
+The C++ log-posterior is about 10 times faster than the R one, and the
 analytic gradient costs about the same as one log-posterior, where
 finite differences need 40.
 
@@ -538,21 +551,21 @@ Now the full fit, with the VB correction, first without a gradient:
 ``` r
 
 fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
-#> ✔ Found the posterior mode in 79 iterations [104ms]
-#> ✔ VB mean correction, max shift 0.43σ [7.0s]
-#> ✔ Fitted 39 skew-normal marginals [236ms]
+#> ✔ Found the posterior mode in 82 iterations [54ms]
+#> ✔ VB mean correction, max shift 0.43σ [3.8s]
+#> ✔ Fitted 39 skew-normal marginals [132ms]
 ```
 
-It took 500,872 calls, nearly all in the VB correction. In R, at 139
-microseconds a call, these would take about 70 seconds. With the
+It took 501,117 calls, nearly all in the VB correction. In R, at 50
+microseconds a call, these would take about 25 seconds. With the
 gradient:
 
 ``` r
 
 fit <- inla_vanilla(logpost_cpp, init, grad = grad_cpp, Y = Y)
-#> ✔ Found the posterior mode in 91 iterations [10ms]
-#> ✔ VB mean correction, max shift 0.43σ [266ms]
-#> ✔ Fitted 39 skew-normal marginals [187ms]
+#> ✔ Found the posterior mode in 89 iterations [6ms]
+#> ✔ VB mean correction, max shift 0.43σ [147ms]
+#> ✔ Fitted 39 skew-normal marginals [97ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -565,9 +578,9 @@ neither does. The calls and times (in seconds) of the three fits:
 fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 #>                  logpost  grad laplace   vb marginals total
-#> R, no VB           14295     0    0.87 0.00      1.01  1.88
-#> C++               500872     0    0.10 7.00      0.24  7.34
-#> C++ and gradient    1537 15541    0.01 0.27      0.19  0.47
+#> R, no VB           14055     0    0.40 0.00      0.52  0.92
+#> C++               501117     0    0.05 3.84      0.13  4.02
+#> C++ and gradient    1535 15539    0.01 0.15      0.10  0.26
 ```
 
 The three fits agree. The skew-normal marginals do not depend on the VB
@@ -582,7 +595,7 @@ c(
   `C++` = max(abs(fit_cpp$summary - fit$summary) / sds)
 )
 #>            R          C++ 
-#> 5.689665e-05 4.961973e-05
+#> 4.488435e-05 2.977629e-05
 ```
 
 ## Results
@@ -590,7 +603,7 @@ c(
 ``` r
 
 summary(fit)
-#> ── INLAvanilla summary ─────────────────────────────────────────────────────────
+#> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
 #> 
 #> Posterior marginals
 #>                     Mean      SD    2.5%     25%     50%     75%   97.5%    Mode
@@ -622,7 +635,7 @@ summary(fit)
 #> logv_y1            0.685   0.246   0.181   0.524   0.692   0.853   1.146   0.708
 #> logv_y2            2.065   0.178   1.719   1.944   2.063   2.184   2.418   2.060
 #> logv_y3            1.655   0.196   1.277   1.522   1.653   1.785   2.044   1.649
-#> logv_y4            1.207   0.231   0.732   1.056   1.214   1.365   1.641   1.229
+#> logv_y4            1.207   0.231   0.733   1.056   1.214   1.365   1.641   1.229
 #> logv_y5            0.902   0.211   0.487   0.760   0.903   1.045   1.314   0.904
 #> logv_y6            1.643   0.181   1.290   1.520   1.642   1.765   2.001   1.640
 #> logv_y7            1.320   0.209   0.909   1.179   1.320   1.460   1.727   1.321
@@ -636,16 +649,16 @@ summary(fit)
 #> 
 #> Diagnostics
 #>                   VB shift   SN - VB  Shape     NMAD   Bend
-#> nu_x1             -0.00014  -0.00036  -0.14  4.1e-06  0.054
-#> nu_x2             -0.00025   -0.0004  -0.14  4.4e-06  0.054
-#> nu_x3             -0.00022  -0.00036  -0.13  3.9e-06  0.054
-#> nu_y1              -0.0004  -0.00032  -0.15  6.9e-06   0.05
-#> nu_y2             -0.00049  -0.00032  -0.14  4.7e-06  0.042
+#> nu_x1             -7.6e-05  -0.00036  -0.14  4.2e-06  0.054
+#> nu_x2             -0.00021  -0.00039  -0.14  4.4e-06  0.054
+#> nu_x3             -0.00017  -0.00036  -0.13  3.9e-06  0.054
+#> nu_y1             -0.00042  -0.00032  -0.15  6.8e-06   0.05
+#> nu_y2              -0.0005  -0.00031  -0.14  4.7e-06  0.042
 #> nu_y3              -0.0005  -0.00033  -0.15  5.9e-06  0.047
-#> nu_y4             -0.00057  -0.00037  -0.15  6.5e-06  0.047
-#> nu_y5             -0.00038  -0.00029  -0.15  6.4e-06  0.049
+#> nu_y4             -0.00055  -0.00037  -0.15  6.5e-06  0.047
+#> nu_y5             -0.00041  -0.00029  -0.15  6.3e-06  0.049
 #> nu_y6             -0.00051  -0.00033  -0.15  6.5e-06  0.051
-#> nu_y7             -0.00051  -0.00031  -0.15  6.5e-06  0.046
+#> nu_y7             -0.00051  -0.00031  -0.15  6.4e-06  0.046
 #> nu_y8             -0.00057  -0.00034  -0.15  6.6e-06  0.048
 #> lam_x2                0.33     0.047    1.5   0.0067  0.043
 #> lam_x3                0.18   -0.0032    1.1   0.0043  0.079
@@ -656,7 +669,7 @@ summary(fit)
 #> beta_dem65_ind60    -0.074    -0.011   0.69  0.00038  0.075
 #> beta_dem65_dem60      0.12     0.014   0.98   0.0038  0.042
 #> logv_ind60          -0.037   -0.0022   0.69    0.003  0.038
-#> logv_dem60          0.0018   -0.0072  -0.69   0.0022  0.059
+#> logv_dem60          0.0017   -0.0072  -0.69   0.0022  0.059
 #> logv_dem65           -0.43       0.2   -4.2    0.045   0.44
 #> logv_x1               0.26     0.044   -1.1    0.006   0.14
 #> logv_x2               -0.3     0.031   -3.3    0.033   0.11
@@ -676,20 +689,20 @@ summary(fit)
 #> z_y4_y8             -0.094   -0.0018  -0.74   0.0041   0.13
 #> z_y6_y8             -0.085    0.0053  -0.35   0.0053   0.08
 #> 
-#> ✔ Mode found in 91 iterations (gradient 7.8e-05 SDs).
+#> ✔ Mode found in 89 iterations (gradient 8.3e-05 SDs).
 #> ✔ VB correction in 4 iterations: max shift 0.43 SDs.
 #> ! The straight scan misses up to 0.44 nats at +-2 SDs for b, logv_dem65, logv_x1, logv_x2, z_y2_y6, and z_y4_y8: the marginal may be too narrow.
 #> ✔ Skew-normal fits: max NMAD 0.045.
 #> ! Skew-normal and VB means differ by up to 0.2 SDs, for logv_dem65.
 #> 
 #> Log marginal likelihood: -1686.847 (Laplace -1687.471, VB term 0.62)
-#> 1537 logpost and 15541 grad calls in 470ms (mode 10ms, VB 267ms, marginals 188ms)
+#> 1535 logpost and 15539 grad calls in 256ms (mode 6ms, VB 148ms, marginals 98ms)
 ```
 
 The intercepts are close to symmetric, and the loadings and regressions
 are mildly right-skewed. The most skewed marginal is that of the
 disturbance variance of `dem65`. Democracy in 1960 and industrialisation
-explain most of the variation in democracy in 1965 (see $`R^2`$ below),
+explain most of the variation in democracy in 1965 (see \\R^2\\ below),
 so this variance is small and poorly determined, and its log has a long
 left tail. [`summary()`](https://rdrr.io/r/base/summary.html) flags it
 and a few others: there, the straight scan through the mode misses some
@@ -740,8 +753,8 @@ round(t(apply(effects, 2, quantile, c(0.025, 0.5, 0.975))), 3)
 ```
 
 The share of the variance of `dem65` explained by industrialisation and
-democracy in 1960, $`R^2`$, needs the covariance matrix of the latent
-variables, $`A \Psi A^\top`$:
+democracy in 1960, \\R^2\\, needs the covariance matrix of the latent
+variables, \\A \Psi A^\top\\:
 
 ``` r
 
@@ -757,40 +770,91 @@ round(quantile(r2_dem65, c(0.025, 0.5, 0.975)), 3)
 #> 0.847 0.952 0.994
 ```
 
-### Compared with maximum likelihood
+### Compared with INLAvaan
 
-The posterior modes are close to lavaan’s maximum likelihood estimates,
-but not equal to them, because of the priors:
+INLAvaan runs the same approximation on the same log-posterior, so the
+two fits should agree. The modes and the Laplace covariances, in
+posterior SDs and relative to the largest covariance:
 
 ``` r
 
-pars <- c(parnames[12:19], "logv_dem65")
+sds <- sqrt(diag(fit$cov))
+c(
+  mode = max(abs(theta_inlavaan - fit$mode) / sds),
+  cov = max(abs(int$Sigma_theta[at, at] - fit$cov)) / max(abs(fit$cov))
+)
+#>         mode          cov 
+#> 9.982413e-05 1.559542e-04
+```
+
+Both agree to a few parts in \\10^{4}\\, the precision of the two
+optimisers and finite-difference Hessians.
+
+INLAvaan fits a skew-normal to each parameter as well. Its means and
+SDs, on the same scale, next to ours for the regressions and the
+variance of `dem65`:
+
+``` r
+
+sn <- int$approx_data[inlavaan_names, ]
+delta <- sn[, "alpha"] / sqrt(1 + sn[, "alpha"]^2)
+sn_mean <- sn[, "xi"] + sn[, "omega"] * delta * sqrt(2 / pi)
+sn_sd <- sn[, "omega"] * sqrt(1 - 2 * delta^2 / pi)
+names(sn_mean) <- names(sn_sd) <- parnames
+
+pars <- c(parnames[17:19], "logv_dem65")
 round(
   cbind(
-    ML = theta_ml[pars],
-    `posterior mode` = fit$mode[pars],
-    `posterior mean` = fit$summary[pars, "Mean"],
-    `posterior SD` = fit$summary[pars, "SD"]
+    `mean, INLAvaan` = sn_mean[pars],
+    `mean, ours` = fit$summary[pars, "Mean"],
+    `SD, INLAvaan` = sn_sd[pars],
+    `SD, ours` = fit$summary[pars, "SD"]
+  ),
+  4
+)
+#>                  mean, INLAvaan mean, ours SD, INLAvaan SD, ours
+#> beta_dem60_ind60         1.4685     1.4685       0.3915   0.3915
+#> beta_dem65_ind60         0.5872     0.5872       0.2417   0.2417
+#> beta_dem65_dem60         0.8679     0.8679       0.0770   0.0770
+#> logv_dem65              -1.5981    -1.5980       0.8610   0.8610
+max(abs(sn_mean - fit$summary[, "Mean"]) / fit$summary[, "SD"])
+#> [1] 6.996214e-05
+```
+
+Over all 39 parameters, the means differ by at most about \\10^{-4}\\
+posterior SDs. The two packages share the skew-normal marginals, and
+with them the limitation for `logv_dem65` and `logv_x2` described above.
+
+The log marginal likelihoods share their Laplace part. The VB terms
+differ a little, because INLAvaan takes the expectation in the VB
+correction with 64 Sobol points and inlavanilla with a deterministic
+cubature rule:
+
+``` r
+
+round(
+  rbind(
+    INLAvaan = c(
+      Laplace = int$mloglik - int$vb$kld_global,
+      VB = int$vb$kld_global,
+      total = int$mloglik
+    ),
+    ours = c(
+      Laplace = fit$logml_laplace,
+      VB = fit$logml - fit$logml_laplace,
+      total = fit$logml
+    )
   ),
   3
 )
-#>                      ML posterior mode posterior mean posterior SD
-#> lam_x2            2.180          2.168          2.219        0.147
-#> lam_x3            1.818          1.814          1.840        0.155
-#> a                 1.191          1.187          1.211        0.145
-#> b                 1.175          1.174          1.189        0.122
-#> c                 1.251          1.248          1.276        0.128
-#> beta_dem60_ind60  1.471          1.470          1.468        0.391
-#> beta_dem65_ind60  0.600          0.608          0.587        0.242
-#> beta_dem65_dem60  0.865          0.858          0.868        0.077
-#> logv_dem65       -1.805         -1.399         -1.598        0.861
+#>            Laplace    VB     total
+#> INLAvaan -1687.471 0.687 -1686.784
+#> ours     -1687.471 0.624 -1686.847
 ```
 
-The largest gap is again for the log disturbance variance of `dem65`. On
-the log scale, its prior (a Gamma(1, 0.5) on the SD, times the Jacobian)
-falls to zero for small variances, which lifts the posterior mode above
-the maximum likelihood estimate. The long left tail then puts the
-posterior mean below the mode.
+The Laplace parts agree to the last digit. The VB terms differ by 0.06,
+from the two integration rules: 64 Sobol points estimate the expectation
+with Monte Carlo error, which the deterministic cubature rule avoids.
 
 ## References
 

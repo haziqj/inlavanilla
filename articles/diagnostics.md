@@ -6,15 +6,18 @@
 approximates a posterior in stages, and each stage can fail in its own
 way. The mode search can stop short. The Gaussian can be a poor centre,
 so the VB correction moves far. A skew-normal can fail to match the
-shape of a marginal. And each marginal is fitted to a scan of only
-$`\pm 4`$ Laplace SDs around the mode, so whatever lies beyond is
+shape of a marginal. And each marginal is fitted to a scan of only \\\pm
+4\\ Laplace SDs around the mode, so whatever lies beyond is
 extrapolated.
 
 Each stage is checked as it runs, at almost no cost: the checks reuse
 what the fit has already computed.
 [`summary()`](https://rdrr.io/r/base/summary.html) reports every check
 and flags the values that look off. The clearest problems also raise one
-warning at the end of the fit.
+warning at the end of the fit. Printing the fit ends with a line
+counting its warnings and one counting the flagged checks, each shown
+only when there are any, so even a fit run with `silent = TRUE` shows
+that something needs a look.
 
 | Check | In `fit$diagnostics` | Flagged by [`summary()`](https://rdrr.io/r/base/summary.html) | Fit-time warning |
 |----|----|----|----|
@@ -48,7 +51,7 @@ logpost_pois <- function(theta, y) {
 }
 fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
-#> ── INLAvanilla summary ─────────────────────────────────────────────────────────
+#> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
 #> 
 #> Posterior marginals
 #>            Mean     SD   2.5%    25%    50%    75%  97.5%   Mode
@@ -64,7 +67,7 @@ summary(fit_pois)
 #> ✔ Skew-normal and VB means agree to within 7.7e-04 SDs.
 #> 
 #> Log marginal likelihood: -12.354 (Laplace -12.362, VB term 0.0083)
-#> 78 logpost calls in 16ms (mode 7ms, VB 1ms, marginals 6ms)
+#> 78 logpost calls in 9ms (mode 3ms, VB 1ms, marginals 3ms)
 ```
 
 Every check passes. The marginal is mildly skewed (shape about -1.4),
@@ -103,9 +106,9 @@ logpost_mix <- function(theta) {
   log(0.7 * dnorm(theta[[1]], 0, 1) + 0.3 * dnorm(theta[[1]], 3, 1))
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
-#> ✔ Found the posterior mode in 4 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.4σ [14ms]
-#> ✔ Fitted 1 skew-normal marginal [4ms]
+#> ✔ Found the posterior mode in 4 iterations [3ms]
+#> ✔ VB mean correction, max shift 0.4σ [7ms]
+#> ✔ Fitted 1 skew-normal marginal [2ms]
 #> Warning: The approximation may be poor for some parameters.
 #> ✖ Heavy tails for theta: the density is still over 5% of its peak at the ends
 #>   of the scan, 4 Laplace SDs out, and the skew-normal extrapolates beyond them.
@@ -156,7 +159,7 @@ path on which the Laplace Gaussian puts the other parameters at their
 conditional mode given this one. When the true conditional mode bends
 away from the line, the scan misses log-density, and the marginal comes
 out too narrow. `bend` is the log-density, in nats, that one Newton step
-in the other parameters would recover at $`\pm 2`$ SDs.
+in the other parameters would recover at \\\pm 2\\ SDs.
 
 This happens when a parameter’s spread depends on another parameter that
 the data pin down poorly. A normal mean with an unknown SD, from 12
@@ -201,7 +204,7 @@ sds
 ```
 
 The skew-normal SD of `mu` is 13% too small here. The gap shrinks as
-$`1/n`$: for a normal mean with an unknown SD it is about 3% at 50
+\\1/n\\: for a normal mean with an unknown SD it is about 3% at 50
 observations and under 1% at 200. The `bend` value says which parameters
 are at risk, not exactly how much.
 
@@ -213,17 +216,16 @@ different things:
 - `tails` reads the **log-posterior itself** at the two ends of the
   scan. It is flagged when either end is still within 3 nats of the
   peak, that is, when the density there is over 5% of its peak. A
-  Gaussian is 8 nats down at $`\pm 4`$ SDs.
+  Gaussian is 8 nats down at \\\pm 4\\ SDs.
 - `scan_end_mass` is the mass the **fitted skew-normal** puts beyond the
   window, where it is extrapolated (as INLAvaan’s `diagnostics()`
-  reports it). A Gaussian marginal gives
-  $`2\Phi(-4) = 6.3 \times 10^{-5}`$; the larger it is, the more of the
-  marginal is extrapolated.
+  reports it). A Gaussian marginal gives \\2\Phi(-4) = 6.3 \times
+  10^{-5}\\; the larger it is, the more of the marginal is extrapolated.
 
 Neither one can see the mass the true posterior has beyond the window.
 The figure shows three one-parameter posteriors whose exact densities
 are known. The x axis is in Laplace SDs from the mode, so the scanned
-window is always $`-4`$ to $`4`$ (the grey band).
+window is always \\-4\\ to \\4\\ (the grey band).
 
 ![Three columns, one posterior each. Top row: the log density with the
 scan points, the ends of the scan and a line 3 nats below the peak.
@@ -298,8 +300,8 @@ fit <- withCallingHandlers(
   }
 )
 #> ✔ Found the posterior mode in 4 iterations [0ms]
-#> ✔ VB mean correction, max shift 0.4σ [1ms]
-#> ✔ Fitted 1 skew-normal marginal [4ms]
+#> ✔ VB mean correction, max shift 0.4σ [0ms]
+#> ✔ Fitted 1 skew-normal marginal [2ms]
 #> Check this fit.
 ```
 

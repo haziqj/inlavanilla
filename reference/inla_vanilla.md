@@ -336,18 +336,18 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.24σ [3ms]
-#> ✔ Fitted 2 skew-normal marginals [9ms]
+#> ✔ Found the posterior mode in 10 iterations [3ms]
+#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────────────────────── 19ms ──
-#> 2 parameters · skew-normal marginals · VB-corrected
+#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
 #>             Mean     SD   2.5%    50%  97.5%   Mode
 #> mu         5.159  0.327  4.517  5.159  5.800  5.159
 #> log_sigma  0.616  0.129  0.377  0.610  0.885  0.599
 #> 
 #> Log marginal likelihood: -66.38
+#> ! 1 check flagged by `summary()`.
 
 # The posterior of sigma itself, through the draws
 sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
@@ -365,26 +365,26 @@ fit <- inla_vanilla(
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ Found the posterior mode in 10 iterations [0ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26 gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ (warning above 0.01σ)
+#>   logpost at the mode -65.06, whitened gradient 9e-08σ (warning above 0.01σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu, log_sigma), smallest eigenvalue 1
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0081, 2.4e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
 #>   Largest shift 0.24σ, for log_sigma
 #>   KL term 0.03, giving a log marginal likelihood of -66.38
 #>   81 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ Fitted 2 skew-normal marginals [4ms]
 #>              Shape     NMAD     Bend  Tails    gamma1
 #>   mu         -0.25  4.2e-05     0.13!    ok  -0.00014
 #>   log_sigma   1.32   0.0076  5.5e-06     ok      0.13
 #>   ! marks what summary() flags: NMAD above 0.05, bend above 0.1, heavy tails
 #>   66 logpost calls
-#> ℹ Done: 210 logpost calls in 20ms
+#> ℹ Done: 210 logpost calls in 11ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

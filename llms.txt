@@ -1,6 +1,6 @@
 # inlavanilla
 
-*INLA-style skew-normal marginals for any log-posterior.*
+> INLA-style skew-normal marginals for any log-posterior.
 
 If you can write down the log-likelihood plus the log-prior,
 [inlavanilla](http://haziqj.ml/inlavanilla/) gives you approximate
@@ -46,13 +46,13 @@ pak::pak("haziqj/inlavanilla")
 ## Example
 
 A trial records 3 responders out of 20 patients. With a uniform prior on
-the response rate $`p`$, the posterior is $`\text{Beta}(4, 18)`$:
+the response rate \\p\\, the posterior is \\\text{Beta}(4, 18)\\:
 skewed, and bounded at zero.
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 works on an unconstrained scale, so we write the log-posterior in terms
-of $`\vartheta = \operatorname{logit} p`$. The prior is stated for
-$`p`$, so it carries the Jacobian $`dp / d\vartheta = p(1 - p)`$:
+of \\\vartheta = \text{logit}(p)\\. The prior is stated for \\p\\, so it
+carries the Jacobian \\dp / d\vartheta = p(1 - p)\\:
 
 ``` r
 
@@ -66,12 +66,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [27ms]
-#> ✔ VB mean correction, max shift 0.17σ [34ms]
-#> ✔ Fitted 1 skew-normal marginal [75ms]
+#> ✔ Found the posterior mode in 6 iterations [25ms]
+#> ✔ VB mean correction, max shift 0.17σ [27ms]
+#> ✔ Fitted 1 skew-normal marginal [60ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──
-#> 1 parameter · skew-normal marginals · VB-corrected
+#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
 #> logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494
@@ -82,7 +81,7 @@ fit
 The summary is on the logit scale.
 [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) draws
 from the approximate posterior, and its `fun` argument maps each draw
-back to $`p`$, or to any other quantity of interest:
+back to \\p\\, or to any other quantity of interest:
 
 ``` r
 

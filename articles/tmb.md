@@ -19,7 +19,7 @@ write it as a TMB template.
 ``` r
 
 library(inlavanilla)
-library(lavaan)
+data(PoliticalDemocracy, package = "lavaan")
 ```
 
 ## Data and parameters
@@ -46,12 +46,12 @@ The 39 parameters, all on an unconstrained scale, in six blocks:
 
 | Block | Number | Parameters | Prior |
 |:---|---:|:---|:---|
-| `nu` | 11 | intercepts | $`N(0, 32^2)`$ |
-| `lam` | 5 | loadings of `x2`, `x3`, and `a`, `b`, `c` | $`N(0, 10^2)`$ |
-| `beta` | 3 | regressions | $`N(0, 10^2)`$ |
-| `logv_lv` | 3 | log variance of `ind60`, log disturbance variances of `dem60` and `dem65` | $`\text{Gamma}(1, \text{rate } 0.5)`$ on the SD |
-| `logv_ov` | 11 | log residual variances | $`\text{Gamma}(1, \text{rate } 0.5)`$ on the SD |
-| `z` | 6 | residual correlations $`\rho`$ on the atanh scale | $`\text{Beta}(1, 1)`$ on $`(\rho + 1)/2`$ |
+| `nu` | 11 | intercepts | \\N(0, 32^2)\\ |
+| `lam` | 5 | loadings of `x2`, `x3`, and `a`, `b`, `c` | \\N(0, 10^2)\\ |
+| `beta` | 3 | regressions | \\N(0, 10^2)\\ |
+| `logv_lv` | 3 | log variance of `ind60`, log disturbance variances of `dem60` and `dem65` | \\\text{Gamma}(1, \text{rate } 0.5)\\ on the SD |
+| `logv_ov` | 11 | log residual variances | \\\text{Gamma}(1, \text{rate } 0.5)\\ on the SD |
+| `z` | 6 | residual correlations \\\rho\\ on the atanh scale | \\\text{Beta}(1, 1)\\ on \\(\rho + 1)/2\\ |
 
 We give them readable names, and the same starting values as in the Rcpp
 article:
@@ -210,12 +210,10 @@ all.equal(unname(obj$par), unname(init))
 #> [1] TRUE
 ```
 
-### A check against lavaan
+### A check against INLAvaan
 
-At lavaan’s maximum likelihood estimates, the 75 pointwise
-log-likelihoods should equal lavaan’s casewise ones. We map the
-estimates to the unconstrained scale, and ask the template for its
-`REPORT()`ed values there:
+INLAvaan fits the same model, with the same parameterisation and priors.
+As in the Rcpp article, we put its posterior mode in our order:
 
 ``` r
 
@@ -231,29 +229,39 @@ model <- "
   y4 ~~ y8
   y6 ~~ y8
 "
-fit_ml <- sem(model, PoliticalDemocracy, meanstructure = TRUE)
-est <- coef(fit_ml)
-est <- est[!duplicated(names(est))] # a, b and c appear twice
+fit_inlavaan <- INLAvaan::asem(
+  model,
+  PoliticalDemocracy,
+  meanstructure = TRUE,
+  verbose = FALSE
+)
+int <- INLAvaan::get_inlavaan_internal(fit_inlavaan)
 
 lv <- c("ind60", "dem60", "dem65")
-var_ml <- est[paste0(c(lv, ov), "~~", c(lv, ov))]
-sd_ml <- sqrt(var_ml[-(1:3)])
-names(sd_ml) <- ov
-rho_ml <- est[paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])] /
-  (sd_ml[cov_pairs[, 1]] * sd_ml[cov_pairs[, 2]])
-
-theta_ml <- c(
-  est[paste0(ov, "~1")],
-  est[c("ind60=~x2", "ind60=~x3", "a", "b", "c")],
-  est[c("dem60~ind60", "dem65~ind60", "dem65~dem60")],
-  log(var_ml),
-  atanh(rho_ml)
+inlavaan_names <- c(
+  paste0(ov, "~1"),
+  "ind60=~x2",
+  "ind60=~x3",
+  "a",
+  "b",
+  "c",
+  "dem60~ind60",
+  "dem65~ind60",
+  "dem65~dem60",
+  paste0(c(lv, ov), "~~", c(lv, ov)),
+  paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])
 )
-names(theta_ml) <- parnames
+at <- match(inlavaan_names, names(int$coefficients))
+theta_inlavaan <- setNames(int$theta_star_novbc[at], parnames)
+```
 
-loglik_ml <- obj$report(theta_ml)$loglik
-max(abs(loglik_ml - lavInspect(fit_ml, "loglik.casewise")))
-#> [1] 7.81597e-14
+There, the template’s objective should equal the one INLAvaan minimised:
+
+``` r
+
+c(TMB = obj$fn(theta_inlavaan), INLAvaan = int$opt$objective)
+#>      TMB INLAvaan 
+#> 1655.078 1655.078
 ```
 
 ## Fitting
@@ -270,9 +278,9 @@ fit <- inla_vanilla(
   init,
   grad = function(theta) -as.vector(obj$gr(theta))
 )
-#> ✔ Found the posterior mode in 91 iterations [53ms]
-#> ✔ VB mean correction, max shift 0.43σ [2.0s]
-#> ✔ Fitted 39 skew-normal marginals [714ms]
+#> ✔ Found the posterior mode in 90 iterations [28ms]
+#> ✔ VB mean correction, max shift 0.43σ [1.2s]
+#> ✔ Fitted 39 skew-normal marginals [367ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -291,13 +299,13 @@ time_per_call <- function(f, n) {
 }
 fit$counts
 #> logpost    grad 
-#>    1537   15541
+#>    1539   15540
 c(
   fn = time_per_call(function() obj$fn(init), n = 2000),
   gr = time_per_call(function() obj$gr(init), n = 1000)
 )
-#>  fn  gr 
-#>  59 145
+#>   fn   gr 
+#> 32.5 84.0
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for
@@ -311,8 +319,7 @@ TMB’s needs neither.
 ``` r
 
 fit
-#> ── INLAvanilla ───────────────────────────────────────────────────────── 2.8s ──
-#> 39 parameters · skew-normal marginals · VB-corrected
+#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
 #>                     Mean      SD    2.5%     50%   97.5%    Mode
 #> nu_x1             5.0538  0.0846  4.8880  5.0538  5.2195  5.0538
@@ -343,7 +350,7 @@ fit
 #> logv_y1            0.685   0.246   0.181   0.692   1.146   0.708
 #> logv_y2            2.065   0.178   1.719   2.063   2.418   2.060
 #> logv_y3            1.655   0.196   1.277   1.653   2.044   1.649
-#> logv_y4            1.207   0.231   0.732   1.214   1.641   1.229
+#> logv_y4            1.207   0.231   0.733   1.214   1.641   1.229
 #> logv_y5            0.902   0.211   0.487   0.903   1.314   0.904
 #> logv_y6            1.643   0.181   1.290   1.642   2.001   1.640
 #> logv_y7            1.320   0.209   0.909   1.320   1.727   1.321
@@ -356,10 +363,15 @@ fit
 #> z_y6_y8            0.328   0.123   0.086   0.328   0.569   0.329
 #> 
 #> Log marginal likelihood: -1686.85
+#> ! 2 checks flagged by `summary()`.
 ```
 
 This agrees with the Rcpp article’s fit, which uses the same
-log-posterior, to within about $`10^{-4}`$ posterior SDs.
+log-posterior, to within about \\10^{-4}\\ posterior SDs. The two checks
+flagged by [`summary()`](https://rdrr.io/r/base/summary.html) are the
+scan-path bend, for several parameters, and the gap between the
+skew-normal and VB means of `logv_dem65`; the [Rcpp
+article](http://haziqj.ml/inlavanilla/articles/rcpp.md) discusses both.
 
 ``` r
 
@@ -374,9 +386,10 @@ dashed.](tmb_files/figure-html/plot-1.png)
 
 The parameters are on the unconstrained scale, and
 [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) with
-`fun` maps its draws back. Here are the residual correlations
-$`\rho = \tanh z`$ and the disturbance variance of `dem65`, next to
-lavaan’s maximum likelihood estimates.
+`fun` maps its draws back. Here are the residual correlations \\\rho =
+\tanh z\\ and the disturbance variance of `dem65`, next to the posterior
+medians from INLAvaan’s own copula draws, which are on the natural
+scale.
 
 ``` r
 
@@ -386,26 +399,30 @@ natural <- sampling(fit, nsamp = 10000, fun = function(theta) {
   names(rho) <- paste0("rho_", cov_pairs[, 1], "_", cov_pairs[, 2])
   c(rho, psi_dem65 = exp(theta[["logv_dem65"]]))
 })
+draws <- INLAvaan::sampling(fit_inlavaan, nsamp = 10000)
+v <- function(x) draws[, paste0(x, "~~", x)]
+rho <- draws[, paste0(cov_pairs[, 1], "~~", cov_pairs[, 2])] /
+  sqrt(v(cov_pairs[, 1]) * v(cov_pairs[, 2]))
 round(
   cbind(
     t(apply(natural, 2, quantile, c(0.025, 0.5, 0.975))),
-    ML = c(rho_ml, var_ml[["dem65~~dem65"]])
+    INLAvaan = c(apply(rho, 2, median), median(v("dem65")))
   ),
   3
 )
-#>             2.5%   50% 97.5%    ML
-#> rho_y1_y5 -0.024 0.288 0.528 0.281
-#> rho_y2_y4  0.039 0.276 0.475 0.291
-#> rho_y2_y6  0.153 0.345 0.520 0.356
-#> rho_y3_y7 -0.084 0.184 0.421 0.169
-#> rho_y4_y8 -0.158 0.109 0.347 0.111
-#> rho_y6_y8  0.080 0.315 0.509 0.338
-#> psi_dem65  0.028 0.234 0.739 0.164
+#>             2.5%   50% 97.5% INLAvaan
+#> rho_y1_y5 -0.024 0.288 0.528    0.286
+#> rho_y2_y4  0.039 0.276 0.475    0.274
+#> rho_y2_y6  0.153 0.345 0.520    0.345
+#> rho_y3_y7 -0.084 0.184 0.421    0.184
+#> rho_y4_y8 -0.158 0.109 0.347    0.111
+#> rho_y6_y8  0.080 0.315 0.509    0.317
+#> psi_dem65  0.028 0.234 0.739    0.230
 ```
 
-The correlations agree closely with maximum likelihood. The disturbance
-variance of `dem65` is small and poorly determined, with a long right
-tail on this scale.
+The medians agree with INLAvaan’s, up to the Monte Carlo error of the
+two sets of draws. The disturbance variance of `dem65` is small and
+poorly determined, with a long right tail on this scale.
 
 ### Leave-one-out cross-validation
 
@@ -428,12 +445,40 @@ loo_sem
 #> ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit 35.
 ```
 
-With 39 parameters this takes $`39^2 + 39 + 1`$, or 1,561, evaluations
+INLAvaan’s [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) uses
+the same deterministic expansion (Alhyari et al., 2026), with its own
+per-case log-likelihoods:
+
+``` r
+
+loo_inlavaan <- INLAvaan::loo(fit_inlavaan)
+round(
+  rbind(
+    ours = loo_sem$estimates[, "Estimate"],
+    INLAvaan = loo_inlavaan$estimates[, "Estimate"]
+  ),
+  2
+)
+#>          elpd_loo p_loo   looic
+#> ours     -1588.83 38.60 3177.66
+#> INLAvaan -1588.96 38.77 3177.92
+```
+
+The two agree to well within the standard error. They differ a little
+because each expands about its own VB-corrected mean, and the two VB
+corrections take their expectations with different rules.
+
+With 39 parameters this takes \\39^2 + 39 + 1\\, or 1,561, evaluations
 of the template, each giving all 75 terms. See [Model comparison with
 LOO and WAIC](http://haziqj.ml/inlavanilla/articles/model-comparison.md)
 for what the numbers mean and how to compare models with them.
 
 ## References
+
+Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). *Deterministic
+leave-one-cluster-out cross-validation for multilevel Bayesian models*
+(arXiv:2609.00670 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2609.00670>
 
 Bollen, K. A. (1989). *Structural equations with latent variables*.
 Wiley. <https://doi.org/10.1002/9781118619179>

@@ -83,7 +83,9 @@ Some problems also raise one warning at the end of the fit, of class
 scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback.
 These levels match INLAvaan's fit-time warning; the flags here are more
 sensitive. With `silent = TRUE` the warning is only recorded in
-`fit$warnings`.
+`fit$warnings`. Printing the fit ends with a line for its warnings and
+one counting the checks flagged here, each shown only when there are
+any.
 [`vignette("diagnostics", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/diagnostics.md)
 explains every check with examples.
 

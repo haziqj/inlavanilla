@@ -6,7 +6,13 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Diagnostics • inlavanilla</title>
-<script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
+  window.MathJax = {
+    chtml: {
+      fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
+    }
+  };
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -76,8 +82,8 @@
 
     <section class="level2"><h2 id="what-can-go-wrong">What can go wrong<a class="anchor" aria-label="anchor" href="#what-can-go-wrong"></a>
 </h2>
-<p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> approximates a posterior in stages, and each stage can fail in its own way. The mode search can stop short. The Gaussian can be a poor centre, so the VB correction moves far. A skew-normal can fail to match the shape of a marginal. And each marginal is fitted to a scan of only <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">\pm 4</annotation></semantics></math> Laplace SDs around the mode, so whatever lies beyond is extrapolated.</p>
-<p>Each stage is checked as it runs, at almost no cost: the checks reuse what the fit has already computed. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports every check and flags the values that look off. The clearest problems also raise one warning at the end of the fit.</p>
+<p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> approximates a posterior in stages, and each stage can fail in its own way. The mode search can stop short. The Gaussian can be a poor centre, so the VB correction moves far. A skew-normal can fail to match the shape of a marginal. And each marginal is fitted to a scan of only <span class="math inline">\(\pm 4\)</span> Laplace SDs around the mode, so whatever lies beyond is extrapolated.</p>
+<p>Each stage is checked as it runs, at almost no cost: the checks reuse what the fit has already computed. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports every check and flags the values that look off. The clearest problems also raise one warning at the end of the fit. Printing the fit ends with a line counting its warnings and one counting the flagged checks, each shown only when there are any, so even a fit run with <code>silent = TRUE</code> shows that something needs a look.</p>
 <table class="table caption-top">
 <colgroup>
 <col style="width: 25%">
@@ -157,7 +163,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>log_rate <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla summary ─────────────────────────────────────────────────────────</span></span>
+<span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Posterior marginals</span></span>
 <span><span class="co">#&gt;            Mean     SD   2.5%    25%    50%    75%  97.5%   Mode</span></span>
@@ -173,7 +179,7 @@
 <span><span class="co">#&gt; ✔ Skew-normal and VB means agree to within 7.7e-04 SDs.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -12.354 (Laplace -12.362, VB term 0.0083)</span></span>
-<span><span class="co">#&gt; 78 logpost calls in 16ms (mode 7ms, VB 1ms, marginals 6ms)</span></span></code></pre></div>
+<span><span class="co">#&gt; 78 logpost calls in 9ms (mode 3ms, VB 1ms, marginals 3ms)</span></span></code></pre></div>
 </div>
 <p>Every check passes. The marginal is mildly skewed (shape about -1.4), the skew-normal matches the scan to within 1% of its peak (NMAD), and its mean agrees with the VB-corrected mean.</p>
 </section><section class="level2"><h2 id="the-mode-and-the-vb-correction">The mode and the VB correction<a class="anchor" aria-label="anchor" href="#the-mode-and-the-vb-correction"></a>
@@ -190,9 +196,9 @@
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.7</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [4ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.4σ [14ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [3ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.4σ [7ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [2ms]</span></span>
 <span><span class="co">#&gt; Warning: The approximation may be poor for some parameters.</span></span>
 <span><span class="co">#&gt; ✖ Heavy tails for theta: the density is still over 5% of its peak at the ends</span></span>
 <span><span class="co">#&gt;   of the scan, 4 Laplace SDs out, and the skew-normal extrapolates beyond them.</span></span>
@@ -233,7 +239,7 @@
 </div>
 </section><section class="level2"><h2 id="the-scan-path">The scan path<a class="anchor" aria-label="anchor" href="#the-scan-path"></a>
 </h2>
-<p>Each marginal is scanned along a straight line through the mode, the path on which the Laplace Gaussian puts the other parameters at their conditional mode given this one. When the true conditional mode bends away from the line, the scan misses log-density, and the marginal comes out too narrow. <code>bend</code> is the log-density, in nats, that one Newton step in the other parameters would recover at <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>2</mn></mrow><annotation encoding="application/x-tex">\pm 2</annotation></semantics></math> SDs.</p>
+<p>Each marginal is scanned along a straight line through the mode, the path on which the Laplace Gaussian puts the other parameters at their conditional mode given this one. When the true conditional mode bends away from the line, the scan misses log-density, and the marginal comes out too narrow. <code>bend</code> is the log-density, in nats, that one Newton step in the other parameters would recover at <span class="math inline">\(\pm 2\)</span> SDs.</p>
 <p>This happens when a parameter’s spread depends on another parameter that the data pin down poorly. A normal mean with an unknown SD, from 12 observations, is the textbook case:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
@@ -268,17 +274,17 @@
 <span><span class="co">#&gt;       exact skew_normal </span></span>
 <span><span class="co">#&gt;   0.6125832   0.5308595</span></span></code></pre></div>
 </div>
-<p>The skew-normal SD of <code>mu</code> is 13% too small here. The gap shrinks as <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><mi>n</mi></mrow><annotation encoding="application/x-tex">1/n</annotation></semantics></math>: for a normal mean with an unknown SD it is about 3% at 50 observations and under 1% at 200. The <code>bend</code> value says which parameters are at risk, not exactly how much.</p>
+<p>The skew-normal SD of <code>mu</code> is 13% too small here. The gap shrinks as <span class="math inline">\(1/n\)</span>: for a normal mean with an unknown SD it is about 3% at 50 observations and under 1% at 200. The <code>bend</code> value says which parameters are at risk, not exactly how much.</p>
 </section><section class="level2"><h2 id="tails-and-scan-end-mass">Tails and scan-end mass<a class="anchor" aria-label="anchor" href="#tails-and-scan-end-mass"></a>
 </h2>
 <p>Both checks are about the edge of the scanned window, but they look at different things:</p>
 <ul>
 <li>
-<code>tails</code> reads the <strong>log-posterior itself</strong> at the two ends of the scan. It is flagged when either end is still within 3 nats of the peak, that is, when the density there is over 5% of its peak. A Gaussian is 8 nats down at <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">\pm 4</annotation></semantics></math> SDs.</li>
+<code>tails</code> reads the <strong>log-posterior itself</strong> at the two ends of the scan. It is flagged when either end is still within 3 nats of the peak, that is, when the density there is over 5% of its peak. A Gaussian is 8 nats down at <span class="math inline">\(\pm 4\)</span> SDs.</li>
 <li>
-<code>scan_end_mass</code> is the mass the <strong>fitted skew-normal</strong> puts beyond the window, where it is extrapolated (as INLAvaan’s <code>diagnostics()</code> reports it). A Gaussian marginal gives <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi mathvariant="normal">Φ</mi><mo stretchy="false" form="prefix">(</mo><mi>−</mi><mn>4</mn><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>6.3</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>5</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2\Phi(-4) = 6.3 \times 10^{-5}</annotation></semantics></math>; the larger it is, the more of the marginal is extrapolated.</li>
+<code>scan_end_mass</code> is the mass the <strong>fitted skew-normal</strong> puts beyond the window, where it is extrapolated (as INLAvaan’s <code>diagnostics()</code> reports it). A Gaussian marginal gives <span class="math inline">\(2\Phi(-4) = 6.3 \times 10^{-5}\)</span>; the larger it is, the more of the marginal is extrapolated.</li>
 </ul>
-<p>Neither one can see the mass the true posterior has beyond the window. The figure shows three one-parameter posteriors whose exact densities are known. The x axis is in Laplace SDs from the mode, so the scanned window is always <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>4</mn></mrow><annotation encoding="application/x-tex">-4</annotation></semantics></math> to <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>4</mn><annotation encoding="application/x-tex">4</annotation></semantics></math> (the grey band).</p>
+<p>Neither one can see the mass the true posterior has beyond the window. The figure shows three one-parameter posteriors whose exact densities are known. The x axis is in Laplace SDs from the mode, so the scanned window is always <span class="math inline">\(-4\)</span> to <span class="math inline">\(4\)</span> (the grey band).</p>
 <div class="cell" data-layout-align="center">
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -323,8 +329,8 @@
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [0ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.4σ [1ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.4σ [0ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [2ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checks-on-a-supplied-gradient">Checks on a supplied gradient<a class="anchor" aria-label="anchor" href="#checks-on-a-supplied-gradient"></a>

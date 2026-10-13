@@ -6,7 +6,13 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>INLA-Style Skew-Normal Marginals for Any Log-Posterior • inlavanilla</title>
-<script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
+  window.MathJax = {
+    chtml: {
+      fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
+    }
+  };
+</script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -63,7 +69,9 @@
 </h1></div>
 <!-- badges: start -->
 
-<p><em>INLA-style skew-normal marginals for any log-posterior.</em></p>
+<blockquote>
+<p>INLA-style skew-normal marginals for any log-posterior.</p>
+</blockquote>
 <p>If you can write down the log-likelihood plus the log-prior, <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> with nothing model-specific:</p>
 <ol style="list-style-type: decimal">
 <li>a <strong>Laplace approximation</strong> at the posterior mode, with the Laplace estimate of the log marginal likelihood;</li>
@@ -87,8 +95,8 @@
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<p>A trial records 3 responders out of 20 patients. With a uniform prior on the response rate <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, the posterior is <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Beta</mtext><mo stretchy="false" form="prefix">(</mo><mn>4</mn><mo>,</mo><mn>18</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{Beta}(4, 18)</annotation></semantics></math>: skewed, and bounded at zero.</p>
-<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works on an unconstrained scale, so we write the log-posterior in terms of <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϑ</mi><mo>=</mo><mrow><mi mathvariant="normal">logit</mi><mo>⁡</mo></mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">\vartheta = \operatorname{logit} p</annotation></semantics></math>. The prior is stated for <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, so it carries the Jacobian <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mi>p</mi><mi>/</mi><mi>d</mi><mi>ϑ</mi><mo>=</mo><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">dp / d\vartheta = p(1 - p)</annotation></semantics></math>:</p>
+<p>A trial records 3 responders out of 20 patients. With a uniform prior on the response rate <span class="math inline">\(p\)</span>, the posterior is <span class="math inline">\(\text{Beta}(4, 18)\)</span>: skewed, and bounded at zero.</p>
+<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works on an unconstrained scale, so we write the log-posterior in terms of <span class="math inline">\(\vartheta = \text{logit}(p)\)</span>. The prior is stated for <span class="math inline">\(p\)</span>, so it carries the Jacobian <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span></span>
@@ -100,18 +108,17 @@
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [27ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [34ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [75ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [25ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [27ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [60ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──</span></span>
-<span><span class="co">#&gt; 1 parameter · skew-normal marginals · VB-corrected</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -3.05</span></span></code></pre></div>
-<p>The summary is on the logit scale. <code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw back to <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, or to any other quantity of interest:</p>
+<p>The summary is on the logit scale. <code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw back to <span class="math inline">\(p\)</span>, or to any other quantity of interest:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">1e5</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
@@ -183,6 +190,7 @@
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 <li><a href="https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://app.codecov.io/gh/haziqj/inlavanilla" class="external-link"><img src="https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg" alt="Codecov test coverage"></a></li>
+<li><a href="https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION" class="external-link"><img src="https://img.shields.io/badge/dependencies-1%2F1-67ac09" alt="Dependencies"></a></li>
 </ul>
 </div>
 

@@ -5,8 +5,8 @@
 Leave-one-out cross-validation (LOO) asks how well a model predicts each
 observation when that observation is left out of the fit. Summed over
 the observations, this is the expected log predictive density,
-$`\mathrm{elpd}_{\mathrm{loo}}`$, and it compares models on the scale of
-the data, whatever their parameters.
+\\\mathrm{elpd}\_{\mathrm{loo}}\\, and it compares models on the scale
+of the data, whatever their parameters.
 
 Refitting once per observation is slow.
 [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) gets the answer
@@ -65,9 +65,9 @@ logpost_pois <- function(theta, X, y) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
-#> ✔ Found the posterior mode in 29 iterations [16ms]
-#> ✔ VB mean correction, max shift 0.025σ [36ms]
-#> ✔ Fitted 6 skew-normal marginals [25ms]
+#> ✔ Found the posterior mode in 29 iterations [10ms]
+#> ✔ VB mean correction, max shift 0.025σ [28ms]
+#> ✔ Fitted 6 skew-normal marginals [19ms]
 ```
 
 [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) takes the fit,
@@ -84,7 +84,7 @@ loo_pois
 #> p_loo         20.6   3.0
 #> looic        485.9  30.0
 #> 
-#> ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for unit 37.
+#> ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for unit 41.
 ```
 
 `p_loo` is the effective number of parameters. Here it is about 21, for
@@ -93,10 +93,10 @@ counts vary much more than a Poisson distribution allows.
 
 ### A negative binomial model
 
-The negative binomial adds a dispersion parameter $`\phi`$: the variance
-is $`\mu + \mu^2 / \phi`$. On the unconstrained scale the parameter is
-$`\log \phi`$, and the prior $`\phi \sim \mathrm{Gamma}(2, 0.1)`$ needs
-the Jacobian of $`\phi = e^{\log \phi}`$, which is $`\log \phi`$ itself
+The negative binomial adds a dispersion parameter \\\phi\\: the variance
+is \\\mu + \mu^2 / \phi\\. On the unconstrained scale the parameter is
+\\\log \phi\\, and the prior \\\phi \sim \mathrm{Gamma}(2, 0.1)\\ needs
+the Jacobian of \\\phi = e^{\log \phi}\\, which is \\\log \phi\\ itself
 on the log scale:
 
 ``` r
@@ -211,12 +211,10 @@ waic(fit_nb, loglik_nb, X = X, y = y)
 
 The brute-force LOO refits the model without each observation in turn
 and averages that observation’s likelihood over the refitted posterior:
-``` math
-\log p(y_i \mid y_{-i}) = \log \int p(y_i \mid \vartheta) \,
-p(\vartheta \mid y_{-i}) \, d\vartheta.
-```
-Here the integral is an average over copula draws. The draws need only
-the skew-normal marginals, so the refits skip the VB correction.
+\\ \log p(y_i \mid y\_{-i}) = \log \int p(y_i \mid \vartheta) \\
+p(\vartheta \mid y\_{-i}) \\ d\vartheta. \\ Here the integral is an
+average over copula draws. The draws need only the skew-normal
+marginals, so the refits skip the VB correction.
 
 ``` r
 
@@ -240,7 +238,7 @@ time_loo <- system.time(loo(fit_nb, loglik_nb, X = X, y = y))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  4.728  0.004
+#>  3.920  0.003
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1733
@@ -289,7 +287,7 @@ the log-likelihood is the sum of the terms.
 Each unit’s `k`, in `pointwise[, "k"]`, is the largest share of the
 posterior precision it carries in any direction of the parameter space.
 A value close to 1 means that the unit alone pins down some combination
-of the parameters. At $`k \ge 1`$ the rest of the data and the prior
+of the parameters. At \\k \ge 1\\ the rest of the data and the prior
 cannot identify that combination without it, the second-order term does
 not exist, and [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)
 falls back to the first-order expansion for every unit, with a warning.
