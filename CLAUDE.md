@@ -35,18 +35,18 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## Architecture
 
-Entry point: `inla_vanilla(logpost, init, grad = NULL, vb = TRUE, verbose = TRUE, control = list(), ...)` in `R/inla-vanilla.R`.
+Entry point: `inla_vanilla(logpost, init, ..., grad = NULL, vb = TRUE, verbose = TRUE, control = list())` in `R/inla-vanilla.R`. The dots come right after `init`, so the later arguments must be named in full and data arguments cannot partially match them.
 
 - **Input.** The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included; `...` is passed through as in `optim()`.
 - **No transform layer in v1.** Natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`), so keep the engine free of transform logic.
-- **Wrappers.** `inla_vanilla()` wraps the user functions in closures (`lp`, `gr`) that name the parameters, forward `...`, count calls and tick progress. Every stage receives these closures, never the user functions.
+- **Wrappers.** `inla_vanilla()` binds `...` once in `logpost_x()` and `grad_x()`, then wraps them in closures (`lp`, `gr`) that name the parameters, count calls, record the last parameter value and tick progress. Every stage receives these closures, never the user functions. Never forward `...` to internal helpers, because a user's data argument could partially match one of their formals (the same applies to `fun` in `sampling()`). `with_context()` reports an error from `logpost` or `grad` with the stage and the parameter value.
 
 The stages run in order, one file each:
 
 1. **Laplace** (`R/laplace.R`, `laplace_fit()`).
-   - The mode comes from `nlminb`.
-   - The Hessian comes from finite differences of `grad`. With no gradient, it takes two passes of `fd_hessian()`, the second stepping 0.01 posterior SD.
-   - It returns R (upper Cholesky of the precision), Σ, L (L Lᵀ = Σ) and the Laplace log marginal likelihood.
+   - The mode comes from `nlminb`. If the whitened gradient at the mode is still above 1e-3, `nlminb` reruns with `scale = sqrt(diag(H))`.
+   - Finite-difference steps are set per coordinate by `fd_scales()`, a cheap curvature search. With a gradient the Hessian takes central differences of it at 1e-4 of that scale; without one, `fd_hessian()` at 0.01 of it. This keeps posterior SDs from 1e-6 to 1e4 working.
+   - It returns R (upper Cholesky of the precision), Σ, L (L Lᵀ = Σ), the whitened gradient at the mode (which, not `nlminb`'s return code, decides the convergence warning), the Jacobian asymmetry (a check on a user `grad`), and the Laplace log marginal likelihood.
 2. **VB** (`R/vb.R`).
    - `vb_correct()` is INLAvaan's fixed-point iteration with Anderson(1) acceleration and an `nlminb` fallback.
    - The Gaussian expectation uses `vb_nodes()`, the fully symmetric degree-5 cubature rule (2m²+1 nodes on Σ's principal axes). This replaced INLAvaan's Sobol points after the benchmark in `lab/vb-benchmark.R`.
@@ -55,13 +55,15 @@ The stages run in order, one file each:
    - Each parameter is scanned on `seq(-4, 4)` posterior SDs along the conditional mode path, corrected by `gamma1_*`, and fitted by `fit_skew_normal()`.
    - The volume correction has two routes that must agree: `gamma1_grad()` is INLAvaan's shortcut, using the gradient; `gamma1_lp()` uses second differences of `logpost` when there is no gradient, at O(m) calls per parameter instead of O(m²).
    - The marginals are scanned around the mode ϑ*, so VB does not move them.
-4. **Copula draws** (`R/sampling.R`). `sampling()` is an S3 generic, matching INLAvaan's exported `sampling()`.
+   - The scan is a fixed ±4 SDs, as in INLAvaan. `tails` records a scan whose ends stay above `log_threshold`. Extending the scan into heavy tails was tried and rejected, because it hurt the fit in other cases.
+4. **Copula draws** (`R/sampling.R`). `sampling()` is an S3 generic, matching INLAvaan's exported `sampling()`. Draws go through `sn_score_map()`, a spline from normal scores to skew-normal quantiles; do not use `qsnorm_fast()` directly, because it is only a starting value, accurate to about 5e-2.
 
 Supporting files:
 
 - **Skew-normal utilities** (`R/skew-normal.R`, `R/qsnorm-fast.R`): ported from INLAvaan. The Apache-licensed `qsnorm_fast()` keeps its attribution header. All of them are internal.
 - **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout.
 - **Progress** (`R/progress.R`): each stage has a cli progress bar that appears only after 0.5 s, and ends with a plain styled `message()` line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path.
+- **Errors and warnings**: raise them with `abort()` and `warn()` (`R/utils.R`), which format with cli and signal with base R, giving the classes `inlavanilla_error` and `inlavanilla_warning`. Do not use `cli::cli_abort()` or `cli::cli_warn()`: they call rlang, which cli only suggests.
 - **Non-ASCII output**: user-visible non-ASCII characters (σ, ·) go through `sd_unit()` and `sep_dot()`, which fall back to ASCII. R source files must stay ASCII.
 
 Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
