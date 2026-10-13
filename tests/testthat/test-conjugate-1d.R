@@ -443,7 +443,7 @@ expect_exact_gaussian <- function(fit, model, mode_tol, laplace_tol = 1e-10) {
 }
 
 test_that("a Gaussian posterior is recovered exactly with finite differences", {
-  fit <- inla_vanilla(normal$logpost, init = c(mu = 0), verbose = FALSE)
+  fit <- inla_vanilla(normal$logpost, init = c(mu = 0), silent = TRUE)
   expect_exact_gaussian(fit, normal, mode_tol = 2e-6)
 })
 
@@ -452,7 +452,7 @@ test_that("a Gaussian posterior is recovered exactly with an analytic gradient",
     normal$logpost,
     init = c(mu = 0),
     grad = normal$grad,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_exact_gaussian(fit, normal, mode_tol = 1e-12)
 })
@@ -470,7 +470,7 @@ test_that("a Gaussian posterior is recovered exactly at small and large scales",
         model$logpost,
         init = c(mu = k),
         grad = gr,
-        verbose = FALSE
+        silent = TRUE
       )
       expect_exact_gaussian(fit, model, mode_tol = 5e-6, laplace_tol = 5e-8)
     }
@@ -514,7 +514,7 @@ test_that("a Gaussian posterior in dollars is recovered exactly with finite diff
     fit <- inla_vanilla(
       house_prices$logpost,
       init = c(mu = 2e5),
-      verbose = FALSE
+      silent = TRUE
     )
   )
   if (!is.null(fit)) {
@@ -533,13 +533,13 @@ test_that("a Gaussian posterior in dollars is recovered exactly with an analytic
     house_prices$logpost,
     init = c(mu = 2e5),
     grad = house_prices$grad,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_house_prices_exact(fit)
 })
 
 test_that("the default summary of a Gaussian posterior matches its exact quantiles", {
-  fit <- inla_vanilla(normal$logpost, init = c(mu = 0), verbose = FALSE)
+  fit <- inla_vanilla(normal$logpost, init = c(mu = 0), silent = TRUE)
   exact <- c(
     normal$mean,
     normal$sd,
@@ -559,7 +559,7 @@ test_that("without the VB correction the log marginal likelihood is the Laplace 
     bb_skewed$logpost,
     init = c(theta = 0),
     vb = FALSE,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_identical(fit$logml, fit$logml_laplace)
   expect_equal(fit$mean_vb, fit$mode)
@@ -569,7 +569,7 @@ test_that("without the VB correction the log marginal likelihood is the Laplace 
   fit_vb <- inla_vanilla(
     bb_skewed$logpost,
     init = c(theta = 0),
-    verbose = FALSE
+    silent = TRUE
   )
   expect_identical(fit$sn, fit_vb$sn)
   expect_identical(fit$summary, fit_vb$summary)
@@ -620,13 +620,13 @@ fit_both_ways <- function(model, init) {
     finite_differences = inla_vanilla(
       model$logpost,
       init = init,
-      verbose = FALSE
+      silent = TRUE
     ),
     analytic = inla_vanilla(
       model$logpost,
       init = init,
       grad = model$grad,
-      verbose = FALSE
+      silent = TRUE
     )
   )
 }
@@ -720,12 +720,12 @@ test_that("the fit does not depend on the starting value", {
   # Starts 3.6 SDs below and 8.1 SDs above the mode. Observed: the summaries
   # agree with the start at 0 to 4.2e-8 SDs, the log marginal likelihoods to
   # 1.5e-8
-  ref <- inla_vanilla(bb_skewed$logpost, init = c(theta = 0), verbose = FALSE)
+  ref <- inla_vanilla(bb_skewed$logpost, init = c(theta = 0), silent = TRUE)
   for (init in c(-4, 4)) {
     fit <- inla_vanilla(
       bb_skewed$logpost,
       init = c(theta = init),
-      verbose = FALSE
+      silent = TRUE
     )
     expect_lt(
       max(abs(fit$summary - ref$summary)) / bb_skewed$sd,
@@ -736,7 +736,7 @@ test_that("the fit does not depend on the starting value", {
 })
 
 test_that("copula draws reproduce the exact beta posterior of p", {
-  fit <- inla_vanilla(bb_skewed$logpost, init = c(theta = 0), verbose = FALSE)
+  fit <- inla_vanilla(bb_skewed$logpost, init = c(theta = 0), silent = TRUE)
   set.seed(42)
   p <- sampling(fit, nsamp = 20000, fun = function(theta) plogis(theta))
   expect_equal(dim(p), c(20000L, 1L))
@@ -851,7 +851,7 @@ test_that("copula draws reproduce the exact gamma posterior of lambda", {
   fit <- inla_vanilla(
     gp_skewed$logpost,
     init = c(log_lambda = 0),
-    verbose = FALSE
+    silent = TRUE
   )
   set.seed(42)
   lambda <- sampling(fit, nsamp = 20000, fun = function(theta) exp(theta))
