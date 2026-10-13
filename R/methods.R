@@ -100,18 +100,16 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_line()
 
   opt <- x$optim
-  if (opt$convergence == 0L && opt$grad_mode < 1e-2) {
+  if (opt$grad_mode < 1e-2) {
     cat_status(
       "ok",
       "Mode found in {opt$iterations} iteration{?s} (gradient {fmt_num(opt$grad_mode)} SDs)."
     )
-  } else if (opt$convergence == 0L) {
+  } else {
     cat_status(
       "warn",
-      "Mode search stopped with a gradient of {fmt_num(opt$grad_mode)} SDs."
+      "Mode search stopped with a gradient of {fmt_num(opt$grad_mode)} SDs ({opt$message})."
     )
-  } else {
-    cat_status("fail", "Mode search did not converge: {opt$message}")
   }
 
   if (!is.null(x$vb)) {
