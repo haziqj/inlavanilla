@@ -10,6 +10,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 [![R-CMD-check](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app.codecov.io/gh/haziqj/inlavanilla)
+[![Dependencies](https://img.shields.io/badge/dependencies-1%2F1-67ac09)](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
 <!-- [![CRAN status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla) -->
 <!-- badges: end -->
 
