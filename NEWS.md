@@ -31,4 +31,9 @@
   out of a rendered document.
 * The marginal diagnostics include `scan_end_mass`, the mass each fitted
   skew-normal puts outside the scanned window, as in INLAvaan's
-  `diagnostics()`. It is recorded in `fit$diagnostics$marginals`, not flagged.
+  `diagnostics()`; `summary()` flags it above 0.05.
+* A fit whose marginals are clearly off now ends with one warning, of class
+  `inlavanilla_diagnostics_warning`: heavy tails, an NMAD above 0.1, a
+  scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback, at
+  INLAvaan's levels. Healthy fits stay silent. A new vignette,
+  "Diagnostics", explains every check.

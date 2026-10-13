@@ -130,10 +130,10 @@ abort <- function(
 
 # A warning also carries its message as plain text, with no colours and no
 # line wrapping, for the record of warnings in a fit (see warning_text()).
-warn <- function(message, .envir = parent.frame()) {
+warn <- function(message, class = NULL, .envir = parent.frame()) {
   force(.envir)
   warning(structure(
-    class = c("inlavanilla_warning", "warning", "condition"),
+    class = c(class, "inlavanilla_warning", "warning", "condition"),
     list(
       message = cli::format_warning(message, .envir = .envir),
       call = NULL,

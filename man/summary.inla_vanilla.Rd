@@ -56,14 +56,21 @@ target the posterior mean, so they should agree closely (to
 \eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026a). A gap above
 0.1 SDs is flagged: the posterior is far from Gaussian along that
 parameter, and either approximation may be off.
+\item \strong{Scan-end mass.} \code{scan_end_mass}, the mass each fitted skew-normal
+puts outside the scanned window (the mode \eqn{\pm 4} Laplace SDs),
+where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
+reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
+  10^{-5}}, and well-fitted marginals usually sit between \eqn{10^{-3}}
+and \eqn{10^{-2}}. It is flagged above 0.05.
 }
 
-\code{diagnostics} also holds \code{scan_end_mass}, the mass each fitted
-skew-normal puts outside the scanned window (the mode \eqn{\pm 4} Laplace
-SDs), where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
-reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
-10^{-5}}, and well-fitted marginals usually sit between \eqn{10^{-3}} and
-\eqn{10^{-2}}. It is recorded but not flagged.
+Some problems also raise one warning at the end of the fit, of class
+\code{inlavanilla_diagnostics_warning}: heavy tails, an NMAD above 0.1, a
+scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
+levels match INLAvaan's fit-time warning; the flags here are more
+sensitive. With \code{silent = TRUE} the warning is only recorded in
+\code{fit$warnings}. \code{vignette("diagnostics", package = "inlavanilla")}
+explains every check with examples.
 
 With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
 With \code{marginals = "gaussian"} there are no scans, so only the VB shift is

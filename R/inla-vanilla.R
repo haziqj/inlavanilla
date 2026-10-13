@@ -606,6 +606,10 @@ vanilla_fit <- function(
     )
   )
 
+  # One warning for every marginal that is clearly off, before the fit is
+  # built so that fit$warnings records it
+  warn_diagnostics(diagnostics$marginals, diagnostics$vb)
+
   t_total <- elapsed() - t_start
   if (prog$detail) {
     report_end(prog, n_lp, n_gr, t_total)
