@@ -35,7 +35,7 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## Architecture
 
-Entry point: `inla_vanilla(logpost, init, ..., grad = NULL, vb = TRUE, verbose = TRUE, control = list())` in `R/inla-vanilla.R`. The dots come right after `init`, so the later arguments must be named in full and data arguments cannot partially match them.
+Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, verbose = TRUE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `verbose` and `control` must be named in full and data arguments cannot partially match them.
 
 - **Input.** The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included; `...` is passed through as in `optim()`.
 - **No transform layer in v1.** Natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`), so keep the engine free of transform logic.
@@ -55,6 +55,7 @@ The stages run in order, one file each:
    - Each parameter is scanned on `seq(-4, 4)` posterior SDs along the conditional mode path, corrected by `gamma1_*`, and fitted by `fit_skew_normal()`.
    - The volume correction has two routes that must agree: `gamma1_grad()` is INLAvaan's shortcut, using the gradient; `gamma1_lp()` uses second differences of `logpost` when there is no gradient, at O(m) calls per parameter instead of O(m²).
    - The marginals are scanned around the mode ϑ*, so VB does not move them.
+   - `scan_bend()` computes the diagnostic `bend`: the log-density, in nats, that the straight scan misses at ±2 SDs, from one Newton step in the other parameters. `summary()` flags it above 0.1. It catches the documented small-n narrowing.
    - The scan is a fixed ±4 SDs, as in INLAvaan. `tails` records a scan whose ends stay above `log_threshold`. Extending the scan into heavy tails was tried and rejected, because it hurt the fit in other cases.
 4. **Copula draws** (`R/sampling.R`). `sampling()` is an S3 generic, matching INLAvaan's exported `sampling()`. Draws go through `sn_score_map()`, a spline from normal scores to skew-normal quantiles; do not use `qsnorm_fast()` directly, because it is only a starting value, accurate to about 5e-2.
 
