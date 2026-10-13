@@ -40,7 +40,7 @@ Nothing at present.
   - The test suite found the same effect independently:
     - For the normal mean under a normal–inverse-gamma prior, the skew-normal SD is short by exactly √(2(aₙ − 1)/(2aₙ + 1)), a Gaussian against the true Student-t.
     - For the log scale of a Weibull model (n ≈ 15), both the skew-normal and Laplace SDs are about 11% too small, and a full Laplace marginal is within 0.1%.
-  - Prototype remedies on Puromycin (`scratch cmp-fix.R`), SD error for log Vm and log K:
+  - Prototype remedies on Puromycin (`lab/scan-path-prototype.R`), SD error for log Vm and log K:
 
     | Scan | SD error |
     |---|---|
