@@ -29,3 +29,6 @@
 * Progress bars follow the `cli.progress_show_after` option when it is set
   (half a second otherwise), so a knitr or Quarto setup chunk can keep them
   out of a rendered document.
+* The marginal diagnostics include `scan_end_mass`, the mass each fitted
+  skew-normal puts outside the scanned window, as in INLAvaan's
+  `diagnostics()`. It is recorded in `fit$diagnostics$marginals`, not flagged.

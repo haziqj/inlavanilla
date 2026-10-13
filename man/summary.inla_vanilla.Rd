@@ -58,6 +58,13 @@ target the posterior mean, so they should agree closely (to
 parameter, and either approximation may be off.
 }
 
+\code{diagnostics} also holds \code{scan_end_mass}, the mass each fitted
+skew-normal puts outside the scanned window (the mode \eqn{\pm 4} Laplace
+SDs), where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
+reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
+10^{-5}}, and well-fitted marginals usually sit between \eqn{10^{-3}} and
+\eqn{10^{-2}}. It is recorded but not flagged.
+
 With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
 With \code{marginals = "gaussian"} there are no scans, so only the VB shift is
 reported.
