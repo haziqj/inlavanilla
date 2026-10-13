@@ -252,13 +252,20 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
     }
     idx <- match(idx, rownames(sn))
   }
-  if (!is.numeric(idx) || any(idx < 1 | idx > nrow(sn))) {
+  if (
+    !is.numeric(idx) ||
+      length(idx) == 0L ||
+      anyNA(idx) ||
+      any(idx < 1 | idx > nrow(sn))
+  ) {
     abort("{.arg pars} must name or index parameters of the fit.")
   }
 
   col_sn <- "#C2410C"
   col_lap <- "#0F766E"
   k <- length(idx)
+  # Setting `mfrow` resets `cex`, and so does restoring it: keep the caller's
+  old_cex <- graphics::par("cex")
   # Wider than tall: panels side by side, then rows
   op <- graphics::par(
     mfrow = rev(grDevices::n2mfrow(k)),
@@ -267,7 +274,10 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
     mgp = c(2, 0.6, 0),
     las = 1
   )
-  on.exit(graphics::par(op))
+  on.exit({
+    graphics::par(op)
+    graphics::par(cex = old_cex)
+  })
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
   for (j in idx) {
     lap_sd <- sqrt(x$cov[j, j])
