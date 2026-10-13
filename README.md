@@ -15,12 +15,13 @@ coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app
 
 *INLA-style skew-normal marginals for any log-posterior.*
 
-If you can write down an unnormalised log-posterior, the log-likelihood
-plus the log-prior, `{inlavanilla}` gives you approximate Bayesian
-inference: posterior marginals, posterior draws and the marginal
-likelihood. There is no sampler and no tuning, and small models take
-milliseconds. It runs the approximation pipeline of
-[INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
+If you can write down the log-likelihood plus the log-prior,
+`{inlavanilla}` gives you approximate Bayesian inference for the
+parameters of your model: posterior marginals and draws, the marginal
+likelihood, and leave-one-out cross-validation. There is no sampler and
+no tuning, and small models take milliseconds. It runs the approximation
+pipeline of [INLAvaan](https://inlavaan.haziqj.ml/) with nothing
+model-specific:
 
 1.  a **Laplace approximation** at the posterior mode, with the Laplace
     estimate of the log marginal likelihood;
@@ -34,6 +35,10 @@ Stages 2 and 3 are optional and independent: `vb = FALSE` skips the VB
 correction, and `marginals = "gaussian"` keeps the Gaussian marginals
 instead of scanning for skew-normal ones. With both, you get the Laplace
 approximation alone.
+
+Give `loo()` or `waic()` the log-likelihood as one term per observation,
+and they estimate the model’s predictive accuracy from the fit alone,
+with no refits and no draws.
 
 The package is pure R and small. Its only dependency outside base R is
 [cli](https://cli.r-lib.org/).
@@ -70,11 +75,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [33ms]
-#> ✔ VB mean correction, max shift 0.17σ [41ms]
-#> ✔ Fitted 1 skew-normal marginal [89ms]
+#> ✔ Found the posterior mode in 6 iterations [21ms]
+#> ✔ VB mean correction, max shift 0.17σ [28ms]
+#> ✔ Fitted 1 skew-normal marginal [7ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 175ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 133ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
