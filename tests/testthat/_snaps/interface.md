@@ -146,9 +146,9 @@
       -- INLAvanilla summary ------------------------------------- Skew-normal + VB --
       
       Posterior marginals
-                  Mean     SD    2.5%    25%    50%    75%  97.5%   Mode
-      intercept  0.582  0.286  -0.025  0.400  0.598  0.780  1.098  0.632
-      slope      0.594  0.222   0.174  0.442  0.588  0.740  1.047  0.576
+                  Mean     SD    2.5%    50%  97.5%   Mode
+      intercept  0.582  0.286  -0.025  0.598  1.098  0.632
+      slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Diagnostics
                  VB shift  SN - VB  Shape   NMAD   Bend  End mass
@@ -173,9 +173,9 @@
       -- INLAvanilla summary ------------------------------------------ Skew-normal --
       
       Posterior marginals
-                  Mean     SD    2.5%    25%    50%    75%  97.5%   Mode
-      intercept  0.582  0.286  -0.025  0.400  0.598  0.780  1.098  0.632
-      slope      0.594  0.222   0.174  0.442  0.588  0.740  1.047  0.576
+                  Mean     SD    2.5%    50%  97.5%   Mode
+      intercept  0.582  0.286  -0.025  0.598  1.098  0.632
+      slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Diagnostics
                  Shape   NMAD   Bend  End mass
