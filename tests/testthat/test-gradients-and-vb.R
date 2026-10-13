@@ -300,21 +300,24 @@ test_that("fits with and without a gradient agree on a five-parameter logistic r
 
   d <- fit_discrepancy(fit_grad, fit_fd)
   # Without a gradient nlminb() differences the objective itself and stops
-  # slightly further from the mode; across seeds this ranged up to 5e-5 SDs.
+  # slightly further from the mode. These values do not move when the data
+  # are perturbed by 1e-14 relative, so they are not rounding luck, but other
+  # datasets (seeds 1 to 30) gave up to 7e-5 SDs in the mode and 2e-5 in the
+  # summaries.
   expect_lt(d[["mode"]], 2e-5) # observed 5.7e-6 SDs
-  expect_lt(d[["cov"]], 1e-5) # observed 3.2e-6
-  expect_lt(d[["logml_laplace"]], 7e-6) # observed 2.2e-6
-  expect_lt(d[["summary"]], 1e-5) # observed 3.1e-6 SDs
-  expect_lt(d[["summary_table"]], 1e-5) # observed 3.1e-6 SDs
-  expect_lt(d[["xi"]], 2e-6) # observed 5.0e-7 SDs
-  expect_lt(d[["omega"]], 3e-6) # observed 1.1e-6
-  expect_lt(d[["alpha"]], 1e-5) # observed 3.3e-6
+  expect_lt(d[["cov"]], 8.5e-6) # observed 2.8e-6
+  expect_lt(d[["logml_laplace"]], 6e-6) # observed 1.9e-6
+  expect_lt(d[["summary"]], 8e-6) # observed 2.6e-6 SDs
+  expect_lt(d[["summary_table"]], 8e-6) # observed 2.6e-6 SDs
+  expect_lt(d[["xi"]], 1.3e-6) # observed 4.2e-7 SDs
+  expect_lt(d[["omega"]], 3e-6) # observed 1.0e-6
+  expect_lt(d[["alpha"]], 9e-6) # observed 2.9e-6
   expect_lt(
     max(abs(
       fit_fd$diagnostics$marginals$gamma1 -
         fit_grad$diagnostics$marginals$gamma1
     )),
-    4.5e-6 # observed 1.5e-6
+    4e-6 # observed 1.3e-6
   )
   # VB stage, with one-sided differences as above (central differences
   # agreed to 7.5e-7 SDs); also 6.1e-5 with vb_tol = 1e-9
@@ -875,7 +878,7 @@ fit_past_init_check <- function(logpost, init, grad) {
 
 test_that("the VB shift in posterior SDs does not depend on the scale of the parameters", {
   # theta = scale * beta for the 2D Poisson regression, so the posterior SDs
-  # run from 2e-5 to 3e3. The fixed-point step, its convergence test and the
+  # run from 3e-5 to 4e3. The fixed-point step, its convergence test and the
   # fallback trigger are all measured in posterior SDs, and the
   # finite-difference steps scale with them, so the shift in SDs should not
   # change and the iteration should not fall back.
@@ -984,7 +987,8 @@ test_that("the degree-5 rule gives the exact VB shift for a degree-6 polynomial 
   # Eight nodes per axis are exact up to degree 15
   ref <- vb_reference(grad, fit$mode, fit$cov, n_gh = 8)
   expect_gt(max_sd_diff(ref, fit$mode, sds), 0.2) # a real shift
-  expect_lt(max_sd_diff(fit$mean_vb, ref, sds), 1e-11) # observed 4e-14 SDs
+  # Solved to vb_tol = 1e-12 SDs with an exact rule: observed 4e-14 SDs
+  expect_lt(max_sd_diff(fit$mean_vb, ref, sds), 1e-12)
 
   # With the default tolerance the iteration stops a little short
   fit_default <- inla_vanilla(logpost, init, grad = grad, verbose = FALSE)
