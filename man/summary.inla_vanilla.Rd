@@ -79,5 +79,6 @@ reported.
 \references{
 Jamil, H., & Rue, H. (2026). \emph{Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
-approximations}. arXiv. \url{https://doi.org/10.48550/arXiv.2603.25690}
+approximations} (arXiv:2603.25690 [stat.ME]). arXiv.
+\url{https://doi.org/10.48550/arXiv.2603.25690}
 }

@@ -95,7 +95,7 @@ The tests are described as "the main point of the package." They use closed-form
 - Imports should stay limited to base packages (stats, graphics, utils) plus cli, which the user requires for messages and progress bars. Do not add numDeriv, sn or Rcpp.
 - The license is GPL (>= 3).
 - Add a `NEWS.md` bullet for user-facing changes, as `CONTRIBUTING.md` asks.
-- Write references and in-text citations in APA 7 style, by hand, in roxygen, the README and the vignettes: "Jamil, H., & Rue, H. (2026a). *Title in sentence case*. arXiv. <https://doi.org/...>", cited as "(Jamil & Rue, 2026a)" or "Jamil and Rue (2026a)". The a/b suffixes appear only where both 2026 papers are cited. In roxygen use `--` for page ranges (it renders as an en dash) and `<https://doi.org/...>` rather than `\doi{}`. `DESCRIPTION` keeps CRAN's `<doi:...>` form.
+- Write references and in-text citations in APA 7 style, by hand, in roxygen, the README and the vignettes: "Jamil, H., & Rue, H. (2026a). *Title in sentence case* (arXiv:2603.25690 [stat.ME]). arXiv. <https://doi.org/...>" (the arXiv identifier and primary category in brackets after the title, as Zotero's APA style gives; escape the square brackets as `\[stat.ME\]` in roxygen), cited as "(Jamil & Rue, 2026a)" or "Jamil and Rue (2026a)". The a/b suffixes appear only where both 2026 papers are cited. In roxygen use `--` for page ranges (it renders as an en dash) and `<https://doi.org/...>` rather than `\doi{}`. `DESCRIPTION` keeps CRAN's `<doi:...>` form.
 - The vignette (`vignettes/inlavanilla.qmd`) is Quarto, as in INLAvaan; CI installs Quarto, and R-CMD-check installs the package itself so that Quarto's R session finds it on Windows.
 
 ## Coding principles
