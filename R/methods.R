@@ -215,50 +215,77 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
 
   col_sn <- "#C2410C"
   col_lap <- "#0F766E"
+  k <- length(idx)
+  # Wider than tall: panels side by side, then rows
   op <- graphics::par(
-    mfrow = grDevices::n2mfrow(length(idx)),
-    mar = c(4, 1, 2.5, 1),
+    mfrow = rev(grDevices::n2mfrow(k)),
+    mar = c(2.5, 1, 2, 1),
+    oma = c(0, 0, if (laplace) 1.5 else 0, 0),
+    mgp = c(2, 0.6, 0),
     las = 1
   )
   on.exit(graphics::par(op))
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
   for (j in idx) {
     lap_sd <- sqrt(x$cov[j, j])
-    tt <- seq(
-      min(mom$mean[j], x$mode[j]) - 4.5 * max(mom$sd[j], lap_sd),
-      max(mom$mean[j], x$mode[j]) + 4.5 * max(mom$sd[j], lap_sd),
-      length.out = 300
+    q_sn <- qsnorm(
+      c(0.0005, 0.9995),
+      sn[j, "xi"],
+      sn[j, "omega"],
+      sn[j, "alpha"]
     )
+    q_lap <- stats::qnorm(c(0.0005, 0.9995), x$mode[j], lap_sd)
+    lims <- if (laplace) range(q_sn, q_lap) else q_sn
+    tt <- seq(lims[1], lims[2], length.out = 400)
     f_sn <- dsnorm(tt, sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
     f_lap <- stats::dnorm(tt, x$mode[j], lap_sd)
     graphics::plot(
       tt,
       f_sn,
-      type = "l",
-      lwd = 2,
-      col = col_sn,
+      type = "n",
       ylim = c(0, max(f_sn, if (laplace) f_lap) * 1.05),
       main = rownames(sn)[j],
+      font.main = 1,
       xlab = "",
       ylab = "",
       yaxt = "n",
       bty = "n",
       ...
     )
+    graphics::polygon(
+      c(tt, rev(tt)),
+      c(f_sn, numeric(length(tt))),
+      col = grDevices::adjustcolor(col_sn, 0.15),
+      border = NA
+    )
+    graphics::lines(tt, f_sn, lwd = 2, col = col_sn)
     if (laplace) {
       graphics::lines(tt, f_lap, lty = 2, lwd = 1.5, col = col_lap)
     }
-    graphics::abline(v = mom$mean[j], col = col_sn, lty = 3)
+    graphics::segments(
+      mom$mean[j],
+      0,
+      mom$mean[j],
+      dsnorm(mom$mean[j], sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"]),
+      col = col_sn,
+      lty = 3
+    )
   }
   if (laplace) {
+    # One legend for all panels, in the outer margin at the top
+    graphics::par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0))
+    graphics::par(new = TRUE)
+    graphics::plot.new()
     graphics::legend(
-      "topright",
+      "top",
       legend = c("Skew-normal", "Laplace"),
       col = c(col_sn, col_lap),
       lty = c(1, 2),
       lwd = c(2, 1.5),
+      horiz = TRUE,
       bty = "n",
-      cex = 0.8
+      cex = 0.85,
+      xpd = NA
     )
   }
   invisible(x)

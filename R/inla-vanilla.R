@@ -356,7 +356,8 @@ sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975)) {
 }
 
 format_probs <- function(probs) {
-  paste0(formatC(100 * probs, format = "fg", digits = 3), "%")
+  # as stats::quantile() names them, with no padding
+  paste0(formatC(100 * probs, format = "fg", width = 1, digits = 7), "%")
 }
 
 vanilla_control <- function(control) {
