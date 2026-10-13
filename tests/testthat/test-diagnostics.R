@@ -96,6 +96,10 @@ test_that("each check adds its own line to the warning", {
   d$vb_shift[1] <- 2
   expect_length(diagnostic_problems(d, vb_ok), 4)
   text <- warning_text(d, vb_ok)
+  # each line shows its own value
+  expect_match(text, "largest NMAD 0.2,")
+  expect_match(text, "puts up to 0.3 of its mass")
+  expect_match(text, "by up to 2 posterior SDs")
   expect_match(text, "^The approximation may be poor for some parameters")
   expect_match(text, 'vignette\\("diagnostics", package = "inlavanilla"\\)')
 })
