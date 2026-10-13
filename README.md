@@ -7,11 +7,10 @@
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN
-status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla)
 [![R-CMD-check](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app.codecov.io/gh/haziqj/inlavanilla)
+<!-- [![CRAN status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla) -->
 <!-- badges: end -->
 
 The goal of inlavanilla is to …
