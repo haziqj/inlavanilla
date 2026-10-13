@@ -276,6 +276,31 @@ test_that("loo::loo_compare() compares the results", {
   expect_equal(row_b$se_diff, sqrt(length(d)) * sd(d), tolerance = 1e-12)
 })
 
+test_that("warnings from loglik are recorded, and muffled for a silent fit", {
+  chatty <- function(theta, X, y) {
+    warning("loglik is chatty")
+    ll_lin(theta, X, y)
+  }
+  # fit_lin is silent: nothing is signalled, the warning is recorded once
+  expect_silent(res <- loo(fit_lin, chatty, X = lin_X, y = lin_y))
+  expect_identical(res$warnings, "loglik is chatty")
+  expect_silent(res <- waic(fit_lin, chatty, X = lin_X, y = lin_y))
+  expect_identical(res$warnings, "loglik is chatty")
+  # A fit that is not silent: signalled at every call, and recorded once
+  fit_loud <- fit_lin
+  fit_loud$silent <- FALSE
+  n_signalled <- 0
+  res <- withCallingHandlers(
+    suppressMessages(loo(fit_loud, chatty, X = lin_X, y = lin_y)),
+    warning = function(w) {
+      n_signalled <<- n_signalled + 1
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_identical(n_signalled, 13)
+  expect_identical(res$warnings, "loglik is chatty")
+})
+
 test_that("the methods are reachable through the loo package's generics", {
   skip_if_not_installed("loo")
   res <- loo::loo(fit_lin, ll_lin, X = lin_X, y = lin_y)

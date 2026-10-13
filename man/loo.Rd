@@ -113,6 +113,14 @@ VB correction does. A cross-check that uses the skew-normal marginals is
 Pareto-smoothed importance sampling on copula draws:
 \code{loo::loo(sampling(fit, 4000, fun = loglik, ...))}.
 }
+\section{Silent fits}{
+
+On a fit made with \code{silent = TRUE}, \code{loo()} and \code{waic()} print nothing and
+raise no warnings, their own or those of \code{loglik}; the warnings are kept
+in the result's \code{warnings}, and a fallback to first order shows in \code{order}
+and \code{first_order_units}.
+}
+
 \section{Comparing models}{
 
 The results have the layout of the loo package's objects, so
