@@ -35,11 +35,11 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## Architecture
 
-Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, marginals = c("skewnormal", "gaussian"), verbose = TRUE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `marginals`, `verbose` and `control` must be named in full and data arguments cannot partially match them. `marginals` is checked by `check_choice()`, which accepts exact values only.
+Entry point: `inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE, marginals = c("skewnormal", "gaussian"), verbose = FALSE, silent = FALSE, control = list())` in `R/inla-vanilla.R`. As in `optim()` and `nlminb()`, the dots come after the gradient, so `vb`, `marginals`, `verbose`, `silent` and `control` must be named in full and data arguments cannot partially match them. `marginals` is checked by `check_choice()`, which accepts exact values only. `inla_vanilla()` checks the arguments and sets up the condition handlers; the stages run in the internal `vanilla_fit()`.
 
 - **Input.** The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included; `...` is passed through as in `optim()`.
 - **No transform layer in v1.** Natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`), so keep the engine free of transform logic.
-- **Wrappers.** `inla_vanilla()` binds `...` once in `logpost_x()` and `grad_x()`, then wraps them in closures (`lp`, `gr`) that name the parameters, count calls, record the last parameter value and tick progress. Every stage receives these closures, never the user functions. Never forward `...` to internal helpers, because a user's data argument could partially match one of their formals (the same applies to `fun` in `sampling()`). `with_context()` reports an error from `logpost` or `grad` with the stage and the parameter value.
+- **Wrappers.** `inla_vanilla()` binds `...` once in `logpost_x()` and `grad_x()`, and `vanilla_fit()` wraps them in closures (`lp`, `gr`) that name the parameters, count calls, record the last parameter value and tick progress. Every stage receives these closures, never the user functions. Never forward `...` to internal helpers, because a user's data argument could partially match one of their formals (the same applies to `fun` in `sampling()`). `with_context()` reports an error from `logpost` or `grad` with the stage and the parameter value.
 
 The stages run in order, one file each:
 
@@ -64,7 +64,11 @@ Supporting files:
 
 - **Skew-normal utilities** (`R/skew-normal.R`, `R/qsnorm-fast.R`): ported from INLAvaan. The Apache-licensed `qsnorm_fast()` keeps its attribution header. All of them are internal.
 - **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout.
-- **Progress** (`R/progress.R`): each stage has a cli progress bar that appears only after 0.5 s, and ends with a plain styled `message()` line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path.
+- **Progress** (`R/progress.R`): three output levels, held in the `prog` environment from `progress_new()`.
+  - Default (`verbose = FALSE, silent = FALSE`): each stage ends with a plain styled `message()` line. Only in a dynamic terminal (`progress_bars_ok()`, i.e. `cli::is_dynamic_tty()`, checked once per fit) does it also get a cli progress bar, which appears after `getOption("cli.progress_show_after", 0.5)` seconds; elsewhere (knitr, Quarto, Rscript to a log file) cli would print every bar update as a new line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path, and keep the default path free of anything built only for `verbose`.
+  - `verbose = TRUE`: the `report_*()` functions add indented grey detail lines under each stage, behind `if (prog$detail)`. They use only what the fit has already computed (`lap$restart`, `lap$hessian`, `vbc$history`, the call counters), never further calls of `logpost` or `grad`.
+  - `silent = TRUE`: nothing is printed, and the handlers in `inla_vanilla()` muffle every warning and message raised during the fit. `verbose = TRUE, silent = TRUE` is an error.
+  - Whatever the level, the handler records each distinct warning in `prog$warnings`, which becomes `fit$warnings`, as plain text: `warn()` attaches its message unwrapped and uncoloured as `text`. The fit also stores `verbose` and `silent`.
 - **Errors and warnings**: raise them with `abort()` and `warn()` (`R/utils.R`), which format with cli and signal with base R, giving the classes `inlavanilla_error` and `inlavanilla_warning`. Do not use `cli::cli_abort()` or `cli::cli_warn()`: they call rlang, which cli only suggests.
 - **Non-ASCII output**: user-visible non-ASCII characters (σ, ·) go through `sd_unit()` and `sep_dot()`, which fall back to ASCII. R source files must stay ASCII.
 
