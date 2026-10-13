@@ -155,7 +155,10 @@ keep two residual variances away from zero, so on the log scale their
 posteriors had a long, exponential left tail, set by the prior. Checked
 against MCMC, those two skew-normal marginals were less than half as wide
 as the posterior, with the 2.5\\% quantile about 2 posterior SDs too high;
-the other 37 were within 7\\% in SD. The \code{bend} diagnostic of
+the other 37 were within 7\\% in SD. On the variance scale, where the tail
+near zero is compressed, the two were much closer: means 0.2 posterior SDs
+too high and SDs 10--15\\% too small. INLAvaan's marginals of this model
+are the same as inlavanilla's. The \code{bend} diagnostic of
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged both, but its size does not say how far
 off a marginal is, and the \code{tails} check, which looks only 4 Laplace SDs
 out, missed them.

@@ -237,8 +237,14 @@ narrow by a factor that vanishes as O(1/n).
     log scale the left tail is exponential, with slope 0.50: the
     `gamma(1,.5)[sd]` prior with its Jacobian. A skew-normal cannot follow
     it, and the scan (4 Laplace SDs) stops before the tail flattens.
-  - On the variance scale the skew-normal overstates the mean by 16-18% and
-    puts the 2.5% quantile at 0.03 instead of 0.001.
+  - On the variance scale, the scale INLAvaan reports, the error is moderate.
+    Against Stan NUTS on an independently written model with INLAvaan's
+    default priors (`lab/poldem.stan` in inlavanilla), INLAvaan's own summary
+    has x2~~x2 mean 0.132 against 0.114 (0.23 posterior SDs), SD 0.066
+    against 0.077, 2.5% quantile 0.031 against 0.001; dem65~~dem65 mean 0.273
+    against 0.236 (0.17 SDs). The other 37 parameters: means within 0.09 SDs,
+    SD ratios 0.93-1.01. A validation against MCMC on the natural scale with
+    a tolerance of about 0.25 SDs would pass this model.
   - The other 37 parameters are within 7% in SD (median 3%), 0.08 SDs in the
     mean and 0.21 SDs in the quantiles.
   - inlavanilla's fit matches INLAvaan's here (modes within 2e-4 SDs, log
