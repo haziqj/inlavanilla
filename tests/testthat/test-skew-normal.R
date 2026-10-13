@@ -2,11 +2,11 @@
 # R/qsnorm-fast.R. Every reference is computed here, independently of the code
 # under test: stats::integrate() of the density or of Owen's defining
 # integral, closed forms (alpha = 0 and |alpha| = 1), root finding on a score
-# or on a quadrature CDF written out below, and optim() on a least-squares
-# objective written out below. Quantiles are checked by quadrature at the
-# returned value, not by inverting psnorm(); only qsnorm_fast()'s coarse
-# envelope uses a psnorm() root, and psnorm() is itself checked against
-# integrate() first.
+# or on a quadrature CDF, and finite differences of a least-squares objective,
+# all written out below. Quantiles are checked by quadrature at the returned
+# value, not by inverting psnorm(); only qsnorm_fast()'s coarse checks use a
+# psnorm() root, in the bulk and the heavier tail, where psnorm() is first
+# checked against integrate().
 #
 # Tolerances were calibrated by printing the actual errors first; each
 # comment states the observed value.
@@ -27,7 +27,7 @@ sn_logdens_ref <- function(x, xi, omega, alpha) {
     log(omega)
 }
 
-# SD of the standardised skew-normal, 1 - 2 delta^2 / pi with
+# SD of the standardised skew-normal, sqrt(1 - 2 delta^2 / pi) with
 # delta = alpha / sqrt(1 + alpha^2) (checked against quadrature below).
 sn_sd_std <- function(alpha) {
   sqrt(1 - 2 / pi * alpha^2 / (1 + alpha^2))
@@ -106,7 +106,8 @@ scan_sn_pars <- function(alpha, mode = 0) {
 }
 
 # Reference quantile: the root of psnorm(q) = p, on the standardised scale.
-# Used only for qsnorm_fast()'s coarse envelope.
+# Used only for qsnorm_fast()'s coarse checks, in the bulk and the heavier
+# tail, where psnorm() is accurate (checked below).
 sn_quantile_ref <- function(p, alpha) {
   vapply(
     p,
@@ -479,30 +480,31 @@ test_that("qsnorm_fast is within its documented envelope of the true quantile", 
 
 test_that("qsnorm_fast gives the same start in scalar and vector calls for tiny p", {
   # For alpha < 0 the function folds p to 1 - p, which is exactly 1 for
-  # p < 1.1e-16. The special values for p = 0 and 1 are assigned before the
-  # fold, so a scalar call returns -Inf and, in a vector call, the element
-  # keeps its initial value 0. The true quantiles (heavy lower tail) are
-  # about -8.5, -9.3 and -21.3. Observed: -Inf (scalar) and 0 (vector).
+  # p < 1.1e-16, so qsnorm_fast() cannot resolve these quantiles; it is only
+  # a starting value. Scalar and vector calls must agree (the vector path
+  # used to leave such an element at 0), and qsnorm(), which starts from the
+  # Gaussian tail there, must still find the true quantiles (heavy lower
+  # tail, about -8.5, -9.3 and -21.3).
   p <- c(1e-17, 1e-20, 1e-100)
   for (a in c(-2, -5)) {
     scalar <- vapply(p, function(pp) qsnorm_fast(pp, 0, 1, a), numeric(1))
     vector <- qsnorm_fast(c(0.5, p), 0, 1, a)[-1]
-    q_true <- sn_quantile_ref(p, a)
     expect_identical(vector, scalar)
+    q_true <- sn_quantile_ref(p, a)
     expect_all_below(
       stats::setNames(
-        abs(vector - q_true) / abs(q_true),
+        abs(qsnorm(p, 0, 1, a) - q_true) / abs(q_true),
         sprintf("alpha=%g, p=%g", a, p)
       ),
-      0.1
+      1e-8
     )
   }
 })
 
 test_that("qsnorm returns quantiles whose probability is p, across (1e-6, 1 - 1e-6)", {
   # R/skew-normal.R documents qsnorm() as accurate to near machine
-  # precision. The error is |F(q) - p| / f(q) with F by quadrature on the
-  # smaller tail, relative to max(1, |q|). Observed max 6.1e-13 (at alpha = 5,
+  # precision. The error is, to first order, |F(q) - p| / f(q) with F by
+  # quadrature on the smaller tail, relative to max(1, |q|). Observed max 6.1e-13 (at alpha = 5,
   # p = 1e-6, the light tail); 4.4e-16 for alpha in {0, +-1}.
   alphas <- c(alpha_wide, -1, 0, 1)
   grid <- expand.grid(p = p_wide, alpha = alphas)
@@ -576,6 +578,8 @@ test_that("qsnorm does not run away deep in the lighter tail", {
   # -1.627). Where psnorm() returns 0, qsn_std_logtail()'s safeguard
   # "step back towards the centre" sets step = +1 for a lower tail (-1 for
   # an upper), and q - step moves further out, every iteration up to the cap.
+  # (Flipping that sign alone still leaves 1.3 to 1.7 SDs, as q then
+  # oscillates by unit steps; bisection on psnorm() reaches 0.05 SDs.)
   sn_light_quantile_ref <- function(p, a) {
     # The lower tail for a > 0; F(z) <= 2 Phi(z) Phi(a z) brackets the root
     lo <- -sqrt(2 * log(1 / p) / (1 + a^2)) - 1
@@ -656,9 +660,10 @@ test_that("sn_score_map is monotone and continues linearly beyond its knots", {
 # sn_moments and sn_mode --------------------------------------------------------
 
 test_that("sn_moments gives the mean and SD found by integration", {
-  # Observed relative errors <= 2.2e-16.
+  # Observed relative errors <= 2.2e-16; the tolerance leaves room for
+  # integrate(), which is asked for 1e-12.
   for (p in c(sn_pars, list(c(0, 1, 100)))) {
-    f <- function(x) dsnorm(x, p[1], p[2], p[3])
+    f <- function(x) sn_density_ref((x - p[1]) / p[2], p[3]) / p[2]
     mean_ref <- stats::integrate(
       function(x) x * f(x),
       -Inf,
@@ -697,7 +702,7 @@ test_that("sn_mode finds the maximum of the density", {
   # errors <= 9.7e-9 and <= 1.5e-8 SDs.
   for (p in c(sn_pars, list(c(0, 1, 100), c(0, 1, -100)))) {
     mode <- sn_mode(p[1], p[2], p[3])
-    sd <- sn_moments(p[1], p[2], p[3])$sd
+    sd <- p[2] * sn_sd_std(p[3])
     mode_score <- p[1] + p[2] * sn_std_mode_ref(p[3])
     mode_opt <- stats::optimize(
       function(x) sn_density_ref((x - p[1]) / p[2], p[3]),
@@ -768,12 +773,14 @@ test_that("fit_skew_normal recovers xi, omega and alpha from exact skew-normal s
     )
   )
   # The input is an exact skew-normal, so the fit is exact up to the
-  # optimiser's convergence. Observed parameter errors <= 1.8e-14, nmad
+  # optimiser's rounding. Observed parameter errors <= 1.8e-14, nmad
   # <= 8.9e-16 and log-density errors <= 2.8e-13 (on values down to -100).
+  # Tolerances for fits to exact inputs in this section are about 5x the
+  # observed, to allow for rounding on other platforms.
   for (p in pars) {
     fit <- fit_sn_check(p)
-    expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 1e-12)
-    expect_lt(fit$nmad, 1e-14)
+    expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 1e-13)
+    expect_lt(fit$nmad, 5e-15)
     # logC restores the normalisation removed by max(y) = 0
     expect_lt(
       max(abs(
@@ -781,7 +788,7 @@ test_that("fit_skew_normal recovers xi, omega and alpha from exact skew-normal s
           fit$logC -
           fit$y
       )),
-      1e-11
+      1.5e-12
     )
   }
 })
@@ -800,7 +807,7 @@ test_that("fit_skew_normal fits mirror-image inputs with mirror-image parameters
         c(fit_rev$xi, fit_rev$omega, fit_rev$alpha) -
           c(-fit$xi, fit$omega, -fit$alpha)
       )),
-      1e-12,
+      5e-13,
       label = sprintf("mirrored fit for alpha = %g", a)
     )
   }
@@ -825,8 +832,8 @@ test_that("fit_skew_normal recovers mildly skewed scans, centred or shifted", {
     nmad[i] <- fit$nmad
   }
   labels <- sprintf("alpha=%g, mode=%g", cases$alpha, cases$mode)
-  expect_all_below(stats::setNames(err, labels), 1e-12)
-  expect_all_below(stats::setNames(nmad, labels), 1e-14)
+  expect_all_below(stats::setNames(err, labels), 3e-13)
+  expect_all_below(stats::setNames(nmad, labels), 5e-15)
 })
 
 test_that("fit_skew_normal gives alpha near 0 and the right moments for a Gaussian input", {
@@ -837,10 +844,13 @@ test_that("fit_skew_normal gives alpha near 0 and the right moments for a Gaussi
     y <- stats::dnorm(grid_scan, p[1], p[2], log = TRUE)
     y <- y - max(y)
     fit <- fit_skew_normal(grid_scan, y)
-    mom <- sn_moments(fit$xi, fit$omega, fit$alpha)
+    # SN mean xi + omega delta sqrt(2 / pi), SD omega sqrt(1 - 2 delta^2 / pi)
+    delta <- fit$alpha / sqrt(1 + fit$alpha^2)
+    sn_mean <- fit$xi + fit$omega * delta * sqrt(2 / pi)
+    sn_sd <- fit$omega * sn_sd_std(fit$alpha)
     expect_lt(abs(fit$alpha), 0.02)
-    expect_lt(abs(mom$mean - p[1]), 5e-8)
-    expect_lt(abs(mom$sd - p[2]), 5e-8)
+    expect_lt(abs(sn_mean - p[1]), 5e-8)
+    expect_lt(abs(sn_sd - p[2]), 5e-8)
     expect_lt(fit$nmad, 5e-8)
   }
 })
@@ -853,7 +863,7 @@ test_that("fit_skew_normal handles uneven grids, as when scan points are dropped
     p <- scan_sn_pars(a, 0.3)
     for (drop in list(c(1, 2), c(20, 21), c(3, 8, 15), 1:4)) {
       fit <- fit_sn_check(p, grid_scan[-drop])
-      expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 1e-12)
+      expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 3e-14)
     }
   }
 })
@@ -861,6 +871,7 @@ test_that("fit_skew_normal handles uneven grids, as when scan points are dropped
 test_that("fit_skew_normal ignores points below threshold_log_drop", {
   # Six of the 21 points fall below -6 for this scan; pushing them further
   # down must not move the fit, and a stricter threshold still recovers it.
+  # Observed parameter errors <= 8.9e-16.
   p <- scan_sn_pars(5)
   y <- sn_logdens_ref(grid_scan, p[1], p[2], p[3])
   y <- y - max(y)
@@ -869,12 +880,17 @@ test_that("fit_skew_normal ignores points below threshold_log_drop", {
   y_low <- y
   y_low[low] <- y_low[low] - 50
   fit <- fit_skew_normal(grid_scan, y_low)
-  expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 1e-12)
-  # nmad is over all points, including the dropped ones
-  expect_gt(fit$nmad, 1e-4)
+  expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 5e-15)
+  # nmad is over all points, including the dropped ones, where the fit has
+  # the original heights (observed 2.2e-3, agreeing to 7.8e-16 relative)
+  expect_equal(
+    fit$nmad,
+    max(exp(y[low]) - exp(y_low[low])),
+    tolerance = 3e-15
+  )
 
   fit <- fit_skew_normal(grid_scan, y, threshold_log_drop = -2)
-  expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 1e-12)
+  expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 5e-15)
 })
 
 test_that("fit_skew_normal keeps at least five points for a narrow scan", {
@@ -887,7 +903,7 @@ test_that("fit_skew_normal keeps at least five points for a narrow scan", {
     y <- y - max(y)
     expect_lt(sum(y >= -6), 5)
     fit <- fit_skew_normal(grid_scan, y)
-    expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 1e-12)
+    expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 5e-15)
   }
 })
 
