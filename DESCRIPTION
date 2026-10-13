@@ -12,7 +12,3 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.1.0
 URL: http://haziqj.ml/inlavanilla/
-LinkingTo: 
-    Rcpp
-Imports: 
-    Rcpp
