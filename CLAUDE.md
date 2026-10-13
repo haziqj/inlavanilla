@@ -44,7 +44,7 @@ The pipeline has four stages. Implement them in this order, each with tests pass
 3. **2. Skew-normal marginals per parameter.** Scan the height along the CMP direction (Lemma 3.1), add the volume correction (Corollary 3.3), then fit SN(ξ, ω, α). Back-transform the densities with the Jacobian (log → f(log ψ)/ψ; tanh → f(artanh ρ)/(1 − ρ²)).
 4. **3. Gaussian copula draws.** Set R = cor(Ω), draw z ~ N(0, R), take u = Φ(z) and apply the SN quantile per margin. Return draws on both the unconstrained and natural scales.
 
-Outputs: `print()`, `summary()` (natural-scale moments, quantiles and mode, plus the log marginal likelihood), `plot()`, and `sampling()` for copula draws, optionally of a derived `g(theta)`. The name `sampling()` matches INLAvaan's exported generic; `base::sample` is not generic. The OOP system (S3 or S7) is still open, and S4 and R6 are ruled out.
+Outputs: `print()`, `summary()` (natural-scale moments, quantiles and mode, plus the log marginal likelihood), `plot()`, and `sampling()` for copula draws, optionally of a derived `g(theta)`. The name `sampling()` matches INLAvaan's exported generic; `base::sample` is not generic. The object system is S3 (not S7, S4 or R6), and the fit is a classed list built by `new_inla_vanilla()`.
 
 Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Gauss–Hermite VB, parallel cores).
 
@@ -62,7 +62,7 @@ The tests are described as "the main point of the package." They use closed-form
 ## Known scaffold inconsistencies
 
 - `DESCRIPTION` still has template placeholders (Title, Description, Authors@R).
-- Imports should stay limited to base packages (stats, graphics, utils). Do not add numDeriv, sn or Rcpp.
+- Imports should stay limited to base packages (stats, graphics, utils) plus cli, which the user requires for messages and progress bars. Do not add numDeriv, sn or Rcpp.
 - The license is GPL (>= 3).
 - `CONTRIBUTING.md` asks for a `NEWS.md` bullet for user-facing changes, but there is no `NEWS.md` yet.
 
