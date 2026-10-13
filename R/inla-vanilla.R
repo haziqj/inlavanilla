@@ -878,12 +878,35 @@ check_grad_at_init <- function(grad, lp, init) {
   # posterior SD, so a gradient that is wrong by a factor is caught whatever
   # the scale of the parameter
   u <- ifelse(attr(scales, "ok"), scales, 1)
-  err <- abs(g - g_fd) * u / (1 + abs(g_fd) * u)
+  score <- function(g, g_fd) abs(g - g_fd) * u / (1 + abs(g_fd) * u)
+  err <- score(g, g_fd)
+  where <- "at {.arg init}"
+  # Near the mode both gradients are close to zero, so a gradient that is
+  # wrong by a factor can still pass there. Check again one curvature scale
+  # away, where the gradient is about one per scale; skip the point if
+  # logpost or grad cannot be evaluated there.
+  x1 <- init + u
+  if (is.finite(lp(x1))) {
+    g1 <- tryCatch(as.numeric(grad(x1)), error = function(e) NULL)
+    if (length(g1) == length(init) && all(is.finite(g1))) {
+      g1_fd <- fd_grad(lp, x1, h = h)
+      err1 <- score(g1, g1_fd)
+      if (all(is.finite(err1)) && max(err1) > max(err)) {
+        err <- err1
+        g <- g1
+        g_fd <- g1_fd
+        where <- "one curvature scale from {.arg init}"
+      }
+    }
+  }
   if (any(err > 1e-3)) {
     worst <- which.max(err)
     warn(c(
-      "{.arg grad} does not match finite differences of {.arg logpost} at
-       {.arg init}.",
+      paste0(
+        "{.arg grad} does not match finite differences of {.arg logpost} ",
+        where,
+        "."
+      ),
       "x" = "For {.field {names(init)[worst]}}: {.arg grad} gives
              {.val {signif(g[worst], 4)}}, finite differences give
              {.val {signif(g_fd[worst], 4)}}.",

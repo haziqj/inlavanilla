@@ -695,16 +695,21 @@ test_that("the gradient check works whatever the scale of the posterior", {
 
 test_that("a gradient that is not a gradient field is caught at the mode", {
   # A rotation added to the right gradient: zero at the mode (1, 1), where
-  # the fit starts, so the check at init passes, but its Jacobian is not
-  # symmetric.
+  # the fit starts, so the check at init passes, but it is wrong one
+  # curvature scale away, and its Jacobian is not symmetric.
   gr_rot <- function(theta) {
     d <- theta - 1
     c(-d[[1]] + 0.5 * d[[2]], -d[[2]] - 0.5 * d[[1]])
   }
-  expect_warning(
-    suppressMessages(inla_vanilla(lp_gauss, c(a = 1, b = 1), grad = gr_rot)),
-    "does not look like the gradient of `logpost`",
-    class = "inlavanilla_warning"
+  fit <- inla_vanilla(lp_gauss, c(a = 1, b = 1), grad = gr_rot, silent = TRUE)
+  expect_length(fit$warnings, 2)
+  expect_match(
+    fit$warnings[[1]],
+    "does not match finite differences of `logpost` one curvature scale"
+  )
+  expect_match(
+    fit$warnings[[2]],
+    "does not look like the gradient of `logpost`"
   )
 })
 
@@ -2061,6 +2066,32 @@ test_that("scan_end_mass is the fitted mass outside the scanned window", {
   # Recorded, not flagged or printed
   out <- capture_output(print(summary(fit_reg)))
   expect_no_match(out, "mass")
+})
+
+test_that("a gradient wrong by a factor is caught when init is at the mode", {
+  # At the mode both gradients are near zero, so the check at init alone
+  # passes a gradient that forgot a factor of 1 / sigma^2; the second check,
+  # one curvature scale away, catches it.
+  set.seed(1)
+  n <- 5000
+  x <- rnorm(n)
+  y <- 1 + 2 * x + rnorm(n, 0, 2)
+  X <- cbind(1, x)
+  lp <- function(b) {
+    sum(dnorm(y, drop(X %*% b), 2, log = TRUE)) +
+      sum(dnorm(b, 0, 10, log = TRUE))
+  }
+  gr_ok <- function(b) drop(crossprod(X, y - X %*% b)) / 4 - b / 100
+  gr_bad <- function(b) 4 * gr_ok(b)
+  init <- stats::setNames(coef(lm(y ~ x)), c("a", "b"))
+  fit <- inla_vanilla(lp, init, grad = gr_bad, silent = TRUE)
+  expect_match(
+    fit$warnings,
+    "does not match finite differences of `logpost` one curvature scale",
+    all = FALSE
+  )
+  fit <- inla_vanilla(lp, init, grad = gr_ok, silent = TRUE)
+  expect_identical(fit$warnings, character())
 })
 
 test_that("silent = TRUE copes with conditions that have no muffle restart", {
