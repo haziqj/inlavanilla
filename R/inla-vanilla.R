@@ -102,7 +102,52 @@
 #' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
 #'   tolerance in posterior SDs (default `1e-3`) for the VB correction.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
-#'   `iter.max` and `eval.max` default to `1000` and `2000`.
+#'   `iter.max` and `eval.max` default to `1000` and `2000`, and `trace = 1`
+#'   prints its iterations.
+#'
+#' @section Output:
+#' By default each stage prints one line as it finishes, with the time it
+#' took. In a terminal or the RStudio console, a stage that runs for longer
+#' than half a second (or the option `cli.progress_show_after`, if set) also
+#' shows a progress bar; in knitr and Quarto documents, or with output
+#' redirected to a file, there are no bars, only the stage lines. Warnings,
+#' such as a mode that was not reached or a gradient that does not match
+#' `logpost`, are signalled as usual.
+#'
+#' `verbose = TRUE` adds a full diagnostic of the fit, in grey lines under
+#' each stage. It reports what the fit computes anyway, with no further calls
+#' of `logpost` or `grad`:
+#' * Before the mode search: the parameters, where the derivatives come from,
+#'   `logpost` at `init`, and for a supplied `grad` its largest relative
+#'   discrepancy from finite differences there.
+#' * The mode: the message, iterations and evaluations of [stats::nlminb()],
+#'   and whether it was restarted with the parameters rescaled; the
+#'   log-posterior and the whitened gradient at the mode; how the Hessian was
+#'   taken (and, for a supplied `grad`, the asymmetry of its Jacobian); the
+#'   largest posterior correlation and the smallest eigenvalue of the
+#'   correlation matrix, which is near zero when some combination of the
+#'   parameters is poorly identified; and the Laplace log marginal likelihood.
+#' * The VB correction: the largest step, in posterior SDs, at each
+#'   fixed-point iteration, whether Anderson acceleration or the fallback
+#'   optimiser was used, the largest shift, and the term it adds to the log
+#'   marginal likelihood.
+#' * The marginals: the shape, NMAD, bend, tails and volume correction
+#'   `gamma1` of each parameter, with the values that
+#'   [summary.inla_vanilla()] flags marked.
+#' * The calls of `logpost` and `grad` in each stage, and in all, with the
+#'   total time.
+#'
+#' For the iteration trace of [stats::nlminb()] itself, pass
+#' `control = list(nlminb = list(trace = 1))`.
+#'
+#' `silent = TRUE` prints nothing, for simulations and other repeated fits:
+#' no progress bars and no stage lines, and every warning and message raised
+#' during the fit, including those of `logpost` and `grad`, is muffled.
+#' Errors are still raised. Output printed with [cat()] or [print()], by
+#' `logpost`, `grad` or the trace of [stats::nlminb()], is not captured.
+#'
+#' Whatever the level, the warnings raised during the fit are recorded in
+#' `fit$warnings`, so that a simulation can check them afterwards.
 #'
 #' @param logpost A function `logpost(theta, ...)` returning the log-posterior
 #'   density (up to a constant) at the named numeric vector `theta`, on the
@@ -117,8 +162,8 @@
 #' @param ... Further arguments passed to `logpost` and `grad`, such as the
 #'   data. As in [stats::optim()] and [stats::nlminb()], they come after the
 #'   gradient, and the arguments after them (`vb`, `marginals`, `verbose`,
-#'   `control`) must be given by their full names, so data arguments cannot
-#'   partially match them.
+#'   `silent`, `control`) must be given by their full names, so data
+#'   arguments cannot partially match them.
 #' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
 #'   the log marginal likelihood, and the skew-normal means are checked against
 #'   it (see [summary.inla_vanilla()]).
@@ -127,7 +172,11 @@
 #'   uses the Gaussian marginal of the Laplace approximation, centred at the
 #'   VB mean when `vb = TRUE`, with no scans. Abbreviations such as `"skew"`
 #'   and `"gauss"` work too.
-#' @param verbose Logical. Show progress? Default `TRUE`.
+#' @param verbose Logical. Print a full diagnostic of each stage under its
+#'   progress line? Default `FALSE`. See the section on output.
+#' @param silent Logical. Print nothing at all, and muffle the warnings and
+#'   messages raised during the fit? Default `FALSE`. The warnings are still
+#'   recorded in `fit$warnings`. Cannot be combined with `verbose = TRUE`.
 #' @param control A list of tuning parameters; see the section on control.
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
@@ -138,8 +187,11 @@
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
-#'   * `vb`, `marginals`: the settings the fit used.
+#'   * `vb`, `marginals`, `verbose`, `silent`: the settings the fit used.
 #'   * `logml`: the log marginal likelihood.
+#'   * `warnings`: the messages of the warnings raised during the fit, as a
+#'     character vector of plain text, each message once (empty when there
+#'     were none). They are recorded whether or not `silent` is `TRUE`.
 #'
 #' @references
 #' Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural
@@ -174,6 +226,23 @@
 #' # The posterior of sigma itself, through the draws
 #' sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
 #' quantile(sigma, c(0.025, 0.5, 0.975))
+#'
+#' # A full diagnostic of each stage
+#' fit <- inla_vanilla(
+#'   logpost,
+#'   init = c(mu = 0, log_sigma = 0),
+#'   y = y,
+#'   verbose = TRUE
+#' )
+#'
+#' # Nothing printed, as in a simulation; any warnings are kept in the fit
+#' fit <- inla_vanilla(
+#'   logpost,
+#'   init = c(mu = 0, log_sigma = 0),
+#'   y = y,
+#'   silent = TRUE
+#' )
+#' fit$warnings
 #' @export
 inla_vanilla <- function(
   logpost,
@@ -182,7 +251,8 @@ inla_vanilla <- function(
   ...,
   vb = TRUE,
   marginals = c("skewnormal", "gaussian"),
-  verbose = TRUE,
+  verbose = FALSE,
+  silent = FALSE,
   control = list()
 ) {
   t_start <- elapsed()
@@ -195,23 +265,80 @@ inla_vanilla <- function(
   check_flag(vb, "vb")
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
   check_flag(verbose, "verbose")
-  init <- check_init(init, verbose)
+  check_flag(silent, "silent")
+  if (verbose && silent) {
+    abort(c(
+      "{.arg verbose} and {.arg silent} cannot both be {.code TRUE}.",
+      "i" = "{.code verbose = TRUE} prints a full diagnostic of the fit, and
+             {.code silent = TRUE} prints nothing."
+    ))
+  }
+  init <- check_init(init, show = !silent)
   ctrl <- vanilla_control(control)
-  m <- length(init)
-  parnames <- names(init)
 
-  prog <- progress_new(verbose)
-
-  # The engine calls these wrappers, which name the parameters, pass on `...`
-  # and count the calls.
-  n_lp <- 0L
-  n_gr <- 0L
-  last_x <- init
   # The user's functions with `...` bound once here: forwarding `...` to
   # internal helpers would let a data argument such as `g` partially match
   # one of their formals.
   logpost_x <- function(x) logpost(x, ...)
   grad_x <- if (is.null(grad)) NULL else function(x) grad(x, ...)
+
+  # Every warning raised during the fit, by the package or by logpost and
+  # grad, is recorded once in fit$warnings. With silent = TRUE it is then
+  # muffled, and so is every message; otherwise it is signalled as usual.
+  # Errors pass through either way.
+  prog <- progress_new(show = !silent, detail = verbose)
+  withCallingHandlers(
+    vanilla_fit(
+      logpost_x,
+      grad_x,
+      init,
+      vb = vb,
+      marginals = marginals,
+      ctrl = ctrl,
+      prog = prog,
+      call = call,
+      t_start = t_start
+    ),
+    warning = function(w) {
+      msg <- warning_text(w)
+      if (!msg %in% prog$warnings) {
+        prog$warnings <- c(prog$warnings, msg)
+      }
+      if (silent) {
+        invokeRestart("muffleWarning")
+      }
+    },
+    message = function(m) {
+      if (silent) {
+        invokeRestart("muffleMessage")
+      }
+    }
+  )
+}
+
+# The stages of the fit, given the user's functions with `...` already bound,
+# the checked arguments, and the progress reporter `prog`, which also holds
+# the record of warnings.
+vanilla_fit <- function(
+  logpost_x,
+  grad_x,
+  init,
+  vb,
+  marginals,
+  ctrl,
+  prog,
+  call,
+  t_start
+) {
+  m <- length(init)
+  parnames <- names(init)
+  has_grad <- !is.null(grad_x)
+
+  # The engine calls these wrappers, which name the parameters, count the
+  # calls and tick the progress bar.
+  n_lp <- 0L
+  n_gr <- 0L
+  last_x <- init
   lp <- function(x) {
     names(x) <- parnames
     last_x <<- x
@@ -223,7 +350,7 @@ inla_vanilla <- function(
     v <- logpost_x(x)[[1L]]
     if (is.na(v)) -Inf else v
   }
-  gr <- if (is.null(grad)) {
+  gr <- if (!has_grad) {
     NULL
   } else {
     function(x) {
@@ -232,6 +359,14 @@ inla_vanilla <- function(
       n_gr <<- n_gr + 1L
       as.numeric(grad_x(x))
     }
+  }
+  # The calls since the last stage, for verbose output
+  calls_seen <- c(0L, 0L)
+  calls_since <- function() {
+    now <- c(n_lp, n_gr)
+    out <- now - calls_seen
+    calls_seen <<- now
+    out
   }
   # An error inside logpost or grad stops the fit; say where it happened
   # and at which parameter value.
@@ -254,15 +389,18 @@ inla_vanilla <- function(
     })
   }
 
-  with_context(
+  lp_init <- with_context(
     "evaluating logpost at init",
     check_logpost_at_init(logpost_x, init)
   )
-  if (!is.null(grad)) {
+  grad_check <- if (has_grad) {
     with_context(
       "evaluating grad at init",
       check_grad_at_init(grad_x, lp, init)
     )
+  }
+  if (prog$detail) {
+    report_start(prog, init, lp_init, grad_check, calls_since())
   }
 
   # 1a. Joint Gaussian -------------------------------------------------------
@@ -272,7 +410,7 @@ inla_vanilla <- function(
     "finding the posterior mode",
     laplace_fit(lp, gr, init, ctrl)
   )
-  if (!is.null(grad) && lap$asymmetry > 1e-3) {
+  if (has_grad && lap$asymmetry > 1e-3) {
     warn(c(
       "{.arg grad} does not look like the gradient of {.arg logpost}.",
       "x" = "Its Jacobian at the mode is not symmetric (relative asymmetry
@@ -321,6 +459,9 @@ inla_vanilla <- function(
     t_laplace,
     ok = mode_ok
   )
+  if (prog$detail) {
+    report_mode(prog, lap, calls_since())
+  }
 
   # Gradients for the VB correction: the user's, or one-sided differences
   # stepping a thousandth of a posterior SD. A one-sided difference is biased
@@ -359,6 +500,11 @@ inla_vanilla <- function(
       elapsed() - t0,
       ok = !vbc$fallback && vb_max <= 1
     )
+    if (prog$detail) {
+      report_vb(prog, vbc, sds, lap$logml, calls_since())
+    }
+  } else {
+    progress_info(prog, "No VB correction (vb = FALSE)")
   }
   t_vb <- elapsed() - t0
   shift <- if (vb) vbc$shift else stats::setNames(numeric(m), parnames)
@@ -384,6 +530,9 @@ inla_vanilla <- function(
       ),
       elapsed() - t0
     )
+    if (prog$detail) {
+      report_marginals(prog, sn, calls_since())
+    }
   } else {
     na <- rep(NA_real_, m)
     sn <- cbind(
@@ -396,6 +545,10 @@ inla_vanilla <- function(
       bend = na
     )
     rownames(sn) <- parnames
+    progress_info(
+      prog,
+      "Gaussian marginals (marginals = \"gaussian\"): no scans"
+    )
   }
   t_marginals <- elapsed() - t0
 
@@ -432,7 +585,11 @@ inla_vanilla <- function(
     )
   )
 
-  out <- new_inla_vanilla(
+  t_total <- elapsed() - t_start
+  if (prog$detail) {
+    report_end(prog, n_lp, n_gr, t_total)
+  }
+  new_inla_vanilla(
     sn = sn[, c("xi", "omega", "alpha"), drop = FALSE],
     mode = lap$mode,
     cov = lap$Sigma,
@@ -445,14 +602,16 @@ inla_vanilla <- function(
       laplace = t_laplace,
       vb = t_vb,
       marginals = t_marginals,
-      total = elapsed() - t_start
+      total = t_total
     ),
     vb = vb,
     marginals = marginals,
-    has_grad = !is.null(grad),
+    has_grad = has_grad,
+    verbose = prog$detail,
+    silent = !prog$show,
+    warnings = prog$warnings,
     call = call
   )
-  out
 }
 
 new_inla_vanilla <- function(
@@ -468,6 +627,9 @@ new_inla_vanilla <- function(
   vb,
   marginals,
   has_grad,
+  verbose,
+  silent,
+  warnings,
   call
 ) {
   structure(
@@ -485,6 +647,9 @@ new_inla_vanilla <- function(
       vb = vb,
       marginals = marginals,
       has_grad = has_grad,
+      verbose = verbose,
+      silent = silent,
+      warnings = warnings,
       call = call
     ),
     class = "inla_vanilla"
@@ -599,7 +764,7 @@ check_choice <- function(x, choices, arg) {
   choices[[i]]
 }
 
-check_init <- function(init, verbose = TRUE) {
+check_init <- function(init, show = TRUE) {
   if (!is.numeric(init) || length(init) == 0L) {
     abort(
       "{.arg init} must be a non-empty numeric vector, not {.obj_type_friendly {init}}."
@@ -624,7 +789,7 @@ check_init <- function(init, verbose = TRUE) {
     if (anyDuplicated(nms)) {
       abort("{.arg init} has names that cannot be made unique.")
     }
-    if (verbose) {
+    if (show) {
       message(cli::format_message(c(
         "i" = "Numbered the repeated names in {.arg init}: {.val {nms[renamed]}}."
       )))
@@ -692,5 +857,6 @@ check_grad_at_init <- function(grad, lp, init) {
       "i" = "A wrong gradient gives a wrong mode and wrong marginals."
     ))
   }
-  invisible(g)
+  # The largest discrepancy, for verbose output
+  invisible(max(err))
 }

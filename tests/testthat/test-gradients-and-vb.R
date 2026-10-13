@@ -248,9 +248,9 @@ test_that("fits with and without a gradient agree on a two-parameter normal mode
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE
+    silent = TRUE
   )
-  fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
+  fit_fd <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
   expect_true(fit_grad$has_grad)
   expect_false(fit_fd$has_grad)
   expect_identical(fit_fd$counts[["grad"]], 0L)
@@ -292,9 +292,9 @@ test_that("fits with and without a gradient agree on a five-parameter logistic r
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE
+    silent = TRUE
   )
-  fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
+  fit_fd <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
   # A genuinely skewed posterior, so the comparison is not vacuous
   expect_gt(max(abs(fit_grad$sn[, "alpha"])), 1)
 
@@ -431,9 +431,9 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE
+    silent = TRUE
   )
-  fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
+  fit_fd <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
   expect_lt(max(abs(fit_grad$diagnostics$marginals$gamma1)), 1e-8)
   expect_lt(max(abs(fit_fd$diagnostics$marginals$gamma1)), 1e-10)
 })
@@ -782,7 +782,7 @@ test_that("the VB shift is zero for an exactly Gaussian posterior", {
   # In a full fit the shift only absorbs where nlminb() stopped, so the VB
   # mean is the exact mean, and the log marginal likelihood is exact.
   for (gr in list(mod$grad, NULL)) {
-    fit <- inla_vanilla(mod$logpost, mod$init, grad = gr, verbose = FALSE)
+    fit <- inla_vanilla(mod$logpost, mod$init, grad = gr, silent = TRUE)
     expect_lt(max_sd_diff(fit$mean_vb, fit$mode, sds), 1e-8) # observed 3e-10
     expect_lt(max_sd_diff(fit$mean_vb, mod$mean, sds), 1e-12) # observed 3e-14
     expect_equal(fit$logml, mod$logml, tolerance = 1e-10)
@@ -801,7 +801,7 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 1D poster
       B * stats::plogis(-theta[[1]], log.p = TRUE)
   }
   grad <- function(theta) A - (A + B) * stats::plogis(theta[[1]])
-  fit <- inla_vanilla(logpost, c(t = 0), grad = grad, verbose = FALSE)
+  fit <- inla_vanilla(logpost, c(t = 0), grad = grad, silent = TRUE)
   sds <- sqrt(fit$cov[1, 1])
   ref <- vb_reference(grad, fit$mode, fit$cov)
   # The reference is converged in the number of nodes
@@ -817,7 +817,7 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 1D poster
   expect_lt(vb_err, laplace_err / 100)
 
   # Without a gradient: the one-sided differences add little to the error
-  fit_fd <- inla_vanilla(logpost, c(t = 0), verbose = FALSE)
+  fit_fd <- inla_vanilla(logpost, c(t = 0), silent = TRUE)
   expect_lt(max_sd_diff(fit_fd$mean_vb, ref, sds), 1.5e-3) # observed 5.7e-4
 })
 
@@ -829,7 +829,7 @@ test_that("the VB shift solves the three-point rule exactly for a Poisson-gamma 
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE,
+    silent = TRUE,
     control = list(vb_tol = 1e-12)
   )
   s <- sqrt(fit$cov[1, 1])
@@ -842,7 +842,7 @@ test_that("the VB shift solves the three-point rule exactly for a Poisson-gamma 
 
 test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D posterior", {
   mod <- poisson_regression_model(2)
-  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, verbose = FALSE)
+  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, silent = TRUE)
   sds <- sqrt(diag(fit$cov))
   expect_lt(stats::cov2cor(fit$cov)[1, 2], -0.5) # correlated parameters
   # The reference holds q's covariance at fit$cov, so check that against the
@@ -857,17 +857,19 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D poster
   expect_lt(vb_err, 7.5e-4) # observed 2.5e-4 SDs, for a shift of 0.25 SDs
   expect_lt(vb_err, laplace_err / 100)
 
-  fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
+  fit_fd <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
   expect_lt(max_sd_diff(fit_fd$mean_vb, ref, sds), 7.5e-4) # observed 2.7e-4
 })
 
 # inla_vanilla() with only the gradient check at init silenced. That check
 # steps 1e-5 whatever the scale of the parameter, so it warns about a correct
 # gradient when the posterior SDs are small (see the test after the next
-# one). Every other warning still gets through.
+# one). Every other warning still gets through: the fit runs at the default
+# output level, since silent = TRUE would muffle them, with its stage lines
+# suppressed.
 fit_past_init_check <- function(logpost, init, grad) {
   withCallingHandlers(
-    inla_vanilla(logpost, init, grad = grad, verbose = FALSE),
+    suppressMessages(inla_vanilla(logpost, init, grad = grad)),
     inlavanilla_warning = function(w) {
       if (grepl("does not match finite differences", conditionMessage(w))) {
         invokeRestart("muffleWarning")
@@ -883,8 +885,8 @@ test_that("the VB shift in posterior SDs does not depend on the scale of the par
   # finite-difference steps scale with them, so the shift in SDs should not
   # change and the iteration should not fall back.
   mod <- poisson_regression_model(2)
-  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, verbose = FALSE)
-  fit_fd <- inla_vanilla(mod$logpost, mod$init, verbose = FALSE)
+  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, silent = TRUE)
+  fit_fd <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
   shift_sd <- function(f) (f$mean_vb - f$mode) / sqrt(diag(f$cov))
   ref_sd <- (vb_reference(mod$grad, fit$mode, fit$cov) - fit$mode) /
     sqrt(diag(fit$cov))
@@ -932,9 +934,9 @@ test_that("a correct gradient passes the check at init when the posterior SD is 
     (lp_scaled(c(t = 2e-5 + 1e-9)) - lp_scaled(c(t = 2e-5 - 1e-9))) / 2e-9,
     tolerance = 1e-6
   )
-  expect_no_warning(
-    inla_vanilla(lp_scaled, c(t = 0), grad = gr_scaled, verbose = FALSE)
-  )
+  # silent = TRUE muffles warnings, but records them in fit$warnings
+  fit <- inla_vanilla(lp_scaled, c(t = 0), grad = gr_scaled, silent = TRUE)
+  expect_identical(fit$warnings, character())
 })
 
 test_that("the degree-5 rule gives the exact VB shift for a degree-6 polynomial log-posterior", {
@@ -979,7 +981,7 @@ test_that("the degree-5 rule gives the exact VB shift for a degree-6 polynomial 
     logpost,
     init,
     grad = grad,
-    verbose = FALSE,
+    silent = TRUE,
     control = list(vb_tol = 1e-12, vb_maxit = 200)
   )
   expect_false(fit$diagnostics$vb$fallback)
@@ -991,7 +993,7 @@ test_that("the degree-5 rule gives the exact VB shift for a degree-6 polynomial 
   expect_lt(max_sd_diff(fit$mean_vb, ref, sds), 1e-12)
 
   # With the default tolerance the iteration stops a little short
-  fit_default <- inla_vanilla(logpost, init, grad = grad, verbose = FALSE)
+  fit_default <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
   expect_lt(max_sd_diff(fit_default$mean_vb, ref, sds), 1e-4) # observed 2e-5
 })
 
@@ -1004,7 +1006,7 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
     mod$init,
     grad = mod$grad,
     vb = FALSE,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_false(fit$vb)
   expect_identical(fit$mean_vb, fit$mode)
@@ -1026,14 +1028,14 @@ test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE
+    silent = TRUE
   )
   fit_lap <- inla_vanilla(
     mod$logpost,
     mod$init,
     grad = mod$grad,
     vb = FALSE,
-    verbose = FALSE
+    silent = TRUE
   )
   shift <- fit_vb$mean_vb - fit_vb$mode
   H <- solve(fit_vb$cov)
@@ -1075,7 +1077,7 @@ test_that("the VB term of the log marginal likelihood is positive and uses the e
   )
   for (mod in models) {
     for (gr in list(mod$grad, NULL)) {
-      fit <- inla_vanilla(mod$logpost, mod$init, grad = gr, verbose = FALSE)
+      fit <- inla_vanilla(mod$logpost, mod$init, grad = gr, silent = TRUE)
       shift <- fit$mean_vb - fit$mode
       kld <- 0.5 * drop(shift %*% -mod$hessian(fit$mode) %*% shift)
       expect_gt(kld, 0.03) # observed 0.033 to 0.23
@@ -1098,7 +1100,7 @@ test_that("a strongly skewed Poisson posterior falls back to nlminb() at a stati
   # the posterior is log-gamma with shape 0.5 and the Laplace SD is sqrt(2).
   # The first Newton step is over one SD, which triggers the fallback.
   mod <- poisson_gamma_model(y = 0, a = 0.5, b = 1)
-  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, verbose = FALSE)
+  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, silent = TRUE)
   expect_true(fit$diagnostics$vb$fallback)
   s <- sqrt(fit$cov[1, 1])
   expect_equal(s, sqrt(2), tolerance = 1e-6)
@@ -1138,7 +1140,7 @@ test_that("a strongly skewed 2D posterior falls back to nlminb() at a stationary
   }
   init <- c(a = 0, b = 0)
   for (gr in list(grad, NULL)) {
-    fit <- inla_vanilla(logpost, init, grad = gr, verbose = FALSE)
+    fit <- inla_vanilla(logpost, init, grad = gr, silent = TRUE)
     expect_true(fit$diagnostics$vb$fallback)
     sds <- sqrt(diag(fit$cov))
     # observed 1.9e-7 with the gradient, 3.6e-8 with finite differences
@@ -1156,7 +1158,7 @@ test_that("a forced fallback agrees with the fixed-point solution", {
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE,
+    silent = TRUE,
     control = list(vb_tol = 1e-10)
   )
   # One iteration cannot converge, so the solve falls back to nlminb()
@@ -1164,7 +1166,7 @@ test_that("a forced fallback agrees with the fixed-point solution", {
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    verbose = FALSE,
+    silent = TRUE,
     control = list(vb_maxit = 1)
   )
   expect_false(fit_fixed$diagnostics$vb$fallback)

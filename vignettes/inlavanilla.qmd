@@ -16,7 +16,8 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-options(cli.num_colors = 1)
+# Plain output, and no progress bars in the rendered page
+options(cli.num_colors = 1, cli.dynamic = FALSE)
 ```
 
 ## The idea
@@ -102,7 +103,10 @@ fit
 
 The table summarises each parameter's skew-normal marginal: the mean,
 standard deviation, quantiles and mode. Each step of the fit reports as it
-finishes, with the time it took.
+finishes, with the time it took. `verbose = TRUE` adds a full diagnostic of
+each step, and `silent = TRUE` prints nothing at all, as in a simulation; the
+warnings it would have shown are kept in `fit$warnings`. The fits below use
+`silent = TRUE`.
 
 `summary()` adds the quartiles and diagnostics for each stage:
 
@@ -230,7 +234,7 @@ grad <- function(theta, X, y) {
   eta <- as.numeric(X %*% theta)
   as.numeric(crossprod(X, y - plogis(eta))) - theta / 2.5^2
 }
-fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, verbose = FALSE)
+fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 ```
@@ -250,7 +254,7 @@ With both, the fit is the Laplace approximation alone.
 ```{r}
 #| label: cheaper
 fit_fast <- function(...) {
-  inla_vanilla(logpost, init, X = X, y = y, verbose = FALSE, ...)
+  inla_vanilla(logpost, init, X = X, y = y, silent = TRUE, ...)
 }
 fits <- list(
   `skew-normal + VB` = fit,
@@ -341,7 +345,7 @@ fit_wt <- inla_vanilla(
   c(b0 = 0, b_wt = 0),
   X = X[, 1:2],
   y = y,
-  verbose = FALSE
+  silent = TRUE
 )
 log_bf <- fit$logml - fit_wt$logml
 log_bf
@@ -381,7 +385,7 @@ logpost_p <- function(theta, y) {
     dbeta(p, 1, 1, log = TRUE) + # prior on p ...
     log(p) + log1p(-p) # ... and the Jacobian
 }
-fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, verbose = FALSE)
+fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, silent = TRUE)
 ```
 
 Natural-scale summaries come from the draws, and match the exact Beta

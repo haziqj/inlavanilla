@@ -199,7 +199,7 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
   n <- NA_integer_
 
   pb <- NULL
-  if (!isTRUE(fit$silent)) {
+  if (!isTRUE(fit$silent) && progress_bars_ok()) {
     pb <- cli::cli_progress_bar(
       "Differentiating loglik",
       total = n_calls,

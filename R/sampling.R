@@ -35,7 +35,7 @@
 #'     dnorm(theta[["mu"]], 0, 10, log = TRUE) +
 #'     dexp(sigma, log = TRUE) + theta[["log_sigma"]]
 #' }
-#' fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, verbose = FALSE)
+#' fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 #'
 #' draws <- sampling(fit, nsamp = 2000)
 #' head(draws)
