@@ -128,9 +128,36 @@ abort <- function(
   ))
 }
 
+# A warning also carries its message as plain text, with no colours and no
+# line wrapping, for the record of warnings in a fit (see warning_text()).
 warn <- function(message, .envir = parent.frame()) {
+  force(.envir)
   warning(structure(
     class = c("inlavanilla_warning", "warning", "condition"),
-    list(message = cli::format_warning(message, .envir = .envir), call = NULL)
+    list(
+      message = cli::format_warning(message, .envir = .envir),
+      call = NULL,
+      text = format_plain(message, .envir)
+    )
   ))
+}
+
+format_plain <- function(message, .envir) {
+  old <- options(
+    cli.condition_width = Inf,
+    cli.width = Inf,
+    cli.num_colors = 1
+  )
+  on.exit(options(old))
+  cli::format_warning(message, .envir = .envir)
+}
+
+# The message of a warning as plain text: the package's own from warn(), any
+# other with its colours stripped.
+warning_text <- function(w) {
+  if (inherits(w, "inlavanilla_warning") && is.character(w[["text"]])) {
+    w[["text"]]
+  } else {
+    cli::ansi_strip(conditionMessage(w))
+  }
 }

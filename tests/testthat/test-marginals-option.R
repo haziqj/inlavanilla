@@ -18,20 +18,20 @@ lp_reg <- function(theta) {
 }
 init_reg <- c(intercept = 0.2, slope = 0.1)
 
-fit_sn_vb <- inla_vanilla(lp_reg, init_reg, verbose = FALSE)
-fit_sn <- inla_vanilla(lp_reg, init_reg, vb = FALSE, verbose = FALSE)
+fit_sn_vb <- inla_vanilla(lp_reg, init_reg, silent = TRUE)
+fit_sn <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
 fit_g_vb <- inla_vanilla(
   lp_reg,
   init_reg,
   marginals = "gaussian",
-  verbose = FALSE
+  silent = TRUE
 )
 fit_g <- inla_vanilla(
   lp_reg,
   init_reg,
   vb = FALSE,
   marginals = "gaussian",
-  verbose = FALSE
+  silent = TRUE
 )
 
 scrub_output <- function(x) {
@@ -54,7 +54,7 @@ test_that("marginals takes one of two values, or an abbreviation", {
   for (ok in c("gaus", "gauss", "g", "Gaussian")) {
     expect_identical(check_choice(ok, choices, "marginals"), "gaussian")
   }
-  fit <- inla_vanilla(lp_reg, init_reg, marginals = "gauss", verbose = FALSE)
+  fit <- inla_vanilla(lp_reg, init_reg, marginals = "gauss", silent = TRUE)
   expect_identical(fit$marginals, "gaussian")
   expect_identical(fit$summary, fit_g_vb$summary)
   for (bad in list(
@@ -68,7 +68,7 @@ test_that("marginals takes one of two values, or an abbreviation", {
     NULL
   )) {
     expect_error(
-      inla_vanilla(lp_reg, init_reg, marginals = bad, verbose = FALSE),
+      inla_vanilla(lp_reg, init_reg, marginals = bad, silent = TRUE),
       "`marginals` must be one of \"skewnormal\" or \"gaussian\"",
       class = "inlavanilla_error"
     )
@@ -79,20 +79,20 @@ test_that("marginals takes one of two values, or an abbreviation", {
       lp_reg,
       init_reg,
       marginals = c("gaussian", "skewnormal"),
-      verbose = FALSE
+      silent = TRUE
     ),
     class = "inlavanilla_error"
   )
   expect_snapshot(
     error = TRUE,
-    inla_vanilla(lp_reg, init_reg, marginals = "laplace", verbose = FALSE)
+    inla_vanilla(lp_reg, init_reg, marginals = "laplace", silent = TRUE)
   )
 })
 
 test_that("a data argument named like marginals reaches logpost", {
   # `marginals` comes after `...`, so `marg` cannot partially match it
   lp <- function(theta, marg) dnorm(theta[[1]], marg, 1, log = TRUE)
-  fit <- inla_vanilla(lp, c(a = 0), marg = 3, verbose = FALSE)
+  fit <- inla_vanilla(lp, c(a = 0), marg = 3, silent = TRUE)
   expect_equal(fit$mode[["a"]], 3, tolerance = 1e-6)
   expect_identical(fit$marginals, "skewnormal")
 })
@@ -160,7 +160,7 @@ test_that("an exactly Gaussian posterior is recovered exactly", {
       c(a = 0, b = 0),
       vb = vb,
       marginals = "gaussian",
-      verbose = FALSE
+      silent = TRUE
     )
     expect_equal(unname(fit$summary[, "Mean"]), mu, tolerance = 1e-6)
     expect_equal(unname(fit$cov), S, tolerance = 1e-6)
@@ -177,7 +177,7 @@ test_that("Gaussian marginals skip the scans", {
       n <<- n + 1L
       lp_reg(theta)
     }
-    inla_vanilla(lp, init_reg, verbose = FALSE, ...)
+    inla_vanilla(lp, init_reg, silent = TRUE, ...)
     n
   }
   for (vb in c(TRUE, FALSE)) {
@@ -216,24 +216,25 @@ test_that("sampling() draws from the joint Gaussian", {
   expect_equal(cor(draws)[1, 2], cov2cor(fit_g_vb$cov)[1, 2], tolerance = 0.02)
 })
 
-test_that("verbose output has no skew-normal line", {
+test_that("the stage lines have no skew-normal line", {
   msgs <- capture_messages(
-    inla_vanilla(lp_reg, init_reg, marginals = "gaussian", verbose = TRUE)
+    inla_vanilla(lp_reg, init_reg, marginals = "gaussian")
   )
   expect_length(msgs, 2)
   expect_match(msgs[1], "Found the posterior mode")
   expect_match(msgs[2], "VB mean correction")
   msgs <- capture_messages(
-    inla_vanilla(
-      lp_reg,
-      init_reg,
-      vb = FALSE,
-      marginals = "gaussian",
-      verbose = TRUE
-    )
+    inla_vanilla(lp_reg, init_reg, vb = FALSE, marginals = "gaussian")
   )
   expect_length(msgs, 1)
   expect_match(msgs, "Found the posterior mode")
+
+  # verbose = TRUE says that no scans ran
+  msgs <- capture_messages(
+    inla_vanilla(lp_reg, init_reg, marginals = "gaussian", verbose = TRUE)
+  )
+  expect_match(msgs, "Gaussian marginals .*: no scans", all = FALSE)
+  expect_no_match(msgs, "skew-normal|Shape")
 })
 
 test_that("print() and summary() describe Gaussian marginals", {

@@ -16,7 +16,8 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-options(cli.num_colors = 1)
+# Plain output, and no progress bars in the rendered page
+options(cli.num_colors = 1, cli.dynamic = FALSE)
 ```
 
 ## Predictive accuracy from one fit
@@ -123,7 +124,7 @@ logpost_nb <- function(theta, X, y) {
 }
 
 init_nb <- c(init_pois, log_phi = 2)
-fit_nb <- inla_vanilla(logpost_nb, init_nb, X = X, y = y, verbose = FALSE)
+fit_nb <- inla_vanilla(logpost_nb, init_nb, X = X, y = y, silent = TRUE)
 loo_nb <- loo(fit_nb, loglik_nb, X = X, y = y)
 loo_nb
 ```
@@ -155,7 +156,7 @@ X_add <- model.matrix(~ wool + tension, data = warpbreaks)
 colnames(X_add)[1] <- "intercept"
 init_add <- c(setNames(numeric(ncol(X_add)), colnames(X_add)), log_phi = 2)
 
-fit_add <- inla_vanilla(logpost_nb, init_add, X = X_add, y = y, verbose = FALSE)
+fit_add <- inla_vanilla(logpost_nb, init_add, X = X_add, y = y, silent = TRUE)
 loo_add <- loo(fit_add, loglik_nb, X = X_add, y = y)
 elpd_diff(loo_nb, loo_add)
 ```
@@ -201,7 +202,7 @@ refit_elpd <- function(i) {
     X = X[-i, ],
     y = y[-i],
     vb = FALSE,
-    verbose = FALSE
+    silent = TRUE
   )
   ll <- sampling(fit_i, 4000, fun = loglik_nb, X = X[i, , drop = FALSE], y = y[i])
   max(ll) + log(mean(exp(ll - max(ll))))

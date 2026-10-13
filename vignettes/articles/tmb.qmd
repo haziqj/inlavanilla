@@ -16,7 +16,7 @@ knitr:
 #| label: setup
 #| include: false
 # Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.progress_handlers_only = character())
+options(cli.num_colors = 1, cli.dynamic = FALSE)
 ```
 
 [TMB](https://github.com/kaskr/adcomp) (Kristensen et al., 2016) compiles a

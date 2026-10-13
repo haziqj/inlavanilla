@@ -13,7 +13,7 @@ logpost <- function(theta) {
     dnorm(theta[[2]], log(0.1), 1, log = TRUE) + dnorm(sigma, 0, 20, log = TRUE) + log(2) + theta[[3]]
 }
 init <- c(log_Vm = log(200), log_K = log(0.1), log_sigma = log(10))
-fit <- inla_vanilla(logpost, init, verbose = FALSE)
+fit <- inla_vanilla(logpost, init, silent = TRUE)
 gr <- function(x) fd_grad(logpost, x, 1e-5)
 mode <- fit$mode; S <- fit$cov; H <- solve(S); sds <- sqrt(diag(S)); m <- 3
 L <- backsolve(chol(H), diag(m))

@@ -27,7 +27,7 @@ fit_lin <- inla_vanilla(
   c(a = 0, b = 0, c = 0),
   X = lin_X,
   y = lin_y,
-  verbose = FALSE
+  silent = TRUE
 )
 
 # Conjugate posterior of the coefficients given rows `rows`
@@ -134,7 +134,7 @@ test_that("LOO is close to the exact LOO for a skewed posterior", {
     c(a = 0, b = 0),
     x = pois_x,
     y = pois_y,
-    verbose = FALSE
+    silent = TRUE
   )
   res <- loo(fit, ll_pois, x = pois_x, y = pois_y)
   g <- expand.grid(
@@ -172,7 +172,7 @@ test_that("the expansion is at the VB mean, or at the mode without VB", {
     x = pois_x,
     y = pois_y,
     vb = FALSE,
-    verbose = FALSE
+    silent = TRUE
   )
   res <- loo(fit, ll_pois, x = pois_x, y = pois_y)
   expect_identical(res$theta, fit$mode)
@@ -254,7 +254,7 @@ test_that("loo::loo_compare() compares the results", {
     c(a = 0, b = 0),
     x = pois_x,
     y = pois_y,
-    verbose = FALSE
+    silent = TRUE
   )
   ll_const <- function(theta, x, y) dpois(y, exp(theta[["a"]]), log = TRUE)
   lpost_const <- function(theta, x, y) {
@@ -265,7 +265,7 @@ test_that("loo::loo_compare() compares the results", {
     c(a = 0),
     x = pois_x,
     y = pois_y,
-    verbose = FALSE
+    silent = TRUE
   )
   a <- loo(fit_a, ll_pois, x = pois_x, y = pois_y)
   b <- loo(fit_b, ll_const, x = pois_x, y = pois_y)

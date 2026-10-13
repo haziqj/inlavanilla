@@ -1,3 +1,12 @@
+# verbose and silent cannot both be TRUE
+
+    Code
+      inla_vanilla(lp_gauss, c(a = 0.5), verbose = TRUE, silent = TRUE)
+    Condition
+      Error:
+      ! `verbose` and `silent` cannot both be `TRUE`.
+      i `verbose = TRUE` prints a full diagnostic of the fit, and `silent = TRUE` prints nothing.
+
 # validation errors are informative
 
     Code
@@ -37,7 +46,7 @@
 # a wrong analytic gradient triggers the mismatch warning
 
     Code
-      invisible(inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), grad = gr_wrong, verbose = FALSE))
+      invisible(suppressMessages(inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), grad = gr_wrong)))
     Condition
       Warning:
       `grad` does not match finite differences of `logpost` at `init`.
@@ -47,12 +56,71 @@
 # an improper posterior with no mode fails with the Hessian error
 
     Code
-      inla_vanilla(function(theta) 0, c(a = 0.3), verbose = FALSE)
+      inla_vanilla(function(theta) 0, c(a = 0.3), silent = TRUE)
     Condition
       Error:
       ! The Hessian at the posterior mode is not positive definite.
       i The optimiser may have stopped short of the mode, or the posterior may be improper or not identified.
       i Optimiser message: <msg>
+
+# verbose output keeps its layout
+
+    Code
+      invisible(inla_vanilla(lp_reg, init_reg, verbose = TRUE))
+    Message
+      i 2 parameters: intercept and slope
+        Derivatives by finite differences of logpost
+        logpost at init #
+      v Found the posterior mode in <n> iteration(s) [<time>]
+        nlminb: <message>, after <n> iteration(s) (<n> function and <n> gradient evaluations)
+        logpost at the mode #, whitened gradient # SD (warning above 0.01 SD)
+        Hessian by second differences of logpost: 6 calls, and <n> more to set the steps
+        Posterior correlation matrix: largest correlation # (intercept, slope), smallest eigenvalue #
+        Laplace log marginal likelihood #
+        <n> logpost calls
+      v VB mean correction, max shift # SD [<time>]
+        Fixed-point steps, largest over the parameters (SD): <steps>
+        Converged in <n> iteration(s), <anderson>; no fallback
+        Largest shift # SD, for intercept
+        KL term #, giving a log marginal likelihood of #
+        <n> logpost calls
+      v Fitted 2 skew-normal marginals [<time>]
+                   Shape NMAD Bend Tails gamma1
+        intercept # # # ok #
+        slope # # #! ok #
+        ! marks what summary() flags: NMAD above 0.05, bend above 0.1, heavy tails
+        <n> logpost calls
+      i Done: <n> logpost calls in <time>
+
+---
+
+    Code
+      invisible(inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE))
+    Message
+      i 2 parameters: intercept and slope
+        Gradient from grad, checked at init: relative discrepancy # (warning above 0.001), <n> logpost calls
+        logpost at init #
+      v Found the posterior mode in <n> iteration(s) [<time>]
+        nlminb: <message>, after <n> iteration(s) (<n> function and <n> gradient evaluations)
+        logpost at the mode #, whitened gradient # SD (warning above 0.01 SD)
+        Hessian by central differences of grad: 4 calls, and <n> logpost calls to set the steps
+        Jacobian asymmetry # (warning above 0.001)
+        Posterior correlation matrix: largest correlation # (intercept, slope), smallest eigenvalue #
+        Laplace log marginal likelihood #
+        <n> logpost and <n> grad calls
+      v VB mean correction, max shift # SD [<time>]
+        Fixed-point steps, largest over the parameters (SD): <steps>
+        Converged in <n> iteration(s), <anderson>; no fallback
+        Largest shift # SD, for intercept
+        KL term #, giving a log marginal likelihood of #
+        <n> grad calls
+      v Fitted 2 skew-normal marginals [<time>]
+                   Shape NMAD Bend Tails gamma1
+        intercept # # # ok #
+        slope # # #! ok #
+        ! marks what summary() flags: NMAD above 0.05, bend above 0.1, heavy tails
+        <n> logpost and <n> grad calls
+      i Done: <n> logpost and <n> grad calls in <time>
 
 # print() shows the summary table and returns the fit invisibly
 
