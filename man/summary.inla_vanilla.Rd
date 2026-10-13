@@ -37,9 +37,9 @@ SDs (\code{vb_shift}). It is flagged when it exceeds 1 SD, or when the
 fixed-point iteration failed and the fallback optimiser ran: both mean
 the posterior is far from the Laplace Gaussian.
 \item \strong{Tails.} Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
-\code{tails} is \code{FALSE} when the log-posterior had not yet fallen below
-\code{control$log_threshold} at an end of the scan: the Laplace SD understates
-a heavy tail there, and the skew-normal extrapolates it.
+\code{tails} is \code{FALSE} (and flagged) when the density at an end of the scan
+is still over 5\\% of its peak: the Laplace SD badly understates a heavy
+tail there, and the skew-normal extrapolates it.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and the
 scanned density relative to its peak (flagged above 0.05), and
 \code{sn_vs_vb}, the gap between the

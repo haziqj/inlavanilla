@@ -73,12 +73,14 @@ whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
 }
 
 # Scan each parameter over +-4 Laplace SDs, as in INLAvaan, and fit its
-# skew-normal. `tails` records whether the corrected log-height fell below
-# `log_threshold` at both ends of the scan. When it did not, the Laplace SD
-# has understated a heavy tail and the skew-normal extrapolates it. Extending
-# the scan was tried and rejected: it improved some heavy tails but pulled
-# the fit away from the bulk of others (a Fisher-z correlation lost an order
-# of magnitude in SD accuracy), so it is reported instead.
+# skew-normal. `tails` is FALSE when the corrected log-height at an end of the
+# scan is still within 3 of its maximum (over 5% of the peak density): the
+# Laplace SD has badly understated a heavy tail, and the skew-normal
+# extrapolates it. Moderately skewed marginals, which the skew-normal fits
+# well, end around -4 to -6 on their heavy side. Extending the scan was tried
+# and rejected: it improved some heavy tails but pulled the fit away from the
+# bulk of others (a Fisher-z correlation lost an order of magnitude in SD
+# accuracy), so the problem is reported instead.
 fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   mode <- lap$mode
   Sigma <- lap$Sigma
@@ -122,7 +124,7 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
         g1 * zz
     }
     above <- function(h, y) {
-      is.finite(h) && h - max(y[is.finite(y)]) > ctrl$log_threshold
+      is.finite(h) && h - max(y[is.finite(y)]) > -3
     }
 
     y <- heights(z)
