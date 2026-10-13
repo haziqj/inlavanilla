@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`inlavanilla` (styled "INLAvanilla" in prose) is a small, pure-R package that exports `inla_vanilla()` and `sampling()`, with S3 `print`, `summary` and `plot` methods. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline and the test plan. Test posteriors with a natural-scale closed form (e.g. the beta–binomial) are written as unconstrained `logpost`s with the Jacobian included, and compared through `sampling(fit, fun = ...)` or the ϑ-scale density. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
+`inlavanilla` (styled "INLAvanilla" in prose) is a small, pure-R package that exports `inla_vanilla()`, `sampling()`, `loo()` and `waic()`, with S3 `print`, `summary` and `plot` methods. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline and the test plan. Test posteriors with a natural-scale closed form (e.g. the beta–binomial) are written as unconstrained `logpost`s with the Jacobian included, and compared through `sampling(fit, fun = ...)` or the ϑ-scale density. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
 
-Tagline: *INLA-style skew-normal marginals for any log-posterior.* The package runs the INLAvaan approximation pipeline on any user-supplied log-density, with no latent field and nothing SEM-specific.
+Tagline: *INLA-style skew-normal marginals for any log-posterior.* The package runs the INLAvaan approximation pipeline on any user-supplied log-density, with no latent field and nothing SEM-specific. The README and vignette open with the package owner's wording: "If you can write down the log-likelihood plus the log-prior, `{inlavanilla}` gives you approximate Bayesian inference for the parameters of your model."
 
 ## Commands
 
@@ -65,6 +65,11 @@ Supporting files:
 
 - **Skew-normal utilities** (`R/skew-normal.R`, `R/qsnorm-fast.R`): ported from INLAvaan. The Apache-licensed `qsnorm_fast()` keeps its attribution header. All of them are internal.
 - **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout.
+- **LOO and WAIC** (`R/loo.R`): `loo(fit, loglik, ...)` and `waic()`, the deterministic second-order Taylor method of Alhyari, Jamil, Montcho and Rue (2026, arXiv:2609.00670), as in INLAvaan: no refits and no draws.
+  - `loglik(theta, ...)` returns one log-likelihood term per unit; `logpost` is their sum plus the log-prior, and the fit never sees `loglik`.
+  - `taylor_pointwise()` takes each unit's score and Hessian by central differences in the whitened coordinates of N(mean_vb, Σ), 0.01 SD apart: m² + m + 1 calls of `loglik`. If any unit's leverage k (an eigenvalue of −ΣH_u) reaches 1, every unit falls back to first order, with a warning; there is no mixing of orders.
+  - The results have the loo package's layout (classes `loo` and `waic`, `estimates`, `pointwise` with one `elpd_*` column), so `loo::loo_compare()` works with no dependency. The methods are also registered on loo's generics (`loo_x_inla_vanilla()`, `waic_x_inla_vanilla()`), and `loo.default()` and `waic.default()` forward other objects to loo when it is installed.
+  - The generics take `object` first, not `x`, so data named `x` reaches `loglik`. They follow `fit$silent`, for `loglik`'s own warnings too, and record each distinct warning in the result's `warnings`.
 - **Progress** (`R/progress.R`): three output levels, held in the `prog` environment from `progress_new()`.
   - Default (`verbose = FALSE, silent = FALSE`): each stage has a cli progress bar that appears after the user's `cli.progress_show_after` seconds, or 0.5 s when that option is unset (never override a value the user set: setup chunks of rendered documents use it to keep bars out), and ends with a plain styled `message()` line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path, and keep the default path free of anything built only for `verbose`.
   - `verbose = TRUE`: the `report_*()` functions add indented grey detail lines under each stage, behind `if (prog$detail)`. They use only what the fit has already computed (`lap$restart`, `lap$hessian`, `vbc$history`, the call counters), never further calls of `logpost` or `grad`.
@@ -73,7 +78,7 @@ Supporting files:
 - **Errors and warnings**: raise them with `abort()` and `warn()` (`R/utils.R`), which format with cli and signal with base R, giving the classes `inlavanilla_error` and `inlavanilla_warning`. Do not use `cli::cli_abort()` or `cli::cli_warn()`: they call rlang, which cli only suggests.
 - **Non-ASCII output**: user-visible non-ASCII characters (σ, ·) go through `sd_unit()` and `sep_dot()`, which fall back to ASCII. R source files must stay ASCII.
 
-Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
+Out of scope for v0.1: factor scores, PPP and DIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
 
 ## Source-of-truth rules for the maths
 
