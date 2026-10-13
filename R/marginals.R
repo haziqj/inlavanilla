@@ -72,6 +72,13 @@ whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
   tr
 }
 
+# Scan each parameter over +-4 Laplace SDs, as in INLAvaan, and fit its
+# skew-normal. `tails` records whether the corrected log-height fell below
+# `log_threshold` at both ends of the scan. When it did not, the Laplace SD
+# has understated a heavy tail and the skew-normal extrapolates it. Extending
+# the scan was tried and rejected: it improved some heavy tails but pulled
+# the fit away from the bulk of others (a Fisher-z correlation lost an order
+# of magnitude in SD accuracy), so it is reported instead.
 fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   mode <- lap$mode
   Sigma <- lap$Sigma
@@ -80,7 +87,6 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   sds <- sqrt(diag(Sigma))
   Vscan <- sweep(Sigma, 2, sds, "/")
   z <- seq(-4, 4, length.out = ctrl$n_grid)
-  i0 <- which.min(abs(z)) # the mode itself, whose height is known
 
   tr0 <- if (is.null(gr)) {
     whitened_trace_lp(lp, mode, lap$lp_max, L)
@@ -91,8 +97,11 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   out <- matrix(
     NA_real_,
     m,
-    5,
-    dimnames = list(names(mode), c("xi", "omega", "alpha", "gamma1", "nmad"))
+    6,
+    dimnames = list(
+      names(mode),
+      c("xi", "omega", "alpha", "gamma1", "nmad", "tails")
+    )
   )
 
   for (j in seq_len(m)) {
@@ -101,12 +110,24 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
     } else {
       gamma1_grad(j, gr, mode, Vscan, L)
     }
-
-    y <- numeric(length(z))
-    for (k in seq_along(z)) {
-      y[k] <- if (k == i0) lap$lp_max else lp(mode + Vscan[, j] * z[k])
+    # Corrected log-heights along the scan; the mode's height is known
+    heights <- function(zz) {
+      vapply(
+        zz,
+        function(t) {
+          if (t == 0) lap$lp_max else lp(mode + Vscan[, j] * t)
+        },
+        numeric(1)
+      ) +
+        g1 * zz
     }
-    y <- y + g1 * z
+    above <- function(h, y) {
+      is.finite(h) && h - max(y[is.finite(y)]) > ctrl$log_threshold
+    }
+
+    y <- heights(z)
+    tails <- !above(y[1], y) && !above(y[length(y)], y)
+
     ok <- is.finite(y)
     fit <- fit_skew_normal(
       x = z[ok],
@@ -120,7 +141,8 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
       fit$omega * sds[[j]],
       fit$alpha,
       g1,
-      fit$nmad
+      fit$nmad,
+      tails
     )
     tick()
   }

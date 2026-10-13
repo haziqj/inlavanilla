@@ -33,6 +33,10 @@ at the mode in whitened units (posterior SDs); a value well above zero
 means the optimiser stopped short.
 \item \strong{VB correction.} The shift of each mean from the mode, in posterior
 SDs.
+\item \strong{Tails.} Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
+\code{tails} is \code{FALSE} when the log-posterior had not yet fallen below
+\code{control$log_threshold} at an end of the scan: the Laplace SD understates
+a heavy tail there, and the skew-normal extrapolates it.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and the
 scanned density relative to its peak, and \code{sn_vs_vb}, the gap between the
 skew-normal mean and the VB-corrected mean in posterior SDs. Both means

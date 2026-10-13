@@ -37,6 +37,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   means the optimiser stopped short.
 #' * **VB correction.** The shift of each mean from the mode, in posterior
 #'   SDs.
+#' * **Tails.** Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
+#'   `tails` is `FALSE` when the log-posterior had not yet fallen below
+#'   `control$log_threshold` at an end of the scan: the Laplace SD understates
+#'   a heavy tail there, and the skew-normal extrapolates it.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and the
 #'   scanned density relative to its peak, and `sn_vs_vb`, the gap between the
 #'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
@@ -61,7 +65,7 @@ summary.inla_vanilla <- function(
   ...
 ) {
   if (!is.numeric(probs) || any(!is.finite(probs) | probs <= 0 | probs >= 1)) {
-    cli::cli_abort(
+    abort(
       "{.arg probs} must be probabilities strictly between 0 and 1."
     )
   }
@@ -123,6 +127,12 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status("info", "No VB correction (vb = FALSE).")
   }
 
+  if (!all(diag$tails)) {
+    cat_status(
+      "warn",
+      "The scan of {.field {rownames(diag)[!diag$tails]}} ended above the log threshold: heavy tails, which the skew-normal extrapolates."
+    )
+  }
   max_nmad <- max(diag$nmad)
   max_gap <- max(abs(diag$sn_vs_vb))
   if (max_nmad > 0.05) {
@@ -204,12 +214,12 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
   if (is.character(idx)) {
     bad <- setdiff(idx, rownames(sn))
     if (length(bad) > 0L) {
-      cli::cli_abort("Unknown parameter{?s}: {.val {bad}}.")
+      abort("Unknown parameter{?s}: {.val {bad}}.")
     }
     idx <- match(idx, rownames(sn))
   }
   if (!is.numeric(idx) || any(idx < 1 | idx > nrow(sn))) {
-    cli::cli_abort("{.arg pars} must name or index parameters of the fit.")
+    abort("{.arg pars} must name or index parameters of the fit.")
   }
 
   col_sn <- "#C2410C"
