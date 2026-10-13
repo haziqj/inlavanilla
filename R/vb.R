@@ -81,22 +81,31 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   # judged on the step in posterior SDs. A step over `maxstep` SDs, or a
   # non-finite score, means the quadratic premise has failed (a strongly
   # skewed posterior), and the solve falls back to nlminb().
+  # The history (the step at each iteration, in posterior SDs, and whether
+  # the Anderson secant replaced it) and the reason for a fallback are kept
+  # for verbose output.
   maxstep <- 1
   shift <- numeric(m)
   iter <- 0L
   move <- Inf
   fallback <- FALSE
+  reason <- NULL
+  steps <- numeric()
+  accelerated <- logical()
   step_prev <- shift_prev <- NULL
   for (it in seq_len(ctrl$vb_maxit)) {
     s <- score(shift)
     if (!all(is.finite(s))) {
       fallback <- TRUE
+      reason <- "the expected gradient was not finite"
       break
     }
     step <- as.numeric(Sigma %*% s)
     move <- max(abs(step) / sds)
+    steps[it] <- move
     if (move > maxstep) {
       fallback <- TRUE
+      reason <- "a step was over 1 posterior SD"
       break
     }
     if (move < ctrl$vb_tol) {
@@ -108,6 +117,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     # removes the dominant error mode. The plain step is kept whenever the
     # secant is degenerate or would move too far.
     update <- step
+    accelerated[it] <- FALSE
     if (!is.null(step_prev)) {
       df <- step - step_prev
       dx <- shift - shift_prev
@@ -120,6 +130,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
             max(abs(cand) / sds) <= min(maxstep, 2 * move)
         ) {
           update <- cand
+          accelerated[it] <- TRUE
         }
       }
     }
@@ -130,6 +141,9 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   }
   if (move >= ctrl$vb_tol) {
     fallback <- TRUE
+    if (is.null(reason)) {
+      reason <- "the iteration did not converge in `vb_maxit` steps"
+    }
   }
 
   if (fallback) {
@@ -151,6 +165,12 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     shift = shift,
     iterations = iter,
     fallback = fallback,
+    history = list(
+      steps = steps,
+      accelerated = accelerated,
+      reason = reason,
+      nlminb = if (fallback) nl$message
+    ),
     # Joint KL divergence between the Laplace Gaussian and its shifted copy,
     # 0.5 shift' H shift. It is the location term the Laplace estimate of the
     # marginal likelihood misses, and is added to it.
