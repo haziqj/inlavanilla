@@ -6,6 +6,8 @@
 # upper Cholesky factor R of the precision (R'R = H), the covariance Sigma,
 # a whitening factor L (L L' = Sigma), the optimiser output, the largest
 # whitened gradient at the mode, and the Laplace log marginal likelihood.
+# For verbose output it also says how the Hessian was taken (`hessian`) and
+# whether nlminb() was restarted (`restart`, NULL when it was not).
 laplace_fit <- function(lp, gr, init, ctrl) {
   ob <- function(x) {
     v <- lp(x)
@@ -25,6 +27,7 @@ laplace_fit <- function(lp, gr, init, ctrl) {
   # it can stop well short of the mode, reporting success or false
   # convergence. When the whitened gradient says the mode is off, restart
   # from there with each parameter scaled by its curvature.
+  restart <- NULL
   if (is.null(cur$R) || cur$grad_mode > 1e-3) {
     scale <- if (is.null(cur$R)) 1 / cur$scales else sqrt(diag(cur$H))
     opt2 <- stats::nlminb(
@@ -34,7 +37,12 @@ laplace_fit <- function(lp, gr, init, ctrl) {
       scale = scale,
       control = ctrl$nlminb
     )
-    if (opt2$objective <= opt$objective) {
+    restart <- list(
+      grad_mode = cur$grad_mode,
+      iterations = opt$iterations,
+      kept = opt2$objective <= opt$objective
+    )
+    if (restart$kept) {
       opt <- opt2
       cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init))
     }
@@ -61,6 +69,7 @@ laplace_fit <- function(lp, gr, init, ctrl) {
     cur,
     list(
       opt = opt,
+      restart = restart,
       # log pi(y) ~ log pi(y, mode) - log N(mode | mode, Sigma), with
       # log det(Sigma) = -2 sum(log(diag(R)))
       logml = cur$lp_max + (m / 2) * log(2 * pi) - sum(log(diag(cur$R)))
@@ -73,7 +82,8 @@ laplace_fit <- function(lp, gr, init, ctrl) {
 # they suit each parameter's own scale: central differences of the gradient
 # at 1e-4 of that scale, or, without a gradient, second differences of the
 # log-posterior at a hundredth of it. R is NULL when the Hessian is not
-# positive definite.
+# positive definite. `hessian` records the method and its calls, those of
+# fd_scales() counted apart.
 laplace_at <- function(lp, gr, mode, lp_max, parnames) {
   m <- length(mode)
   mode <- stats::setNames(mode, parnames)
@@ -101,7 +111,12 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
     R = R,
     scales = scales,
     asymmetry = asymmetry,
-    grad_mode = Inf
+    grad_mode = Inf,
+    hessian = list(
+      by = if (is.null(gr)) "logpost" else "grad",
+      calls = if (is.null(gr)) m^2 + m else 2 * m,
+      step_calls = attr(scales, "calls")
+    )
   )
   if (is.null(R)) {
     return(out)
@@ -126,11 +141,13 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
 # and 1, a few calls per coordinate. A fixed step fails at the extremes: for
 # a posterior SD of 1e4 the second difference at h = 1e-4 drowns in rounding
 # error, and for an SD of 1e-6 it measures far beyond the quadratic region.
-# The attribute `ok` marks the coordinates where the search succeeded.
+# The attribute `ok` marks the coordinates where the search succeeded, and
+# `calls` counts the calls of `fn`.
 fd_scales <- function(fn, x, f0) {
   m <- length(x)
   s <- numeric(m)
   ok <- logical(m)
+  calls <- 0L
   for (i in seq_len(m)) {
     h <- 1e-4 * max(1, abs(x[[i]]))
     drop <- NA_real_
@@ -139,6 +156,7 @@ fd_scales <- function(fn, x, f0) {
       xp[i] <- x[i] + h
       xm[i] <- x[i] - h
       drop <- f0 - 0.5 * (fn(xp) + fn(xm))
+      calls <- calls + 2L
       if (!is.finite(drop) || drop > 1) {
         h <- h / 10 # too far: out of the quadratic region or the support
       } else if (drop < 1e-3) {
@@ -152,7 +170,7 @@ fd_scales <- function(fn, x, f0) {
   }
   # `ok` is FALSE where no step gave a drop in the window, such as where the
   # log-posterior is not locally concave
-  structure(s, ok = ok)
+  structure(s, ok = ok, calls = calls)
 }
 
 chol_or_null <- function(H) {
