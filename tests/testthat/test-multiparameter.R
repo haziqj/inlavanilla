@@ -143,6 +143,11 @@ log_sech2 <- function(z) {
 # (mn, log(2 bn / (2 an + 1)) / 2) and the Hessian there is diagonal with
 # entries kn (2 an + 1) / (2 bn) and 2 (2 an + 1). The marginal likelihood is
 #   p(y) = (2 pi)^(-n/2) sqrt(k0 / kn) b0^a0 Gamma(an) / (Gamma(a0) bn^an).
+#
+# The VB mean correction keeps the Laplace covariance diag(v1, v2) and moves
+# the mean to the m where the expected gradient under N(m, diag(v1, v2))
+# vanishes. With E[exp(-2 s)] = exp(-2 m2 + 2 v2), that gives m1 = mn and
+#   m2 = v2 + log((2 bn + kn v1) / (2 an + 1)) / 2.
 nig_model <- function(y, m0, k0, a0, b0) {
   n <- length(y)
   ybar <- mean(y)
@@ -193,6 +198,11 @@ nig_model <- function(y, m0, k0, a0, b0) {
     ),
     joint_mode = c(mu = mn, log_sigma = 0.5 * log(2 * bn / (2 * an + 1))),
     joint_cov = diag(c(2 * bn / (kn * (2 * an + 1)), 1 / (2 * (2 * an + 1)))),
+    vb_mean = local({
+      v1 <- 2 * bn / (kn * (2 * an + 1))
+      v2 <- 1 / (2 * (2 * an + 1))
+      c(mu = mn, log_sigma = v2 + 0.5 * log((2 * bn + kn * v1) / (2 * an + 1)))
+    }),
     logml = lgamma(an) -
       lgamma(a0) +
       a0 * log(b0) -
@@ -455,6 +465,38 @@ test_that("the normal-inverse-gamma references agree with quadrature", {
     expect_equal(f, nig$log_sigma$density(s), tolerance = 1e-7)
   }
 
+  # The expected gradient at the VB mean, by nested quadrature over the
+  # Laplace Gaussian, is zero
+  sds <- sqrt(diag(nig$joint_cov))
+  expected_grad <- function(k) {
+    inner <- function(z2) {
+      vapply(
+        z2,
+        function(zz2) {
+          integrate(
+            function(z1) {
+              vapply(
+                z1,
+                function(zz1) {
+                  nig$grad(nig$vb_mean + sds * c(zz1, zz2))[k] * dnorm(zz1)
+                },
+                numeric(1)
+              )
+            },
+            -10,
+            10,
+            rel.tol = 1e-10
+          )$value *
+            dnorm(zz2)
+        },
+        numeric(1)
+      )
+    }
+    integrate(inner, -10, 10, rel.tol = 1e-10)$value
+  }
+  expect_lt(abs(expected_grad(1)) * sds[1], 1e-8)
+  expect_lt(abs(expected_grad(2)) * sds[2], 1e-8)
+
   # Moments, mode and quantiles of the log_sigma density
   dens <- nig$log_sigma$density
   int_s <- function(fn) {
@@ -538,10 +580,22 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
       nig$log_sigma$sd
     expect_lt(abs(mode_err), 0.05)
     # Right skew, and the VB mean moves right: observed shift 0.36 SDs, VB
-    # mean error 0.028 SDs
+    # mean error 0.028 SDs against the posterior mean
     expect_gt(fit$sn["log_sigma", "alpha"], 1)
     expect_gt(fit$mean_vb[["log_sigma"]], fit$mode[["log_sigma"]])
     expect_lt(abs(err$mean_vb), 0.08)
+    # Against the exact VB solution, the VB mean is off only by the error of
+    # the cubature rule: observed 5.2e-5 SDs for log_sigma, 3e-5 (finite
+    # differences) or 5e-9 (gradient) for mu. The VB term of the log marginal
+    # likelihood, 0.5 shift' H shift, is off by 1.9e-5 against the exact
+    # shift and the exact H.
+    sds <- sqrt(diag(nig$joint_cov))
+    expect_lt(max(abs(fit$mean_vb - nig$vb_mean) / sds), 2e-4)
+    shift <- nig$vb_mean - nig$joint_mode
+    expect_lt(
+      abs(fit$logml - fit$logml_laplace - 0.5 * sum(shift^2 / sds^2)),
+      6e-5
+    )
 
     # mu: a Student-t with 2 an = 14 degrees of freedom, symmetric about mn.
     # The covariance at the joint mode is diagonal, so the scan for mu holds
@@ -666,9 +720,10 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   )
 
   # The Laplace step against a Hessian by nested central differences written
-  # here. Observed: whitened gradient at the mode 3e-7, covariance error
-  # 1.4e-5 relative to the SDs (the package's second differences of logpost),
-  # logml_laplace error 9e-7.
+  # here, which agree to 1e-7 across steps from 2e-5 to 5e-4. Observed:
+  # whitened gradient at the mode 3e-7, covariance error 1.4e-5 relative to
+  # the SDs (the package's second differences of logpost), logml_laplace
+  # error 9e-7.
   lp <- function(x) bvn$logpost(stats::setNames(x, c("mu1", "mu2", "z")))
   lap <- laplace_errors(
     fit,
@@ -678,7 +733,7 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
       num_jacobian(function(y) num_grad(lp, y, 1e-4), x, 1e-4)
     }
   )
-  expect_lt(lap$grad, 1e-5)
+  expect_lt(lap$grad, 1e-6)
   expect_lt(lap$cov, 5e-5)
   expect_lt(abs(lap$logml_laplace), 3e-6)
 
