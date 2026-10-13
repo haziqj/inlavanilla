@@ -117,7 +117,8 @@ and the paper reports a calibration of the expected error against them in
 its Supplementary Material.
 
 The status lines list every flagged parameter, worst first, with its
-value; the warning lists at most three, as INLAvaan's does. With
+value (the heavy-tails line, a yes/no check, lists names only, in
+parameter order); the warning lists at most three, as INLAvaan's does. With
 \code{silent = TRUE} the warning is only recorded in \code{fit$warnings}. Printing
 the fit ends with a line for its warnings and one counting the checks
 flagged here, each shown only when there are any.

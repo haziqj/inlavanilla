@@ -398,8 +398,9 @@ In the top row, `tails` reads the open circles against the dashed line 3 nats
 below the peak. In the bottom row, the orange shading is `scan_end_mass` and
 the grey shading is the exact posterior's mass beyond the window.
 
-1. **Well behaved.** The scan ends are about 8 nats down, as for a Gaussian,
-   and neither the fit nor the posterior has much mass outside. Both checks
+1. **Well behaved.** The scan ends are 5.8 and 11.6 nats down, either side
+   of a Gaussian's 8, as the Poisson log rate is a little skewed, and neither
+   the fit nor the posterior has much mass outside. Both checks
    are rightly quiet.
 2. **Heavy inside the window.** A Cauchy posterior is still high at the ends
    of the scan, so `tails` fires, and the fit warns. `scan_end_mass` stays

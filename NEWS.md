@@ -48,9 +48,10 @@
   are inlavanilla's own check. Like INLAvaan, the fit only records the VB
   fallback. `summary()` flags the same checks at the same levels, and also
   the scan-path bend and the gap between the skew-normal and VB means; its
-  lines list every flagged parameter, worst first, with its value. Healthy
+  lines list every flagged parameter, worst first, with its value (names
+  only for the heavy-tails check, which is yes or no). Healthy
   fits stay silent. A new vignette, "Diagnostics", explains every check,
-  with citations of Jamil and Rue (2026a).
+  with citations of Jamil and Rue (2026).
 * `diagnostics(fit)` and `diagnostics(fit, type = "param")` return the
   checks as numbers, with the names, order and print formats of INLAvaan's
   `diagnostics()`, followed by inlavanilla's own. `plot(fit, type =
