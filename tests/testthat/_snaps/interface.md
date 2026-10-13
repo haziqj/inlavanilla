@@ -159,7 +159,8 @@
       v Hessian condition number 3.6, in posterior-SD units.
       v VB correction in <n> iteration(s): max shift 0.24 posterior SDs.
       v Skew-normal fits: max NMAD 0.015.
-      ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope` (0.14): the marginal may be too narrow.
+      ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope`
+        (0.14): the marginal may be too narrow.
       v Skew-normal and VB means agree to within 0.0069 posterior SDs.
       
       Log marginal likelihood: -16.248 (Laplace -16.277, VB term 0.029)
@@ -186,7 +187,8 @@
       v Hessian condition number 3.6, in posterior-SD units.
       i No VB correction (vb = FALSE).
       v Skew-normal fits: max NMAD 0.015.
-      ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope` (0.14): the marginal may be too narrow.
+      ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope`
+        (0.14): the marginal may be too narrow.
       
       Log marginal likelihood: -16.277
       <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
