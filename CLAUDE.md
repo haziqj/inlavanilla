@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`inlavanilla` (styled "INLAvanilla" in prose) is a freshly scaffolded R package (usethis template). There is no `R/` directory, no tests and no exported functions yet. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline, the test plan and the required order of work. Test posteriors with a natural-scale closed form (e.g. the beta–binomial) are written as unconstrained `logpost`s with the Jacobian included, and compared through `sampling(fit, fun = ...)` or the ϑ-scale density. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
+`inlavanilla` (styled "INLAvanilla" in prose) is a small, pure-R package that exports `inla_vanilla()` and `sampling()`, with S3 `print`, `summary` and `plot` methods. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline and the test plan. Test posteriors with a natural-scale closed form (e.g. the beta–binomial) are written as unconstrained `logpost`s with the Jacobian included, and compared through `sampling(fit, fun = ...)` or the ϑ-scale density. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
 
 Tagline: *INLA-style skew-normal marginals for any log-posterior.* The package runs the INLAvaan approximation pipeline on any user-supplied log-density, with no latent field and nothing SEM-specific.
 
@@ -33,38 +33,55 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 - `test-coverage.yaml` runs covr and uploads to Codecov. The Codecov checks are informational only.
 - `pkgdown.yaml` builds the site and deploys it to `gh-pages` on pushes to main.
 
-## Planned architecture (from `lab/IDEA.md` and `lab/DESIGN.md`)
+## Architecture
 
-Main entry point: `inla_vanilla(logpost, init, grad = NULL, vb = TRUE, control = list(), ...)`. The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included, and `...` is passed through as in `optim()`. v1 has no transform layer: natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`). Keep the engine free of transform logic. When `grad` is missing, gradients fall back to INLAvaan's own finite differences, not numDeriv.
+Entry point: `inla_vanilla(logpost, init, grad = NULL, vb = TRUE, verbose = TRUE, control = list(), ...)` in `R/inla-vanilla.R`.
 
-The pipeline has four stages. Implement them in this order, each with tests passing before moving on:
+- **Input.** The user supplies a single `logpost(theta, ...)` on the unconstrained scale ϑ ∈ ℝᵐ, with any Jacobian already included; `...` is passed through as in `optim()`.
+- **No transform layer in v1.** Natural-scale and derived quantities come from `sampling(fit, fun = ...)`. A later transform layer is planned as a wrapper that builds an unconstrained `logpost` for the unchanged engine (see `lab/DESIGN.md`), so keep the engine free of transform logic.
+- **Wrappers.** `inla_vanilla()` wraps the user functions in closures (`lp`, `gr`) that name the parameters, forward `...`, count calls and tick progress. Every stage receives these closures, never the user functions.
 
-1. **1a. Joint Gaussian (Laplace).** Find the mode ϑ* and set Ω = H(ϑ*)⁻¹. The log marginal likelihood is log π(y, ϑ*) − log π̃_G(ϑ* | y). It is only meaningful when `logpost` includes every normalising constant, and the docs must say so. With VB on, INLAvaan adds ½ δᵀHδ.
-2. **1b. VB mean correction.** ϑ̃ = ϑ* + δ̂, with the covariance unchanged. It is on by default. In INLAvaan's skew-normal path it does not move the marginals, which are scanned around ϑ*. It feeds the log marginal likelihood and serves as a check on the skew-normal fit (Prop. 3.4).
-3. **2. Skew-normal marginals per parameter.** Scan the height along the CMP direction (Lemma 3.1), add the volume correction (Corollary 3.3), then fit SN(ξ, ω, α). In v1 the marginals stay on the ϑ scale; back-transforming densities belongs to the later transform layer.
-4. **3. Gaussian copula draws.** Set R = cor(Ω), draw z ~ N(0, R), take u = Φ(z) and apply the SN quantile per margin. Return draws on the ϑ scale, or of `fun(theta)` when `fun` is given.
+The stages run in order, one file each:
 
-Outputs: `print()`, `summary()` (ϑ-scale moments, quantiles and mode, plus the log marginal likelihood), `plot()`, and `sampling()` for copula draws, optionally of a derived `g(theta)`. The name `sampling()` matches INLAvaan's exported generic; `base::sample` is not generic. The object system is S3 (not S7, S4 or R6), and the fit is a classed list built by `new_inla_vanilla()`.
+1. **Laplace** (`R/laplace.R`, `laplace_fit()`).
+   - The mode comes from `nlminb`.
+   - The Hessian comes from finite differences of `grad`. With no gradient, it takes two passes of `fd_hessian()`, the second stepping 0.01 posterior SD.
+   - It returns R (upper Cholesky of the precision), Σ, L (L Lᵀ = Σ) and the Laplace log marginal likelihood.
+2. **VB** (`R/vb.R`).
+   - `vb_correct()` is INLAvaan's fixed-point iteration with Anderson(1) acceleration and an `nlminb` fallback.
+   - The Gaussian expectation uses `vb_nodes()`, the fully symmetric degree-5 cubature rule (2m²+1 nodes on Σ's principal axes). This replaced INLAvaan's Sobol points after the benchmark in `lab/vb-benchmark.R`.
+   - `fit$logml` = Laplace + ½ δᵀHδ.
+3. **Skew-normal marginals** (`R/marginals.R`, `fit_marginals()`).
+   - Each parameter is scanned on `seq(-4, 4)` posterior SDs along the conditional mode path, corrected by `gamma1_*`, and fitted by `fit_skew_normal()`.
+   - The volume correction has two routes that must agree: `gamma1_grad()` is INLAvaan's shortcut, using the gradient; `gamma1_lp()` uses second differences of `logpost` when there is no gradient, at O(m) calls per parameter instead of O(m²).
+   - The marginals are scanned around the mode ϑ*, so VB does not move them.
+4. **Copula draws** (`R/sampling.R`). `sampling()` is an S3 generic, matching INLAvaan's exported `sampling()`.
 
-Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Gauss–Hermite VB, parallel cores).
+Supporting files:
+
+- **Skew-normal utilities** (`R/skew-normal.R`, `R/qsnorm-fast.R`): ported from INLAvaan. The Apache-licensed `qsnorm_fast()` keeps its attribution header. All of them are internal.
+- **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout.
+- **Progress** (`R/progress.R`): each stage has a cli progress bar that appears only after 0.5 s, and ends with a plain styled `message()` line. cli's glue-based helpers (`cli_progress_step()`, `cli_alert_*()`) cost several ms per call, as much as a whole small fit, so avoid them in the fitting path.
+- **Non-ASCII output**: user-visible non-ASCII characters (σ, ·) go through `sd_unit()` and `sep_dot()`, which fall back to ASCII. R source files must stay ASCII.
+
+Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
 
 ## Source-of-truth rules for the maths
 
 - Port and adapt the implementations in the INLAvaan source (github.com/haziqj/INLAvaan): joint Gaussian, VB correction, SN fitting with the volume correction, and copula sampling. Do not re-derive them from generic INLA knowledge. The references are the papers arXiv 2603.25690 and 2604.00671.
 - If INLAvaan's code and `lab/IDEA.md` / `lab/DESIGN.md` disagree, flag the disagreement and ask the user. Do not guess.
 - The pipeline to lift is `R/inlavaan.R` from mode-finding through copula sampling. It reaches the model only through the `joint_lp()` / `joint_lp_grad()` closures and the per-parameter transform functions `g`, `ginv`, `g_prime` and `ginv_prime` (`R/partable.R`). Its helpers are all pure R: `R/utils-optim.R`, `R/utils-inlavaan.R` (`compute_gamma1j`), `R/skew-normal.R`, `R/qsnorm_fast.R`, `R/sobol.R` (with the `SobolOwen` table in `R/sysdata.rda`), `R/posterior-marginals.R` and `R/posterior-sampling.R`.
-- The first step in `lab/IDEA.md` is a written plan mapping INLAvaan functions to INLAvanilla functions, shown to the user before any coding.
 
 ## Testing philosophy
 
 The tests are described as "the main point of the package." They use closed-form or cheaply computed posteriors as ground truth: normal–normal conjugate, normal with unknown variance (log), beta–binomial on the logit scale, gamma–Poisson (log), a bivariate case with a correlation (tanh), analytic marginal likelihoods, analytic vs numerical gradients, and copula draws reproducing the marginal quantiles and R. Use tolerances that fit the approximation error, not exact equality. Where there is no closed form, compare against 1–2D numerical quadrature rather than MCMC.
 
-## Known scaffold inconsistencies
+## Dependencies and housekeeping
 
-- `DESCRIPTION` still has template placeholders (Title, Description, Authors@R).
 - Imports should stay limited to base packages (stats, graphics, utils) plus cli, which the user requires for messages and progress bars. Do not add numDeriv, sn or Rcpp.
 - The license is GPL (>= 3).
-- `CONTRIBUTING.md` asks for a `NEWS.md` bullet for user-facing changes, but there is no `NEWS.md` yet.
+- Add a `NEWS.md` bullet for user-facing changes, as `CONTRIBUTING.md` asks.
+- The vignette (`vignettes/inlavanilla.qmd`) is Quarto, as in INLAvaan; CI installs Quarto, and R-CMD-check installs the package itself so that Quarto's R session finds it on Windows.
 
 ## Coding principles
 
