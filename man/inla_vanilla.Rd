@@ -59,8 +59,8 @@ recorded in \code{fit$warnings}. Cannot be combined with \code{verbose = TRUE}.}
 }
 \value{
 An object of class \code{inla_vanilla}, with methods for \code{\link[=print]{print()}},
-\code{\link[=summary]{summary()}}, \code{\link[=plot]{plot()}} and \code{\link[=sampling]{sampling()}}. It is a list holding, among
-other things:
+\code{\link[=summary]{summary()}}, \code{\link[=plot]{plot()}}, \code{\link[=sampling]{sampling()}} and \code{\link[=diagnostics]{diagnostics()}}. It is a list
+holding, among other things:
 \itemize{
 \item \code{summary}: the posterior summary table (mean, SD, quantiles, mode).
 \item \code{mode}, \code{cov}: the Laplace mode and covariance.
@@ -68,7 +68,26 @@ other things:
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
 parameter (with \code{alpha = 0} for Gaussian marginals).
 \item \code{vb}, \code{marginals}, \code{verbose}, \code{silent}: the settings the fit used.
-\item \code{logml}: the log marginal likelihood.
+\item \code{logml}: the log marginal likelihood, and \code{logml_laplace} its Laplace
+part.
+\item \code{diagnostics}: the checks of each stage, which \code{\link[=diagnostics]{diagnostics()}}
+returns under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} explains.
+\code{optim} holds the return code, message and iterations of
+\code{\link[stats:nlminb]{stats::nlminb()}}, the gradient of minus the log-posterior at the mode
+(\code{grad}), the whitened gradient there (\code{grad_mode}), and the condition
+number of the Hessian in posterior-SD units (\code{hess_cond}). \code{vb} holds
+the iterations of the VB correction, whether it fell back to
+\code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
+the shift (\code{kld_global}); it is \code{NULL} when \code{vb = FALSE}. \code{marginals}
+is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
+\code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{scan_end_mass},
+\code{sn_vs_vb}, \code{gamma1}, \code{tails} and \code{bend}, with \code{NA} for the checks the
+fit did not run.
+\item \code{scan}: the scans the skew-normals were fitted to, for
+\code{plot(fit, type = "sn_fit")}: the grid \code{z} in posterior SDs from the
+mode, the log-posterior at each point (\code{logpost}, a column per
+parameter), and the log scale factor \code{logC} of each fit on that grid.
+It is \code{NULL} for Gaussian marginals.
 \item \code{warnings}: the messages of the warnings raised during the fit, as a
 character vector of plain text, each message once (empty when there
 were none). They are recorded whether or not \code{silent} is \code{TRUE}.
@@ -76,8 +95,9 @@ were none). They are recorded whether or not \code{silent} is \code{TRUE}.
 }
 \description{
 Approximates the posterior of a parameter vector from its log density
-alone, using the approximation pipeline of INLAvaan with no latent field
-and nothing model-specific. The pipeline has four stages:
+alone, using the approximation pipeline of INLAvaan (Jamil & Rue, 2026a,
+2026b) with no latent field and nothing model-specific. The pipeline has
+four stages:
 \enumerate{
 \item \strong{Joint Gaussian (Laplace).} The posterior mode \eqn{\vartheta^*} and
 the inverse Hessian \eqn{\Omega} there give a Gaussian approximation
@@ -158,10 +178,12 @@ as the posterior, with the 2.5\% quantile about 2 posterior SDs too high;
 the other 37 were within 7\% in SD. On the variance scale, where the tail
 near zero is compressed, the two were much closer: means 0.2 posterior SDs
 too high and SDs 10 to 15\% too small. INLAvaan's marginals of this model
-are the same as inlavanilla's. The \code{bend} diagnostic of
-\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged both, but its size does not say how far
-off a marginal is, and the \code{tails} check, which looks only 4 Laplace SDs
-out, missed them.
+are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
+the same miss in the lower tail of a variance near zero, the boundary
+pile-up that a unimodal skew-normal cannot capture. The \code{bend} diagnostic
+of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged both, but its size does not say how
+far off a marginal is, and the \code{tails} check, which looks only 4 posterior
+SDs either side of the mode (the Laplace SDs), missed them.
 }
 
 \section{Gradients}{
@@ -211,8 +233,10 @@ took, and shows a progress bar while it runs for longer than half a
 second, or than the option \code{cli.progress_show_after} when it is set. In
 knitr or Quarto documents, where a bar cannot redraw in place, a larger
 \code{cli.progress_show_after} in the setup chunk keeps bars out of the output.
-Warnings, such as a mode that was not reached or a gradient that does not
-match \code{logpost}, are signalled as usual.
+Warnings, such as a gradient that does not match \code{logpost}, are signalled
+as usual. A fit whose checks look off, such as a mode that was not
+reached, ends with one warning that lists them, as INLAvaan's does (see
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} and \code{\link[=diagnostics]{diagnostics()}}).
 
 \code{verbose = TRUE} adds a full diagnostic of the fit, in grey lines under
 each stage. It reports what the fit computes anyway, with no further calls
@@ -223,17 +247,20 @@ of \code{logpost} or \code{grad}:
 discrepancy from finite differences there.
 \item The mode: the message, iterations and evaluations of \code{\link[stats:nlminb]{stats::nlminb()}},
 and whether it was restarted with the parameters rescaled; the
-log-posterior and the whitened gradient at the mode; how the Hessian was
-taken (and, for a supplied \code{grad}, the asymmetry of its Jacobian); the
-largest posterior correlation and the smallest eigenvalue of the
-correlation matrix, which is near zero when some combination of the
-parameters is poorly identified; and the Laplace log marginal likelihood.
+log-posterior at the mode, the whitened gradient there (which decides
+the restart) and the largest Newton step in posterior SDs (which the
+fit-time warning checks); how the Hessian was taken (and, for a
+supplied \code{grad}, the asymmetry of its Jacobian); the largest posterior
+correlation and the smallest eigenvalue of the correlation matrix, which
+is near zero when some combination of the parameters is poorly
+identified, and the condition number of the Hessian in posterior-SD
+units; and the Laplace log marginal likelihood.
 \item The VB correction: the largest step, in posterior SDs, at each
 fixed-point iteration, whether Anderson acceleration or the fallback
 optimiser was used, the largest shift, and the term it adds to the log
 marginal likelihood.
-\item The marginals: the shape, NMAD, bend, tails and volume correction
-\code{gamma1} of each parameter, with the values that
+\item The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
+correction \code{gamma1} of each parameter, with the values that
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.
 \item The calls of \code{logpost} and \code{grad} in each stage, and in all, with the
 total time.
@@ -303,5 +330,5 @@ approximate Bayesian structural equation modelling} (arXiv:2604.00671
 }
 \seealso{
 \code{\link[=sampling]{sampling()}} for posterior draws and derived quantities,
-\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} for diagnostics.
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} and \code{\link[=diagnostics]{diagnostics()}} for diagnostics.
 }
