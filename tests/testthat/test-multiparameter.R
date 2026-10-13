@@ -11,6 +11,10 @@
 #     no closed form: marginals by brute-force 2D grid quadrature;
 # (d) invariance of the marginals to the order of the parameters.
 #
+# The Laplace step (mode, covariance, logml_laplace) is also checked against
+# an exact or independently differenced Hessian in (a) to (c), and in (a) the
+# VB mean against the exact VB fixed point, which has a closed form there.
+#
 # Every logpost carries all of its normalising constants and the Jacobian of
 # the reparameterisation, so fit$logml is comparable with the exact log
 # marginal likelihood. Location errors are in reference posterior SDs, SD
@@ -543,7 +547,7 @@ test_that("normal data with unknown mean and variance give the exact Laplace ste
     # Covariance, relative to the SDs: observed error 3.3e-6 with finite
     # differences, 1.4e-8 with the gradient
     cov_err <- max(abs(fit$cov - nig$joint_cov) / outer(sds, sds))
-    expect_lt(cov_err, if (is.null(gr)) 1e-5 else 1e-7)
+    expect_lt(cov_err, if (is.null(gr)) 1e-5 else 5e-8)
     # The Laplace log marginal likelihood from the exact mode and covariance
     logml_laplace <- nig$logpost(nig$joint_mode) +
       log(2 * pi) +
@@ -600,8 +604,9 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
     # mu: a Student-t with 2 an = 14 degrees of freedom, symmetric about mn.
     # The covariance at the joint mode is diagonal, so the scan for mu holds
     # log_sigma at its mode, the scanned log-heights are exactly quadratic in
-    # mu, and the volume correction vanishes by symmetry. The skew-normal is
-    # then the Laplace Gaussian N(mn, 2 bn / (kn (2 an + 1))), whose SD is
+    # mu, and the exact volume correction at the mode is zero by symmetry.
+    # The skew-normal is then the Laplace Gaussian
+    # N(mn, 2 bn / (kn (2 an + 1))), whose SD is
     # sqrt(2 (an - 1) / (2 an + 1)) = 0.894 times the Student-t SD. The
     # linear scan cannot see the extra spread from the uncertainty in sigma,
     # which is an O(1 / n) limitation of the method, not of this code.
