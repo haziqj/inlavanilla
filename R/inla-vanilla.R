@@ -469,7 +469,7 @@ sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975)) {
 
 format_probs <- function(probs) {
   # as stats::quantile() names them, with no padding
-  paste0(formatC(100 * probs, format = "fg", width = 1, digits = 7), "%")
+  sprintf("%s%%", formatC(100 * probs, format = "fg", width = 1, digits = 7))
 }
 
 vanilla_control <- function(control) {
@@ -616,9 +616,13 @@ check_grad_at_init <- function(grad, lp, init) {
   scales <- fd_scales(lp, init, lp(init))
   h <- ifelse(attr(scales, "ok"), 1e-3 * scales, 1e-5 * pmax(1, abs(init)))
   g_fd <- fd_grad(lp, init, h = h)
-  bad <- abs(g - g_fd) > 1e-3 * (1 + abs(g_fd))
-  if (any(bad)) {
-    worst <- which.max(abs(g - g_fd) / (1 + abs(g_fd)))
+  # Compare per curvature scale, the change in log-posterior over about one
+  # posterior SD, so a gradient that is wrong by a factor is caught whatever
+  # the scale of the parameter
+  u <- ifelse(attr(scales, "ok"), scales, 1)
+  err <- abs(g - g_fd) * u / (1 + abs(g_fd) * u)
+  if (any(err > 1e-3)) {
+    worst <- which.max(err)
     warn(c(
       "{.arg grad} does not match finite differences of {.arg logpost} at
        {.arg init}.",
