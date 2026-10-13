@@ -271,7 +271,13 @@ test_that("loo::loo_compare() compares the results", {
   b <- loo(fit_b, ll_const, x = pois_x, y = pois_y)
   comp <- loo::loo_compare(list(trend = a, constant = b))
   d <- b$pointwise[, "elpd_loo"] - a$pointwise[, "elpd_loo"]
-  row_b <- comp[comp$model == "constant", ]
+  # loo 2.10 returns a data frame with a `model` column; earlier versions a
+  # matrix with the models as row names
+  if (is.data.frame(comp)) {
+    row_b <- comp[comp$model == "constant", c("elpd_diff", "se_diff")]
+  } else {
+    row_b <- as.list(comp["constant", c("elpd_diff", "se_diff")])
+  }
   expect_equal(row_b$elpd_diff, sum(d), tolerance = 1e-12)
   expect_equal(row_b$se_diff, sqrt(length(d)) * sd(d), tolerance = 1e-12)
 })
