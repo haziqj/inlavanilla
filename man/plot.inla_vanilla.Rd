@@ -12,7 +12,7 @@
 \item{pars}{Parameters to plot, by name or position. Defaults to all.}
 
 \item{laplace}{Logical. Overlay the Laplace (Gaussian) marginals? Default
-\code{TRUE}.}
+\code{TRUE}; ignored when the marginals are the Laplace ones.}
 
 \item{...}{Further graphical parameters passed to \code{\link[graphics:plot]{graphics::plot()}} for
 each panel, such as \code{xlab} or \code{main}; they replace the defaults (the
@@ -22,7 +22,10 @@ parameter name as the title, no axis labels, no y axis).}
 \code{x}, invisibly.
 }
 \description{
-Draws the skew-normal marginal density of each parameter, on the
-unconstrained scale, with the Gaussian marginal of the Laplace approximation
-for comparison. The vertical line marks the posterior mean.
+Draws the marginal density of each parameter, on the unconstrained scale,
+with the Gaussian marginal of the Laplace approximation for comparison. The
+vertical line marks the posterior mean. For a fit with
+\code{marginals = "gaussian"} the marginals are Gaussian: centred at the VB mean,
+or, with \code{vb = FALSE}, the Laplace marginals themselves, drawn without a
+second copy.
 }

@@ -59,6 +59,8 @@ parameter, and either approximation may be off.
 }
 
 With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
+With \code{marginals = "gaussian"} there are no scans, so only the VB shift is
+reported.
 }
 \references{
 Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for

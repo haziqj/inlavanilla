@@ -19,6 +19,16 @@
 #' 4. **Gaussian copula draws.** [sampling()] couples the skew-normal marginals
 #'    through the correlations of \eqn{\Omega}.
 #'
+#' Stages 2 and 3 are optional and independent of each other. `vb = FALSE`
+#' skips the VB correction, which leaves the marginals unchanged (they are
+#' scanned around the mode) but gives the Laplace log marginal likelihood.
+#' `marginals = "gaussian"` skips the scans and uses the Gaussian's own
+#' marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at the VB mean
+#' (or at the mode when `vb = FALSE`); [sampling()] then draws from the joint
+#' Gaussian. So `vb = FALSE, marginals = "gaussian"` is the Laplace
+#' approximation alone, and `marginals = "gaussian"` alone is the Laplace
+#' approximation with the VB correction.
+#'
 #' @section Writing `logpost`:
 #' The approximation works on an unconstrained scale: every parameter must be
 #' free to take any real value. Reparameterise anything constrained, for
@@ -71,7 +81,9 @@
 #' 50,000 calls. With `grad`, the VB correction takes 2m^2 + 1 gradient calls
 #' per sweep instead, and the fit is faster and more accurate. For more than
 #' about 10 parameters, supply `grad`, or set `vb = FALSE` to skip the VB
-#' correction (and its term in the log marginal likelihood).
+#' correction (and its term in the log marginal likelihood): the skew-normal
+#' marginals do not depend on it. `marginals = "gaussian"` saves the calls of
+#' the scans.
 #'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -104,12 +116,16 @@
 #'   differences are used.
 #' @param ... Further arguments passed to `logpost` and `grad`, such as the
 #'   data. As in [stats::optim()] and [stats::nlminb()], they come after the
-#'   gradient, and the arguments after them (`vb`, `verbose`, `control`) must
-#'   be given by their full names, so data arguments cannot partially match
-#'   them.
+#'   gradient, and the arguments after them (`vb`, `marginals`, `verbose`,
+#'   `control`) must be given by their full names, so data arguments cannot
+#'   partially match them.
 #' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
 #'   the log marginal likelihood, and the skew-normal means are checked against
 #'   it (see [summary.inla_vanilla()]).
+#' @param marginals The marginal of each parameter: `"skewnormal"` (the
+#'   default) fits a skew-normal to a scan of the log-posterior; `"gaussian"`
+#'   uses the Gaussian marginal of the Laplace approximation, centred at the
+#'   VB mean when `vb = TRUE`, with no scans.
 #' @param verbose Logical. Show progress? Default `TRUE`.
 #' @param control A list of tuning parameters; see the section on control.
 #'
@@ -120,7 +136,8 @@
 #'   * `mode`, `cov`: the Laplace mode and covariance.
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
-#'     parameter.
+#'     parameter (with `alpha = 0` for Gaussian marginals).
+#'   * `vb`, `marginals`: the settings the fit used.
 #'   * `logml`: the log marginal likelihood.
 #'
 #' @references
@@ -163,6 +180,7 @@ inla_vanilla <- function(
   grad = NULL,
   ...,
   vb = TRUE,
+  marginals = c("skewnormal", "gaussian"),
   verbose = TRUE,
   control = list()
 ) {
@@ -174,6 +192,7 @@ inla_vanilla <- function(
     check_function(grad, "grad")
   }
   check_flag(vb, "vb")
+  marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
   check_flag(verbose, "verbose")
   init <- check_init(init, verbose)
   ctrl <- vanilla_control(control)
@@ -342,27 +361,43 @@ inla_vanilla <- function(
   }
   t_vb <- elapsed() - t0
   shift <- if (vb) vbc$shift else stats::setNames(numeric(m), parnames)
+  mean_vb <- lap$mode + shift
 
   # 2. Skew-normal marginals -------------------------------------------------
+  # With Gaussian marginals there are no scans: each marginal is the
+  # Gaussian's own, N(mean_vb_j, Sigma_jj), a skew-normal with shape 0.
   t0 <- elapsed()
-  progress_start(prog, "Fitting skew-normal marginals", total = m)
-  sn <- with_context(
-    "fitting the skew-normal marginals",
-    fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
-  )
+  if (marginals == "skewnormal") {
+    progress_start(prog, "Fitting skew-normal marginals", total = m)
+    sn <- with_context(
+      "fitting the skew-normal marginals",
+      fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
+    )
+    progress_done(
+      prog,
+      paste0(
+        "Fitted ",
+        hl(m),
+        " skew-normal marginal",
+        if (m == 1L) "" else "s"
+      ),
+      elapsed() - t0
+    )
+  } else {
+    na <- rep(NA_real_, m)
+    sn <- cbind(
+      xi = mean_vb,
+      omega = sds,
+      alpha = 0,
+      gamma1 = na,
+      nmad = na,
+      tails = na,
+      bend = na
+    )
+    rownames(sn) <- parnames
+  }
   t_marginals <- elapsed() - t0
-  progress_done(
-    prog,
-    paste0(
-      "Fitted ",
-      hl(m),
-      " skew-normal marginal",
-      if (m == 1L) "" else "s"
-    ),
-    t_marginals
-  )
 
-  mean_vb <- lap$mode + shift
   logml <- lap$logml + if (vb) vbc$kld else 0
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
 
@@ -382,8 +417,12 @@ inla_vanilla <- function(
     },
     marginals = data.frame(
       vb_shift = shift / sds,
-      sn_vs_vb = (mom$mean - mean_vb) / sds,
-      alpha = sn[, "alpha"],
+      sn_vs_vb = if (marginals == "skewnormal") {
+        (mom$mean - mean_vb) / sds
+      } else {
+        NA_real_
+      },
+      alpha = if (marginals == "skewnormal") sn[, "alpha"] else NA_real_,
       gamma1 = sn[, "gamma1"],
       nmad = sn[, "nmad"],
       tails = as.logical(sn[, "tails"]),
@@ -408,6 +447,7 @@ inla_vanilla <- function(
       total = elapsed() - t_start
     ),
     vb = vb,
+    marginals = marginals,
     has_grad = !is.null(grad),
     call = call
   )
@@ -425,6 +465,7 @@ new_inla_vanilla <- function(
   counts,
   timing,
   vb,
+  marginals,
   has_grad,
   call
 ) {
@@ -441,6 +482,7 @@ new_inla_vanilla <- function(
       counts = counts,
       timing = timing,
       vb = vb,
+      marginals = marginals,
       has_grad = has_grad,
       call = call
     ),
@@ -537,6 +579,18 @@ check_flag <- function(x, arg) {
   if (!is.logical(x) || length(x) != 1L || is.na(x)) {
     abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
   }
+}
+
+# One of `choices`, given in full; the whole vector (the default) means the
+# first. Unlike match.arg(), no partial matching and the package's own error.
+check_choice <- function(x, choices, arg) {
+  if (identical(x, choices)) {
+    return(choices[[1L]])
+  }
+  if (!is.character(x) || length(x) != 1L || is.na(x) || !x %in% choices) {
+    abort("{.arg {arg}} must be one of {.or {.val {choices}}}.")
+  }
+  x
 }
 
 check_init <- function(init, verbose = TRUE) {
