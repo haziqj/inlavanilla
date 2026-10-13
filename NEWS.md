@@ -10,3 +10,15 @@
 * The VB correction (`vb`) and the skew-normal marginals (`marginals =
   "skewnormal"` or `"gaussian"`) can each be switched off, down to the
   Laplace approximation alone.
+* Three output levels: by default each stage prints one line; `verbose =
+  TRUE` adds a full diagnostic of each stage (the optimiser's report, how the
+  Hessian was taken, the posterior correlations, the VB iterations, a line per
+  marginal with the flagged values marked, and the calls each stage made);
+  `silent = TRUE` prints nothing and muffles warnings, for simulations. The
+  default output is what `verbose = TRUE` used to give, so code that passed
+  `verbose = FALSE` to keep a fit quiet should now pass `silent = TRUE`. The
+  warnings raised during a fit are kept in `fit$warnings` whatever the level.
+* Progress bars are drawn only in a terminal or the RStudio console, so they
+  no longer spill into knitr and Quarto documents or log files as one line
+  per update, and they follow the `cli.progress_show_after` option when it is
+  set.
