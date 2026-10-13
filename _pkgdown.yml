@@ -2,3 +2,19 @@ url: http://haziqj.ml/inlavanilla/
 template:
   bootstrap: 5
 
+articles:
+- title: Get started
+  contents:
+  - inlavanilla
+- title: Model comparison
+  navbar: ~
+  contents:
+  - model-comparison
+- title: Compiled code
+  desc: >
+    Faster log-posteriors for larger models. Both articles fit the same
+    structural equation model, with 39 parameters.
+  navbar: ~
+  contents:
+  - articles/rcpp
+  - articles/tmb
