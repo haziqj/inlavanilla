@@ -6,7 +6,7 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
 
 - **One `logpost`.** The user supplies `logpost(theta, ...)` returning log p(y, θ). There is no `loglik` / `logprior` split. The log marginal likelihood is valid only when `logpost` includes every normalising constant, and the docs must say so.
 - **Pure R.** No Rcpp and no `src/`. Users bring compiled code by passing any R-callable function, e.g. `Rcpp::cppFunction()`, TMB's `obj$fn` / `obj$gr` (negate them: TMB minimises), RTMB, or BridgeStan.
-- **No numDeriv, no sn.** Port INLAvaan's own finite differences (`fast_grad`, `fast_jacobian`, `fast_hessian`) and skew-normal code (`fit_skew_normal`, `dsnorm`, `psnorm`, `qsnorm_fast`, `owen_t`). Imports are limited to base packages (stats, graphics, utils) plus cli.
+- **No numDeriv, no sn.** Port INLAvaan's own finite differences (`fast_grad`, `fast_jacobian`, `fast_hessian`, now `fd_*` with per-coordinate steps) and skew-normal code (`fit_skew_normal`, `dsnorm`, `psnorm`, `qsnorm_fast`, `owen_t`). Imports are limited to base packages (stats, graphics, utils) plus cli.
 - **v1 has no transform layer.** `logpost` is written on the unconstrained scale ϑ ∈ ℝᵐ. Including any Jacobian is the user's job: a prior on σ with ϑ = log σ needs `+ theta["log_sigma"]`. The docs must stress this, because forgetting it gives the wrong posterior, not merely a worse approximation. `summary()` reports on the ϑ scale. Natural-scale or derived quantities, such as σ, Σ, or continuous-time SEM drift matrices, come from `sampling(fit, fun = ...)`, and the user summarises the draws. `summary()` takes no `fun` argument for now. Copula draws never call `logpost`, so `nsamp` can be large at almost no cost. The reason for this choice: real constraints are often joint and model-specific (covariance matrices, stable drift matrices), and no generic transform layer can express them.
 - **S3, not S7.** S4 and R6 are ruled out. The fit is a classed list built by one internal constructor, `new_inla_vanilla()`. `summary()` returns a `summary.inla_vanilla` object with its own `print()` method. S7 would add an Imports entry and an `@` workaround for R < 4.3, for features we don't use (validated properties, inheritance, multiple dispatch).
 - **cli is a required Imports entry.** It is used for formatted messages, warnings and errors (`cli_abort()` etc.) and for progress bars and steps, as in INLAvaan. It may be dropped at a later optimisation stage, but not before. Add it to `DESCRIPTION` with the first code that uses it, to avoid an unused-Imports NOTE.
@@ -16,7 +16,7 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
   - skew-normal marginals
   - `nlminb`
   - the `"shortcut"` volume correction
-  - Sobol QMC for VB
+  - for the VB expectation, the fully symmetric degree-5 cubature rule (2m² + 1 nodes on the principal axes of Ω), replacing INLAvaan's Sobol points. It is exact when the log-posterior is a degree-6 polynomial in whitened coordinates, and deterministic. In `lab/vb-benchmark.R` it was the most accurate rule on every model tested, from 1 to 30 parameters: 10 to 150 times better than 64 Sobol points in 1–2D, and 0.016 against 0.058 SDs at m = 30. The cost is 2m² + 1 gradient calls per sweep, so the docs advise supplying `grad` for larger m.
 - **Not ported:**
   - the `asymgaus`, `marggaus` and `sampling` marginals
   - NORTA
