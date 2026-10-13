@@ -12,3 +12,4 @@
 ^vignettes/.*_files$
 ^\.quarto$
 ^CLAUDE\.md$
+^\.claude$
