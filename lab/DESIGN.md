@@ -29,6 +29,17 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
 
 Nothing at present.
 
+## Findings to discuss
+
+- **Linear scan path at small n.** The skew-normal scan follows the conditional mode path (CMP) of the Laplace Gaussian, which is a straight line (Lemma 3.1). When another parameter's conditional mode bends along that path, the scanned heights are too low in the tails. A common case is a noise scale, where σ̂²(K) ∝ SSR(K) bends quadratically. The marginal then comes out too narrow, by a factor that shrinks as O(1/n).
+  - Example: Michaelis–Menten on the treated `Puromycin` data (n = 12; parameters log Vm, log K, log σ).
+  - Exact marginal SDs from a 3D grid: 0.0382 and 0.1537 for log Vm and log K.
+  - Skew-normal: 0.0315 and 0.127, both about 18% too narrow. Laplace is the same.
+  - A full Laplace marginal with exact conditional modes and conditional Hessians recovers 0.0383 and 0.1541. So the gap comes from the linear path, not from the skew-normal fit or the volume correction.
+  - log σ itself is captured almost exactly: skew-normal mean 2.4733 against an exact 2.4734, while Laplace gives 2.3324.
+  - Possible remedy, not implemented: correct the scan points towards the true conditional mode, e.g. one Newton step in the other parameters per grid point, using the gradient.
+  - In this example the SN − VB diagnostic flagged log σ (0.13 SDs). That gap came from the VB mean being off, not the skew-normal, so the diagnostic is documented as "either may be off".
+
 ## Later
 
 - LOO/WAIC need pointwise log-likelihoods. This would be an optional extra argument (e.g. `loglik_i`) and does not reopen the `logpost` decision.
