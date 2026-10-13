@@ -181,22 +181,26 @@ inla_vanilla <- function(
   t0 <- elapsed()
   progress_start(prog, "Finding the posterior mode")
   lap <- laplace_fit(lp, gr, init, ctrl)
-  if (lap$opt$convergence != 0L) {
-    cli::cli_warn(c(
-      "The optimiser did not report convergence.",
-      "i" = "{.fn nlminb} says: {.val {lap$opt$message}}.",
-      "i" = "Try other starting values, or raise {.code iter.max} in
-             {.code control$nlminb}."
-    ))
-  }
-  # Gradient at the mode in whitened units: how far, in posterior SDs, the
-  # optimiser stopped short.
+  # Gradient at the mode in whitened units: how far, in posterior SDs, a
+  # Newton step would still move the mode. This, not nlminb()'s return code,
+  # decides whether to warn: without a gradient nlminb() can report "false
+  # convergence" at an accurate mode, and it can report success short of one.
   g_mode <- if (is.null(gr)) {
     fd_grad(lp, lap$mode, h = 1e-3 * sqrt(diag(lap$Sigma)))
   } else {
     gr(lap$mode)
   }
   grad_mode <- max(abs(crossprod(lap$L, g_mode)))
+  if (!is.finite(grad_mode) || grad_mode > 1e-2) {
+    cli::cli_warn(c(
+      "The posterior mode may be inaccurate.",
+      "x" = "The gradient there is {signif(grad_mode, 2)} posterior SDs
+             (whitened); it should be close to zero.",
+      "i" = "{.fn nlminb} says: {.val {lap$opt$message}}.",
+      "i" = "Try other starting values, supply {.arg grad}, or raise
+             {.code iter.max} in {.code control$nlminb}."
+    ))
+  }
   t_laplace <- elapsed() - t0
   progress_done(
     prog,

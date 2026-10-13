@@ -88,12 +88,14 @@ apply_draws <- function(theta, fun, ...) {
   if (k == 0L) {
     cli::cli_abort("{.arg fun} returned an empty vector.")
   }
-  out <- vapply(
-    seq_len(nrow(theta)),
+  n <- nrow(theta)
+  rest <- vapply(
+    seq_len(n)[-1],
     function(i) as.numeric(fun(theta[i, ], ...)),
     numeric(k)
   )
-  out <- matrix(out, nrow = nrow(theta), ncol = k, byrow = TRUE)
+  # vapply() gives k x (n - 1), or a vector when k = 1; rows are draws
+  out <- matrix(c(as.numeric(first), rest), nrow = n, ncol = k, byrow = TRUE)
   colnames(out) <- names(first)
   out
 }
