@@ -341,7 +341,7 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
     -0.5 * determinant(H[-j, -j, drop = FALSE])$modulus[[1]]
   }
 
-  g_grad <- g_lp <- g_ref <- numeric(m)
+  g_grad <- g_lp <- g_ref <- g_grad_half <- g_lp_half <- numeric(m)
   for (j in seq_len(m)) {
     g_grad[j] <- gamma1_grad(j, mod$grad, lap$mode, v_scan, lap$L)
     g_lp[j] <- gamma1_lp(
@@ -353,6 +353,25 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
       lap$L,
       tr0
     )
+    # The same, with the forward difference over half the distance
+    g_grad_half[j] <- gamma1_grad(
+      j,
+      mod$grad,
+      lap$mode,
+      v_scan,
+      lap$L,
+      d_outer = 0.005
+    )
+    g_lp_half[j] <- gamma1_lp(
+      j,
+      mod$logpost,
+      lap$mode,
+      lap$lp_max,
+      v_scan,
+      lap$L,
+      tr0,
+      d_outer = 0.005
+    )
     g_ref[j] <- (log_vol(j, 1e-4) - log_vol(j, -1e-4)) / 2e-4
   }
 
@@ -361,9 +380,20 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
   # The two routes agree with each other closely ...
   expect_lt(max(abs(g_grad - g_lp)), 1e-6) # observed 2.0e-7
   # ... and with the exact slope to within the O(d_outer) error of a forward
-  # difference 0.01 SDs from the mode
-  expect_lt(max(abs(g_grad - g_ref)), 1e-3) # observed 2.4e-4
-  expect_lt(max(abs(g_lp - g_ref)), 1e-3) # observed 2.4e-4
+  # difference 0.01 SDs from the mode (observed 2.3e-4 to 2.4e-4 for every
+  # parameter, both routes)
+  expect_lt(max(abs(g_grad - g_ref)), 6e-4)
+  expect_lt(max(abs(g_lp - g_ref)), 6e-4)
+  # That error is the first-order truncation and nothing else: halving
+  # d_outer halves it (observed ratios 2.000 to 2.001), and the Richardson
+  # extrapolation 2 gamma1(d / 2) - gamma1(d) removes it, leaving 1.7e-7
+  # (gradient route) and 7.4e-8 (log-posterior route) against values up to
+  # 0.17. A constant bias in either route, such as a wrong baseline at the
+  # mode, would survive the extrapolation.
+  expect_lt(max(abs((g_grad - g_ref) / (g_grad_half - g_ref) - 2)), 0.01)
+  expect_lt(max(abs((g_lp - g_ref) / (g_lp_half - g_ref) - 2)), 0.01)
+  expect_lt(max(abs(2 * g_grad_half - g_grad - g_ref)), 5e-7)
+  expect_lt(max(abs(2 * g_lp_half - g_lp - g_ref)), 3e-7)
 })
 
 test_that("the volume correction vanishes for an exactly Gaussian log-posterior", {
@@ -510,6 +540,50 @@ test_that("finite-difference errors take their exact form on polynomials, step b
     fd_hessian(poly4, x, h),
     exact + truncation,
     tolerance = 1e-10
+  )
+})
+
+test_that("fd_grad_forward() has the exact one-sided error that the curvature removes", {
+  # The VB stage without a gradient uses one-sided differences plus half a
+  # step times the Laplace curvature. On polynomials the error is exact: the
+  # forward difference of c x^3 is 3 c x^2 + 3 c x h + c h^2, whose O(h) term
+  # is half a step times the second derivative 6 c x. Steps differ per
+  # coordinate, so a step applied to the wrong coordinate shows.
+  x <- c(0.6, -1.2, 0.9)
+  h <- c(0.1, 0.02, 0.3)
+  cc <- c(1, -2, 0.5)
+  cubic <- function(x) sum(cc * x^3)
+  expect_equal(
+    fd_grad_forward(cubic, x, h),
+    3 * cc * x^2 + 3 * cc * x * h + cc * h^2,
+    tolerance = 1e-12
+  )
+
+  # On a quadratic -x'Px / 2 + 1'x, removing half a step times the
+  # curvature P_jj, as inla_vanilla() does with diag(H), is exact.
+  P <- matrix(c(2, 0.5, -0.3, 0.5, 1, 0.2, -0.3, 0.2, 3), 3)
+  quad <- function(x) -0.5 * sum(x * (P %*% x)) + sum(x)
+  expect_equal(
+    fd_grad_forward(quad, x, h) + 0.5 * h * diag(P),
+    drop(1 - P %*% x),
+    tolerance = 1e-12
+  )
+
+  # m + 1 calls, or m when f(x) is supplied, with the same result; a scalar
+  # step is recycled
+  calls <- 0L
+  counted <- function(x) {
+    calls <<- calls + 1L
+    cubic(x)
+  }
+  g <- fd_grad_forward(counted, x, h)
+  expect_identical(calls, 4L)
+  calls <- 0L
+  expect_identical(fd_grad_forward(counted, x, h, f0 = cubic(x)), g)
+  expect_identical(calls, 3L)
+  expect_identical(
+    fd_grad_forward(cubic, x, 0.1),
+    fd_grad_forward(cubic, x, rep(0.1, 3))
   )
 })
 

@@ -389,16 +389,16 @@ test_that("each column is its skew-normal quantile of a linear map of iid normal
   set.seed(61)
   draws <- sampling(pois_fit, nsamp = n)
   s <- draws
-  dq_dz <- draws
+  dq_dz_sd <- draws
   for (j in 1:3) {
     sn <- sn_par(pois_fit, j)
     s[, j] <- sn_normal_score_ref(draws[, j], sn$xi, sn$omega, sn$alpha)
-    dq_dz[, j] <- dnorm(s[, j]) /
+    dq_dz_sd[, j] <- dnorm(s[, j]) /
       sn_density_ref(draws[, j], sn$xi, sn$omega, sn$alpha) /
       sn_sd_ref(sn$omega, sn$alpha)
   }
   A <- qr.solve(z_iid, s)
-  resid_sd <- abs(s - z_iid %*% A) * dq_dz
+  resid_sd <- abs(s - z_iid %*% A) * dq_dz_sd
   expect_lt(max(resid_sd), 5e-8)
   expect_lt(max(abs(crossprod(A) - R)), 1.5e-8)
 })
