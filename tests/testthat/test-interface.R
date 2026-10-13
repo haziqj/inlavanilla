@@ -1184,8 +1184,10 @@ test_that("progress bars follow the user's cli.progress_show_after", {
     },
     .package = "cli"
   )
+  # add = TRUE: a plain on.exit() would replace the exit handler that undoes
+  # the mock, which then leaks into later tests
   old <- options(cli.progress_show_after = NULL)
-  on.exit(options(old))
+  on.exit(options(old), add = TRUE)
 
   # Unset: half a second for each of the three stages, then unset again
   suppressMessages(inla_vanilla(lp_reg, init_reg))
@@ -1390,7 +1392,7 @@ test_that("silent = TRUE records each warning once, as plain text", {
     testthat::local_reproducible_output(width = 30, crayon = TRUE)
     # testthat leaves conditions unwrapped; wrap them at 30 characters
     old <- options(cli.condition_width = 30)
-    on.exit(options(old))
+    on.exit(options(old), add = TRUE)
     fit <- fit_short()
     expect_false(any(grepl("\033", fit$warnings, fixed = TRUE)))
     expect_false(any(grepl("{.", fit$warnings, fixed = TRUE)))
