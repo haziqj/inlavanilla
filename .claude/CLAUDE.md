@@ -29,7 +29,7 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## CI
 
-- `R-CMD-check.yaml` runs on macOS, Windows, and Ubuntu with R devel, release and oldrel-1 through oldrel-4. Avoid base-R features that are too new for oldrel-4.
+- `R-CMD-check.yaml` runs on macOS, Windows and Ubuntu with R release only; the package is not on CRAN, so the matrix is kept minimal. CI no longer tests older R, so keep to base-R features available in R 4.1, the minimum in `DESCRIPTION`.
 - `test-coverage.yaml` runs covr and uploads to Codecov. The Codecov checks are informational only.
 - `pkgdown.yaml` builds the site and deploys it to `gh-pages` on pushes to main.
 
