@@ -41,8 +41,9 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   scanned density relative to its peak, and `sn_vs_vb`, the gap between the
 #'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 #'   target the posterior mean, so they should agree closely (to
-#'   \eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026); a large gap
-#'   flags a poor skew-normal fit.
+#'   \eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026). A large gap
+#'   means the posterior is far from Gaussian along that parameter, where
+#'   either approximation may be off.
 #'
 #' @param object An object of class `inla_vanilla`.
 #' @param probs Probabilities for the reported quantiles.
