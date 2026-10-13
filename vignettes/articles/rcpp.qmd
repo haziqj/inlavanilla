@@ -588,6 +588,13 @@ some log-density, and the marginal may come out too narrow. The skew-normal
 and VB means of `logv_dem65` also differ by 0.2 posterior SDs, another sign
 that its marginal is hard to approximate.
 
+Here the warning is borne out. Checked against MCMC, the marginals of
+`logv_dem65` and `logv_x2` are less than half as wide as the posterior, with
+the 2.5% quantile of `logv_dem65` at −3.6 against −7.3. The data cannot rule
+out a variance near zero, so on the log scale the posterior has a long
+exponential left tail, held back only by the prior, and a skew-normal cannot
+follow it. The other 37 marginals agree with MCMC to within 7% in SD.
+
 ```{r}
 #| label: plot
 #| fig-alt: "Posterior densities of three parameters: the two regressions of 1965 democracy, both slightly right-skewed, and the log disturbance variance of 1965 democracy, strongly left-skewed. Dashed Gaussian curves are symmetric."

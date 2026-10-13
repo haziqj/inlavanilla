@@ -226,12 +226,25 @@ narrow by a factor that vanishes as O(1/n).
     cost of the marginal stage.
 
 - **Bollen's Political Democracy SEM (39 parameters, n = 75), the model of
-  INLAvaan's SEM article with a mean structure:** against full Laplace
-  marginals, the SDs are too small by about 25% for the log disturbance
-  variance of `dem65`, 19% for the log residual variance of `x2`, 6% for
-  `x1`, 5.5% for a loading and 2.6% for the intercepts. inlavanilla's fit
-  matches INLAvaan's here (modes within 2e-4 SDs, log marginal likelihood
-  -1686.85 against -1686.86), so INLAvaan has the same gap.
+  INLAvaan's SEM article with a mean structure, default priors:** checked
+  against HMC (4 chains of 10,000 draws, R-hat 1.000) and against full
+  Laplace marginals on a wide grid, which agree with each other.
+  - The log residual variance of `x2` and the log disturbance variance of
+    `dem65` have skew-normal SDs of 0.38 and 0.46 times the posterior SD.
+    Their 2.5% quantiles are -3.46 against -6.98 and -3.60 against -7.34,
+    two or more posterior SDs off; the upper quantiles agree.
+  - Cause: the data cannot keep these variances away from zero, so on the
+    log scale the left tail is exponential, with slope 0.50: the
+    `gamma(1,.5)[sd]` prior with its Jacobian. A skew-normal cannot follow
+    it, and the scan (4 Laplace SDs) stops before the tail flattens.
+  - On the variance scale the skew-normal overstates the mean by 16-18% and
+    puts the 2.5% quantile at 0.03 instead of 0.001.
+  - The other 37 parameters are within 7% in SD (median 3%), 0.08 SDs in the
+    mean and 0.21 SDs in the quantiles.
+  - inlavanilla's fit matches INLAvaan's here (modes within 2e-4 SDs, log
+    marginal likelihood -1686.85 against -1686.86), so INLAvaan's marginals
+    of these two parameters will be off the same way. Worth checking any
+    validation against MCMC on the log scale, where it shows most.
 
-See `lab/DESIGN.md`, `lab/scan-path-prototype.R` and `lab/sem-marginal-check.R`
-in inlavanilla.
+See `lab/DESIGN.md`, `lab/scan-path-prototype.R`, `lab/sem-marginal-check.R`
+and `lab/sem-hmc.R` in inlavanilla.
