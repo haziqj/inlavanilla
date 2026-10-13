@@ -75,11 +75,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [30ms]
-#> ✔ VB mean correction, max shift 0.17σ [36ms]
-#> ✔ Fitted 1 skew-normal marginal [58ms]
+#> ✔ Found the posterior mode in 6 iterations [27ms]
+#> ✔ VB mean correction, max shift 0.17σ [34ms]
+#> ✔ Fitted 1 skew-normal marginal [75ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 133ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
@@ -125,8 +125,10 @@ quantities and model comparison.
 
 Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
-approximations*. arXiv. <https://doi.org/10.48550/arXiv.2603.25690>
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
 
 Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
-INLA-based approximate Bayesian structural equation modelling*. arXiv.
+INLA-based approximate Bayesian structural equation modelling*
+(arXiv:2604.00671 \[stat.CO\]). arXiv.
 <https://doi.org/10.48550/arXiv.2604.00671>

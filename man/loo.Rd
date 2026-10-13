@@ -166,8 +166,9 @@ waic(fit, loglik, time = time, y = y)
 }
 \references{
 Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). \emph{Deterministic
-leave-one-cluster-out cross-validation for multilevel Bayesian models}.
-arXiv. \url{https://doi.org/10.48550/arXiv.2609.00670}
+leave-one-cluster-out cross-validation for multilevel Bayesian models}
+(arXiv:2609.00670 [stat.ME]). arXiv.
+\url{https://doi.org/10.48550/arXiv.2609.00670}
 
 Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
 evaluation using leave-one-out cross-validation and WAIC. \emph{Statistics and
