@@ -92,13 +92,12 @@
       logit_p   -0.995  0.622  -2.294  -1.396  -0.967  -0.566  0.149  -0.910
       
       Diagnostics
-                VB shift   SN - VB  Shape    NMAD
-      log_rate     -0.13  -0.00077   -1.4  0.0066
-      logit_p      -0.12    -0.015   -1.4  0.0094
+                VB shift   SN - VB  Shape    NMAD     Bend
+      log_rate     -0.13  -0.00077   -1.4  0.0066  2.2e-15
+      logit_p      -0.12    -0.015   -1.4  0.0094  3.4e-22
       
       v Mode found in 8 iterations (gradient <g> SDs).
       v VB correction in 3 iterations: max shift 0.13 SDs.
-      ! The scan of log_rate and logit_p ended above the log threshold: heavy tails, which the skew-normal extrapolates.
       v Skew-normal fits: max NMAD 0.0094.
       v Skew-normal and VB means agree to within 0.015 SDs.
       
@@ -118,13 +117,12 @@
       logit_p   -0.995  0.622  -2.294  -1.396  -0.967  -0.566  0.149  -0.910
       
       Diagnostics
-                Shape    NMAD
-      log_rate   -1.4  0.0066
-      logit_p    -1.4  0.0094
+                Shape    NMAD     Bend
+      log_rate   -1.4  0.0066  2.2e-15
+      logit_p    -1.4  0.0094  3.4e-22
       
       v Mode found in 8 iterations (gradient <g> SDs).
       i No VB correction (vb = FALSE).
-      ! The scan of log_rate and logit_p ended above the log threshold: heavy tails, which the skew-normal extrapolates.
       v Skew-normal fits: max NMAD 0.0094.
       
       Log marginal likelihood: -14.950
