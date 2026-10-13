@@ -6,9 +6,10 @@ articles:
 - title: Get started
   contents:
   - inlavanilla
-- title: Model comparison
+- title: Checking a fit
   navbar: ~
   contents:
+  - diagnostics
   - model-comparison
 - title: Compiled code
   desc: >
