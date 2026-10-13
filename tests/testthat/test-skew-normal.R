@@ -402,8 +402,9 @@ alpha_wide <- c(-20, -5, -2, -1.5, -0.5, 0.3, 0.5, 1.5, 2, 5, 20)
 test_that("qsnorm_fast and qsnorm are exact where the quantile has a closed form", {
   # alpha = 0 is N(xi, omega^2); alpha = 1 has F = Phi^2 and alpha = -1 has
   # 1 - F = Phi(-z)^2. Each reference is written in its well-conditioned
-  # tail. Observed: qsnorm <= 8.8e-15; qsnorm_fast <= 3.4e-12, since it
-  # takes qnorm(sqrt(p)), which is ill-conditioned near p = 1.
+  # tail. Observed, in units of omega: qsnorm <= 2.2e-14; qsnorm_fast
+  # <= 1.7e-11, since it takes qnorm(sqrt(p)), which is ill-conditioned near
+  # p = 1.
   xi <- 0.4
   omega <- 1.7
   ref_pos <- xi +
@@ -420,7 +421,7 @@ test_that("qsnorm_fast and qsnorm are exact where the quantile has a closed form
         stats::qnorm(p_wide / (1 + sqrt(1 - p_wide)), lower.tail = FALSE),
         stats::qnorm(sqrt(1 - p_wide))
       )
-  for (case in list(list(qsnorm_fast, 1e-11), list(qsnorm, 3e-14))) {
+  for (case in list(list(qsnorm_fast, 5e-11), list(qsnorm, 6e-14))) {
     qfun <- case[[1]]
     tol <- case[[2]]
     expect_equal(
@@ -516,8 +517,8 @@ test_that("qsnorm is accurate at the probabilities summaries use, over alpha in 
   q <- unlist(lapply(alphas, function(a) qsnorm(probs, 0, 1, a)))
   err <- sn_quantile_err(q, grid$p, grid$alpha) / pmax(1, abs(q))
   names(err) <- sprintf("alpha=%g, p=%g", grid$alpha, grid$p)
-  # Observed max 1.2e-15.
-  expect_all_below(err, 5e-15)
+  # Observed max 7.4e-16.
+  expect_all_below(err, 2.5e-15)
 
   # Location and scale carry through
   expect_equal(
@@ -545,7 +546,7 @@ test_that("qsnorm recycles its arguments and returns NA or +-Inf at the edges", 
 test_that("qsnorm stays accurate far into the heavier tail", {
   # The heavier tail is the lower one for alpha < 0 (and the upper one for
   # alpha > 0, but p = 1 - 1e-20 is not representable). Probabilities in one
-  # vector call, as summary() makes them. Observed error <= 1.2e-15 down to
+  # vector call, as summary() makes them. Observed error <= 1.7e-16 down to
   # p = 1e-100. At p = 1e-300 the true quantile is -37.05, but qsnorm()
   # returns -30.0: the vector start from qsnorm_fast() is 0 (see above), and
   # 30 Newton steps capped at one unit cannot reach it. (A scalar call starts
@@ -555,7 +556,7 @@ test_that("qsnorm stays accurate far into the heavier tail", {
     q <- qsnorm(p, 0, 1, a)
     err <- sn_quantile_err(q, p, a) / pmax(1, abs(q))
     names(err) <- sprintf("alpha=%g, p=%g", a, p)
-    expect_all_below(err, 5e-15)
+    expect_all_below(err, 5e-16)
   }
 })
 
@@ -635,8 +636,8 @@ test_that("sn_score_map is monotone and continues linearly beyond its knots", {
     z <- seq(-9, 9, by = 0.01)
     expect_true(all(diff(map(z)) > 0))
     # continuous at the ends of the knot range
-    expect_lt(abs(map(7 + 1e-9) - map(7 - 1e-9)), 1e-7)
-    expect_lt(abs(map(-7 + 1e-9) - map(-7 - 1e-9)), 1e-7)
+    expect_lt(abs(map(7 + 1e-9) - map(7 - 1e-9)), 1e-8)
+    expect_lt(abs(map(-7 + 1e-9) - map(-7 - 1e-9)), 1e-8)
     z_out <- c(-8, -7.5, 7.5, 8)
     err <- sn_quantile_err(
       map(z_out),
@@ -889,57 +890,64 @@ test_that("fit_skew_normal keeps at least five points for a narrow scan", {
 })
 
 test_that("fit_skew_normal returns the least-squares fit and its nmad for a non-skew-normal input", {
-  # The scan of log(lambda) for lambda ~ Gamma(shape, 1), centred at the mode
+  # The scan of log(lambda) for lambda ~ Gamma(k, 1), centred at the mode
   # with unit curvature: y(t) = sqrt(k) t - k (exp(t / sqrt(k)) - 1). The
   # fit should minimise the weighted least-squares objective documented in
-  # R/skew-normal.R, written out here and minimised by optim() from several
-  # starts. Observed: objectives agree to 2e-14 relative, alpha to 1e-6,
-  # and nmad matches its definition to 1e-17.
-  ref_objective <- function(par, x, y) {
-    keep <- y >= -6 | rank(-y, ties.method = "first") <= 5
+  # R/skew-normal.R (weights exp(y), points below the threshold dropped but
+  # at least five kept), written out here and minimised by optim() from two
+  # starts. Observed: objectives agree to 2.1e-14 relative, alpha to
+  # 2.1e-7, and nmad matches its definition to 1.5e-16 relative.
+  ref_objective <- function(par, x, y, threshold) {
+    keep <- y >= threshold | rank(-y, ties.method = "first") <= 5
     x <- x[keep]
     y <- y[keep]
     w <- exp(y) / sum(exp(y))
     ld <- sn_logdens_ref(x, par[1], exp(par[2]), par[3]) + par[4]
     sum(w * (y - ld)^2)
   }
-  for (k in c(3, 50)) {
-    for (sgn in c(1, -1)) {
-      t <- sgn * grid_scan
-      y <- sqrt(k) * t - k * (exp(t / sqrt(k)) - 1)
-      y <- y - max(y)
-      fit <- fit_skew_normal(grid_scan, y)
-      obj_fit <- ref_objective(
-        c(fit$xi, log(fit$omega), fit$alpha, fit$logC),
-        grid_scan,
-        y
+  cases <- expand.grid(k = c(3, 50), sgn = c(1, -1), threshold = c(-6, -3))
+  for (i in seq_len(nrow(cases))) {
+    k <- cases$k[i]
+    sgn <- cases$sgn[i]
+    threshold <- cases$threshold[i]
+    t <- sgn * grid_scan
+    y <- sqrt(k) * t - k * (exp(t / sqrt(k)) - 1)
+    y <- y - max(y)
+    fit <- fit_skew_normal(grid_scan, y, threshold_log_drop = threshold)
+    obj_fit <- ref_objective(
+      c(fit$xi, log(fit$omega), fit$alpha, fit$logC),
+      grid_scan,
+      y,
+      threshold
+    )
+    best <- NULL
+    for (a0 in c(-1, 1)) {
+      o <- stats::optim(
+        c(0, 0, a0, 0),
+        ref_objective,
+        x = grid_scan,
+        y = y,
+        threshold = threshold,
+        method = "BFGS",
+        control = list(reltol = 1e-16, maxit = 1000)
       )
-      best <- NULL
-      for (a0 in c(-1, 1)) {
-        o <- stats::optim(
-          c(0, 0, a0, 0),
-          ref_objective,
-          x = grid_scan,
-          y = y,
-          method = "BFGS",
-          control = list(reltol = 1e-16, maxit = 1000)
-        )
-        if (is.null(best) || o$value < best$value) best <- o
-      }
-      expect_lt(obj_fit / best$value - 1, 1e-10)
-      expect_lt(abs(fit$alpha - best$par[3]), 1e-4)
-      expect_lt(fit$alpha * sgn, 0)
-
-      nmad_ref <- max(abs(
-        exp(y) -
-          exp(
-            sn_logdens_ref(grid_scan, fit$xi, fit$omega, fit$alpha) +
-              fit$logC
-          )
-      )) /
-        max(exp(y))
-      expect_equal(fit$nmad, nmad_ref, tolerance = 1e-12)
-      expect_gt(fit$nmad, 1e-3)
+      if (is.null(best) || o$value < best$value) best <- o
     }
+    label <- sprintf("k = %g, sign %g, threshold %g", k, sgn, threshold)
+    expect_lt(obj_fit / best$value - 1, 1e-12, label = label)
+    expect_lt(abs(fit$alpha - best$par[3]), 1e-6, label = label)
+    # log(lambda) is skewed to the left
+    expect_lt(fit$alpha * sgn, 0, label = label)
+
+    nmad_ref <- max(abs(
+      exp(y) -
+        exp(
+          sn_logdens_ref(grid_scan, fit$xi, fit$omega, fit$alpha) +
+            fit$logC
+        )
+    )) /
+      max(exp(y))
+    expect_equal(fit$nmad, nmad_ref, tolerance = 1e-14, label = label)
+    expect_gt(fit$nmad, 1e-3)
   }
 })
