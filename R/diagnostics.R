@@ -10,7 +10,9 @@ warn_levels <- list(nmad = 0.1, scan_end_mass = 0.05, vb_shift = 1)
 
 # `diag` is fit$diagnostics$marginals; `vbd` is fit$diagnostics$vb (NULL when
 # vb = FALSE). Returns the bullets of the warning, or none, as cli templates
-# with the environment that fills them in attribute "envir".
+# with the environment that fills them in attribute "envir". The templates
+# are filled in only when the warning is raised, so every value they show
+# needs a variable of its own.
 diagnostic_problems <- function(diag, vbd) {
   rn <- rownames(diag)
   out <- character()
@@ -28,12 +30,12 @@ diagnostic_problems <- function(diag, vbd) {
   nmad <- diag$nmad
   bad <- !is.na(nmad) & nmad > warn_levels$nmad
   if (any(bad)) {
-    worst <- signif(max(nmad[bad]), 2)
+    worst_nmad <- signif(max(nmad[bad]), 2)
     poor <- rn[bad]
     out <- c(
       out,
       x = paste0(
-        "Poor skew-normal fit for {.field {poor}}: largest NMAD {worst}, ",
+        "Poor skew-normal fit for {.field {poor}}: largest NMAD {worst_nmad}, ",
         "above ",
         warn_levels$nmad,
         "."
@@ -43,12 +45,12 @@ diagnostic_problems <- function(diag, vbd) {
   sem <- diag$scan_end_mass
   bad <- !is.na(sem) & sem > warn_levels$scan_end_mass
   if (any(bad)) {
-    worst <- signif(max(sem[bad]), 2)
+    worst_sem <- signif(max(sem[bad]), 2)
     beyond <- rn[bad]
     out <- c(
       out,
       x = paste0(
-        "The skew-normal for {.field {beyond}} puts up to {worst} of its ",
+        "The skew-normal for {.field {beyond}} puts up to {worst_sem} of its ",
         "mass beyond the scanned window (above ",
         warn_levels$scan_end_mass,
         "), so its outer quantiles are extrapolated."
@@ -66,13 +68,13 @@ diagnostic_problems <- function(diag, vbd) {
         )
       )
     } else if (any(shift > warn_levels$vb_shift)) {
-      worst <- signif(max(shift), 2)
+      worst_shift <- signif(max(shift), 2)
       moved <- rn[shift > warn_levels$vb_shift]
       out <- c(
         out,
         x = paste0(
           "The VB correction moved the mean of {.field {moved}} by up to ",
-          "{worst} posterior SDs from the mode: the posterior is far from ",
+          "{worst_shift} posterior SDs from the mode: the posterior is far from ",
           "the Laplace Gaussian."
         )
       )
