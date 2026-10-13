@@ -47,3 +47,6 @@
   instead of the run time, which `summary()` still reports. It ends with a
   line when the fit raised warnings and one when `summary()` flags any check,
   so a fit run with `silent = TRUE` does not look clean when it is not.
+* `summary()` reports the 2.5%, 50% and 97.5% quantiles by default, as
+  R-INLA does, instead of adding the quartiles, so its table fits in 80
+  columns and matches `print()`. Pass `probs` for others.
