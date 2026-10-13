@@ -354,19 +354,23 @@ The correlations agree closely with maximum likelihood. The disturbance
 variance of `dem65` is small and poorly determined, with a long right tail on
 this scale.
 
-### Pointwise log-likelihoods
+### Leave-one-out cross-validation
 
 `obj$report()` evaluates the template at any parameter value without
-recording derivatives, and returns the 75 pointwise log-likelihoods. At
-posterior draws they give a matrix of the shape that leave-one-out
-cross-validation and WAIC take:
+recording derivatives, and returns the 75 pointwise log-likelihoods: the
+`loglik` that `loo()` needs. It leaves out one country at a time, from this
+one fit:
 
 ```{r}
-#| label: pointwise
-draws <- sampling(fit, nsamp = 1000)
-loglik_draws <- t(apply(draws, 1, function(theta) obj$report(theta)$loglik))
-dim(loglik_draws)
+#| label: loo
+loo_sem <- loo(fit, function(theta) obj$report(theta)$loglik)
+loo_sem
 ```
+
+With 39 parameters this takes $39^2 + 39 + 1 = 1{,}561$ evaluations of the
+template, each giving all 75 terms. See
+[Model comparison with LOO and WAIC](model-comparison.html) for what the
+numbers mean and how to compare models with them.
 
 ## References
 
