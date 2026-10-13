@@ -2,8 +2,9 @@
 #'
 #' @description
 #' Approximates the posterior of a parameter vector from its log density
-#' alone, using the approximation pipeline of INLAvaan with no latent field
-#' and nothing model-specific. The pipeline has four stages:
+#' alone, using the approximation pipeline of INLAvaan (Jamil & Rue, 2026a,
+#' 2026b) with no latent field and nothing model-specific. The pipeline has
+#' four stages:
 #'
 #' 1. **Joint Gaussian (Laplace).** The posterior mode \eqn{\vartheta^*} and
 #'    the inverse Hessian \eqn{\Omega} there give a Gaussian approximation
@@ -80,10 +81,12 @@
 #' the other 37 were within 7% in SD. On the variance scale, where the tail
 #' near zero is compressed, the two were much closer: means 0.2 posterior SDs
 #' too high and SDs 10 to 15% too small. INLAvaan's marginals of this model
-#' are the same as inlavanilla's. The `bend` diagnostic of
-#' [summary.inla_vanilla()] flagged both, but its size does not say how far
-#' off a marginal is, and the `tails` check, which looks only 4 Laplace SDs
-#' out, missed them.
+#' are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
+#' the same miss in the lower tail of a variance near zero, the boundary
+#' pile-up that a unimodal skew-normal cannot capture. The `bend` diagnostic
+#' of [summary.inla_vanilla()] flagged both, but its size does not say how
+#' far off a marginal is, and the `tails` check, which looks only 4 posterior
+#' SDs either side of the mode (the Laplace SDs), missed them.
 #'
 #' @section Gradients:
 #' `grad` is optional. Without it, derivatives come from finite differences
@@ -125,8 +128,10 @@
 #' second, or than the option `cli.progress_show_after` when it is set. In
 #' knitr or Quarto documents, where a bar cannot redraw in place, a larger
 #' `cli.progress_show_after` in the setup chunk keeps bars out of the output.
-#' Warnings, such as a mode that was not reached or a gradient that does not
-#' match `logpost`, are signalled as usual.
+#' Warnings, such as a gradient that does not match `logpost`, are signalled
+#' as usual. A fit whose checks look off, such as a mode that was not
+#' reached, ends with one warning that lists them, as INLAvaan's does (see
+#' [summary.inla_vanilla()] and [diagnostics()]).
 #'
 #' `verbose = TRUE` adds a full diagnostic of the fit, in grey lines under
 #' each stage. It reports what the fit computes anyway, with no further calls
@@ -136,17 +141,20 @@
 #'   discrepancy from finite differences there.
 #' * The mode: the message, iterations and evaluations of [stats::nlminb()],
 #'   and whether it was restarted with the parameters rescaled; the
-#'   log-posterior and the whitened gradient at the mode; how the Hessian was
-#'   taken (and, for a supplied `grad`, the asymmetry of its Jacobian); the
-#'   largest posterior correlation and the smallest eigenvalue of the
-#'   correlation matrix, which is near zero when some combination of the
-#'   parameters is poorly identified; and the Laplace log marginal likelihood.
+#'   log-posterior at the mode, the whitened gradient there (which decides
+#'   the restart) and the largest Newton step in posterior SDs (which the
+#'   fit-time warning checks); how the Hessian was taken (and, for a
+#'   supplied `grad`, the asymmetry of its Jacobian); the largest posterior
+#'   correlation and the smallest eigenvalue of the correlation matrix, which
+#'   is near zero when some combination of the parameters is poorly
+#'   identified, and the condition number of the Hessian in posterior-SD
+#'   units; and the Laplace log marginal likelihood.
 #' * The VB correction: the largest step, in posterior SDs, at each
 #'   fixed-point iteration, whether Anderson acceleration or the fallback
 #'   optimiser was used, the largest shift, and the term it adds to the log
 #'   marginal likelihood.
-#' * The marginals: the shape, NMAD, bend, tails and volume correction
-#'   `gamma1` of each parameter, with the values that
+#' * The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
+#'   correction `gamma1` of each parameter, with the values that
 #'   [summary.inla_vanilla()] flags marked.
 #' * The calls of `logpost` and `grad` in each stage, and in all, with the
 #'   total time.
@@ -196,15 +204,34 @@
 #' @param control A list of tuning parameters; see the section on control.
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
-#'   [summary()], [plot()] and [sampling()]. It is a list holding, among
-#'   other things:
+#'   [summary()], [plot()], [sampling()] and [diagnostics()]. It is a list
+#'   holding, among other things:
 #'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
 #'   * `mode`, `cov`: the Laplace mode and covariance.
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
 #'   * `vb`, `marginals`, `verbose`, `silent`: the settings the fit used.
-#'   * `logml`: the log marginal likelihood.
+#'   * `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
+#'     part.
+#'   * `diagnostics`: the checks of each stage, which [diagnostics()]
+#'     returns under INLAvaan's names and [summary.inla_vanilla()] explains.
+#'     `optim` holds the return code, message and iterations of
+#'     [stats::nlminb()], the gradient of minus the log-posterior at the mode
+#'     (`grad`), the whitened gradient there (`grad_mode`), and the condition
+#'     number of the Hessian in posterior-SD units (`hess_cond`). `vb` holds
+#'     the iterations of the VB correction, whether it fell back to
+#'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
+#'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
+#'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
+#'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `scan_end_mass`,
+#'     `sn_vs_vb`, `gamma1`, `tails` and `bend`, with `NA` for the checks the
+#'     fit did not run.
+#'   * `scan`: the scans the skew-normals were fitted to, for
+#'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
+#'     mode, the log-posterior at each point (`logpost`, a column per
+#'     parameter), and the log scale factor `logC` of each fit on that grid.
+#'     It is `NULL` for Gaussian marginals.
 #'   * `warnings`: the messages of the warnings raised during the fit, as a
 #'     character vector of plain text, each message once (empty when there
 #'     were none). They are recorded whether or not `silent` is `TRUE`.
@@ -220,7 +247,7 @@
 #' \[stat.CO\]). arXiv. <https://doi.org/10.48550/arXiv.2604.00671>
 #'
 #' @seealso [sampling()] for posterior draws and derived quantities,
-#'   [summary.inla_vanilla()] for diagnostics.
+#'   [summary.inla_vanilla()] and [diagnostics()] for diagnostics.
 #'
 #' @examples
 #' # Normal data with unknown mean and standard deviation, on the scale
@@ -444,26 +471,13 @@ vanilla_fit <- function(
       "i" = "A wrong gradient gives a wrong mode and wrong marginals."
     ))
   }
-  # The whitened gradient at the mode (how far, in posterior SDs, a Newton
-  # step would still move it), not nlminb()'s return code, decides whether to
-  # warn: without a gradient nlminb() can report "false convergence" at an
-  # accurate mode, and it can report success short of one.
-  grad_mode <- lap$grad_mode
-  mode_ok <- is.finite(grad_mode) && grad_mode <= 1e-2
-  if (!mode_ok) {
-    hint <- if (grepl("limit", lap$opt$message)) {
-      "Raise {.code iter.max} or {.code eval.max} in {.code control$nlminb}."
-    } else {
-      "Try other starting values, or supply {.arg grad}."
-    }
-    warn(c(
-      "The posterior mode may be inaccurate.",
-      "x" = "The gradient there is {signif(grad_mode, 2)} posterior SDs
-             (whitened); it should be close to zero.",
-      "i" = "{.fn nlminb} says: {.val {lap$opt$message}}.",
-      "i" = hint
-    ))
-  }
+  # INLAvaan's Newton step at the mode, in posterior SDs, decides whether the
+  # mode is marked here and reported in the fit-time warning, not nlminb()'s
+  # return code: without a gradient nlminb() can report "false convergence"
+  # at an accurate mode, and it can report success short of one.
+  mode_shift_max <- max(lap$mode_shift)
+  mode_ok <- is.finite(mode_shift_max) &&
+    mode_shift_max <= warn_levels$mode_shift
   t_laplace <- elapsed() - t0
   progress_done(
     prog,
@@ -476,8 +490,8 @@ vanilla_fit <- function(
       )
     } else {
       paste0(
-        "Stopped near the posterior mode (gradient ",
-        hl(paste0(format(signif(grad_mode, 2)), sd_unit())),
+        "Stopped near the posterior mode (Newton step ",
+        hl(with_sd(mode_shift_max)),
         ")"
       )
     },
@@ -514,6 +528,8 @@ vanilla_fit <- function(
       "applying the VB mean correction",
       vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
     )
+    # The fallback is a route of the solver, reported but not marked, as in
+    # INLAvaan
     vb_max <- max(abs(vbc$shift) / sds)
     progress_done(
       prog,
@@ -523,7 +539,7 @@ vanilla_fit <- function(
         if (vbc$fallback) " (fallback optimiser)" else ""
       ),
       elapsed() - t0,
-      ok = !vbc$fallback && vb_max <= 1
+      ok = is.finite(vb_max) && vb_max <= warn_levels$vb_shift
     )
     if (prog$detail) {
       report_vb(prog, vbc, sds, lap$logml, calls_since())
@@ -541,10 +557,16 @@ vanilla_fit <- function(
   t0 <- elapsed()
   if (marginals == "skewnormal") {
     progress_start(prog, "Fitting skew-normal marginals", total = m)
-    sn <- with_context(
+    mar <- with_context(
       "fitting the skew-normal marginals",
       fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
     )
+    sn <- cbind(
+      mar$sn,
+      scan_end_mass = scan_end_mass(mar$sn, lap$mode, sds)
+    )
+    # The scans, kept for plot(type = "sn_fit"): no further calls
+    scan <- list(z = mar$z, logpost = mar$logpost, logC = sn[, "logC"])
     progress_done(
       prog,
       paste0(
@@ -567,9 +589,12 @@ vanilla_fit <- function(
       gamma1 = na,
       nmad = na,
       tails = na,
-      bend = na
+      bend = na,
+      logC = na,
+      scan_end_mass = na
     )
     rownames(sn) <- parnames
+    scan <- NULL
     progress_info(
       prog,
       "Gaussian marginals (marginals = \"gaussian\"): no scans"
@@ -577,47 +602,58 @@ vanilla_fit <- function(
   }
   t_marginals <- elapsed() - t0
 
-  logml <- lap$logml + if (vb) vbc$kld else 0
+  logml <- lap$logml + if (vb) vbc$kld_global else 0
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
 
+  # The diagnostics, in the names and order of INLAvaan's diagnostics() where
+  # it has the quantity. Checks that did not run are NA: the VB columns with
+  # vb = FALSE, the scan columns with Gaussian marginals.
+  skew <- marginals == "skewnormal"
+  na <- rep(NA_real_, m)
   diagnostics <- list(
     optim = list(
       convergence = lap$opt$convergence,
       message = lap$opt$message,
       iterations = lap$opt$iterations,
-      grad_mode = grad_mode
+      # INLAvaan's sign: the gradient of nlminb()'s objective, -logpost
+      grad = -lap$grad,
+      grad_mode = lap$grad_mode,
+      hess_cond = lap$hess_cond
     ),
     vb = if (vb) {
       list(
         iterations = vbc$iterations,
         fallback = vbc$fallback,
-        kld = vbc$kld
+        kld_global = vbc$kld_global
       )
     },
     marginals = data.frame(
-      vb_shift = shift / sds,
-      sn_vs_vb = if (marginals == "skewnormal") {
-        (mom$mean - mean_vb) / sds
-      } else {
-        NA_real_
-      },
-      alpha = if (marginals == "skewnormal") sn[, "alpha"] else NA_real_,
-      gamma1 = sn[, "gamma1"],
+      mode_shift_sigma = lap$mode_shift,
+      kld = if (vb) 0.5 * (shift / sds)^2 else na,
+      vb_shift = if (vb) shift else na,
+      vb_shift_sigma = if (vb) shift / sds else na,
       nmad = sn[, "nmad"],
+      alpha = if (skew) sn[, "alpha"] else na,
+      scan_end_mass = sn[, "scan_end_mass"],
+      sn_vs_vb = if (vb && skew) (mom$mean - mean_vb) / sds else na,
+      gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
       bend = sn[, "bend"],
-      scan_end_mass = if (marginals == "skewnormal") {
-        scan_end_mass(sn, lap$mode, sds)
-      } else {
-        NA_real_
-      },
       row.names = parnames
     )
   )
 
-  # One warning for every marginal that is clearly off, before the fit is
-  # built so that fit$warnings records it
-  warn_diagnostics(diagnostics$marginals, diagnostics$vb)
+  # One warning for every check that looks off, before the fit is built so
+  # that fit$warnings records it
+  warn_diagnostics(
+    diagnostics_internal(
+      diagnostics$optim,
+      diagnostics$vb,
+      diagnostics$marginals,
+      pars = mean_vb
+    ),
+    gaussian = !skew
+  )
 
   t_total <- elapsed() - t_start
   if (prog$detail) {
@@ -631,6 +667,7 @@ vanilla_fit <- function(
     logml = logml,
     logml_laplace = lap$logml,
     diagnostics = diagnostics,
+    scan = scan,
     counts = c(logpost = n_lp, grad = n_gr),
     timing = c(
       laplace = t_laplace,
@@ -656,6 +693,7 @@ new_inla_vanilla <- function(
   logml,
   logml_laplace,
   diagnostics,
+  scan,
   counts,
   timing,
   vb,
@@ -676,6 +714,7 @@ new_inla_vanilla <- function(
       logml = logml,
       logml_laplace = logml_laplace,
       diagnostics = diagnostics,
+      scan = scan,
       counts = counts,
       timing = timing,
       vb = vb,

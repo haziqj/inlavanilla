@@ -221,6 +221,9 @@ report_mode <- function(p, lap, calls) {
       )
     )
   }
+  # The whitened gradient decides the restart, and the Newton step (INLAvaan's
+  # mode shift, in posterior SDs) the warning
+  msm <- max(lap$mode_shift)
   lines <- c(
     lines,
     paste0(
@@ -228,10 +231,16 @@ report_mode <- function(p, lap, calls) {
         "logpost at the mode ",
         format_value(lap$lp_max),
         ", whitened gradient ",
-        with_sd(lap$grad_mode)
+        with_sd(lap$grad_mode),
+        ", Newton step ",
+        with_sd(msm)
       ),
-      if (!(lap$grad_mode <= 1e-2)) flag() else "",
-      grey(" (warning above ", with_sd(0.01), ")")
+      if (any(off_level(lap$mode_shift, warn_levels$mode_shift))) {
+        flag()
+      } else {
+        ""
+      },
+      grey(" (warning above ", with_sd(warn_levels$mode_shift), ")")
     )
   )
   hs <- lap$hessian
@@ -263,7 +272,9 @@ report_mode <- function(p, lap, calls) {
     }
   )
   # The smallest eigenvalue of the correlation matrix is near 0 when some
-  # combination of the parameters is poorly identified
+  # combination of the parameters is poorly identified; the ratio of the
+  # largest to it is the condition number of the Hessian in posterior-SD
+  # units, which the fit-time warning checks
   if (length(lap$mode) > 1L) {
     rho <- stats::cov2cor(lap$Sigma)
     upper <- which(upper.tri(rho), arr.ind = TRUE)
@@ -286,6 +297,15 @@ report_mode <- function(p, lap, calls) {
         } else {
           ""
         }
+      ),
+      paste0(
+        grey("Hessian condition number ", fmt_num(lap$hess_cond)),
+        if (off_level(lap$hess_cond, warn_levels$hess_cond)) flag() else "",
+        grey(
+          ", in posterior-SD units (warning above ",
+          fmt_num(warn_levels$hess_cond),
+          ")"
+        )
       )
     )
   }
@@ -318,16 +338,13 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   lines <- c(
     lines,
     if (vbc$fallback) {
-      paste0(
-        flag(),
-        grey(
-          " Fell back to nlminb, as ",
-          h$reason,
-          ": ",
-          h$nlminb,
-          ", after ",
-          plural(vbc$iterations, "iteration")
-        )
+      grey(
+        "Fell back to nlminb, as ",
+        h$reason,
+        ": ",
+        h$nlminb,
+        ", after ",
+        plural(vbc$iterations, "iteration")
       )
     } else {
       grey(
@@ -346,17 +363,22 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   j <- which.max(abs(shift_sd))
   lines <- c(
     lines,
-    grey(
-      "Largest shift ",
-      with_sd(shift_sd[[j]]),
-      ", for ",
-      names(vbc$shift)[j]
+    paste0(
+      grey("Largest shift ", with_sd(shift_sd[[j]])),
+      if (off_level(abs(shift_sd[[j]]), warn_levels$vb_shift)) flag() else "",
+      grey(
+        ", for ",
+        names(vbc$shift)[j],
+        " (warning above ",
+        with_sd(warn_levels$vb_shift),
+        ")"
+      )
     ),
     grey(
       "KL term ",
-      fmt_num(vbc$kld),
+      fmt_num(vbc$kld_global),
       ", giving a log marginal likelihood of ",
-      format_value(logml_laplace + vbc$kld)
+      format_value(logml_laplace + vbc$kld_global)
     ),
     grey(format_calls(calls[[1]], calls[[2]]))
   )
@@ -364,7 +386,7 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
 }
 
 # The skew-normal marginals: one aligned line per parameter, with the values
-# that summary() flags marked.
+# that summary() flags marked, at its levels.
 report_marginals <- function(p, sn, calls) {
   rn <- rownames(sn)
   cols <- list(
@@ -372,14 +394,16 @@ report_marginals <- function(p, sn, calls) {
     NMAD = formatC(sn[, "nmad"], digits = 2, format = "g"),
     Bend = formatC(sn[, "bend"], digits = 2, format = "g"),
     Tails = ifelse(sn[, "tails"] == 1, "ok", "heavy"),
+    `End mass` = formatC(sn[, "scan_end_mass"], digits = 2, format = "g"),
     gamma1 = formatC(sn[, "gamma1"], digits = 2, format = "g")
   )
   none <- logical(length(rn))
   flags <- list(
     Shape = none,
-    NMAD = sn[, "nmad"] > 0.05,
-    Bend = sn[, "bend"] > 0.1,
-    Tails = sn[, "tails"] != 1,
+    NMAD = off_level(sn[, "nmad"], warn_levels$nmad),
+    Bend = off_level(sn[, "bend"], summary_levels$bend),
+    Tails = !sn[, "tails"] %in% 1,
+    `End mass` = off_level(sn[, "scan_end_mass"], warn_levels$scan_end_mass),
     gamma1 = none
   )
   rw <- max(nchar(rn))
@@ -427,8 +451,12 @@ report_marginals <- function(p, sn, calls) {
       paste0(
         flag(),
         grey(
-          " marks what summary() flags: NMAD above 0.05, bend above 0.1, ",
-          "heavy tails"
+          " marks what summary() flags: NMAD above ",
+          warn_levels$nmad,
+          ", bend above ",
+          summary_levels$bend,
+          ", heavy tails, scan-end mass above ",
+          warn_levels$scan_end_mass
         )
       ),
       grey(format_calls(calls[[1]], calls[[2]]))

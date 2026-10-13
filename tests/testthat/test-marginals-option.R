@@ -38,7 +38,11 @@ scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
-  x <- gsub("gradient [-+0-9.e]+ SDs", "gradient <g> SDs", x)
+  x <- gsub(
+    "Newton step [-+0-9.e]+ posterior SDs",
+    "Newton step <g> posterior SDs",
+    x
+  )
   x
 }
 
@@ -253,12 +257,22 @@ test_that("print() and summary() describe Gaussian marginals", {
   # No skew-normal diagnostics or warnings: the bend that the skew-normal fit
   # of this model flags is not computed
   out <- capture_output(print(summary(fit_g_vb)))
-  expect_no_match(out, "Shape|NMAD|Bend|SN - VB|straight scan")
+  expect_no_match(out, "Shape|NMAD|Bend|End mass|SN - VB|straight scan")
   expect_match(out, "VB shift")
   out <- capture_output(print(summary(fit_g)))
   expect_no_match(out, "VB shift")
   expect_true(all(is.na(summary(fit_g)$diagnostics$nmad)))
   expect_true(all(is.na(summary(fit_g)$diagnostics$scan_end_mass)))
+
+  # Nor any scans to plot
+  expect_null(fit_g$scan)
+  for (type in c("sn_fit", "sn_fit_log")) {
+    expect_error(
+      plot(fit_g_vb, type = type),
+      "no scans to plot: the marginals are Gaussian",
+      class = "inlavanilla_error"
+    )
+  }
 })
 
 test_that("plot() labels the curves by the marginals", {

@@ -174,6 +174,6 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     # Joint KL divergence between the Laplace Gaussian and its shifted copy,
     # 0.5 shift' H shift. It is the location term the Laplace estimate of the
     # marginal likelihood misses, and is added to it.
-    kld = 0.5 * sum((R %*% shift)^2)
+    kld_global = 0.5 * sum((R %*% shift)^2)
   )
 }
