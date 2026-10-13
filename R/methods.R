@@ -11,7 +11,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
       m,
       if (m == 1L) " parameter" else " parameters",
       sep_dot(),
-      "skew-normal marginals",
+      if (is_gaussian(x)) "Gaussian marginals" else "skew-normal marginals",
       if (isTRUE(x$vb)) paste0(sep_dot(), "VB-corrected") else ""
     )
   )
@@ -62,6 +62,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   parameter, and either approximation may be off.
 #'
 #' With `vb = FALSE` there is no VB mean, and the VB columns are left out.
+#' With `marginals = "gaussian"` there are no scans, so only the VB shift is
+#' reported.
 #'
 #' @param object An object of class `inla_vanilla`.
 #' @param probs Probabilities for the reported quantiles.
@@ -98,6 +100,7 @@ summary.inla_vanilla <- function(
       vb = object$diagnostics$vb,
       counts = object$counts,
       timing = object$timing,
+      marginals = object$marginals,
       has_grad = object$has_grad
     ),
     class = "summary.inla_vanilla"
@@ -117,16 +120,17 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 
   cli::cat_line(cli::style_bold("Diagnostics"))
   diag <- x$diagnostics
+  gaussian <- is_gaussian(x)
   cols <- c("vb_shift", "sn_vs_vb", "alpha", "nmad", "bend")
   heads <- c("VB shift", "SN - VB", "Shape", "NMAD", "Bend")
-  if (is.null(x$vb)) {
-    cols <- cols[3:5]
-    heads <- heads[3:5]
+  keep <- (!is.null(x$vb) | c(FALSE, FALSE, TRUE, TRUE, TRUE)) &
+    (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE))
+  if (any(keep)) {
+    dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
+    colnames(dtab) <- heads[keep]
+    cat_table(dtab, digits = 2, by_cell = TRUE)
+    cli::cat_line()
   }
-  dtab <- as.matrix(diag[, cols, drop = FALSE])
-  colnames(dtab) <- heads
-  cat_table(dtab, digits = 2, by_cell = TRUE)
-  cli::cat_line()
 
   opt <- x$optim
   if (opt$grad_mode < 1e-2) {
@@ -152,13 +156,19 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status("info", "No VB correction (vb = FALSE).")
   }
 
-  if (!all(diag$tails)) {
+  if (gaussian) {
+    cat_status(
+      "info",
+      "Gaussian marginals: no scans, so no skew-normal checks."
+    )
+  }
+  if (!gaussian && !all(diag$tails)) {
     cat_status(
       "warn",
       "Heavy tails for {.field {rownames(diag)[!diag$tails]}}: the density is still over 5% of its peak 4 Laplace SDs out, and the skew-normal extrapolates beyond."
     )
   }
-  bent <- diag$bend > 0.1
+  bent <- !gaussian & diag$bend > 0.1
   if (any(bent)) {
     cat_status(
       "warn",
@@ -167,7 +177,9 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   }
   max_nmad <- max(diag$nmad)
   max_gap <- max(abs(diag$sn_vs_vb))
-  if (max_nmad > 0.05) {
+  if (gaussian) {
+    # nothing was scanned or fitted
+  } else if (max_nmad > 0.05) {
     cat_status(
       "warn",
       "Skew-normal fit is poor for {.field {rownames(diag)[which.max(diag$nmad)]}} (NMAD {fmt_num(max_nmad)})."
@@ -175,7 +187,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   } else {
     cat_status("ok", "Skew-normal fits: max NMAD {fmt_num(max_nmad)}.")
   }
-  if (!is.null(x$vb)) {
+  if (!is.null(x$vb) && !gaussian) {
     if (max_gap > 0.1) {
       cat_status(
         "warn",
@@ -228,14 +240,17 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 
 #' Plot the posterior marginals of an INLAvanilla fit
 #'
-#' Draws the skew-normal marginal density of each parameter, on the
-#' unconstrained scale, with the Gaussian marginal of the Laplace approximation
-#' for comparison. The vertical line marks the posterior mean.
+#' Draws the marginal density of each parameter, on the unconstrained scale,
+#' with the Gaussian marginal of the Laplace approximation for comparison. The
+#' vertical line marks the posterior mean. For a fit with
+#' `marginals = "gaussian"` the marginals are Gaussian: centred at the VB mean,
+#' or, with `vb = FALSE`, the Laplace marginals themselves, drawn without a
+#' second copy.
 #'
 #' @param x An object of class `inla_vanilla`.
 #' @param pars Parameters to plot, by name or position. Defaults to all.
 #' @param laplace Logical. Overlay the Laplace (Gaussian) marginals? Default
-#'   `TRUE`.
+#'   `TRUE`; ignored when the marginals are the Laplace ones.
 #' @param ... Further graphical parameters passed to [graphics::plot()] for
 #'   each panel, such as `xlab` or `main`; they replace the defaults (the
 #'   parameter name as the title, no axis labels, no y axis).
@@ -264,6 +279,15 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
 
   col_sn <- "#C2410C"
   col_lap <- "#0F766E"
+  label <- if (!is_gaussian(x)) {
+    "Skew-normal"
+  } else if (isTRUE(x$vb)) {
+    "VB Gaussian"
+  } else {
+    # The marginals are the Laplace ones: nothing to overlay
+    laplace <- FALSE
+    "Laplace"
+  }
   k <- length(idx)
   # Setting `mfrow` resets `cex`, and so does restoring it: keep the caller's
   old_cex <- graphics::par("cex")
@@ -335,7 +359,7 @@ plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
     graphics::plot.new()
     graphics::legend(
       "top",
-      legend = c("Skew-normal", "Laplace"),
+      legend = c(label, "Laplace"),
       col = c(col_sn, col_lap),
       lty = c(1, 2),
       lwd = c(2, 1.5),
@@ -398,6 +422,10 @@ cat_status <- function(type, msg, .envir = parent.frame()) {
 
 # Separator and the posterior-SD unit, in plain ASCII where the output cannot
 # show UTF-8.
+is_gaussian <- function(x) {
+  identical(x$marginals, "gaussian")
+}
+
 sep_dot <- function() {
   if (cli::is_utf8_output()) " \u00b7 " else ", "
 }

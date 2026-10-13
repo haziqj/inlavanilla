@@ -10,6 +10,7 @@ inla_vanilla(
   grad = NULL,
   ...,
   vb = TRUE,
+  marginals = c("skewnormal", "gaussian"),
   verbose = TRUE,
   control = list()
 )
@@ -30,13 +31,18 @@ differences are used.}
 
 \item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
 data. As in \code{\link[stats:optim]{stats::optim()}} and \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the
-gradient, and the arguments after them (\code{vb}, \code{verbose}, \code{control}) must
-be given by their full names, so data arguments cannot partially match
-them.}
+gradient, and the arguments after them (\code{vb}, \code{marginals}, \code{verbose},
+\code{control}) must be given by their full names, so data arguments cannot
+partially match them.}
 
 \item{vb}{Logical. Apply the VB mean correction? Default \code{TRUE}. It enters
 the log marginal likelihood, and the skew-normal means are checked against
 it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
+
+\item{marginals}{The marginal of each parameter: \code{"skewnormal"} (the
+default) fits a skew-normal to a scan of the log-posterior; \code{"gaussian"}
+uses the Gaussian marginal of the Laplace approximation, centred at the
+VB mean when \code{vb = TRUE}, with no scans.}
 
 \item{verbose}{Logical. Show progress? Default \code{TRUE}.}
 
@@ -51,7 +57,8 @@ other things:
 \item \code{mode}, \code{cov}: the Laplace mode and covariance.
 \item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = FALSE}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
-parameter.
+parameter (with \code{alpha = 0} for Gaussian marginals).
+\item \code{vb}, \code{marginals}: the settings the fit used.
 \item \code{logml}: the log marginal likelihood.
 }
 }
@@ -74,6 +81,16 @@ changing volume of the other parameters, and fitted by a skew-normal
 \item \strong{Gaussian copula draws.} \code{\link[=sampling]{sampling()}} couples the skew-normal marginals
 through the correlations of \eqn{\Omega}.
 }
+
+Stages 2 and 3 are optional and independent of each other. \code{vb = FALSE}
+skips the VB correction, which leaves the marginals unchanged (they are
+scanned around the mode) but gives the Laplace log marginal likelihood.
+\code{marginals = "gaussian"} skips the scans and uses the Gaussian's own
+marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at the VB mean
+(or at the mode when \code{vb = FALSE}); \code{\link[=sampling]{sampling()}} then draws from the joint
+Gaussian. So \verb{vb = FALSE, marginals = "gaussian"} is the Laplace
+approximation alone, and \code{marginals = "gaussian"} alone is the Laplace
+approximation with the VB correction.
 }
 \section{Writing \code{logpost}}{
 
@@ -132,7 +149,9 @@ beyond a handful of parameters: at m = 20 a fit makes on the order of
 50,000 calls. With \code{grad}, the VB correction takes 2m^2 + 1 gradient calls
 per sweep instead, and the fit is faster and more accurate. For more than
 about 10 parameters, supply \code{grad}, or set \code{vb = FALSE} to skip the VB
-correction (and its term in the log marginal likelihood).
+correction (and its term in the log marginal likelihood): the skew-normal
+marginals do not depend on it. \code{marginals = "gaussian"} saves the calls of
+the scans.
 
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either
