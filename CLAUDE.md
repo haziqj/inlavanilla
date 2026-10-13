@@ -65,6 +65,12 @@ The tests are described as "the main point of the package." They use closed-form
 - The license is GPL (>= 3).
 - `CONTRIBUTING.md` asks for a `NEWS.md` bullet for user-facing changes, but there is no `NEWS.md` yet.
 
+## Coding principles
+
+- **tidyverse style.** Follow the [tidyverse style guide](https://style.tidyverse.org). Format R code with Air and respect its `# fmt: skip` directives. Use descriptive `snake_case` names.
+- **tinyverse: no unnecessary dependencies.** Prefer base R. A new `Imports` entry must be justified by substantial functionality that would be unreasonable to replicate, and must not bring in long dependency chains.
+- **Works out of the box everywhere.** The package must install cleanly on macOS, Linux and Windows with no required system libraries. Optional system libraries (OpenMP, OpenBLAS) may be used for performance but must degrade gracefully. Never assume Homebrew or apt is available.
+
 ## Workflow conventions
 
-Make small, reviewable commits. Open a draft PR rather than pushing large changes to main. Follow the tidyverse style guide.
+Make small, reviewable commits. Open a draft PR rather than pushing large changes to main.
