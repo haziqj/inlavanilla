@@ -29,7 +29,7 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## CI
 
-- `R-CMD-check.yaml` runs on macOS, Windows, and Ubuntu with R devel, release and oldrel-1 through oldrel-4. Avoid base-R features that are too new for oldrel-4.
+- `R-CMD-check.yaml` runs on macOS, Windows and Ubuntu with R release only; the package is not on CRAN, so the matrix is kept minimal. CI no longer tests older R, so keep to base-R features available in R 4.1, the minimum in `DESCRIPTION`.
 - `test-coverage.yaml` runs covr and uploads to Codecov. The Codecov checks are informational only.
 - `pkgdown.yaml` builds the site and deploys it to `gh-pages` on pushes to main.
 
@@ -64,7 +64,7 @@ The stages run in order, one file each:
 Supporting files:
 
 - **Skew-normal utilities** (`R/skew-normal.R`, `R/qsnorm-fast.R`): ported from INLAvaan. The Apache-licensed `qsnorm_fast()` keeps its attribution header. All of them are internal.
-- **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout.
+- **Methods** (`R/methods.R`): `print()` and `summary()` print via `cli::cat_*` to stdout. Both rules name the approximation on the right with `method_label()` ("Skew-normal + VB", "Skew-normal", "Laplace + VB", "Laplace"); the run time is shown only by `summary()`. `print()` ends with a line for the fit's warnings and one counting the checks `summary()` flags, both only when there are any; `check_flags()` holds the flag levels for both methods.
 - **LOO and WAIC** (`R/loo.R`): `loo(fit, loglik, ...)` and `waic()`, the deterministic second-order Taylor method of Alhyari, Jamil, Montcho and Rue (2026, arXiv:2609.00670), as in INLAvaan: no refits and no draws.
   - `loglik(theta, ...)` returns one log-likelihood term per unit; `logpost` is their sum plus the log-prior, and the fit never sees `loglik`.
   - `taylor_pointwise()` takes each unit's score and Hessian by central differences in the whitened coordinates of N(mean_vb, Σ), 0.01 SD apart: m² + m + 1 calls of `loglik`. If any unit's leverage k (an eigenvalue of −ΣH_u) reaches 1, every unit falls back to first order, with a warning; there is no mixing of orders.
@@ -76,7 +76,7 @@ Supporting files:
   - `silent = TRUE`: nothing is printed, and the handlers in `inla_vanilla()` muffle every warning and message raised during the fit. `verbose = TRUE, silent = TRUE` is an error.
   - Whatever the level, the handler records each distinct warning in `prog$warnings`, which becomes `fit$warnings`, as plain text: `warn()` attaches its message unwrapped and uncoloured as `text`. The fit also stores `verbose` and `silent`.
 - **Errors and warnings**: raise them with `abort()` and `warn()` (`R/utils.R`), which format with cli and signal with base R, giving the classes `inlavanilla_error` and `inlavanilla_warning`. Do not use `cli::cli_abort()` or `cli::cli_warn()`: they call rlang, which cli only suggests.
-- **Non-ASCII output**: user-visible non-ASCII characters (σ, ·) go through `sd_unit()` and `sep_dot()`, which fall back to ASCII. R source files must stay ASCII.
+- **Non-ASCII output**: user-visible non-ASCII characters (σ) go through `sd_unit()`, which falls back to ASCII. R source files must stay ASCII.
 
 Out of scope for v0.1: factor scores, PPP and DIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Sobol or Gauss–Hermite VB, parallel cores). Do not add alternative methods; there is one method per stage.
 

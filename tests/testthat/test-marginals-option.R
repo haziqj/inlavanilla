@@ -36,7 +36,6 @@ fit_g <- inla_vanilla(
 
 scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
-  x <- gsub("-+ <time> --", "-- <time> --", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
   x <- gsub("gradient [-+0-9.e]+ SDs", "gradient <g> SDs", x)
@@ -239,13 +238,13 @@ test_that("the stage lines have no skew-normal line", {
 
 test_that("print() and summary() describe Gaussian marginals", {
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
+  # Gaussian marginals are the Laplace approximation's
   out <- capture_output(print(fit_g_vb))
-  expect_match(out, "Gaussian marginals")
-  expect_match(out, "VB-corrected")
-  expect_no_match(out, "skew-normal")
+  expect_match(out, "-- INLAvanilla -+ Laplace \\+ VB --")
+  expect_no_match(out, "Skew-normal")
   out <- capture_output(print(fit_g))
-  expect_match(out, "Gaussian marginals")
-  expect_no_match(out, "VB-corrected")
+  expect_match(out, "-- INLAvanilla -+ Laplace --")
+  expect_match(capture_output(print(summary(fit_g))), "-- Laplace --")
 
   expect_snapshot(print(fit_g_vb), transform = scrub_output)
   expect_snapshot(print(summary(fit_g_vb)), transform = scrub_output)

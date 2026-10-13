@@ -11,8 +11,7 @@
     Code
       print(fit_g_vb)
     Output
-      -- INLAvanilla -- <time> --
-      2 parameters, Gaussian marginals, VB-corrected
+      -- INLAvanilla ------------------------------------------------- Laplace + VB --
       
                   Mean     SD   2.5%    50%  97.5%   Mode
       intercept  0.582  0.276  0.041  0.582  1.124  0.582
@@ -25,7 +24,7 @@
     Code
       print(summary(fit_g_vb))
     Output
-      -- INLAvanilla summary ---------------------------------------------------------
+      -- INLAvanilla summary ----------------------------------------- Laplace + VB --
       
       Posterior marginals
                   Mean     SD   2.5%    25%    50%    75%  97.5%   Mode
@@ -49,7 +48,7 @@
     Code
       print(summary(fit_g))
     Output
-      -- INLAvanilla summary ---------------------------------------------------------
+      -- INLAvanilla summary ---------------------------------------------- Laplace --
       
       Posterior marginals
                   Mean     SD   2.5%    25%    50%    75%  97.5%   Mode

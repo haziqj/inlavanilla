@@ -69,8 +69,10 @@ Some problems also raise one warning at the end of the fit, of class
 scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
 levels match INLAvaan's fit-time warning; the flags here are more
 sensitive. With \code{silent = TRUE} the warning is only recorded in
-\code{fit$warnings}. \code{vignette("diagnostics", package = "inlavanilla")}
-explains every check with examples.
+\code{fit$warnings}. Printing the fit ends with a line for its warnings and one
+counting the checks flagged here, each shown only when there are any.
+\code{vignette("diagnostics", package = "inlavanilla")} explains every check
+with examples.
 
 With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
 With \code{marginals = "gaussian"} there are no scans, so only the VB shift is

@@ -31,7 +31,9 @@ $\pm 4$ Laplace SDs around the mode, so whatever lies beyond is extrapolated.
 Each stage is checked as it runs, at almost no cost: the checks reuse what the
 fit has already computed. `summary()` reports every check and flags the
 values that look off. The clearest problems also raise one warning at the end
-of the fit.
+of the fit. Printing the fit ends with a line counting its warnings and one
+counting the flagged checks, each shown only when there are any, so even a
+fit run with `silent = TRUE` shows that something needs a look.
 
 | Check | In `fit$diagnostics` | Flagged by `summary()` | Fit-time warning |
 |---|---|---|---|

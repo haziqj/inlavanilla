@@ -10,10 +10,11 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 [![R-CMD-check](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/haziqj/inlavanilla/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/haziqj/inlavanilla/graph/badge.svg)](https://app.codecov.io/gh/haziqj/inlavanilla)
+[![Dependencies](https://img.shields.io/badge/dependencies-1%2F1-67ac09)](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
 <!-- [![CRAN status](https://www.r-pkg.org/badges/version/inlavanilla)](https://CRAN.R-project.org/package=inlavanilla) -->
 <!-- badges: end -->
 
-*INLA-style skew-normal marginals for any log-posterior.*
+> INLA-style skew-normal marginals for any log-posterior.
 
 If you can write down the log-likelihood plus the log-prior,
 `{inlavanilla}` gives you approximate Bayesian inference for the
@@ -60,9 +61,8 @@ the response rate $p$, the posterior is $\text{Beta}(4, 18)$: skewed,
 and bounded at zero.
 
 `inla_vanilla()` works on an unconstrained scale, so we write the
-log-posterior in terms of $\vartheta = \operatorname{logit} p$. The
-prior is stated for $p$, so it carries the Jacobian
-$dp / d\vartheta = p(1 - p)$:
+log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
+stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$:
 
 ``` r
 library(inlavanilla)
@@ -75,12 +75,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [27ms]
-#> ✔ VB mean correction, max shift 0.17σ [34ms]
-#> ✔ Fitted 1 skew-normal marginal [75ms]
+#> ✔ Found the posterior mode in 6 iterations [25ms]
+#> ✔ VB mean correction, max shift 0.17σ [27ms]
+#> ✔ Fitted 1 skew-normal marginal [60ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──
-#> 1 parameter · skew-normal marginals · VB-corrected
+#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
 #> logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494
