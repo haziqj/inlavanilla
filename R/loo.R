@@ -72,6 +72,12 @@
 #' in the result's `warnings`, and a fallback to first order shows in `order`
 #' and `first_order_units`.
 #'
+#' @section Other objects:
+#' For any other object, `loo()` and `waic()` call the loo package's
+#' functions of the same name, if it is installed, so attaching inlavanilla
+#' after loo (or a package that uses it, such as rstan or brms) does not get
+#' in their way.
+#'
 #' @section Comparing models:
 #' The results have the layout of the loo package's objects, so
 #' `loo::loo_compare()` compares fits to the same units. By hand, with `d`
@@ -140,6 +146,34 @@ loo <- function(object, ...) {
 #' @export
 waic <- function(object, ...) {
   UseMethod("waic")
+}
+
+#' @rdname loo
+#' @export
+loo.default <- function(object, ...) {
+  if (!requireNamespace("loo", quietly = TRUE)) {
+    abort(
+      c(
+        "There is no {.fn loo} method for {.obj_type_friendly {object}}.",
+        "i" = "Install the loo package for its {.fn loo} methods."
+      )
+    )
+  }
+  loo::loo(object, ...)
+}
+
+#' @rdname loo
+#' @export
+waic.default <- function(object, ...) {
+  if (!requireNamespace("loo", quietly = TRUE)) {
+    abort(
+      c(
+        "There is no {.fn waic} method for {.obj_type_friendly {object}}.",
+        "i" = "Install the loo package for its {.fn waic} methods."
+      )
+    )
+  }
+  loo::waic(object, ...)
 }
 
 #' @rdname loo
