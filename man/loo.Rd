@@ -136,8 +136,8 @@ waic(fit, loglik, x = x, y = y)
 }
 \references{
 Alhyari, M., Jamil, H., Montcho, H. and Rue, H. (2026). Deterministic
-leave-one-cluster-out cross-validation for multilevel Bayesian structural
-equation models. \doi{10.48550/arXiv.2609.00670}
+leave-one-cluster-out cross-validation for multilevel Bayesian models.
+arXiv:2609.00670 [stat.ME]. \doi{10.48550/arXiv.2609.00670}
 
 Vehtari, A., Gelman, A. and Gabry, J. (2017). Practical Bayesian model
 evaluation using leave-one-out cross-validation and WAIC. \emph{Statistics and
