@@ -1,11 +1,20 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>http://haziqj.ml/inlavanilla/404.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/CLAUDE.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/CODE_OF_CONDUCT.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/CONTRIBUTING.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/LICENSE.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/SUPPORT.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/articles/index.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/articles/inlavanilla.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/authors.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/index.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/news/index.html</loc></url>
 <url><loc>http://haziqj.ml/inlavanilla/reference/index.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/reference/inla_vanilla.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/reference/inlavanilla-package.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/reference/sampling.html</loc></url>
+<url><loc>http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.html</loc></url>
 </urlset>
 

@@ -1,11 +1,27 @@
 # inlavanilla
 
-The goal of inlavanilla is to …
+*INLA-style skew-normal marginals for any log-posterior.*
+
+Give [inlavanilla](http://haziqj.ml/inlavanilla/) a log-posterior and it
+returns an approximate posterior, in milliseconds for small models: no
+sampler, no tuning. It runs the approximation pipeline of
+[INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
+
+1.  a **Laplace approximation** at the posterior mode, with the Laplace
+    estimate of the log marginal likelihood;
+2.  a **VB mean correction** that recentres the Gaussian at a better
+    estimate of the posterior mean;
+3.  **skew-normal marginals**, one per parameter, fitted to scans of the
+    log-posterior;
+4.  **Gaussian copula draws** for any function of the parameters.
+
+The package is pure R and small. Its only dependency outside base R is
+[cli](https://cli.r-lib.org/).
 
 ## Installation
 
 You can install the development version of inlavanilla from
-[GitHub](https://github.com/) with:
+[GitHub](https://github.com/haziqj/inlavanilla) with:
 
 ``` r
 
@@ -15,35 +31,85 @@ pak::pak("haziqj/inlavanilla")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+A trial records 3 responders out of 20 patients. With a uniform prior on
+the response rate $`p`$, the posterior is $`\text{Beta}(4, 18)`$:
+skewed, and bounded at zero.
+
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+works on an unconstrained scale, so we write the log-posterior in terms
+of $`\vartheta = \operatorname{logit} p`$. The prior is stated for
+$`p`$, so it carries the Jacobian $`dp / d\vartheta = p(1 - p)`$:
 
 ``` r
 
 library(inlavanilla)
-## basic example code
+
+logpost <- function(theta, y, n) {
+  p <- plogis(theta[["logit_p"]])
+  dbinom(y, n, p, log = TRUE) +
+    dbeta(p, 1, 1, log = TRUE) + # prior on p ...
+    log(p) + log1p(-p) # ... and the Jacobian
+}
+
+fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
+#> ✔ Found the posterior mode in 6 iterations [29ms]
+#> ✔ VB mean correction, max shift 0.17σ [36ms]
+#> ✔ Fitted 1 skew-normal marginal [66ms]
+fit
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──
+#> 1 parameter · skew-normal marginals · VB-corrected
+#> 
+#>            Mean     SD    2.5%     50%   97.5%    Mode
+#> logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494
+#> 
+#> Log marginal likelihood: -3.05
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+The summary is on the logit scale.
+[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) draws
+from the approximate posterior, and its `fun` argument maps each draw
+back to $`p`$, or to any other quantity of interest:
 
 ``` r
 
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
+set.seed(1)
+p <- sampling(fit, nsamp = 1e5, fun = function(theta) plogis(theta[["logit_p"]]))
+rbind(
+  inlavanilla = quantile(p, c(0.025, 0.5, 0.975)),
+  exact = qbeta(c(0.025, 0.5, 0.975), 4, 18)
+)
+#>                   2.5%       50%     97.5%
+#> inlavanilla 0.05443460 0.1723549 0.3645844
+#> exact       0.05446357 0.1720895 0.3634240
 ```
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this.
+The approximation matches the exact posterior, skew included:
 
-You can also embed plots, for example:
+``` r
 
-![](reference/figures/README-pressure-1.png)
+hist(p, breaks = 80, freq = FALSE, border = NA, col = "#F5D0BE",
+     main = NULL, xlab = "Response rate p", ylab = NULL, yaxt = "n")
+curve(dbeta(x, 4, 18), add = TRUE, lwd = 2, col = "#C2410C")
+```
 
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+![Histogram of draws of p, skewed to the right, with the exact Beta(4,
+18) density overlaid and matching
+it.](reference/figures/README-density-1.png)
+
+`summary(fit)` adds diagnostics for each stage of the approximation, and
+`plot(fit)` draws the marginals. The [Get
+started](http://haziqj.ml/inlavanilla/articles/inlavanilla.md) vignette
+works through a multi-parameter example: it checks the approximation
+against the exact posterior, and covers gradients, derived quantities
+and model comparison.
+
+## References
+
+Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations.
+[arXiv:2603.25690](https://doi.org/10.48550/arXiv.2603.25690).
+
+Jamil, H. and Rue, H. (2026). Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling.
+[arXiv:2604.00671](https://doi.org/10.48550/arXiv.2604.00671).

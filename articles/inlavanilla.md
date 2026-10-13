@@ -1,0 +1,439 @@
+# Get started with inlavanilla
+
+## The idea
+
+If you can write down a log-posterior,
+[inlavanilla](http://haziqj.ml/inlavanilla/) can approximate the
+posterior: no sampler, no tuning, and for small models in milliseconds.
+It runs the approximation pipeline of
+[INLAvaan](https://inlavaan.haziqj.ml/) on any log-density:
+
+1.  **Joint Gaussian (Laplace).** Find the posterior mode and the
+    curvature there. This gives a Gaussian approximation and the Laplace
+    estimate of the log marginal likelihood.
+2.  **VB mean correction.** Recentre the Gaussian at the mean that
+    maximises its expected log-posterior, a better estimate of the
+    posterior mean than the mode.
+3.  **Skew-normal marginals.** For each parameter, scan the
+    log-posterior along the path the Gaussian predicts, correct the scan
+    for the changing volume of the other parameters, and fit a
+    skew-normal to it.
+4.  **Gaussian copula draws.** Couple the skew-normal marginals through
+    the Gaussian’s correlations, for draws of any function of the
+    parameters.
+
+The Gaussian is fast but symmetric; the skew-normal marginals keep the
+speed and add the skewness that small samples, bounded quantities and
+nonlinear models produce. This vignette works through an example where
+that skewness matters.
+
+## Which cars are manual?
+
+The `mtcars` data describe 32 cars from 1973–74. Which have a manual
+gearbox (`am = 1`)? Heavy cars tend to be automatic, and for a given
+weight, more powerful ones tend to be manual. We fit a logistic
+regression on weight and horsepower, both standardised.
+
+``` r
+
+library(inlavanilla)
+
+X <- cbind(1, scale(mtcars$wt), scale(mtcars$hp))
+y <- mtcars$am
+```
+
+With 32 cars and two strong predictors the two classes nearly separate,
+so the likelihood is lopsided: it falls away steeply on one side of the
+maximum and slowly on the other. Maximum likelihood gives large,
+uncertain coefficients:
+
+``` r
+
+coef(summary(glm(am ~ scale(wt) + scale(hp), binomial, data = mtcars)))
+#>              Estimate Std. Error   z value    Pr(>|z|)
+#> (Intercept) -1.822019   1.091908 -1.668657 0.095185417
+#> scale(wt)   -7.909336   3.002568 -2.634191 0.008433813
+#> scale(hp)    2.485788   1.215904  2.044394 0.040914646
+```
+
+### Writing the log-posterior
+
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+needs a function of the parameter vector that returns the log-posterior
+density, up to a constant. We give each coefficient a weakly informative
+$`N(0, 2.5^2)`$ prior. Regression coefficients can take any real value,
+so they need no reparameterisation.
+
+``` r
+
+logpost <- function(theta, X, y) {
+  eta <- as.numeric(X %*% theta)
+  sum(dbinom(y, 1, plogis(eta), log = TRUE)) +
+    sum(dnorm(theta, 0, 2.5, log = TRUE))
+}
+```
+
+`theta` arrives as a named vector, so `theta[["b_wt"]]` would work too.
+Further arguments, here `X` and `y`, are passed through `...`, as in
+[`optim()`](https://rdrr.io/r/stats/optim.html).
+
+### Fitting
+
+``` r
+
+init <- c(b0 = 0, b_wt = 0, b_hp = 0)
+fit <- inla_vanilla(logpost, init, X = X, y = y)
+#> ✔ Found the posterior mode in 10 iterations [7ms]
+#> ✔ VB mean correction, max shift 0.43σ [17ms]
+#> ✔ Fitted 3 skew-normal marginals [9ms]
+fit
+#> ── INLAvanilla ───────────────────────────────────────────────────────── 40ms ──
+#> 3 parameters · skew-normal marginals · VB-corrected
+#> 
+#>         Mean     SD    2.5%     50%  97.5%    Mode
+#> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
+#> b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85
+#> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
+#> 
+#> Log marginal likelihood: -11.62
+```
+
+The table summarises each parameter’s skew-normal marginal: the mean,
+standard deviation, quantiles and mode. Each step of the fit reports as
+it finishes, with the time it took.
+
+[`summary()`](https://rdrr.io/r/base/summary.html) adds the quartiles
+and diagnostics for each stage:
+
+``` r
+
+summary(fit)
+#> ── INLAvanilla summary ─────────────────────────────────────────────────────────
+#> 
+#> Posterior marginals
+#>         Mean     SD    2.5%     25%     50%     75%  97.5%    Mode
+#> b0    -1.104  0.615  -2.398  -1.497  -1.072  -0.678  0.017  -1.008
+#> b_wt   -5.12   1.35   -8.00   -5.97   -5.03   -4.18  -2.72   -4.85
+#> b_hp   1.564  0.704   0.306   1.073   1.518   2.008  3.069   1.423
+#> 
+#> Diagnostics
+#>       VB shift  SN - VB  Shape    NMAD   Bend
+#> b0       -0.13   0.0084   -1.5  0.0091   0.14
+#> b_wt     -0.43   -0.057   -1.7   0.017   0.05
+#> b_hp      0.26    0.076    1.7  0.0049  0.024
+#> 
+#> ✔ Mode found in 10 iterations (gradient 2.2e-07 SDs).
+#> ✔ VB correction in 4 iterations: max shift 0.43 SDs.
+#> ! The straight scan misses up to 0.14 nats at +-2 SDs for b0: the marginal may be too narrow.
+#> ✔ Skew-normal fits: max NMAD 0.017.
+#> ✔ Skew-normal and VB means agree to within 0.076 SDs.
+#> 
+#> Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)
+#> 511 logpost calls in 40ms (mode 7ms, VB 18ms, marginals 9ms)
+```
+
+- **VB shift** is how far the VB mean correction moved each mean from
+  the mode, in posterior SDs. The weight coefficient moves by nearly
+  half an SD: the posterior is far from symmetric.
+- **Shape** is the skew-normal’s shape parameter $`\alpha`$; zero means
+  symmetric.
+- **NMAD** measures how well the skew-normal fits the scanned
+  log-posterior (the largest gap relative to the peak); small is good.
+- **SN - VB** compares the skew-normal mean with the VB-corrected mean,
+  in posterior SDs. Both estimate the posterior mean, so they should
+  agree; a large gap means the posterior is far from Gaussian and either
+  may be off.
+- **Bend** is the log-density, in nats, that each scan misses 2 SDs out,
+  because it runs along a straight line while the other parameters’
+  conditional mode bends away from it. Above 0.1 it is flagged, as here
+  for the intercept: its marginal may be a little too narrow.
+
+### Seeing the skew
+
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) draws each
+skew-normal marginal (solid), with the Laplace Gaussian (dashed) for
+comparison:
+
+``` r
+
+plot(fit)
+```
+
+![Three density curves, one per coefficient. The skew-normal marginals
+are visibly skewed; the dashed Gaussian curves are symmetric and shifted
+towards zero.](inlavanilla_files/figure-html/plot-1.png)
+
+The weight coefficient has a long tail away from zero, and the Gaussian,
+centred at the mode, sits too close to zero.
+
+## Checking against the exact posterior
+
+With three parameters we can afford the exact posterior by brute force:
+the log-posterior on a fine grid, normalised numerically. This is the
+reference the approximations are trying to match.
+
+``` r
+
+s <- fit$summary
+axes <- lapply(seq_len(3), function(j) {
+  seq(s[j, "Mean"] - 7 * s[j, "SD"], s[j, "Mean"] + 7 * s[j, "SD"], length.out = 61)
+})
+grid <- as.matrix(expand.grid(axes))
+eta <- X %*% t(grid)
+lp <- colSums(y * eta - log1p(exp(eta))) +
+  rowSums(dnorm(grid, 0, 2.5, log = TRUE))
+w <- exp(lp - max(lp))
+
+# Exact marginal quantiles, by the midpoint rule on each axis
+exact_quantiles <- function(j, probs) {
+  p <- tapply(w, grid[, j], sum)
+  p <- as.numeric(p) / sum(p)
+  approx(cumsum(p) - p / 2, axes[[j]], probs, ties = mean)$y
+}
+```
+
+The 2.5%, 50% and 97.5% quantiles from the exact posterior, the
+skew-normal marginals and the Laplace Gaussian:
+
+``` r
+
+probs <- c(0.025, 0.5, 0.975)
+compare <- do.call(rbind, lapply(seq_len(3), function(j) {
+  rbind(
+    exact = exact_quantiles(j, probs),
+    `skew-normal` = s[j, c("2.5%", "50%", "97.5%")],
+    Laplace = qnorm(probs, fit$mode[j], sqrt(fit$cov[j, j]))
+  )
+}))
+rownames(compare) <- paste(rep(names(init), each = 3), rownames(compare))
+colnames(compare) <- c("2.5%", "50%", "97.5%")
+round(compare, 2)
+#>                   2.5%   50% 97.5%
+#> b0 exact         -2.47 -1.08  0.08
+#> b0 skew-normal   -2.40 -1.07  0.02
+#> b0 Laplace       -2.22 -1.03  0.16
+#> b_wt exact       -7.89 -5.00 -2.68
+#> b_wt skew-normal -8.00 -5.03 -2.72
+#> b_wt Laplace     -6.97 -4.51 -2.05
+#> b_hp exact        0.25  1.50  3.04
+#> b_hp skew-normal  0.31  1.52  3.07
+#> b_hp Laplace      0.09  1.35  2.61
+```
+
+The skew-normal intervals track the exact ones closely. The intercept’s
+is a little narrow, as its bend flag warned. The Laplace intervals are
+symmetric about the mode, so they cut the long tails short and miss
+values on the far side.
+
+The grid also gives the exact log marginal likelihood:
+
+``` r
+
+cell <- prod(vapply(axes, function(a) diff(a[1:2]), numeric(1)))
+c(
+  exact = max(lp) + log(sum(w) * cell),
+  `VB-corrected` = fit$logml,
+  Laplace = fit$logml_laplace
+)
+#>        exact VB-corrected      Laplace 
+#>    -11.61846    -11.61530    -11.70894
+```
+
+The VB correction moves the Laplace estimate most of the way to the
+exact value.
+
+## Supplying a gradient
+
+Without a gradient,
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+uses finite differences of `logpost`. An analytic gradient makes the fit
+faster and more accurate, and it pays off more as the number of
+parameters grows. For logistic regression it is short:
+
+``` r
+
+grad <- function(theta, X, y) {
+  eta <- as.numeric(X %*% theta)
+  as.numeric(crossprod(X, y - plogis(eta))) - theta / 2.5^2
+}
+fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, verbose = FALSE)
+max(abs(fit_g$summary - fit$summary))
+#> [1] 1.813245e-06
+rbind(finite_differences = fit$counts, gradient = fit_g$counts)
+#>                    logpost grad
+#> finite_differences     511    0
+#> gradient               127  124
+```
+
+The two fits agree to several decimal places, and the gradient version
+calls `logpost` far less often.
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+checks a supplied gradient against finite differences at `init` and
+warns if they disagree, which catches most slips in hand-derived
+gradients.
+
+## Derived quantities
+
+[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) draws
+from the approximate joint posterior. The draws come from the
+skew-normal marginals, coupled by a Gaussian copula, and never call
+`logpost`, so even large numbers of draws are cheap:
+
+``` r
+
+set.seed(2026)
+draws <- sampling(fit, nsamp = 10000)
+head(draws, 3)
+#>              b0      b_wt      b_hp
+#> [1,] -0.7657929 -5.309342 0.3008176
+#> [2,] -1.7688214 -3.819659 1.2958502
+#> [3,] -0.9887956 -4.875465 1.0419254
+```
+
+Its `fun` argument maps each draw to any quantity of interest. Here is
+the weight, in pounds, at which a car of average horsepower is equally
+likely to be manual or automatic. That is where the linear predictor
+crosses zero, a ratio of coefficients and so skewed:
+
+``` r
+
+wt_mean <- mean(mtcars$wt)
+wt_sd <- sd(mtcars$wt)
+crossover <- sampling(fit, nsamp = 10000, fun = function(theta) {
+  1000 * (wt_mean - wt_sd * theta[["b0"]] / theta[["b_wt"]])
+})
+quantile(crossover, c(0.025, 0.5, 0.975))
+#>     2.5%      50%    97.5% 
+#> 2736.338 3011.620 3217.324
+```
+
+The same idea gives the whole fitted curve. Here is the probability of a
+manual gearbox against weight, for a car of average horsepower, with a
+95% credible band:
+
+``` r
+
+wt_grid <- seq(1.5, 5.5, length.out = 100)
+z_grid <- (wt_grid - wt_mean) / wt_sd
+prob <- sampling(fit, nsamp = 4000, fun = function(theta) {
+  plogis(theta[["b0"]] + theta[["b_wt"]] * z_grid)
+})
+band <- apply(prob, 2, quantile, c(0.025, 0.5, 0.975))
+
+plot(
+  mtcars$wt, mtcars$am,
+  pch = 16, col = "grey40", xlab = "Weight (1000 lbs)",
+  ylab = "P(manual)", las = 1, bty = "n"
+)
+polygon(
+  c(wt_grid, rev(wt_grid)), c(band[1, ], rev(band[3, ])),
+  col = adjustcolor("#C2410C", 0.25), border = NA
+)
+lines(wt_grid, band[2, ], col = "#C2410C", lwd = 2)
+```
+
+![Posterior probability of a manual gearbox falling with car weight,
+with a shaded 95% band, and the 32 cars plotted at 0 and
+1.](inlavanilla_files/figure-html/curve-1.png)
+
+## Comparing models
+
+The log marginal likelihood compares models through Bayes factors. Does
+horsepower help, once weight is known?
+
+``` r
+
+fit_wt <- inla_vanilla(
+  logpost,
+  c(b0 = 0, b_wt = 0),
+  X = X[, 1:2],
+  y = y,
+  verbose = FALSE
+)
+log_bf <- fit$logml - fit_wt$logml
+log_bf
+#> [1] 1.410956
+```
+
+A log Bayes factor of 1.4 favours the model with horsepower, by a factor
+of about 4.
+
+The log marginal likelihood estimates $`\log p(y)`$ only when `logpost`
+returns the full $`\log p(y, \vartheta)`$, with every normalising
+constant of the likelihood and the prior. Here
+[`dbinom()`](https://rdrr.io/r/stats/Binomial.html) and
+[`dnorm()`](https://rdrr.io/r/stats/Normal.html) include theirs.
+
+## Constrained parameters
+
+The approximation works on an unconstrained scale: each parameter must
+be free to take any real value. Reparameterise anything constrained,
+such as a standard deviation as its log, a probability as its logit, or
+a correlation as its Fisher $`z`$. The parameterisation also matters for
+accuracy, since each parameter’s skew-normal lives on the scale you
+choose, and scales on which the posterior is closer to Gaussian work
+better.
+
+`logpost` is then the log density of the parameters you pass. A prior
+stated on the natural scale needs the log-Jacobian of the
+transformation. For the share of manual cars $`p`$, with a uniform
+prior, on the logit scale $`\vartheta = \operatorname{logit} p`$, the
+Jacobian is $`dp / d\vartheta = p(1 - p)`$:
+
+``` r
+
+logpost_p <- function(theta, y) {
+  p <- plogis(theta[["logit_p"]])
+  sum(dbinom(y, 1, p, log = TRUE)) +
+    dbeta(p, 1, 1, log = TRUE) + # prior on p ...
+    log(p) + log1p(-p) # ... and the Jacobian
+}
+fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, verbose = FALSE)
+```
+
+Natural-scale summaries come from the draws, and match the exact Beta
+posterior:
+
+``` r
+
+p_draws <- sampling(fit_p, nsamp = 20000, fun = function(theta) {
+  plogis(theta[["logit_p"]])
+})
+rbind(
+  inlavanilla = quantile(p_draws, c(0.025, 0.5, 0.975)),
+  exact = qbeta(c(0.025, 0.5, 0.975), 1 + sum(y), 1 + sum(1 - y))
+)
+#>                  2.5%       50%     97.5%
+#> inlavanilla 0.2546500 0.4104370 0.5794388
+#> exact       0.2547618 0.4100149 0.5786063
+```
+
+Leaving the Jacobian out would target a different posterior, not a worse
+approximation of this one, and nothing downstream could detect it.
+
+## Bringing your own compiled code
+
+Any R function works as `logpost` and `grad`, including compiled code
+from Rcpp, TMB or RTMB. TMB minimises, so negate its objective and
+gradient:
+
+``` r
+
+obj <- TMB::MakeADFun(data, parameters, DLL = "model")
+fit <- inla_vanilla(
+  function(theta) -obj$fn(theta),
+  init = obj$par,
+  grad = function(theta) -as.vector(obj$gr(theta))
+)
+```
+
+## References
+
+Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations.
+[arXiv:2603.25690](https://doi.org/10.48550/arXiv.2603.25690).
+
+Jamil, H. and Rue, H. (2026). Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling.
+[arXiv:2604.00671](https://doi.org/10.48550/arXiv.2604.00671).

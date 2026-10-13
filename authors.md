@@ -2,17 +2,29 @@
 
 ## Authors
 
-- **First Last**. Author, maintainer.
+- **Haziq Jamil**. Author, maintainer, copyright holder.
+  [](https://orcid.org/0000-0003-3298-1010)
+
+- **Håvard Rue**. Contributor.
+  [](https://orcid.org/0000-0002-0222-1881)  
+  Statistical and computational methodology
+
+- **Thomas Luu**. Copyright holder.  
+  Skew-normal quantile approximation (Apache License 2.0)
 
 ## Citation
 
-Last F (2026). *inlavanilla: What the Package Does (One Line, Title
-Case)*. R package version 0.0.0.9000, <http://haziqj.ml/inlavanilla/>.
+Source:
+[`DESCRIPTION`](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
+
+Jamil H (2026). *inlavanilla: INLA-Style Skew-Normal Marginals for Any
+Log-Posterior*. R package version 0.1.0,
+<http://haziqj.ml/inlavanilla/>.
 
     @Manual{,
-      title = {inlavanilla: What the Package Does (One Line, Title Case)},
-      author = {First Last},
+      title = {inlavanilla: INLA-Style Skew-Normal Marginals for Any Log-Posterior},
+      author = {Haziq Jamil},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0},
       url = {http://haziqj.ml/inlavanilla/},
     }

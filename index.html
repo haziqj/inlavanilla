@@ -5,14 +5,14 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>What the Package Does (One Line, Title Case) • inlavanilla</title>
+<title>INLA-Style Skew-Normal Marginals for Any Log-Posterior • inlavanilla</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="What the Package Does (One Line, Title Case)">
-<meta name="description" content="What the package does (one paragraph).">
-<meta property="og:description" content="What the package does (one paragraph).">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="INLA-Style Skew-Normal Marginals for Any Log-Posterior">
+<meta name="description" content="Approximates a posterior distribution from its log density alone, using the approximation pipeline of the INLAvaan package (Jamil and Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;.">
+<meta property="og:description" content="Approximates a posterior distribution from its log density alone, using the approximation pipeline of the INLAvaan package (Jamil and Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -31,12 +31,15 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/inlavanilla.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/haziqj/inlavanilla/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -49,11 +52,21 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of inlavanilla is to …</p>
+<p><em>INLA-style skew-normal marginals for any log-posterior.</em></p>
+<p>Give <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> a log-posterior and it returns an approximate posterior, in milliseconds for small models: no sampler, no tuning. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> with nothing model-specific:</p>
+<ol style="list-style-type: decimal">
+<li>a <strong>Laplace approximation</strong> at the posterior mode, with the Laplace estimate of the log marginal likelihood;</li>
+<li>a <strong>VB mean correction</strong> that recentres the Gaussian at a better estimate of the posterior mean;</li>
+<li>
+<strong>skew-normal marginals</strong>, one per parameter, fitted to scans of the log-posterior;</li>
+<li>
+<strong>Gaussian copula draws</strong> for any function of the parameters.</li>
+</ol>
+<p>The package is pure R and small. Its only dependency outside base R is <a href="https://cli.r-lib.org/" class="external-link">cli</a>.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of inlavanilla from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<p>You can install the development version of inlavanilla from <a href="https://github.com/haziqj/inlavanilla" class="external-link">GitHub</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"haziqj/inlavanilla"</span><span class="op">)</span></span></code></pre></div>
@@ -61,27 +74,65 @@
 <div class="section level2">
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
-<p>This is a basic example which shows you how to solve a common problem:</p>
+<p>A trial records 3 responders out of 20 patients. With a uniform prior on the response rate <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, the posterior is <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">Beta</mtext><mo stretchy="false" form="prefix">(</mo><mn>4</mn><mo>,</mo><mn>18</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\text{Beta}(4, 18)</annotation></semantics></math>: skewed, and bounded at zero.</p>
+<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works on an unconstrained scale, so we write the log-posterior in terms of <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϑ</mi><mo>=</mo><mrow><mi mathvariant="normal">logit</mi><mo>⁡</mo></mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">\vartheta = \operatorname{logit} p</annotation></semantics></math>. The prior is stated for <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, so it carries the Jacobian <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mi>p</mi><mi>/</mi><mi>d</mi><mi>ϑ</mi><mo>=</mo><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">dp / d\vartheta = p(1 - p)</annotation></semantics></math>:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
-<p>What is special about using <code>README.Rmd</code> instead of just <code>README.md</code>? You can include R chunks like so:</p>
+<span></span>
+<span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span>, <span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">dbinom</a></span><span class="op">(</span><span class="va">y</span>, <span class="va">n</span>, <span class="va">p</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">dbeta</a></span><span class="op">(</span><span class="va">p</span>, <span class="fl">1</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="co"># prior on p ...</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log1p</a></span><span class="op">(</span><span class="op">-</span><span class="va">p</span><span class="op">)</span> <span class="co"># ... and the Jacobian</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [29ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [36ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [66ms]</span></span>
+<span><span class="va">fit</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──</span></span>
+<span><span class="co">#&gt; 1 parameter · skew-normal marginals · VB-corrected</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;            Mean     SD    2.5%     50%   97.5%    Mode</span></span>
+<span><span class="co">#&gt; logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -3.05</span></span></code></pre></div>
+<p>The summary is on the logit scale. <code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw back to <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, or to any other quantity of interest:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
-<span><span class="co">#&gt;      speed           dist       </span></span>
-<span><span class="co">#&gt;  Min.   : 4.0   Min.   :  2.00  </span></span>
-<span><span class="co">#&gt;  1st Qu.:12.0   1st Qu.: 26.00  </span></span>
-<span><span class="co">#&gt;  Median :15.0   Median : 36.00  </span></span>
-<span><span class="co">#&gt;  Mean   :15.4   Mean   : 42.98  </span></span>
-<span><span class="co">#&gt;  3rd Qu.:19.0   3rd Qu.: 56.00  </span></span>
-<span><span class="co">#&gt;  Max.   :25.0   Max.   :120.00</span></span></code></pre></div>
-<p>You’ll still need to render <code>README.Rmd</code> regularly, to keep <code>README.md</code> up-to-date. <code>devtools::build_readme()</code> is handy for this.</p>
-<p>You can also embed plots, for example:</p>
-<p><img src="reference/figures/README-pressure-1.png" alt="" width="100%"></p>
-<p>In that case, don’t forget to commit and push the resulting figure files, so they display on GitHub and CRAN.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">1e5</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  inlavanilla <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">qbeta</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, <span class="fl">4</span>, <span class="fl">18</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;                   2.5%       50%     97.5%</span></span>
+<span><span class="co">#&gt; inlavanilla 0.05443460 0.1723549 0.3645844</span></span>
+<span><span class="co">#&gt; exact       0.05446357 0.1720895 0.3634240</span></span></code></pre></div>
+<p>The approximation matches the exact posterior, skew included:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">p</span>, breaks <span class="op">=</span> <span class="fl">80</span>, freq <span class="op">=</span> <span class="cn">FALSE</span>, border <span class="op">=</span> <span class="cn">NA</span>, col <span class="op">=</span> <span class="st">"#F5D0BE"</span>,</span>
+<span>     main <span class="op">=</span> <span class="cn">NULL</span>, xlab <span class="op">=</span> <span class="st">"Response rate p"</span>, ylab <span class="op">=</span> <span class="cn">NULL</span>, yaxt <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html" class="external-link">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">dbeta</a></span><span class="op">(</span><span class="va">x</span>, <span class="fl">4</span>, <span class="fl">18</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, lwd <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="st">"#C2410C"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-density-1.png" alt="Histogram of draws of p, skewed to the right, with the exact Beta(4, 18) density overlaid and matching it." width="100%"></p>
+<p><code>summary(fit)</code> adds diagnostics for each stage of the approximation, and <code>plot(fit)</code> draws the marginals. The <a href="http://haziqj.ml/inlavanilla/articles/inlavanilla.html">Get started</a> vignette works through a multi-parameter example: it checks the approximation against the exact posterior, and covers gradients, derived quantities and model comparison.</p>
+</div>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<p>Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural equation models using integrated nested Laplace approximations. <a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link">arXiv:2603.25690</a>.</p>
+<p>Jamil, H. and Rue, H. (2026). Implementation and workflows for INLA-based approximate Bayesian structural equation modelling. <a href="https://doi.org/10.48550/arXiv.2604.00671" class="external-link">arXiv:2604.00671</a>.</p>
 </div>
 </div>
-  </main><aside class="col-md-3"><div class="license">
+  </main><aside class="col-md-3"><div class="links">
+<h2 data-toc-skip>Links</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/haziqj/inlavanilla/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/haziqj/inlavanilla/issues" class="external-link">Report a bug</a></li>
+</ul>
+</div>
+
+<div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
 <li><a href="LICENSE.html">Full license</a></li>
@@ -108,7 +159,8 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>First Last <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Haziq Jamil <br><small class="roles"> Author, maintainer, copyright holder </small> <a href="https://orcid.org/0000-0003-3298-1010" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
 
@@ -126,7 +178,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by First Last.</p>
+  <p>Developed by Haziq Jamil.</p>
 </div>
 
 <div class="pkgdown-footer-right">
