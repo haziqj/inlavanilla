@@ -37,7 +37,20 @@ Nothing at present.
   - Skew-normal: 0.0315 and 0.127, both about 18% too narrow. Laplace is the same.
   - A full Laplace marginal with exact conditional modes and conditional Hessians recovers 0.0383 and 0.1541. So the gap comes from the linear path, not from the skew-normal fit or the volume correction.
   - log σ itself is captured almost exactly: skew-normal mean 2.4733 against an exact 2.4734, while Laplace gives 2.3324.
-  - Possible remedy, not implemented: correct the scan points towards the true conditional mode, e.g. one Newton step in the other parameters per grid point, using the gradient.
+  - The test suite found the same effect independently:
+    - For the normal mean under a normal–inverse-gamma prior, the skew-normal SD is short by exactly √(2(aₙ − 1)/(2aₙ + 1)), a Gaussian against the true Student-t.
+    - For the log scale of a Weibull model (n ≈ 15), both the skew-normal and Laplace SDs are about 11% too small, and a full Laplace marginal is within 0.1%.
+  - Prototype remedies on Puromycin (`scratch cmp-fix.R`), SD error for log Vm and log K:
+
+    | Scan | SD error |
+    |---|---|
+    | Current | −17.7% |
+    | One Newton step towards the conditional mode (Laplace curvature) | −8.1% |
+    | Three Newton steps | −5.7% |
+    | Full Laplace: exact conditional mode and conditional log-determinant at each scan point | −1.0% |
+
+    So the bent path accounts for about two thirds of the gap, and the linear volume correction for the rest.
+  - The full-Laplace remedy is INLA's "Laplace strategy" for marginals. It needs a conditional optimisation and a conditional Hessian at each of the 21 scan points: about 21(m + 3) gradient calls per parameter, against 2m + 2 now, so roughly 10× the cost of the marginal stage. It is a change of method and needs a decision.
   - In this example the SN − VB diagnostic flagged log σ (0.13 SDs). That gap came from the VB mean being off, not the skew-normal, so the diagnostic is documented as "either may be off".
 
 ## Later
