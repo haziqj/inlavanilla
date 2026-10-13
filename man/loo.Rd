@@ -26,7 +26,11 @@ waic(object, ...)
 
 \item{...}{Further arguments passed to \code{loglik}, such as the data. As in
 \code{\link[stats:optim]{stats::optim()}}, a name that abbreviates \code{object} or \code{loglik} (such as
-\code{l}) would be taken as that argument, so give such data a longer name.}
+\code{l}) would be taken as that argument, so give such data a longer name.
+If the loo package is attached after inlavanilla, its generics
+\code{loo(x, ...)} and \code{waic(x, ...)} are the ones called, and they take an
+argument named \code{x} as the fit: then do not name data \code{x}, or call
+\code{inlavanilla::loo()}.}
 
 \item{loglik}{A function \code{loglik(theta, ...)} returning the log-likelihood
 terms, one per observation or independent unit, at the named parameter
@@ -146,17 +150,19 @@ elpd is \code{sum(d)} with standard error \code{sqrt(length(d)) * sd(d)}.
 \examples{
 # Poisson counts: is a log-linear trend better than a constant rate?
 y <- c(2, 3, 6, 7, 8, 9, 10, 12, 15)
-x <- seq_along(y) - 5
+time <- seq_along(y) - 5
 
-loglik <- function(theta, x, y) {
-  dpois(y, exp(theta[["a"]] + theta[["b"]] * x), log = TRUE)
+loglik <- function(theta, time, y) {
+  dpois(y, exp(theta[["a"]] + theta[["b"]] * time), log = TRUE)
 }
 logprior <- function(theta) sum(dnorm(theta, 0, 5, log = TRUE))
-logpost <- function(theta, x, y) sum(loglik(theta, x, y)) + logprior(theta)
+logpost <- function(theta, time, y) {
+  sum(loglik(theta, time, y)) + logprior(theta)
+}
 
-fit <- inla_vanilla(logpost, c(a = 0, b = 0), x = x, y = y)
-loo(fit, loglik, x = x, y = y)
-waic(fit, loglik, x = x, y = y)
+fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
+loo(fit, loglik, time = time, y = y)
+waic(fit, loglik, time = time, y = y)
 }
 \references{
 Alhyari, M., Jamil, H., Montcho, H. and Rue, H. (2026). Deterministic
