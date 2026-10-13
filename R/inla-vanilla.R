@@ -173,9 +173,9 @@ inla_vanilla <- function(
   if (!is.null(grad)) {
     check_function(grad, "grad")
   }
-  init <- check_init(init, verbose)
   check_flag(vb, "vb")
   check_flag(verbose, "verbose")
+  init <- check_init(init, verbose)
   ctrl <- vanilla_control(control)
   m <- length(init)
   parnames <- names(init)

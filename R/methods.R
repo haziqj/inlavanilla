@@ -243,6 +243,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 #' @returns `x`, invisibly.
 #' @export
 plot.inla_vanilla <- function(x, pars = NULL, laplace = TRUE, ...) {
+  check_flag(laplace, "laplace")
   sn <- x$sn
   idx <- if (is.null(pars)) seq_len(nrow(sn)) else pars
   if (is.character(idx)) {
