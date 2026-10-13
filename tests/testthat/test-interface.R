@@ -59,9 +59,14 @@ lp_reg <- function(theta) {
     dnorm(theta[["slope"]], 0, 2, log = TRUE)
 }
 init_reg <- c(intercept = 0.2, slope = 0.1)
+gr_reg <- function(theta) {
+  eta <- theta[["intercept"]] + theta[["slope"]] * reg_x
+  res <- reg_y - exp(eta)
+  c(sum(res), sum(reg_x * res)) - theta / 4
+}
 
-fit_reg <- inla_vanilla(lp_reg, init_reg, verbose = FALSE)
-fit_reg_novb <- inla_vanilla(lp_reg, init_reg, vb = FALSE, verbose = FALSE)
+fit_reg <- inla_vanilla(lp_reg, init_reg, silent = TRUE)
+fit_reg_novb <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
 
 # Helpers ---------------------------------------------------------------------
 
@@ -77,6 +82,38 @@ scrub_output <- function(x) {
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
   x <- gsub("gradient [-+0-9.e]+ SDs", "gradient <g> SDs", x)
+  x
+}
+
+# For the detail lines of verbose = TRUE, which show many more numbers, some
+# at the level of rounding or finite-difference noise: every number with a
+# decimal point or an exponent is scrubbed too (but not the thresholds, after
+# "above"), along with what follows the optimiser's path (nlminb's message
+# and evaluations, the calls that set the finite-difference steps, the list
+# of VB steps and whether Anderson acceleration was used), and the runs of
+# spaces that align the numbers in the table of marginals.
+scrub_numbers <- function(x) {
+  x <- scrub_output(x)
+  x <- gsub("nlminb: .*, after", "nlminb: <message>, after", x)
+  x <- gsub(
+    "[0-9]+ function and [0-9]+ gradient",
+    "<n> function and <n> gradient",
+    x
+  )
+  x <- gsub("and [0-9]+ more", "and <n> more", x)
+  x <- gsub("(Fixed-point steps[^:]*): .*$", "\\1: <steps>", x)
+  x <- gsub(
+    ", (Anderson acceleration at [0-9]+ of them|without Anderson acceleration)",
+    ", <anderson>",
+    x
+  )
+  x <- gsub(
+    "(?<![A-Za-z0-9_.])(?<!above )-?([0-9]+\\.[0-9]+(e[-+]?[0-9]+)?|[0-9]+e[-+]?[0-9]+)",
+    "#",
+    x,
+    perl = TRUE
+  )
+  x <- gsub("(\\S)  +", "\\1 ", x)
   x
 }
 
@@ -154,12 +191,12 @@ par_set_by_any_plot <- c("usr", "xaxp", "yaxp")
 
 test_that("logpost and grad must be functions", {
   expect_error(
-    inla_vanilla(1, c(a = 0), verbose = FALSE),
+    inla_vanilla(1, c(a = 0), silent = TRUE),
     "`logpost` must be a function, not a number",
     class = "inlavanilla_error"
   )
   expect_error(
-    inla_vanilla(lp_gauss, c(a = 0), grad = "gr", verbose = FALSE),
+    inla_vanilla(lp_gauss, c(a = 0), grad = "gr", silent = TRUE),
     "`grad` must be a function, not a string",
     class = "inlavanilla_error"
   )
@@ -168,14 +205,14 @@ test_that("logpost and grad must be functions", {
 test_that("init must be a non-empty, finite numeric vector", {
   for (bad in list("a", numeric(0), list(a = 1))) {
     expect_error(
-      inla_vanilla(lp_gauss, bad, verbose = FALSE),
+      inla_vanilla(lp_gauss, bad, silent = TRUE),
       "`init` must be a non-empty numeric vector",
       class = "inlavanilla_error"
     )
   }
   for (bad in list(c(a = 0, b = NA), c(a = -Inf))) {
     expect_error(
-      inla_vanilla(lp_gauss, bad, verbose = FALSE),
+      inla_vanilla(lp_gauss, bad, silent = TRUE),
       "`init` must contain only finite values",
       class = "inlavanilla_error"
     )
@@ -184,7 +221,7 @@ test_that("init must be a non-empty, finite numeric vector", {
 
 test_that("init must be fully named, or not named at all", {
   expect_error(
-    inla_vanilla(lp_gauss, c(a = 0, 1), verbose = FALSE),
+    inla_vanilla(lp_gauss, c(a = 0, 1), silent = TRUE),
     "fully named, or not named at all",
     class = "inlavanilla_error"
   )
@@ -192,7 +229,7 @@ test_that("init must be fully named, or not named at all", {
     inla_vanilla(
       lp_gauss,
       stats::setNames(c(0, 1), c("a", NA)),
-      verbose = FALSE
+      silent = TRUE
     ),
     "fully named, or not named at all",
     class = "inlavanilla_error"
@@ -207,16 +244,15 @@ test_that("repeated names in init are numbered, as TMB's obj$par needs", {
   }
   init <- c(a = 0.2, b = 0.3, a = 0.4)
   nms <- c("a[1]", "b", "a[2]")
-  expect_silent(fit <- inla_vanilla(lp, init, grad = gr_gauss, verbose = FALSE))
+  expect_silent(fit <- inla_vanilla(lp, init, grad = gr_gauss, silent = TRUE))
+  expect_identical(fit$warnings, character())
   expect_identical(seen, list(nms))
   expect_identical(rownames(fit$summary), nms)
   expect_identical(names(fit$mode), nms)
   expect_equal(unname(fit$mode), c(1, 1, 1), tolerance = 1e-6)
 
-  # With verbose = TRUE, a note says which names were changed
-  msgs <- capture_messages(
-    inla_vanilla(lp_gauss, init, grad = gr_gauss, verbose = TRUE)
-  )
+  # Unless silent = TRUE, a note says which names were changed
+  msgs <- capture_messages(inla_vanilla(lp_gauss, init, grad = gr_gauss))
   expect_match(
     msgs,
     "Numbered the repeated names in `init`: \"a[1]\" and \"a[2]\"",
@@ -226,7 +262,7 @@ test_that("repeated names in init are numbered, as TMB's obj$par needs", {
 
   # Names that clash after numbering are an error
   expect_error(
-    inla_vanilla(lp_gauss, c(a = 0, a = 1, `a[1]` = 2), verbose = FALSE),
+    inla_vanilla(lp_gauss, c(a = 0, a = 1, `a[1]` = 2), silent = TRUE),
     "`init` has names that cannot be made unique",
     class = "inlavanilla_error"
   )
@@ -240,7 +276,7 @@ test_that("logpost must return a single finite number at init", {
   )
   for (lp in not_single) {
     expect_error(
-      inla_vanilla(lp, c(a = 0.5, b = 0.5), verbose = FALSE),
+      inla_vanilla(lp, c(a = 0.5, b = 0.5), silent = TRUE),
       "`logpost` must return a single number",
       class = "inlavanilla_error"
     )
@@ -251,7 +287,7 @@ test_that("logpost must return a single finite number at init", {
   )
   for (lp in not_finite) {
     expect_error(
-      inla_vanilla(lp, c(a = 0.5), verbose = FALSE),
+      inla_vanilla(lp, c(a = 0.5), silent = TRUE),
       "`logpost` is not finite at `init`",
       class = "inlavanilla_error"
     )
@@ -259,13 +295,13 @@ test_that("logpost must return a single finite number at init", {
   # Finite near the mode but not at init: the check is about init itself
   lp_hole <- function(theta) if (theta[[1]] > 5) -Inf else lp_gauss(theta)
   expect_error(
-    inla_vanilla(lp_hole, c(a = 6), verbose = FALSE),
+    inla_vanilla(lp_hole, c(a = 6), silent = TRUE),
     "not finite at `init`",
     class = "inlavanilla_error"
   )
   # A 1 x 1 matrix, such as a quadratic form, is a single number
   lp_form <- function(theta) -0.5 * crossprod(theta - 1)
-  fit <- inla_vanilla(lp_form, c(a = 0.3, b = 1.6), verbose = FALSE)
+  fit <- inla_vanilla(lp_form, c(a = 0.3, b = 1.6), silent = TRUE)
   expect_equal(unname(fit$summary[, "SD"]), c(1, 1), tolerance = 1e-6)
 })
 
@@ -273,24 +309,24 @@ test_that("grad must return a finite vector of the right length at init", {
   init <- c(a = 0.5, b = 0.5)
   for (gr in list(function(theta) 1, function(theta) "a")) {
     expect_error(
-      inla_vanilla(lp_gauss, init, grad = gr, verbose = FALSE),
+      inla_vanilla(lp_gauss, init, grad = gr, silent = TRUE),
       "`grad` must return a numeric vector of length 2",
       class = "inlavanilla_error"
     )
   }
   for (gr in list(function(theta) c(NA, 1))) {
     expect_error(
-      inla_vanilla(lp_gauss, init, grad = gr, verbose = FALSE),
+      inla_vanilla(lp_gauss, init, grad = gr, silent = TRUE),
       "`grad` is not finite at `init`",
       class = "inlavanilla_error"
     )
   }
 })
 
-test_that("vb and verbose must be a single TRUE or FALSE", {
+test_that("vb, verbose and silent must be a single TRUE or FALSE", {
   for (bad in list(NA, c(TRUE, FALSE))) {
     expect_error(
-      inla_vanilla(lp_gauss, c(a = 0.5), vb = bad, verbose = FALSE),
+      inla_vanilla(lp_gauss, c(a = 0.5), vb = bad, silent = TRUE),
       "`vb` must be `TRUE` or `FALSE`",
       class = "inlavanilla_error"
     )
@@ -299,12 +335,29 @@ test_that("vb and verbose must be a single TRUE or FALSE", {
       "`verbose` must be `TRUE` or `FALSE`",
       class = "inlavanilla_error"
     )
+    expect_error(
+      inla_vanilla(lp_gauss, c(a = 0.5), silent = bad),
+      "`silent` must be `TRUE` or `FALSE`",
+      class = "inlavanilla_error"
+    )
   }
 })
 
-test_that("a bad verbose is reported even when init has repeated names", {
-  # check_init() numbers repeated names and says so when verbose is TRUE, so
-  # it must not use verbose before verbose itself has been checked.
+test_that("verbose and silent cannot both be TRUE", {
+  expect_error(
+    inla_vanilla(lp_gauss, c(a = 0.5), verbose = TRUE, silent = TRUE),
+    "`verbose` and `silent` cannot both be `TRUE`",
+    class = "inlavanilla_error"
+  )
+  expect_snapshot(
+    error = TRUE,
+    inla_vanilla(lp_gauss, c(a = 0.5), verbose = TRUE, silent = TRUE)
+  )
+})
+
+test_that("a bad verbose or silent is reported even when init has repeated names", {
+  # check_init() numbers repeated names and says so unless silent is TRUE,
+  # so it must not use the flags before they have been checked.
   # Observed: base R errors from `if (verbose)` inside check_init():
   # "missing value where TRUE/FALSE needed" for NA, "argument is not
   # interpretable as logical" for "yes", and "the condition has length > 1"
@@ -314,13 +367,17 @@ test_that("a bad verbose is reported even when init has repeated names", {
       inla_vanilla(lp_gauss, c(a = 0, a = 1), verbose = bad),
       "`verbose` must be `TRUE` or `FALSE`"
     )
+    expect_package_error(
+      inla_vanilla(lp_gauss, c(a = 0, a = 1), silent = bad),
+      "`silent` must be `TRUE` or `FALSE`"
+    )
   }
 })
 
 test_that("control must be a list of named, known entries", {
   for (bad in list("n_grid", c(n_grid = 21))) {
     expect_error(
-      inla_vanilla(lp_gauss, c(a = 0.5), control = bad, verbose = FALSE),
+      inla_vanilla(lp_gauss, c(a = 0.5), control = bad, silent = TRUE),
       "`control` must be a list",
       class = "inlavanilla_error"
     )
@@ -330,7 +387,7 @@ test_that("control must be a list of named, known entries", {
       lp_gauss,
       c(a = 0.5),
       control = list(foo = 1),
-      verbose = FALSE
+      silent = TRUE
     ),
     "Unknown `control` entry: \"foo\"",
     class = "inlavanilla_error"
@@ -340,7 +397,7 @@ test_that("control must be a list of named, known entries", {
       lp_gauss,
       c(a = 0.5),
       control = list(n_grid = 21, foo = 1, ngrid = 2),
-      verbose = FALSE
+      silent = TRUE
     ),
     "Unknown `control` entries: \"foo\" and \"ngrid\"",
     class = "inlavanilla_error"
@@ -348,7 +405,7 @@ test_that("control must be a list of named, known entries", {
   # Unnamed entries cannot be matched to anything
   for (bad in list(list(21), list(n_grid = 21, 1))) {
     expect_error(
-      inla_vanilla(lp_gauss, c(a = 0.5), control = bad, verbose = FALSE),
+      inla_vanilla(lp_gauss, c(a = 0.5), control = bad, silent = TRUE),
       "Every `control` entry must be named",
       class = "inlavanilla_error"
     )
@@ -372,7 +429,7 @@ test_that("each numeric control entry is checked", {
     for (bad in bad_values[[entry]]) {
       ctrl <- stats::setNames(list(bad), entry)
       expect_package_error(
-        inla_vanilla(lp_gauss, c(a = 0.5), control = ctrl, verbose = FALSE),
+        inla_vanilla(lp_gauss, c(a = 0.5), control = ctrl, silent = TRUE),
         messages[[entry]]
       )
     }
@@ -382,7 +439,7 @@ test_that("each numeric control entry is checked", {
       lp_gauss,
       c(a = 0.5),
       control = list(nlminb = 5),
-      verbose = FALSE
+      silent = TRUE
     ),
     "`control$nlminb` must be a list",
     fixed = TRUE,
@@ -402,7 +459,7 @@ test_that("valid control entries are accepted and keep a Gaussian exact", {
     lp_gauss,
     c(a = 0.3, b = 1.4),
     control = ctrl,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_equal(unname(fit$summary[, "Mean"]), c(1, 1), tolerance = 1e-6)
   expect_equal(unname(fit$summary[, "SD"]), c(1, 1), tolerance = 1e-6)
@@ -418,7 +475,7 @@ test_that("control entries reach the stages they tune", {
       c(a = 0.3, b = 1.4),
       grad = gr_gauss,
       control = list(n_grid = n_grid),
-      verbose = FALSE
+      silent = TRUE
     )$counts
   }
   expect_identical(counts(41) - counts(21), c(logpost = 40L, grad = 0L))
@@ -433,7 +490,7 @@ test_that("control entries reach the stages they tune", {
       a0 = pois_a0,
       b0 = pois_b0,
       control = list(...),
-      verbose = FALSE
+      silent = TRUE
     )$diagnostics$vb
   }
   default <- fit_vb()
@@ -452,7 +509,7 @@ test_that("control entries reach the stages they tune", {
       a0 = pois_a0,
       b0 = pois_b0,
       control = list(log_threshold = thr),
-      verbose = FALSE
+      silent = TRUE
     )$sn
   }
   expect_gt(max(abs(fit_thr(-1) - fit_thr(-6))), 1e-3)
@@ -473,7 +530,7 @@ test_that("any accepted n_grid gives exact marginals for a Gaussian posterior", 
       lp,
       c(a = 0.5),
       control = list(n_grid = n_grid),
-      verbose = FALSE
+      silent = TRUE
     )
     expect_equal(
       unname(fit$summary[1, c("Mean", "SD", "Mode")]),
@@ -507,7 +564,7 @@ test_that("errors do not name the package's internal helpers", {
     function() inla_vanilla(lp_gauss, "a"),
     function() inla_vanilla(lp_gauss, c(a = 0), vb = NA),
     function() inla_vanilla(lp_gauss, c(a = 0.5), grad = function(theta) NA),
-    function() inla_vanilla(function(theta) 0, c(a = 0.3), verbose = FALSE),
+    function() inla_vanilla(function(theta) 0, c(a = 0.3), silent = TRUE),
     function() summary(fit_reg, probs = 2),
     function() {
       grDevices::pdf(NULL)
@@ -536,7 +593,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
     lp_gauss(theta)
   }
   err <- expect_error(
-    inla_vanilla(lp_fails, c(a = 0.5), verbose = FALSE),
+    inla_vanilla(lp_fails, c(a = 0.5), silent = TRUE),
     "while fitting the skew-normal marginals",
     class = "inlavanilla_error"
   )
@@ -555,7 +612,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
 
   # At init, for logpost and for grad
   expect_error(
-    inla_vanilla(function(theta) stop("bad data"), c(a = 0.5), verbose = FALSE),
+    inla_vanilla(function(theta) stop("bad data"), c(a = 0.5), silent = TRUE),
     "while evaluating logpost at init",
     class = "inlavanilla_error"
   )
@@ -564,7 +621,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
       lp_gauss,
       c(a = 0.5),
       grad = function(theta) stop("bad data"),
-      verbose = FALSE
+      silent = TRUE
     ),
     "while evaluating grad at init",
     class = "inlavanilla_error"
@@ -572,7 +629,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
 
   # The package's own errors pass through unwrapped
   err <- expect_error(
-    inla_vanilla(function(theta) 0, c(a = 0.3), verbose = FALSE),
+    inla_vanilla(function(theta) 0, c(a = 0.3), silent = TRUE),
     class = "inlavanilla_error"
   )
   expect_no_match(conditionMessage(err), "The fit stopped")
@@ -584,26 +641,24 @@ test_that("a wrong analytic gradient triggers the mismatch warning", {
   # Right for `a`, twice too large for `b`: the warning names `b`. (A sign
   # error would also be caught, but then the optimiser climbs away from the
   # mode and the fit fails later with the Hessian error.)
+  # (Warnings are tested at the default output level, without silent = TRUE,
+  # which would muffle them; its stage lines are suppressed.)
   gr_wrong <- function(theta) c(-(theta[[1]] - 1), -2 * (theta[[2]] - 1))
   expect_snapshot(
-    invisible(inla_vanilla(
-      lp_gauss,
-      c(a = 0.3, b = 0.2),
-      grad = gr_wrong,
-      verbose = FALSE
+    invisible(suppressMessages(
+      inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), grad = gr_wrong)
     ))
   )
   # A gradient off by a constant factor is also caught
   expect_warning(
-    inla_vanilla(
+    suppressMessages(inla_vanilla(
       lp_pois,
       0.3,
       grad = function(theta, ...) 2 * gr_pois(theta, ...),
       y = pois_y,
       a0 = pois_a0,
-      b0 = pois_b0,
-      verbose = FALSE
-    ),
+      b0 = pois_b0
+    )),
     "does not match finite differences",
     class = "inlavanilla_warning"
   )
@@ -624,14 +679,16 @@ test_that("the gradient check works whatever the scale of the posterior", {
     gr_right <- function(theta) -(theta[[1]] / s - 1) / s
     gr_twice <- function(theta) 2 * gr_right(theta)
     expect_warning(
-      inla_vanilla(lp, c(a = 0.5 * s), grad = gr_twice, verbose = FALSE),
+      suppressMessages(inla_vanilla(lp, c(a = 0.5 * s), grad = gr_twice)),
       "does not match finite differences",
       class = "inlavanilla_warning",
       label = paste("a gradient twice too large at posterior SD", s)
     )
+    # silent = TRUE muffles warnings, but records them in fit$warnings
     expect_silent(
-      fit <- inla_vanilla(lp, c(a = 0.5 * s), grad = gr_right, verbose = FALSE)
+      fit <- inla_vanilla(lp, c(a = 0.5 * s), grad = gr_right, silent = TRUE)
     )
+    expect_identical(fit$warnings, character())
     expect_equal(sqrt(fit$cov[[1]]), s, tolerance = 1e-6)
   }
 })
@@ -645,32 +702,31 @@ test_that("a gradient that is not a gradient field is caught at the mode", {
     c(-d[[1]] + 0.5 * d[[2]], -d[[2]] - 0.5 * d[[1]])
   }
   expect_warning(
-    inla_vanilla(lp_gauss, c(a = 1, b = 1), grad = gr_rot, verbose = FALSE),
+    suppressMessages(inla_vanilla(lp_gauss, c(a = 1, b = 1), grad = gr_rot)),
     "does not look like the gradient of `logpost`",
     class = "inlavanilla_warning"
   )
 })
 
 test_that("a correct analytic gradient passes the checks silently", {
-  expect_silent(
-    inla_vanilla(
-      lp_gauss,
-      c(a = 0.3, b = 0.2),
-      grad = gr_gauss,
-      verbose = FALSE
-    )
+  # silent = TRUE muffles warnings, but records them in fit$warnings
+  fit <- inla_vanilla(
+    lp_gauss,
+    c(a = 0.3, b = 0.2),
+    grad = gr_gauss,
+    silent = TRUE
   )
-  expect_silent(
-    inla_vanilla(
-      lp_pois,
-      0.3,
-      grad = gr_pois,
-      y = pois_y,
-      a0 = pois_a0,
-      b0 = pois_b0,
-      verbose = FALSE
-    )
+  expect_identical(fit$warnings, character())
+  fit <- inla_vanilla(
+    lp_pois,
+    0.3,
+    grad = gr_pois,
+    y = pois_y,
+    a0 = pois_a0,
+    b0 = pois_b0,
+    silent = TRUE
   )
+  expect_identical(fit$warnings, character())
   # Also for a Student-t posterior (5 df) with scale 1e-6, far from
   # quadratic beyond a few scale units. The check once took differences at a
   # fixed step of 1e-5, ten scale units here, which gave a gradient 20 times
@@ -681,18 +737,14 @@ test_that("a correct analytic gradient passes the checks silently", {
     z <- (theta[[1]] - 1) / s
     -6 * z / (5 * s * (1 + z^2 / 5))
   }
-  expect_silent(inla_vanilla(
-    lp_t,
-    c(a = 1 + 0.5 * s),
-    grad = gr_t,
-    verbose = FALSE
-  ))
+  fit <- inla_vanilla(lp_t, c(a = 1 + 0.5 * s), grad = gr_t, silent = TRUE)
+  expect_identical(fit$warnings, character())
   # A 1 x m matrix, as TMB's obj$gr() returns, is accepted
   fit <- inla_vanilla(
     lp_gauss,
     c(a = 0.3, b = 0.2),
     grad = function(theta) matrix(gr_gauss(theta), nrow = 1),
-    verbose = FALSE
+    silent = TRUE
   )
   expect_equal(unname(fit$mode), c(1, 1), tolerance = 1e-8)
 })
@@ -710,7 +762,7 @@ test_that("unnamed init gets the names theta[1], theta[2], ...", {
     seen_gr <<- union(seen_gr, list(names(theta)))
     gr_gauss(theta)
   }
-  fit <- inla_vanilla(lp, c(0.1, 0.2, 0.3), grad = gr, verbose = FALSE)
+  fit <- inla_vanilla(lp, c(0.1, 0.2, 0.3), grad = gr, silent = TRUE)
 
   nms <- c("theta[1]", "theta[2]", "theta[3]")
   # Every call of logpost and grad saw the same names
@@ -742,7 +794,7 @@ test_that("unnamed init gets the names theta[1], theta[2], ...", {
 })
 
 test_that("named init keeps its names, and integer init is accepted", {
-  fit <- inla_vanilla(lp_gauss, c(alpha = 0L, beta = 2L), verbose = FALSE)
+  fit <- inla_vanilla(lp_gauss, c(alpha = 0L, beta = 2L), silent = TRUE)
   expect_identical(rownames(fit$summary), c("alpha", "beta"))
   expect_equal(unname(fit$mode), c(1, 1), tolerance = 1e-6)
 })
@@ -757,7 +809,7 @@ test_that("arguments in ... reach logpost and grad", {
     y = pois_y,
     a0 = pois_a0,
     b0 = pois_b0,
-    verbose = FALSE
+    silent = TRUE
   )
   fit_gr <- inla_vanilla(
     lp_pois,
@@ -766,7 +818,7 @@ test_that("arguments in ... reach logpost and grad", {
     y = pois_y,
     a0 = pois_a0,
     b0 = pois_b0,
-    verbose = FALSE
+    silent = TRUE
   )
   exact_mode <- log(pois_A / pois_B)
   expect_equal(fit_fd$mode[[1]], exact_mode, tolerance = 1e-7)
@@ -783,7 +835,7 @@ test_that("arguments in ... reach logpost and grad", {
     y = y2,
     a0 = pois_a0,
     b0 = pois_b0,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_equal(
     fit2$mode[[1]],
@@ -793,24 +845,27 @@ test_that("arguments in ... reach logpost and grad", {
 
   # Without them logpost fails, and the error says so
   expect_error(
-    inla_vanilla(lp_pois, 0.3, verbose = FALSE),
+    inla_vanilla(lp_pois, 0.3, silent = TRUE),
     "while evaluating logpost at init",
     class = "inlavanilla_error"
   )
 })
 
 test_that("data arguments named like vb, verbose or control reach logpost", {
-  # The arguments after `...` must be named in full, so v, verb, con and
-  # contr are data, not abbreviations of vb, verbose and control (verbose is
-  # left at its default on purpose). The mode is v + verb + con + contr = 10.
-  lp <- function(theta, v, verb, con, contr) {
-    -0.5 * (theta[[1]] - v - verb - con - contr)^2
+  # The arguments after `...` must be named in full, so v, verb, sil, con
+  # and contr are data, not abbreviations of vb, verbose, silent and control
+  # (verbose and silent are left at their defaults on purpose). The mode is
+  # v + verb + sil + con + contr = 15.
+  lp <- function(theta, v, verb, sil, con, contr) {
+    -0.5 * (theta[[1]] - v - verb - sil - con - contr)^2
   }
   fit <- suppressMessages(
-    inla_vanilla(lp, c(a = 0.5), v = 1, verb = 2, con = 3, contr = 4)
+    inla_vanilla(lp, c(a = 0.5), v = 1, verb = 2, sil = 5, con = 3, contr = 4)
   )
-  expect_equal(fit$mode[["a"]], 10, tolerance = 1e-6)
+  expect_equal(fit$mode[["a"]], 15, tolerance = 1e-6)
   expect_true(fit$vb)
+  expect_false(fit$verbose)
+  expect_false(fit$silent)
 })
 
 test_that("NaN outside the support, away from the mode, does not break the fit", {
@@ -834,7 +889,8 @@ test_that("NaN outside the support, away from the mode, does not break the fit",
     if (x <= 0) -Inf else (shape - 1) * log(x) - rate * x
   }
 
-  expect_silent(fit <- inla_vanilla(lp_nan, c(x = 4), verbose = FALSE))
+  expect_silent(fit <- inla_vanilla(lp_nan, c(x = 4), silent = TRUE))
+  expect_identical(fit$warnings, character())
   expect_gt(n_outside, 0)
   expect_true(all(is.finite(fit$summary)))
   expect_true(all(is.finite(fit$sn)))
@@ -861,11 +917,11 @@ test_that("NaN outside the support, away from the mode, does not break the fit",
 
   # Starting near the boundary, where the optimiser's first steps can leave
   # the support, finds the same mode. Observed: exact to 4e-9.
-  fit_near <- inla_vanilla(lp_nan, c(x = 0.1), verbose = FALSE)
+  fit_near <- inla_vanilla(lp_nan, c(x = 0.1), silent = TRUE)
   expect_equal(fit_near$mode[[1]], (shape - 1) / rate, tolerance = 1e-7)
 
   # -Inf and NaN are treated alike
-  fit_inf <- inla_vanilla(lp_inf, c(x = 4), verbose = FALSE)
+  fit_inf <- inla_vanilla(lp_inf, c(x = 4), silent = TRUE)
   expect_equal(fit_inf$summary, fit$summary)
 })
 
@@ -884,7 +940,8 @@ test_that("-Inf inside the scan range of one parameter does not break the fit", 
     dnorm(a, 1, 1, log = TRUE) +
       dnorm(theta[["b"]], 0.5 * a, sqrt(0.75), log = TRUE)
   }
-  expect_silent(fit <- inla_vanilla(lp, c(a = 0.3, b = -0.2), verbose = FALSE))
+  expect_silent(fit <- inla_vanilla(lp, c(a = 0.3, b = -0.2), silent = TRUE))
+  expect_identical(fit$warnings, character())
   expect_gt(n_outside, 0)
   expect_true(all(is.finite(fit$summary)))
   expect_true(all(fit$diagnostics$marginals$tails))
@@ -916,7 +973,7 @@ test_that("a one-parameter model works end to end", {
     y = pois_y,
     a0 = pois_a0,
     b0 = pois_b0,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_s3_class(fit, "inla_vanilla")
   expect_identical(dim(fit$summary), c(1L, 6L))
@@ -981,12 +1038,12 @@ test_that("a posterior flat in one direction fails with the Hessian error", {
   lp_flat <- function(theta) -0.5 * (theta[["a"]] - 1)^2
   gr_flat <- function(theta) c(-(theta[["a"]] - 1), 0)
   expect_error(
-    inla_vanilla(lp_flat, c(a = 0.3, b = 0.2), verbose = FALSE),
+    inla_vanilla(lp_flat, c(a = 0.3, b = 0.2), silent = TRUE),
     "Hessian at the posterior mode is not positive definite",
     class = "inlavanilla_error"
   )
   expect_error(
-    inla_vanilla(lp_flat, c(a = 0.3, b = 0.2), grad = gr_flat, verbose = FALSE),
+    inla_vanilla(lp_flat, c(a = 0.3, b = 0.2), grad = gr_flat, silent = TRUE),
     "Hessian at the posterior mode is not positive definite",
     class = "inlavanilla_error"
   )
@@ -997,12 +1054,12 @@ test_that("a non-identified posterior fails with the Hessian error", {
   lp_sum <- function(theta) -0.5 * (theta[["a"]] + theta[["b"]] - 1)^2
   gr_sum <- function(theta) rep(-(theta[["a"]] + theta[["b"]] - 1), 2)
   expect_error(
-    inla_vanilla(lp_sum, c(a = 0.3, b = 0.2), verbose = FALSE),
+    inla_vanilla(lp_sum, c(a = 0.3, b = 0.2), silent = TRUE),
     "Hessian at the posterior mode is not positive definite",
     class = "inlavanilla_error"
   )
   expect_error(
-    inla_vanilla(lp_sum, c(a = 0.3, b = 0.2), grad = gr_sum, verbose = FALSE),
+    inla_vanilla(lp_sum, c(a = 0.3, b = 0.2), grad = gr_sum, silent = TRUE),
     "Hessian at the posterior mode is not positive definite",
     class = "inlavanilla_error"
   )
@@ -1012,21 +1069,21 @@ test_that("an improper posterior with no mode fails with the Hessian error", {
   # Increasing without bound in b, and flat (logpost = 0) in one dimension
   lp_up <- function(theta) -0.5 * (theta[["a"]] - 1)^2 + theta[["b"]]
   expect_error(
-    inla_vanilla(lp_up, c(a = 0.3, b = 0.2), verbose = FALSE),
+    inla_vanilla(lp_up, c(a = 0.3, b = 0.2), silent = TRUE),
     "Hessian at the posterior mode",
     class = "inlavanilla_error"
   )
   expect_snapshot(
     error = TRUE,
     transform = function(x) gsub("message: .*$", "message: <msg>", x),
-    inla_vanilla(function(theta) 0, c(a = 0.3), verbose = FALSE)
+    inla_vanilla(function(theta) 0, c(a = 0.3), silent = TRUE)
   )
 })
 
 test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
   # One nlminb() iteration from init = 3, 9 posterior SDs above the mode
   # log(A / B) = 0.81, cannot reach it
-  fit_short <- function(verbose) {
+  fit_short <- function(...) {
     inla_vanilla(
       lp_pois,
       3,
@@ -1034,11 +1091,12 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
       a0 = pois_a0,
       b0 = pois_b0,
       control = list(nlminb = list(iter.max = 1)),
-      verbose = verbose
+      ...
     )
   }
+  msgs <- NULL
   w <- expect_warning(
-    fit <- fit_short(FALSE),
+    msgs <- capture_messages(fit <- fit_short()),
     "The posterior mode may be inaccurate",
     class = "inlavanilla_warning"
   )
@@ -1048,7 +1106,6 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
     print(summary(fit)),
     "Mode search stopped with a gradient of"
   )
-  msgs <- capture_messages(suppressWarnings(fit_short(TRUE)))
   expect_match(msgs, "! Stopped near the posterior mode", all = FALSE)
 })
 
@@ -1057,23 +1114,20 @@ test_that("nlminb's false convergence at an exact mode gives no warning", {
   # reports "false convergence (8)" (observed here; it may differ between
   # platforms). The whitened gradient there is zero, so the package must not
   # warn, whatever nlminb() says.
-  expect_silent(
-    fit <- inla_vanilla(
-      function(theta) -0.5 * sum(theta^2),
-      c(a = 0, b = 0),
-      verbose = FALSE
+  expect_no_warning(
+    fit <- suppressMessages(
+      inla_vanilla(function(theta) -0.5 * sum(theta^2), c(a = 0, b = 0))
     )
   )
+  expect_identical(fit$warnings, character())
   expect_equal(unname(fit$summary[, "SD"]), c(1, 1), tolerance = 1e-6)
   expect_equal(unname(fit$summary[, "Mean"]), c(0, 0), tolerance = 1e-6)
 })
 
 # (e) Progress messages and printed output -----------------------------------
 
-test_that("verbose = TRUE reports each stage, verbose = FALSE nothing", {
-  msgs <- capture_messages(
-    fit <- inla_vanilla(lp_reg, init_reg, verbose = TRUE)
-  )
+test_that("by default each stage prints one line, and nothing else", {
+  msgs <- capture_messages(fit <- inla_vanilla(lp_reg, init_reg))
   i_mode <- grep("Found the posterior mode in [0-9]+ iterations", msgs)
   i_vb <- grep("VB mean correction, max shift", msgs)
   i_sn <- grep("Fitted 2 skew-normal marginals", msgs)
@@ -1084,21 +1138,298 @@ test_that("verbose = TRUE reports each stage, verbose = FALSE nothing", {
   expect_true(i_mode < i_vb && i_vb < i_sn)
   # Each line ends with the time it took
   expect_match(msgs, "\\[[0-9.]+m?s\\]\\s*$")
-  # The result does not depend on verbose
-  expect_equal(fit$summary, fit_reg$summary)
+  # The lines are messages: nothing goes to standard output
+  expect_identical(
+    capture_output(suppressMessages(inla_vanilla(lp_reg, init_reg))),
+    ""
+  )
+  expect_false(fit$verbose)
+  expect_false(fit$silent)
 
   # No VB line without the VB correction
-  msgs <- capture_messages(
-    inla_vanilla(lp_reg, init_reg, vb = FALSE, verbose = TRUE)
-  )
+  msgs <- capture_messages(inla_vanilla(lp_reg, init_reg, vb = FALSE))
   expect_false(any(grepl("VB", msgs)))
+  expect_length(msgs, 2)
   expect_length(grep("Found the posterior mode|Fitted 2 skew-normal", msgs), 2)
 
   # One parameter: singular
-  msgs <- capture_messages(inla_vanilla(lp_gauss, c(a = 0.3), verbose = TRUE))
+  msgs <- capture_messages(inla_vanilla(lp_gauss, c(a = 0.3)))
   expect_match(msgs, "Fitted 1 skew-normal marginal\\b", all = FALSE)
+})
 
-  expect_silent(inla_vanilla(lp_reg, init_reg, verbose = FALSE))
+test_that("verbose = TRUE adds detail lines under the stage lines", {
+  stage_text <- function(x) sub(" \\[[0-9.]+m?s\\]\\s*$", "", x)
+  default <- stage_text(capture_messages(inla_vanilla(lp_reg, init_reg)))
+  msgs <- capture_messages(
+    fit <- inla_vanilla(lp_reg, init_reg, verbose = TRUE)
+  )
+  expect_true(fit$verbose)
+  expect_false(fit$silent)
+  # The stage lines are the default ones, in the same order. Every other
+  # line is an indented detail line, or a line of its own marked with an i.
+  is_stage <- stage_text(msgs) %in% default
+  expect_identical(stage_text(msgs)[is_stage], default)
+  expect_match(msgs[!is_stage], "^(  |i )")
+  expect_gt(sum(!is_stage), 15)
+
+  text <- paste(msgs, collapse = "")
+  for (pattern in c(
+    "i 2 parameters: intercept and slope",
+    "Derivatives by finite differences of logpost",
+    "logpost at init -?[0-9.]+",
+    "nlminb: .+, after [0-9]+ iterations? \\([0-9]+ function and [0-9]+ gradient evaluations\\)",
+    "logpost at the mode -?[0-9.]+, whitened gradient",
+    "Hessian by second differences of logpost: 6 calls",
+    "Posterior correlation matrix: largest correlation -0.5[0-9]* \\(intercept, slope\\), smallest eigenvalue 0.4",
+    "Laplace log marginal likelihood -?[0-9.]+",
+    "Fixed-point steps, largest over the parameters \\(SD\\): ",
+    "KL term [0-9.e-]+, giving a log marginal likelihood of -?[0-9.]+",
+    "Largest shift -0.2[0-9]* SD, for intercept",
+    "Shape +NMAD +Bend +Tails +gamma1",
+    "marks what summary\\(\\) flags",
+    "i Done: [0-9]+ logpost calls in [0-9.]+m?s"
+  )) {
+    expect_match(text, pattern)
+  }
+  # The log marginal likelihoods shown are the fit's own
+  expect_match(
+    text,
+    paste(
+      "Laplace log marginal likelihood",
+      format(round(fit$logml_laplace, 2), nsmall = 2)
+    )
+  )
+  expect_match(
+    text,
+    paste(
+      "log marginal likelihood of",
+      format(round(fit$logml, 2), nsmall = 2)
+    )
+  )
+  # The slope's bend is flagged, as in summary(), and nothing else
+  rows <- grep("^  (intercept|slope) ", msgs, value = TRUE)
+  expect_length(rows, 2)
+  expect_match(rows[[2]], "^  slope .*[0-9]!")
+  expect_no_match(rows[[1]], "!")
+  # The calls of the stages add up to the total
+  per_stage <- as.integer(sub(
+    "^  ([0-9]+) logpost calls\n$",
+    "\\1",
+    grep("^  [0-9]+ logpost calls\n$", msgs, value = TRUE)
+  ))
+  expect_length(per_stage, 3)
+  expect_identical(sum(per_stage), fit$counts[["logpost"]])
+  expect_match(text, paste("Done:", fit$counts[["logpost"]], "logpost calls"))
+
+  # With a gradient: its check at init and the asymmetry of its Jacobian
+  text <- paste(
+    capture_messages(
+      inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
+    ),
+    collapse = ""
+  )
+  expect_match(
+    text,
+    "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning above 0.001\\), [0-9]+ logpost calls"
+  )
+  expect_match(text, "Hessian by central differences of grad: 4 calls")
+  expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning above 0.001\\)")
+  expect_match(text, "Done: [0-9]+ logpost and [0-9]+ grad calls")
+
+  # Without VB or scans, it says so
+  msgs <- capture_messages(inla_vanilla(
+    lp_reg,
+    init_reg,
+    vb = FALSE,
+    marginals = "gaussian",
+    verbose = TRUE
+  ))
+  expect_match(msgs, "^i No VB correction \\(vb = FALSE\\)", all = FALSE)
+  expect_match(msgs, "^i Gaussian marginals .*: no scans", all = FALSE)
+  expect_no_match(msgs, "Fixed-point|Shape")
+
+  # One parameter: no correlations
+  msgs <- capture_messages(inla_vanilla(lp_gauss, c(a = 0.3), verbose = TRUE))
+  expect_match(msgs, "^i 1 parameter: a\n$", all = FALSE)
+  expect_no_match(msgs, "correlation")
+})
+
+test_that("verbose output keeps its layout", {
+  testthat::local_reproducible_output(width = 80, crayon = FALSE)
+  expect_snapshot(
+    invisible(inla_vanilla(lp_reg, init_reg, verbose = TRUE)),
+    transform = scrub_numbers
+  )
+  expect_snapshot(
+    invisible(inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)),
+    transform = scrub_numbers
+  )
+})
+
+test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
+  # The unreached mode of the test above: nlminb() is restarted with the
+  # parameters rescaled, the VB correction falls back to nlminb(), and the
+  # scan ends well above the threshold.
+  msgs <- capture_messages(suppressWarnings(inla_vanilla(
+    lp_pois,
+    3,
+    y = pois_y,
+    a0 = pois_a0,
+    b0 = pois_b0,
+    control = list(nlminb = list(iter.max = 1)),
+    verbose = TRUE
+  )))
+  text <- paste(msgs, collapse = "")
+  expect_match(text, "Restarted nlminb with each parameter scaled")
+  expect_match(text, "whitened gradient [0-9.e-]+ SD! \\(warning above")
+  expect_match(text, "! Fell back to nlminb, as a step was over 1 posterior SD")
+  expect_match(text, "heavy!")
+  expect_match(text, "Done: .*, with 1 warning\n")
+})
+
+test_that("silent = TRUE prints nothing at all", {
+  expect_silent(fit <- inla_vanilla(lp_reg, init_reg, silent = TRUE))
+  expect_true(fit$silent)
+  expect_false(fit$verbose)
+  expect_identical(fit$warnings, character())
+  # Nor the note on repeated names, nor the messages and warnings of logpost
+  lp_chatty <- function(theta) {
+    message("evaluating logpost")
+    warning("logpost is chatty")
+    lp_gauss(theta)
+  }
+  expect_silent(fit <- inla_vanilla(lp_chatty, c(a = 0, a = 1), silent = TRUE))
+  expect_identical(names(fit$mode), c("a[1]", "a[2]"))
+  expect_identical(fit$warnings, "logpost is chatty")
+  # Errors are still raised
+  expect_error(
+    inla_vanilla(function(theta) stop("bad data"), c(a = 0.5), silent = TRUE),
+    "while evaluating logpost at init",
+    class = "inlavanilla_error"
+  )
+})
+
+test_that("silent = TRUE records each warning once, as plain text", {
+  # An unreached mode (as above), and a logpost that warns at every call
+  fit_short <- function() {
+    inla_vanilla(
+      lp_pois,
+      3,
+      y = pois_y,
+      a0 = pois_a0,
+      b0 = pois_b0,
+      control = list(nlminb = list(iter.max = 1)),
+      silent = TRUE
+    )
+  }
+  expect_silent(fit <- fit_short())
+  expect_length(fit$warnings, 1)
+  expect_match(fit$warnings, "^The posterior mode may be inaccurate\\.\n")
+  expect_match(
+    fit$warnings,
+    "Raise `iter.max` or `eval.max` in `control$nlminb`.",
+    fixed = TRUE
+  )
+  # The diagnostics show the same unreached mode as without silent
+  expect_gt(fit$diagnostics$optim$grad_mode, 0.01)
+
+  # Plain text, whatever the console: no colours, no cli markup and no line
+  # wrapping, so the headline and its three bullets are four lines
+  local({
+    testthat::local_reproducible_output(width = 30, crayon = TRUE)
+    # testthat leaves conditions unwrapped; wrap them at 30 characters
+    old <- options(cli.condition_width = 30)
+    on.exit(options(old))
+    fit <- fit_short()
+    expect_false(grepl("\033", fit$warnings, fixed = TRUE))
+    expect_false(grepl("{.", fit$warnings, fixed = TRUE))
+    expect_length(strsplit(fit$warnings, "\n")[[1]], 4)
+    # whereas the warning as signalled is styled and wrapped
+    w <- tryCatch(
+      suppressMessages(inla_vanilla(
+        lp_pois,
+        3,
+        y = pois_y,
+        a0 = pois_a0,
+        b0 = pois_b0,
+        control = list(nlminb = list(iter.max = 1))
+      )),
+      inlavanilla_warning = identity
+    )
+    expect_true(grepl("\033", conditionMessage(w), fixed = TRUE))
+    expect_gt(length(strsplit(conditionMessage(w), "\n")[[1]]), 4)
+  })
+
+  n_calls <- 0
+  lp_warns <- function(theta) {
+    n_calls <<- n_calls + 1
+    warning("logpost is chatty")
+    lp_gauss(theta)
+  }
+  fit <- inla_vanilla(lp_warns, c(a = 0.3, b = 0.2), silent = TRUE)
+  expect_gt(n_calls, 50)
+  expect_identical(fit$warnings, "logpost is chatty")
+})
+
+test_that("without silent = TRUE, warnings are signalled and also recorded", {
+  w <- expect_warning(
+    fit <- suppressMessages(inla_vanilla(
+      lp_pois,
+      3,
+      y = pois_y,
+      a0 = pois_a0,
+      b0 = pois_b0,
+      control = list(nlminb = list(iter.max = 1))
+    )),
+    "The posterior mode may be inaccurate",
+    class = "inlavanilla_warning"
+  )
+  # The record is the warning's message, as plain text
+  squish <- function(x) gsub("\\s+", " ", cli::ansi_strip(x))
+  expect_length(fit$warnings, 1)
+  expect_identical(squish(fit$warnings), squish(conditionMessage(w)))
+
+  # Every warning of logpost is signalled, and recorded once
+  n_calls <- 0
+  lp_warns <- function(theta) {
+    n_calls <<- n_calls + 1
+    warning("logpost is chatty")
+    lp_gauss(theta)
+  }
+  n_signalled <- 0
+  fit <- withCallingHandlers(
+    suppressMessages(inla_vanilla(lp_warns, c(a = 0.3, b = 0.2))),
+    warning = function(w) {
+      n_signalled <<- n_signalled + 1
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_identical(n_signalled, n_calls)
+  expect_identical(fit$warnings, "logpost is chatty")
+})
+
+test_that("the output level does not change the fit", {
+  # Only the record of the settings, the timing and the call differ
+  strip <- function(fit) {
+    fit[c("verbose", "silent", "timing", "call")] <- NULL
+    fit
+  }
+  settings <- list(
+    list(),
+    list(grad = gr_reg),
+    list(vb = FALSE, marginals = "gaussian")
+  )
+  for (s in settings) {
+    fit_at <- function(...) {
+      suppressMessages(do.call(
+        inla_vanilla,
+        c(list(lp_reg, init_reg), s, list(...))
+      ))
+    }
+    base <- strip(fit_at(silent = TRUE))
+    expect_identical(strip(fit_at()), base)
+    expect_identical(strip(fit_at(verbose = TRUE)), base)
+  }
 })
 
 test_that("print() shows the summary table and returns the fit invisibly", {
@@ -1128,7 +1459,7 @@ test_that("print() rounds each row to three significant figures of its SD", {
     dnorm(theta[[1]], 100, 0.002, log = TRUE) +
       dnorm(theta[[2]], 1000, 300, log = TRUE)
   }
-  fit <- inla_vanilla(lp, c(a = 99.999, b = 500), verbose = FALSE)
+  fit <- inla_vanilla(lp, c(a = 99.999, b = 500), silent = TRUE)
   expect_equal(unname(fit$summary[, "SD"]), c(0.002, 300), tolerance = 1e-6)
   out <- strsplit(capture_output(print(fit)), "\n")[[1]]
   row_a <- strsplit(trimws(grep("^a ", out, value = TRUE)), " +")[[1]]
@@ -1161,7 +1492,7 @@ test_that("print(summary()) shows marginals, diagnostics and the evidence", {
     y = pois_y,
     a0 = pois_a0,
     b0 = pois_b0,
-    verbose = FALSE
+    silent = TRUE
   )
   out <- capture_output(print(summary(fit_grad)))
   expect_match(
@@ -1186,7 +1517,16 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     c(
       capture_output(print(fit_reg)),
       capture_output(print(summary(fit_reg))),
-      capture_messages(inla_vanilla(lp_reg, init_reg, verbose = TRUE))
+      capture_messages(inla_vanilla(lp_reg, init_reg)),
+      capture_messages(inla_vanilla(lp_reg, init_reg, verbose = TRUE)),
+      capture_messages(inla_vanilla(
+        lp_reg,
+        init_reg,
+        grad = gr_reg,
+        vb = FALSE,
+        marginals = "gaussian",
+        verbose = TRUE
+      ))
     )
   }
   local({
@@ -1195,12 +1535,14 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     expect_false(any(grepl("[^\001-\177]", out, useBytes = TRUE)))
     expect_match(out, "2 parameters, skew-normal marginals", all = FALSE)
     expect_match(out, "max shift [0-9.e-]+ SD", all = FALSE)
+    expect_match(out, "Largest shift [0-9.e-]+ SD", all = FALSE)
   })
   local({
     testthat::local_reproducible_output(unicode = TRUE)
     out <- fit_text()
     expect_match(out, "2 parameters \u00b7 skew-normal", all = FALSE)
     expect_match(out, "max shift [0-9.e-]+\u03c3", all = FALSE)
+    expect_match(out, "Largest shift [0-9.e-]+\u03c3", all = FALSE)
   })
 })
 
@@ -1399,7 +1741,7 @@ test_that("a heavy-tailed posterior is flagged in summary()", {
   fit <- inla_vanilla(
     function(theta) -log1p((theta[[1]] - 1)^2),
     c(x = 0.5),
-    verbose = FALSE
+    silent = TRUE
   )
   d <- summary(fit)$diagnostics
   expect_false(d$tails)
@@ -1437,7 +1779,7 @@ test_that("plot() draws the requested parameters and returns the fit", {
   expect_false(any(c("Skew-normal", "Laplace") %in% strs))
 
   # More parameters than fit on one row
-  fit5 <- inla_vanilla(lp_gauss, c(0.1, 0.2, 0.3, 0.4, 0.5), verbose = FALSE)
+  fit5 <- inla_vanilla(lp_gauss, c(0.1, 0.2, 0.3, 0.4, 0.5), silent = TRUE)
   strs <- plot_strings(record_plot(plot(fit5)))
   expect_true(all(paste0("theta[", 1:5, "]") %in% strs))
   strs <- plot_strings(record_plot(plot(

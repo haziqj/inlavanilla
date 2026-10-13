@@ -136,7 +136,7 @@ pois_fit <- inla_vanilla(
   pois_logpost,
   c(b0 = 0, b1 = 0, b2 = 0),
   grad = pois_grad,
-  verbose = FALSE
+  silent = TRUE
 )
 
 # An exactly Gaussian posterior: y = X b + e, e ~ N(0, sigma^2) with sigma
@@ -164,7 +164,7 @@ lm_fit <- inla_vanilla(
   lm_logpost,
   c(a = 0, b = 0, c = 0),
   grad = lm_grad,
-  verbose = FALSE
+  silent = TRUE
 )
 
 # Gamma-Poisson on theta = log(lambda): y_i ~ Poisson(lambda),
@@ -184,7 +184,7 @@ gp_fit <- inla_vanilla(
   gp_logpost,
   c(log_lambda = 0),
   grad = gp_grad,
-  verbose = FALSE
+  silent = TRUE
 )
 
 # Large draws shared by the distributional tests
@@ -250,7 +250,7 @@ test_that("sampling() never calls the log-posterior", {
     n_calls <<- n_calls + 1
     gp_logpost(theta)
   }
-  fit <- inla_vanilla(counting_logpost, c(log_lambda = 0), verbose = FALSE)
+  fit <- inla_vanilla(counting_logpost, c(log_lambda = 0), silent = TRUE)
   n_calls <- 0
   set.seed(7)
   sampling(fit, nsamp = 5000)

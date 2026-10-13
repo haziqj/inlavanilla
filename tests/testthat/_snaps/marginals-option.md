@@ -1,7 +1,7 @@
 # marginals takes one of two values, in full
 
     Code
-      inla_vanilla(lp_reg, init_reg, marginals = "skew", verbose = FALSE)
+      inla_vanilla(lp_reg, init_reg, marginals = "skew", silent = TRUE)
     Condition
       Error:
       ! `marginals` must be one of "skewnormal" or "gaussian".

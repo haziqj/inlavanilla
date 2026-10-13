@@ -539,7 +539,7 @@ test_that("normal data with unknown mean and variance give the exact Laplace ste
       nig$logpost,
       init = c(mu = 0, log_sigma = 0),
       grad = gr,
-      verbose = FALSE
+      silent = TRUE
     )
     sds <- sqrt(diag(nig$joint_cov))
     # Mode: observed error 6e-8 SDs (the optimiser's tolerance)
@@ -564,7 +564,7 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
       nig$logpost,
       init = c(mu = 0, log_sigma = 0),
       grad = gr,
-      verbose = FALSE
+      silent = TRUE
     )
 
     # log_sigma: a log inverse-gamma, skewed to the right (skewness 0.39)
@@ -721,7 +721,7 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   fit <- inla_vanilla(
     bvn$logpost,
     init = c(mu1 = 0, mu2 = 0, z = 0),
-    verbose = FALSE
+    silent = TRUE
   )
 
   # The Laplace step against a Hessian by nested central differences written
@@ -877,7 +877,7 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
       weib$logpost,
       init = c(log_shape = 0, log_scale = 0),
       grad = gr,
-      verbose = FALSE
+      silent = TRUE
     )
     err_shape <- marginal_errors(fit, "log_shape", ref$log_shape)
     err_scale <- marginal_errors(fit, "log_scale", ref$log_scale)
@@ -984,7 +984,7 @@ test_that("permuting the parameters permutes the marginals (finite differences)"
   fit1 <- inla_vanilla(
     bvn$logpost,
     init = c(mu1 = 0, mu2 = 0, z = 0),
-    verbose = FALSE
+    silent = TRUE
   )
   # The same posterior with the parameters in the order (mu2, z, mu1), a
   # cycle rather than a reversal, so that the permutation is not its own
@@ -995,7 +995,7 @@ test_that("permuting the parameters permutes the marginals (finite differences)"
   fit2 <- inla_vanilla(
     logpost_perm,
     init = c(mu2 = 0, z = 0, mu1 = 0),
-    verbose = FALSE
+    silent = TRUE
   )
   expect_equal(rownames(fit2$summary), c("mu2", "z", "mu1"))
   # Observed differences: 3.4e-8 SDs in the summaries, up to 5e-10 in the
@@ -1008,7 +1008,7 @@ test_that("permuting the parameters permutes the marginals (analytic gradient)",
     weib$logpost,
     init = c(log_shape = 0, log_scale = 0),
     grad = weib$grad,
-    verbose = FALSE
+    silent = TRUE
   )
   logpost_perm <- function(theta) {
     weib$logpost(c(log_shape = theta[[2]], log_scale = theta[[1]]))
@@ -1020,7 +1020,7 @@ test_that("permuting the parameters permutes the marginals (analytic gradient)",
     logpost_perm,
     init = c(log_scale = 0, log_shape = 0),
     grad = grad_perm,
-    verbose = FALSE
+    silent = TRUE
   )
   expect_equal(rownames(fit2$summary), c("log_scale", "log_shape"))
   # Observed differences: 4e-9 SDs in the summaries, 1e-15 or less in the
