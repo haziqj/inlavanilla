@@ -9,14 +9,6 @@
 ---
 
     Code
-      inla_vanilla(function(theta) 0, c(a = 0, 1))
-    Condition
-      Error:
-      ! `init` must be fully named, or not named at all.
-
----
-
-    Code
       inla_vanilla(function(theta) theta, c(a = 0.5, b = 0.5))
     Condition
       Error:
@@ -32,15 +24,6 @@
       ! `logpost` is not finite at `init`.
       x `logpost(init)` returned -Inf.
       i Start inside the support of the posterior, and check that every parameter is on an unconstrained scale.
-
----
-
-    Code
-      inla_vanilla(lp_gauss, c(a = 0.5, b = 0.5), grad = function(theta) 1)
-    Condition
-      Error:
-      ! `grad` must return a numeric vector of length 2.
-      x `grad(init)` returned a number of length 1.
 
 ---
 
