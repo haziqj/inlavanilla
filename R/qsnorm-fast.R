@@ -38,8 +38,11 @@
 # GMRFLib C source and originally by Thomas Luu (2016), as ported in INLAvaan.
 # The domain is split into tail regions, handled through the Lambert W
 # function, and a central region, handled by a fifth-order Taylor expansion of
-# the inverse error function about a well-chosen expansion point. Relative
-# error is below about 1e-7 without any iterative inversion.
+# the inverse error function about a well-chosen expansion point. It needs no
+# iterative inversion, but it is only a starting value: away from
+# alpha = 0 and +-1 its error reaches about 5e-2 in standardised units (Luu's
+# original uses a tolerance of 0.01), so qsnorm() and sn_score_map() refine it
+# by Newton's method.
 #
 # Luu, T. (2016). Fast and accurate parallel computation of quantile functions
 # for random number generation (Doctoral thesis). University College London.
