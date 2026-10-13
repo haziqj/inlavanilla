@@ -321,12 +321,14 @@ inla_vanilla <- function(
         prog$warnings <- c(prog$warnings, msg)
       }
       if (silent) {
-        invokeRestart("muffleWarning")
+        # tryInvokeRestart(), as suppressWarnings() does: a condition
+        # signalled with signalCondition() has no muffle restart
+        tryInvokeRestart("muffleWarning")
       }
     },
     message = function(m) {
       if (silent) {
-        invokeRestart("muffleMessage")
+        tryInvokeRestart("muffleMessage")
       }
     }
   )
@@ -351,17 +353,22 @@ vanilla_fit <- function(
   has_grad <- !is.null(grad_x)
 
   # The engine calls these wrappers, which name the parameters, count the
-  # calls and tick the progress bar.
+  # calls and tick the progress bar. The spinner counts logpost and grad
+  # calls together, so stages driven by grad tick too.
   n_lp <- 0L
   n_gr <- 0L
   last_x <- init
+  tick <- function() {
+    n <- n_lp + n_gr
+    if (prog$calls && n %% 16L == 0L) {
+      progress_tick(prog, set = n)
+    }
+  }
   lp <- function(x) {
     names(x) <- parnames
     last_x <<- x
     n_lp <<- n_lp + 1L
-    if (prog$calls && n_lp %% 16L == 0L) {
-      progress_tick(prog, set = n_lp)
-    }
+    tick()
     # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
     v <- logpost_x(x)[[1L]]
     if (is.na(v)) -Inf else v
@@ -373,6 +380,7 @@ vanilla_fit <- function(
       names(x) <- parnames
       last_x <<- x
       n_gr <<- n_gr + 1L
+      tick()
       as.numeric(grad_x(x))
     }
   }
