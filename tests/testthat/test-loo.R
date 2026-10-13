@@ -276,6 +276,16 @@ test_that("loo::loo_compare() compares the results", {
   expect_equal(row_b$se_diff, sqrt(length(d)) * sd(d), tolerance = 1e-12)
 })
 
+test_that("other objects go to the loo package's loo() and waic()", {
+  skip_if_not_installed("loo")
+  set.seed(3)
+  ll <- matrix(rnorm(4000, -1, 0.1), 400, 10)
+  res <- suppressWarnings(loo(ll))
+  expect_s3_class(res, "psis_loo")
+  expect_equal(res, suppressWarnings(loo::loo(ll)))
+  expect_s3_class(suppressWarnings(waic(ll)), "waic")
+})
+
 test_that("warnings from loglik are recorded, and muffled for a silent fit", {
   chatty <- function(theta, X, y) {
     warning("loglik is chatty")

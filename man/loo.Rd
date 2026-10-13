@@ -3,6 +3,8 @@
 \name{loo}
 \alias{loo}
 \alias{waic}
+\alias{loo.default}
+\alias{waic.default}
 \alias{loo.inla_vanilla}
 \alias{waic.inla_vanilla}
 \title{Leave-one-out cross-validation and WAIC for an INLAvanilla fit}
@@ -10,6 +12,10 @@
 loo(object, ...)
 
 waic(object, ...)
+
+\method{loo}{default}(object, ...)
+
+\method{waic}{default}(object, ...)
 
 \method{loo}{inla_vanilla}(object, loglik, ...)
 
@@ -119,6 +125,14 @@ On a fit made with \code{silent = TRUE}, \code{loo()} and \code{waic()} print no
 raise no warnings, their own or those of \code{loglik}; the warnings are kept
 in the result's \code{warnings}, and a fallback to first order shows in \code{order}
 and \code{first_order_units}.
+}
+
+\section{Other objects}{
+
+For any other object, \code{loo()} and \code{waic()} call the loo package's
+functions of the same name, if it is installed, so attaching inlavanilla
+after loo (or a package that uses it, such as rstan or brms) does not get
+in their way.
 }
 
 \section{Comparing models}{
