@@ -99,12 +99,14 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   out <- matrix(
     NA_real_,
     m,
-    6,
+    7,
     dimnames = list(
       names(mode),
-      c("xi", "omega", "alpha", "gamma1", "nmad", "tails")
+      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "bend")
     )
   )
+  # Scan points for the bend check (see scan_bend())
+  i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
 
   for (j in seq_len(m)) {
     g1 <- if (is.null(gr)) {
@@ -112,23 +114,22 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
     } else {
       gamma1_grad(j, gr, mode, Vscan, L)
     }
-    # Corrected log-heights along the scan; the mode's height is known
-    heights <- function(zz) {
-      vapply(
-        zz,
-        function(t) {
-          if (t == 0) lap$lp_max else lp(mode + Vscan[, j] * t)
-        },
-        numeric(1)
-      ) +
-        g1 * zz
-    }
+    # Log-posterior along the scan; the mode's height is known
+    raw <- vapply(
+      z,
+      function(t) {
+        if (t == 0) lap$lp_max else lp(mode + Vscan[, j] * t)
+      },
+      numeric(1)
+    )
     above <- function(h, y) {
       is.finite(h) && h - max(y[is.finite(y)]) > -3
     }
 
-    y <- heights(z)
+    # Corrected log-heights
+    y <- raw + g1 * z
     tails <- !above(y[1], y) && !above(y[length(y)], y)
+    bend <- scan_bend(j, lp, gr, lap, Vscan, z[i_bend], raw[i_bend])
 
     ok <- is.finite(y)
     fit <- fit_skew_normal(
@@ -144,9 +145,55 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
       fit$alpha,
       g1,
       fit$nmad,
-      tails
+      tails,
+      bend
     )
     tick()
   }
   out
+}
+
+# How far the straight scan path misses the conditional mode of the other
+# parameters. At scan points t (near +-2 posterior SDs), one Newton step in
+# the other parameters, with the Laplace curvature, would raise the
+# log-posterior by 0.5 g' C g, where g is the gradient in the other parameters
+# and C their conditional covariance given theta_j,
+#   C = Sigma[-j, -j] - Sigma[-j, j] Sigma[j, -j] / Sigma[j, j].
+# That is the height the scan misses there, in log-density units. When it is
+# large, the other parameters' conditional mode bends away from the line (as
+# a noise scale does for a regression coefficient at small n), and the
+# marginal comes out too narrow. Returns the larger of the gains. The
+# gradient is the user's, or one-sided differences in the other coordinates
+# only (m - 1 calls per point, reusing the scan's height), with their bias
+# removed by the Laplace curvature as in the VB stage.
+scan_bend <- function(j, lp, gr, lap, Vscan, t, f_t) {
+  m <- length(lap$mode)
+  if (m < 2L) {
+    return(0)
+  }
+  Sigma <- lap$Sigma
+  sds <- sqrt(diag(Sigma))
+  C <- Sigma[-j, -j, drop = FALSE] -
+    tcrossprod(Sigma[-j, j]) / Sigma[j, j]
+  others <- seq_len(m)[-j]
+  h <- 1e-3 * sds
+  gain <- numeric(length(t))
+  for (k in seq_along(t)) {
+    x <- lap$mode + Vscan[, j] * t[k]
+    g <- if (is.null(gr)) {
+      vapply(
+        others,
+        function(i) {
+          xp <- x
+          xp[i] <- x[i] + h[i]
+          (lp(xp) - f_t[k]) / h[i] + 0.5 * h[i] * lap$H[i, i]
+        },
+        numeric(1)
+      )
+    } else {
+      gr(x)[others]
+    }
+    gain[k] <- if (all(is.finite(g))) 0.5 * sum(g * (C %*% g)) else Inf
+  }
+  max(gain)
 }

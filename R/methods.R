@@ -44,6 +44,14 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   `tails` is `FALSE` (and flagged) when the density at an end of the scan
 #'   is still over 5\% of its peak: the Laplace SD badly understates a heavy
 #'   tail there, and the skew-normal extrapolates it.
+#' * **Scan path.** `bend` is the log-density, in nats, that the straight
+#'   scan misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
+#'   towards the conditional mode of the other parameters. It is flagged above
+#'   0.1. A large value means the other parameters' conditional mode bends away
+#'   from the line, as a poorly determined noise scale does for a regression
+#'   coefficient at small n, and the marginal comes out too narrow, by roughly
+#'   0.35 to 0.5 times `bend` in relative SD (see the Accuracy section of
+#'   [inla_vanilla()]).
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and the
 #'   scanned density relative to its peak (flagged above 0.05), and
 #'   `sn_vs_vb`, the gap between the
@@ -109,11 +117,11 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 
   cli::cat_line(cli::style_bold("Diagnostics"))
   diag <- x$diagnostics
-  cols <- c("vb_shift", "sn_vs_vb", "alpha", "nmad")
-  heads <- c("VB shift", "SN - VB", "Shape", "NMAD")
+  cols <- c("vb_shift", "sn_vs_vb", "alpha", "nmad", "bend")
+  heads <- c("VB shift", "SN - VB", "Shape", "NMAD", "Bend")
   if (is.null(x$vb)) {
-    cols <- cols[3:4]
-    heads <- heads[3:4]
+    cols <- cols[3:5]
+    heads <- heads[3:5]
   }
   dtab <- as.matrix(diag[, cols, drop = FALSE])
   colnames(dtab) <- heads
@@ -148,6 +156,13 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status(
       "warn",
       "Heavy tails for {.field {rownames(diag)[!diag$tails]}}: the density is still over 5% of its peak 4 Laplace SDs out, and the skew-normal extrapolates beyond."
+    )
+  }
+  bent <- diag$bend > 0.1
+  if (any(bent)) {
+    cat_status(
+      "warn",
+      "The straight scan misses up to {fmt_num(max(diag$bend))} nats at +-2 SDs for {.field {rownames(diag)[bent]}}: the marginal may be too narrow."
     )
   }
   max_nmad <- max(diag$nmad)

@@ -40,6 +40,14 @@ the posterior is far from the Laplace Gaussian.
 \code{tails} is \code{FALSE} (and flagged) when the density at an end of the scan
 is still over 5\\% of its peak: the Laplace SD badly understates a heavy
 tail there, and the skew-normal extrapolates it.
+\item \strong{Scan path.} \code{bend} is the log-density, in nats, that the straight
+scan misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
+towards the conditional mode of the other parameters. It is flagged above
+0.1. A large value means the other parameters' conditional mode bends away
+from the line, as a poorly determined noise scale does for a regression
+coefficient at small n, and the marginal comes out too narrow, by roughly
+0.35 to 0.5 times \code{bend} in relative SD (see the Accuracy section of
+\code{\link[=inla_vanilla]{inla_vanilla()}}).
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and the
 scanned density relative to its peak (flagged above 0.05), and
 \code{sn_vs_vb}, the gap between the
