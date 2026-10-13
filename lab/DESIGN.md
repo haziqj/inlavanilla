@@ -27,6 +27,7 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
 
 ## Open
 
+Nothing at present.
 
 ## Later
 
