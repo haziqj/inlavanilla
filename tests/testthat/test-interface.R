@@ -738,7 +738,12 @@ test_that("a correct analytic gradient passes the checks silently", {
     -6 * z / (5 * s * (1 + z^2 / 5))
   }
   fit <- inla_vanilla(lp_t, c(a = 1 + 0.5 * s), grad = gr_t, silent = TRUE)
-  expect_identical(fit$warnings, character())
+  # No gradient warning. (A skew-normal cannot follow the t tails, so the
+  # fit-time diagnostics warning reports its NMAD; that is tested elsewhere.)
+  expect_false(any(grepl(
+    "does not match finite differences|does not look like the gradient",
+    fit$warnings
+  )))
   # A 1 x m matrix, as TMB's obj$gr() returns, is accepted
   fit <- inla_vanilla(
     lp_gauss,
@@ -1082,16 +1087,23 @@ test_that("an improper posterior with no mode fails with the Hessian error", {
 
 test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
   # One nlminb() iteration from init = 3, 9 posterior SDs above the mode
-  # log(A / B) = 0.81, cannot reach it
+  # log(A / B) = 0.81, cannot reach it. The bad mode also spoils the
+  # marginal, which the diagnostics warning reports (tested in
+  # test-diagnostics.R); it is muffled here.
   fit_short <- function(...) {
-    inla_vanilla(
-      lp_pois,
-      3,
-      y = pois_y,
-      a0 = pois_a0,
-      b0 = pois_b0,
-      control = list(nlminb = list(iter.max = 1)),
-      ...
+    withCallingHandlers(
+      inla_vanilla(
+        lp_pois,
+        3,
+        y = pois_y,
+        a0 = pois_a0,
+        b0 = pois_b0,
+        control = list(nlminb = list(iter.max = 1)),
+        ...
+      ),
+      inlavanilla_diagnostics_warning = function(w) {
+        invokeRestart("muffleWarning")
+      }
     )
   }
   msgs <- NULL
@@ -1320,7 +1332,8 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   expect_match(text, "whitened gradient [0-9.e-]+ SD! \\(warning above")
   expect_match(text, "! Fell back to nlminb, as a step was over 1 posterior SD")
   expect_match(text, "heavy!")
-  expect_match(text, "Done: .*, with 1 warning\n")
+  # the unreached mode, and the diagnostics warning it leads to
+  expect_match(text, "Done: .*, with 2 warnings\n")
 })
 
 test_that("silent = TRUE prints nothing at all", {
@@ -1359,13 +1372,15 @@ test_that("silent = TRUE records each warning once, as plain text", {
     )
   }
   expect_silent(fit <- fit_short())
-  expect_length(fit$warnings, 1)
-  expect_match(fit$warnings, "^The posterior mode may be inaccurate\\.\n")
+  # The unreached mode, and the diagnostics warning it leads to
+  expect_length(fit$warnings, 2)
+  expect_match(fit$warnings[1], "^The posterior mode may be inaccurate\\.\n")
   expect_match(
-    fit$warnings,
+    fit$warnings[1],
     "Raise `iter.max` or `eval.max` in `control$nlminb`.",
     fixed = TRUE
   )
+  expect_match(fit$warnings[2], "^The approximation may be poor")
   # The diagnostics show the same unreached mode as without silent
   expect_gt(fit$diagnostics$optim$grad_mode, 0.01)
 
@@ -1377,9 +1392,9 @@ test_that("silent = TRUE records each warning once, as plain text", {
     old <- options(cli.condition_width = 30)
     on.exit(options(old))
     fit <- fit_short()
-    expect_false(grepl("\033", fit$warnings, fixed = TRUE))
-    expect_false(grepl("{.", fit$warnings, fixed = TRUE))
-    expect_length(strsplit(fit$warnings, "\n")[[1]], 4)
+    expect_false(any(grepl("\033", fit$warnings, fixed = TRUE)))
+    expect_false(any(grepl("{.", fit$warnings, fixed = TRUE)))
+    expect_length(strsplit(fit$warnings[1], "\n")[[1]], 4)
     # whereas the warning as signalled is styled and wrapped
     w <- tryCatch(
       suppressMessages(inla_vanilla(
@@ -1409,21 +1424,27 @@ test_that("silent = TRUE records each warning once, as plain text", {
 
 test_that("without silent = TRUE, warnings are signalled and also recorded", {
   w <- expect_warning(
-    fit <- suppressMessages(inla_vanilla(
-      lp_pois,
-      3,
-      y = pois_y,
-      a0 = pois_a0,
-      b0 = pois_b0,
-      control = list(nlminb = list(iter.max = 1))
-    )),
+    fit <- withCallingHandlers(
+      suppressMessages(inla_vanilla(
+        lp_pois,
+        3,
+        y = pois_y,
+        a0 = pois_a0,
+        b0 = pois_b0,
+        control = list(nlminb = list(iter.max = 1))
+      )),
+      inlavanilla_diagnostics_warning = function(w) {
+        invokeRestart("muffleWarning")
+      }
+    ),
     "The posterior mode may be inaccurate",
     class = "inlavanilla_warning"
   )
-  # The record is the warning's message, as plain text
+  # The record is the warning's message, as plain text; the diagnostics
+  # warning that follows from the bad mode is recorded too
   squish <- function(x) gsub("\\s+", " ", cli::ansi_strip(x))
-  expect_length(fit$warnings, 1)
-  expect_identical(squish(fit$warnings), squish(conditionMessage(w)))
+  expect_length(fit$warnings, 2)
+  expect_identical(squish(fit$warnings[1]), squish(conditionMessage(w)))
 
   # Every warning of logpost is signalled, and recorded once
   n_calls <- 0

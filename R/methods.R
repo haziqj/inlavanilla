@@ -61,12 +61,20 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   0.1 SDs is flagged: the posterior is far from Gaussian along that
 #'   parameter, and either approximation may be off.
 #'
-#' `diagnostics` also holds `scan_end_mass`, the mass each fitted
-#' skew-normal puts outside the scanned window (the mode \eqn{\pm 4} Laplace
-#' SDs), where the marginal is extrapolated, as INLAvaan's `diagnostics()`
-#' reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
-#' 10^{-5}}, and well-fitted marginals usually sit between \eqn{10^{-3}} and
-#' \eqn{10^{-2}}. It is recorded but not flagged.
+#' * **Scan-end mass.** `scan_end_mass`, the mass each fitted skew-normal
+#'   puts outside the scanned window (the mode \eqn{\pm 4} Laplace SDs),
+#'   where the marginal is extrapolated, as INLAvaan's `diagnostics()`
+#'   reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
+#'   10^{-5}}, and well-fitted marginals usually sit between \eqn{10^{-3}}
+#'   and \eqn{10^{-2}}. It is flagged above 0.05.
+#'
+#' Some problems also raise one warning at the end of the fit, of class
+#' `inlavanilla_diagnostics_warning`: heavy tails, an NMAD above 0.1, a
+#' scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
+#' levels match INLAvaan's fit-time warning; the flags here are more
+#' sensitive. With `silent = TRUE` the warning is only recorded in
+#' `fit$warnings`. `vignette("diagnostics", package = "inlavanilla")`
+#' explains every check with examples.
 #'
 #' With `vb = FALSE` there is no VB mean, and the VB columns are left out.
 #' With `marginals = "gaussian"` there are no scans, so only the VB shift is
@@ -167,6 +175,14 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status(
       "info",
       "Gaussian marginals: no scans, so no skew-normal checks."
+    )
+  }
+  sem <- diag$scan_end_mass
+  if (!gaussian && !is.null(sem) && any(sem > 0.05, na.rm = TRUE)) {
+    beyond <- rownames(diag)[!is.na(sem) & sem > 0.05]
+    cat_status(
+      "warn",
+      "The skew-normal for {.field {beyond}} puts up to {fmt_num(max(sem, na.rm = TRUE))} of its mass beyond the scanned window: its outer quantiles are extrapolated."
     )
   }
   if (!gaussian && !all(diag$tails)) {
