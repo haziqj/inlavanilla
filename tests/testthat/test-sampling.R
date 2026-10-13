@@ -677,47 +677,100 @@ test_that("a fun that is not a function is an error", {
 
 # (f) A derived natural-scale quantity ------------------------------------------
 
-test_that("exp() of gamma-Poisson draws matches the exact gamma posterior", {
-  # lambda | y ~ Gamma(5, 6) exactly. The draws of exp(theta) carry the
-  # skew-normal's approximation error plus Monte Carlo error, so each
-  # quantile is allowed tol_sn exact SDs plus z_mc Monte Carlo SEs. Noise
-  # free, the skew-normal quantiles exp(qsnorm(p, sn)) are within 0.013 exact
-  # SDs of the truth from 1% to 97.5%, and 0.046 at 99%; the Laplace
-  # lognormal exp(qnorm(p, mode, sd)) is off by 0.15 to 1.14 SDs. Observed
-  # for the draws: largest error 0.027 SDs, at most 1.3 Monte Carlo SEs from
-  # the skew-normal quantile.
-  tol_sn <- ifelse(probs > 0.98, 0.1, 0.03)
-  sd_exact <- sqrt(gp_S) / gp_R
-  q_exact <- qgamma(probs, shape = gp_S, rate = gp_R)
+# lambda | y ~ Gamma(5, 6) exactly. The fit's skew-normal for theta, pushed
+# through exp(), is the distribution that sampling(fun = exp) draws from, so
+# the checks split the two error sources: that distribution against the exact
+# gamma (approximation error, no noise), and the draws against it (Monte Carlo
+# error only); then the draws against the exact gamma, within both, and
+# against the Laplace lognormal.
+gp_sd_exact <- sqrt(gp_S) / gp_R
+gp_q_exact <- qgamma(probs, shape = gp_S, rate = gp_R)
+gp_sn <- sn_par(gp_fit, 1)
+gp_q_sn <- exp(sn_quantile_ref(probs, gp_sn$xi, gp_sn$omega, gp_sn$alpha))
+gp_q_laplace <- exp(qnorm(probs, gp_fit$mode, sqrt(gp_fit$cov[1, 1])))
+# Quantile errors allowed for the skew-normal approximation, in exact SDs
+gp_tol_sn <- ifelse(probs > 0.98, 0.1, 0.03)
 
+# E exp(t X) for X ~ SN(xi, omega, alpha) by quadrature on the theta scale
+gp_sn_exp_moment <- function(t) {
+  integrate(
+    function(x) {
+      exp(t * x) * sn_density_ref(x, gp_sn$xi, gp_sn$omega, gp_sn$alpha)
+    },
+    gp_sn$xi - 40 * gp_sn$omega,
+    gp_sn$xi + 20 * gp_sn$omega,
+    rel.tol = 1e-12
+  )$value
+}
+gp_mean_sn <- gp_sn_exp_moment(1)
+gp_sd_sn <- sqrt(gp_sn_exp_moment(2) - gp_mean_sn^2)
+
+test_that("the skew-normal for log(lambda) gives near-exact gamma quantiles and moments", {
+  # No Monte Carlo here. Observed: quantile errors at most 0.013 exact SDs
+  # from 1% to 97.5% and 0.046 at 99% (tolerances 0.03 and 0.1); the Laplace
+  # lognormal is off by 0.15 to 1.14 SDs. Mean and SD errors 0.0022 and
+  # 0.0046 SDs (tolerances 0.005 and 0.012); Laplace is off by 0.24 and 0.16.
+  err_sn <- abs(gp_q_sn - gp_q_exact) / gp_sd_exact
+  err_laplace <- abs(gp_q_laplace - gp_q_exact) / gp_sd_exact
+  expect_true(all(err_sn < gp_tol_sn))
+  expect_true(all(err_sn < err_laplace))
+
+  mean_exact <- gp_S / gp_R
+  expect_lt(abs(gp_mean_sn - mean_exact) / gp_sd_exact, 0.005)
+  expect_lt(abs(gp_sd_sn - gp_sd_exact) / gp_sd_exact, 0.012)
+  lap_var <- gp_fit$cov[1, 1]
+  lap_mean <- exp(gp_fit$mode[[1]] + lap_var / 2)
+  lap_sd <- lap_mean * sqrt(exp(lap_var) - 1)
+  expect_lt(abs(gp_mean_sn - mean_exact), abs(lap_mean - mean_exact))
+  expect_lt(abs(gp_sd_sn - gp_sd_exact), abs(lap_sd - gp_sd_exact))
+})
+
+test_that("exp() of gamma-Poisson draws matches the exact gamma posterior", {
   set.seed(51)
   lambda <- sampling(gp_fit, nsamp = n_big, fun = function(theta) exp(theta))
   expect_identical(dim(lambda), c(as.integer(n_big), 1L))
   q_emp <- unname(quantile(lambda[, 1], probs))
-  se <- quantile_se(probs, n_big, dgamma(q_exact, shape = gp_S, rate = gp_R))
-  err_draws <- abs(q_emp - q_exact)
-  expect_true(all(err_draws < tol_sn * sd_exact + z_mc * se))
 
-  # The skew-normal draws beat the Laplace lognormal at every quantile
-  q_laplace <- exp(qnorm(probs, gp_fit$mode, sqrt(gp_fit$cov[1, 1])))
-  expect_true(all(err_draws < abs(q_laplace - q_exact)))
+  # Against the skew-normal target, within Monte Carlo error only. The
+  # density of lambda = exp(theta) at q is f_sn(log q) / q. Observed: largest
+  # deviation 1.3 SEs.
+  f_sn <- sn_density_ref(log(gp_q_sn), gp_sn$xi, gp_sn$omega, gp_sn$alpha) /
+    gp_q_sn
+  se_sn <- quantile_se(probs, n_big, f_sn)
+  expect_lt(max(abs(q_emp - gp_q_sn) / se_sn), z_mc)
 
-  # Mean and SD of lambda. The skew-normal moment generating function,
-  # E exp(t X) = 2 exp(xi t + omega^2 t^2 / 2) Phi(delta omega t), gives the
-  # noise-free values: mean and SD within 0.0022 and 0.0046 exact SDs, while
-  # the Laplace lognormal is off by 0.24 and 0.16. The Monte Carlo SE of the
-  # mean is SD / sqrt(n), and of the SD, SD sqrt((kurtosis - 1) / (4 n)) with
-  # the gamma kurtosis 3 + 6 / S. Observed: 0.9 and 0.5 SEs.
+  # Against the exact gamma, within the approximation tolerance plus Monte
+  # Carlo error, and closer than the Laplace lognormal at every quantile.
+  # Observed: largest error 0.027 exact SDs.
+  se <- quantile_se(
+    probs,
+    n_big,
+    dgamma(gp_q_exact, shape = gp_S, rate = gp_R)
+  )
+  err_draws <- abs(q_emp - gp_q_exact)
+  expect_true(all(err_draws < gp_tol_sn * gp_sd_exact + z_mc * se))
+  expect_true(all(err_draws < abs(gp_q_laplace - gp_q_exact)))
+
+  # Mean and SD of lambda. The Monte Carlo SE of the mean is SD / sqrt(n),
+  # and of the SD, SD sqrt((kurtosis - 1) / (4 n)) with the gamma kurtosis
+  # 3 + 6 / S. Observed: 1.2 and 1.2 SEs from the skew-normal's mean and SD,
+  # 0.9 and 0.5 SEs from the exact values, and closer to them than the
+  # Laplace lognormal's (0.24 and 0.16 SDs off).
   mean_exact <- gp_S / gp_R
   kurt <- 3 + 6 / gp_S
-  se_mean <- sd_exact / sqrt(n_big)
-  se_sd <- sd_exact * sqrt((kurt - 1) / (4 * n_big))
-  expect_lt(abs(mean(lambda) - mean_exact), 0.005 * sd_exact + z_mc * se_mean)
-  expect_lt(abs(sd(lambda) - sd_exact), 0.012 * sd_exact + z_mc * se_sd)
+  se_mean <- gp_sd_exact / sqrt(n_big)
+  se_sd <- gp_sd_exact * sqrt((kurt - 1) / (4 * n_big))
+  expect_lt(abs(mean(lambda) - gp_mean_sn), z_mc * se_mean)
+  expect_lt(abs(sd(lambda) - gp_sd_sn), z_mc * se_sd)
+  expect_lt(
+    abs(mean(lambda) - mean_exact),
+    0.005 * gp_sd_exact + z_mc * se_mean
+  )
+  expect_lt(abs(sd(lambda) - gp_sd_exact), 0.012 * gp_sd_exact + z_mc * se_sd)
 
   lap_var <- gp_fit$cov[1, 1]
   lap_mean <- exp(gp_fit$mode[[1]] + lap_var / 2)
   lap_sd <- lap_mean * sqrt(exp(lap_var) - 1)
   expect_lt(abs(mean(lambda) - mean_exact), abs(lap_mean - mean_exact))
-  expect_lt(abs(sd(lambda) - sd_exact), abs(lap_sd - sd_exact))
+  expect_lt(abs(sd(lambda) - gp_sd_exact), abs(lap_sd - gp_sd_exact))
 })
