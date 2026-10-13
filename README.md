@@ -30,6 +30,11 @@ milliseconds. It runs the approximation pipeline of
     log-posterior;
 4.  **Gaussian copula draws** for any function of the parameters.
 
+Stages 2 and 3 are optional and independent: `vb = FALSE` skips the VB
+correction, and `marginals = "gaussian"` keeps the Gaussian marginals
+instead of scanning for skew-normal ones. With both, you get the Laplace
+approximation alone.
+
 The package is pure R and small. Its only dependency outside base R is
 [cli](https://cli.r-lib.org/).
 
@@ -65,11 +70,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [30ms]
-#> ✔ VB mean correction, max shift 0.17σ [36ms]
-#> ✔ Fitted 1 skew-normal marginal [71ms]
+#> ✔ Found the posterior mode in 6 iterations [33ms]
+#> ✔ VB mean correction, max shift 0.17σ [41ms]
+#> ✔ Fitted 1 skew-normal marginal [89ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 146ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 175ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode

@@ -239,6 +239,40 @@ The two fits agree to several decimal places, and the gradient version calls
 finite differences at `init` and warns if they disagree, which catches most
 slips in hand-derived gradients.
 
+## Cheaper approximations
+
+The VB correction and the skew-normal marginals are optional, and independent
+of each other. `vb = FALSE` skips the VB correction, and
+`marginals = "gaussian"` skips the scans and keeps the Gaussian marginals.
+With both, the fit is the Laplace approximation alone.
+
+```{r}
+#| label: cheaper
+fit_fast <- function(...) {
+  inla_vanilla(logpost, init, X = X, y = y, verbose = FALSE, ...)
+}
+fits <- list(
+  `skew-normal + VB` = fit,
+  `skew-normal` = fit_fast(vb = FALSE),
+  `Gaussian + VB` = fit_fast(marginals = "gaussian"),
+  Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
+)
+round(t(sapply(fits, function(f) {
+  c(
+    calls = f$counts[["logpost"]],
+    logml = f$logml,
+    f$summary["b_wt", c("Mean", "2.5%", "97.5%")]
+  )
+})), 2)
+```
+
+Without the VB correction the skew-normal marginals are the same, because
+they are scanned around the mode, but the log marginal likelihood is the
+Laplace one. The VB correction moves the Gaussian's centre most of the way to
+the posterior mean, but a Gaussian cannot follow the long tail. Without a
+gradient the VB correction is the most expensive stage, and its cost grows
+fastest with the number of parameters.
+
 ## Derived quantities
 
 `sampling()` draws from the approximate joint posterior. The draws come from

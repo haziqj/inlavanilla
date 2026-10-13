@@ -7,3 +7,6 @@
   log marginal likelihood. `sampling()` gives Gaussian-copula draws of the
   parameters or of any function of them. `print()`, `summary()` and `plot()`
   methods report the fit and its diagnostics.
+* The VB correction (`vb`) and the skew-normal marginals (`marginals =
+  "skewnormal"` or `"gaussian"`) can each be switched off, down to the
+  Laplace approximation alone.
