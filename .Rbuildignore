@@ -9,3 +9,6 @@
 ^docs$
 ^pkgdown$
 ^lab$
+^vignettes/\.quarto$
+^vignettes/.*_files$
+^\.quarto$
