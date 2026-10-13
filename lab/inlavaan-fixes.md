@@ -225,4 +225,13 @@ narrow by a factor that vanishes as O(1/n).
     log-determinant at each point) brings it to -1%, at about 10 times the
     cost of the marginal stage.
 
-See `lab/DESIGN.md` and `lab/scan-path-prototype.R` in inlavanilla.
+- **Bollen's Political Democracy SEM (39 parameters, n = 75), the model of
+  INLAvaan's SEM article with a mean structure:** against full Laplace
+  marginals, the SDs are too small by about 25% for the log disturbance
+  variance of `dem65`, 19% for the log residual variance of `x2`, 6% for
+  `x1`, 5.5% for a loading and 2.6% for the intercepts. inlavanilla's fit
+  matches INLAvaan's here (modes within 2e-4 SDs, log marginal likelihood
+  -1686.85 against -1686.86), so INLAvaan has the same gap.
+
+See `lab/DESIGN.md`, `lab/scan-path-prototype.R` and `lab/sem-marginal-check.R`
+in inlavanilla.
