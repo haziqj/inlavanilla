@@ -165,15 +165,16 @@ loo(fit, loglik, time = time, y = y)
 waic(fit, loglik, time = time, y = y)
 }
 \references{
-Alhyari, M., Jamil, H., Montcho, H. and Rue, H. (2026). Deterministic
-leave-one-cluster-out cross-validation for multilevel Bayesian models.
-arXiv:2609.00670 [stat.ME]. \doi{10.48550/arXiv.2609.00670}
+Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). \emph{Deterministic
+leave-one-cluster-out cross-validation for multilevel Bayesian models}.
+arXiv. \url{https://doi.org/10.48550/arXiv.2609.00670}
 
-Vehtari, A., Gelman, A. and Gabry, J. (2017). Practical Bayesian model
+Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
 evaluation using leave-one-out cross-validation and WAIC. \emph{Statistics and
-Computing}, 27, 1413--1432. \doi{10.1007/s11222-016-9696-4}
+Computing}, \emph{27}(5), 1413--1432. \url{https://doi.org/10.1007/s11222-016-9696-4}
 
 Watanabe, S. (2010). Asymptotic equivalence of Bayes cross validation and
 widely applicable information criterion in singular learning theory.
-\emph{Journal of Machine Learning Research}, 11, 3571--3594.
+\emph{Journal of Machine Learning Research}, \emph{11}, 3571--3594.
+\url{https://jmlr.org/papers/v11/watanabe10a.html}
 }

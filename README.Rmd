@@ -117,10 +117,10 @@ model comparison.
 
 ## References
 
-Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural
-equation models using integrated nested Laplace approximations.
-[arXiv:2603.25690](https://doi.org/10.48550/arXiv.2603.25690).
+Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for structural
+equation models using integrated nested Laplace approximations*. arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
 
-Jamil, H. and Rue, H. (2026). Implementation and workflows for INLA-based
-approximate Bayesian structural equation modelling.
-[arXiv:2604.00671](https://doi.org/10.48550/arXiv.2604.00671).
+Jamil, H., & Rue, H. (2026b). *Implementation and workflows for INLA-based
+approximate Bayesian structural equation modelling*. arXiv.
+<https://doi.org/10.48550/arXiv.2604.00671>

@@ -11,8 +11,8 @@ Authors@R: c(
   )
 Description: Performs approximate Bayesian inference for the parameters of a
     model from its log-likelihood plus log-prior alone, using the
-    approximation pipeline of the 'INLAvaan' package (Jamil and Rue,
-    2026a) <doi:10.48550/arXiv.2603.25690>, an adaptation of the Integrated
+    approximation pipeline of the 'INLAvaan' package (Jamil & Rue, 2026a)
+    <doi:10.48550/arXiv.2603.25690>, an adaptation of the Integrated
     Nested Laplace Approximation (Rue et al., 2009)
     <doi:10.1111/j.1467-9868.2008.00700.x>, with no latent field and nothing
     model-specific. A Laplace approximation with a variational Bayes mean
