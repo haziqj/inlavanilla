@@ -21,7 +21,9 @@
 #'   fixed length (named, ideally). When `NULL`, the parameters themselves are
 #'   returned.
 #' @param ... For the `inla_vanilla` method, further arguments passed to
-#'   `fun`.
+#'   `fun`. As in [stats::optim()], a name that abbreviates `nsamp` or `fun`
+#'   would be taken as that argument: a data argument named `n` would set the
+#'   number of draws. Give such data a longer name, or wrap it in `fun`.
 #'
 #' @returns A numeric matrix with one row per draw: the parameters on the
 #'   unconstrained scale, or the values of `fun`.

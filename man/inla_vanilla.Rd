@@ -34,7 +34,9 @@ differences are used.}
 data. As in \code{\link[stats:optim]{stats::optim()}} and \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the
 gradient, and the arguments after them (\code{vb}, \code{marginals}, \code{verbose},
 \code{silent}, \code{control}) must be given by their full names, so data
-arguments cannot partially match them.}
+arguments cannot partially match them. The arguments before them can be
+matched, as in \code{optim()}: a data argument named \code{g} or \code{gr} would be
+taken as \code{grad}, so give it a longer name.}
 
 \item{vb}{Logical. Apply the VB mean correction? Default \code{TRUE}. It enters
 the log marginal likelihood, and the skew-normal means are checked against

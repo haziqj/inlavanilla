@@ -163,7 +163,9 @@
 #'   data. As in [stats::optim()] and [stats::nlminb()], they come after the
 #'   gradient, and the arguments after them (`vb`, `marginals`, `verbose`,
 #'   `silent`, `control`) must be given by their full names, so data
-#'   arguments cannot partially match them.
+#'   arguments cannot partially match them. The arguments before them can be
+#'   matched, as in `optim()`: a data argument named `g` or `gr` would be
+#'   taken as `grad`, so give it a longer name.
 #' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
 #'   the log marginal likelihood, and the skew-normal means are checked against
 #'   it (see [summary.inla_vanilla()]).
