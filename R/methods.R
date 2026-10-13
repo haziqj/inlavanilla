@@ -420,12 +420,13 @@ cat_status <- function(type, msg, .envir = parent.frame()) {
   cli::cat_line(sym, " ", cli::format_inline(msg, .envir = .envir))
 }
 
-# Separator and the posterior-SD unit, in plain ASCII where the output cannot
-# show UTF-8.
+# Whether a fit has Gaussian marginals (marginals = "gaussian").
 is_gaussian <- function(x) {
   identical(x$marginals, "gaussian")
 }
 
+# Separator and the posterior-SD unit, in plain ASCII where the output cannot
+# show UTF-8.
 sep_dot <- function() {
   if (cli::is_utf8_output()) " \u00b7 " else ", "
 }
