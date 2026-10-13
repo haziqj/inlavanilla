@@ -21,7 +21,8 @@ unconstrained scale. See the section on writing \code{logpost}.}
 
 \item{init}{A named numeric vector of starting values. Its length sets the
 number of parameters and its names label them; unnamed values are called
-\code{theta[1]}, \code{theta[2]}, ....}
+\code{theta[1]}, \code{theta[2]}, ..., and a repeated name is numbered in the same
+way.}
 
 \item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
 data. The arguments after \code{...} must be given by their full names, so
@@ -46,18 +47,16 @@ other things:
 \itemize{
 \item \code{summary}: the posterior summary table (mean, SD, quantiles, mode).
 \item \code{mode}, \code{cov}: the Laplace mode and covariance.
-\item \code{mean_vb}: the VB-corrected mean.
+\item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = FALSE}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
 parameter.
 \item \code{logml}: the log marginal likelihood.
 }
 }
 \description{
-Approximates the posterior of a parameter vector from its log density alone.
-\code{inla_vanilla()} runs the approximation pipeline of INLAvaan with no latent
-field and nothing model-specific:
-}
-\details{
+Approximates the posterior of a parameter vector from its log density
+alone, using the approximation pipeline of INLAvaan with no latent field
+and nothing model-specific. The pipeline has four stages:
 \enumerate{
 \item \strong{Joint Gaussian (Laplace).} The posterior mode \eqn{\vartheta^*} and
 the inverse Hessian \eqn{\Omega} there give a Gaussian approximation
@@ -82,6 +81,11 @@ example a standard deviation \eqn{\sigma > 0} as \eqn{\log\sigma}, a
 probability as its logit, or a correlation as its Fisher \eqn{z}. Means and
 regression coefficients need no change.
 
+Return \code{-Inf} wherever the density is zero or cannot be evaluated, such as
+outside the support or where a matrix is not positive definite (\code{NA} and
+\code{NaN} count the same). The scans and the VB nodes reach several posterior
+SDs from the mode, and an error raised there stops the fit.
+
 \code{logpost} is then the log density \strong{of the parameters you pass}. When a
 prior is stated on the natural scale, include the log-Jacobian of the
 transformation: with \eqn{\vartheta = \log\sigma} and a prior
@@ -104,12 +108,23 @@ the missing constants.
 \section{Gradients}{
 
 \code{grad} is optional. Without it, derivatives come from finite differences
-of \code{logpost}, which costs more calls as the number of parameters grows.
-With it, the fit is faster and more accurate. A supplied \code{grad} is checked
-against finite differences at \code{init}, with a warning if the two disagree.
-Any R function works for either, including compiled code (Rcpp, TMB,
-RTMB). For a TMB object, which minimises, pass \code{function(x) -obj$fn(x)} and
-\code{function(x) -as.vector(obj$gr(x))}.
+of \code{logpost}, and the number of calls grows quickly with the number of
+parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
+take about m(\code{n_grid} + 2m + 5). The VB correction takes about
+(m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
+beyond a handful of parameters: at m = 20 a fit makes on the order of
+50,000 calls. With \code{grad}, the VB correction takes 2m^2 + 1 gradient calls
+per sweep instead, and the fit is faster and more accurate. For more than
+about 10 parameters, supply \code{grad}, or set \code{vb = FALSE} to skip the VB
+correction (and its term in the log marginal likelihood).
+
+A supplied \code{grad} is checked against finite differences at \code{init}, and
+its Jacobian at the mode is checked for symmetry, with a warning if either
+check fails. Any R function works for \code{logpost} and \code{grad}, including
+compiled code (Rcpp, TMB, RTMB). For a TMB object, which minimises, pass
+\code{function(x) -obj$fn(x)} and \code{function(x) -as.vector(obj$gr(x))}, with
+\code{init = obj$par}; its repeated names (one per element of a parameter
+vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on.
 }
 
 \section{Control}{

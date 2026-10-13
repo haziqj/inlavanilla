@@ -1,8 +1,9 @@
 #' INLA-style posterior approximation for any log-posterior
 #'
-#' Approximates the posterior of a parameter vector from its log density alone.
-#' `inla_vanilla()` runs the approximation pipeline of INLAvaan with no latent
-#' field and nothing model-specific:
+#' @description
+#' Approximates the posterior of a parameter vector from its log density
+#' alone, using the approximation pipeline of INLAvaan with no latent field
+#' and nothing model-specific. The pipeline has four stages:
 #'
 #' 1. **Joint Gaussian (Laplace).** The posterior mode \eqn{\vartheta^*} and
 #'    the inverse Hessian \eqn{\Omega} there give a Gaussian approximation
@@ -25,6 +26,11 @@
 #' probability as its logit, or a correlation as its Fisher \eqn{z}. Means and
 #' regression coefficients need no change.
 #'
+#' Return `-Inf` wherever the density is zero or cannot be evaluated, such as
+#' outside the support or where a matrix is not positive definite (`NA` and
+#' `NaN` count the same). The scans and the VB nodes reach several posterior
+#' SDs from the mode, and an error raised there stops the fit.
+#'
 #' `logpost` is then the log density **of the parameters you pass**. When a
 #' prior is stated on the natural scale, include the log-Jacobian of the
 #' transformation: with \eqn{\vartheta = \log\sigma} and a prior
@@ -45,12 +51,23 @@
 #'
 #' @section Gradients:
 #' `grad` is optional. Without it, derivatives come from finite differences
-#' of `logpost`, which costs more calls as the number of parameters grows.
-#' With it, the fit is faster and more accurate. A supplied `grad` is checked
-#' against finite differences at `init`, with a warning if the two disagree.
-#' Any R function works for either, including compiled code (Rcpp, TMB,
-#' RTMB). For a TMB object, which minimises, pass `function(x) -obj$fn(x)` and
-#' `function(x) -as.vector(obj$gr(x))`.
+#' of `logpost`, and the number of calls grows quickly with the number of
+#' parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
+#' take about m(`n_grid` + 2m + 5). The VB correction takes about
+#' (m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
+#' beyond a handful of parameters: at m = 20 a fit makes on the order of
+#' 50,000 calls. With `grad`, the VB correction takes 2m^2 + 1 gradient calls
+#' per sweep instead, and the fit is faster and more accurate. For more than
+#' about 10 parameters, supply `grad`, or set `vb = FALSE` to skip the VB
+#' correction (and its term in the log marginal likelihood).
+#'
+#' A supplied `grad` is checked against finite differences at `init`, and
+#' its Jacobian at the mode is checked for symmetry, with a warning if either
+#' check fails. Any R function works for `logpost` and `grad`, including
+#' compiled code (Rcpp, TMB, RTMB). For a TMB object, which minimises, pass
+#' `function(x) -obj$fn(x)` and `function(x) -as.vector(obj$gr(x))`, with
+#' `init = obj$par`; its repeated names (one per element of a parameter
+#' vector) are numbered, as `beta[1]`, `beta[2]`, and so on.
 #'
 #' @section Control:
 #' `control` is a list with any of:
@@ -68,7 +85,8 @@
 #'   unconstrained scale. See the section on writing `logpost`.
 #' @param init A named numeric vector of starting values. Its length sets the
 #'   number of parameters and its names label them; unnamed values are called
-#'   `theta[1]`, `theta[2]`, ....
+#'   `theta[1]`, `theta[2]`, ..., and a repeated name is numbered in the same
+#'   way.
 #' @param grad Optional function `grad(theta, ...)` returning the gradient of
 #'   `logpost` as a numeric vector. When `NULL` (the default), finite
 #'   differences are used.
@@ -88,7 +106,7 @@
 #'   other things:
 #'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
 #'   * `mode`, `cov`: the Laplace mode and covariance.
-#'   * `mean_vb`: the VB-corrected mean.
+#'   * `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter.
 #'   * `logml`: the log marginal likelihood.
@@ -143,7 +161,7 @@ inla_vanilla <- function(
   if (!is.null(grad)) {
     check_function(grad, "grad")
   }
-  init <- check_init(init)
+  init <- check_init(init, verbose)
   check_flag(vb, "vb")
   check_flag(verbose, "verbose")
   ctrl <- vanilla_control(control)
@@ -236,25 +254,40 @@ inla_vanilla <- function(
   # warn: without a gradient nlminb() can report "false convergence" at an
   # accurate mode, and it can report success short of one.
   grad_mode <- lap$grad_mode
-  if (!is.finite(grad_mode) || grad_mode > 1e-2) {
+  mode_ok <- is.finite(grad_mode) && grad_mode <= 1e-2
+  if (!mode_ok) {
+    hint <- if (grepl("limit", lap$opt$message)) {
+      "Raise {.code iter.max} or {.code eval.max} in {.code control$nlminb}."
+    } else {
+      "Try other starting values, or supply {.arg grad}."
+    }
     warn(c(
       "The posterior mode may be inaccurate.",
       "x" = "The gradient there is {signif(grad_mode, 2)} posterior SDs
              (whitened); it should be close to zero.",
       "i" = "{.fn nlminb} says: {.val {lap$opt$message}}.",
-      "i" = "Try other starting values, or supply {.arg grad}."
+      "i" = hint
     ))
   }
   t_laplace <- elapsed() - t0
   progress_done(
     prog,
-    paste0(
-      "Found the posterior mode in ",
-      hl(lap$opt$iterations),
-      " iteration",
-      if (lap$opt$iterations == 1L) "" else "s"
-    ),
-    t_laplace
+    if (mode_ok) {
+      paste0(
+        "Found the posterior mode in ",
+        hl(lap$opt$iterations),
+        " iteration",
+        if (lap$opt$iterations == 1L) "" else "s"
+      )
+    } else {
+      paste0(
+        "Stopped near the posterior mode (gradient ",
+        hl(paste0(format(signif(grad_mode, 2)), sd_unit())),
+        ")"
+      )
+    },
+    t_laplace,
+    ok = mode_ok
   )
 
   # Gradients for the VB correction: the user's, or one-sided differences
@@ -283,13 +316,16 @@ inla_vanilla <- function(
       "applying the VB mean correction",
       vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
     )
+    vb_max <- max(abs(vbc$shift) / sds)
     progress_done(
       prog,
       paste0(
         "VB mean correction, max shift ",
-        hl(paste0(format(signif(max(abs(vbc$shift) / sds), 2)), sd_unit()))
+        hl(paste0(format(signif(vb_max, 2)), sd_unit())),
+        if (vbc$fallback) " (fallback optimiser)" else ""
       ),
-      elapsed() - t0
+      elapsed() - t0,
+      ok = !vbc$fallback && vb_max <= 1
     )
   }
   t_vb <- elapsed() - t0
@@ -434,38 +470,45 @@ vanilla_control <- function(control) {
   if (!is.list(control)) {
     abort("{.arg control} must be a list.")
   }
-  unknown <- setdiff(names(control), names(defaults))
-  if (
-    length(unknown) > 0L || (length(control) > 0L && is.null(names(control)))
-  ) {
+  nms <- names(control)
+  if (length(control) > 0L && (is.null(nms) || any(is.na(nms) | nms == ""))) {
+    abort(c(
+      "Every {.arg control} entry must be named.",
+      "i" = "Valid entries are {.val {names(defaults)}}."
+    ))
+  }
+  unknown <- setdiff(nms, names(defaults))
+  if (length(unknown) > 0L) {
     abort(c(
       "Unknown {.arg control} entr{?y/ies}: {.val {unknown}}.",
       "i" = "Valid entries are {.val {names(defaults)}}."
     ))
   }
   ctrl <- utils::modifyList(defaults, control)
+  is_num <- function(x) is.numeric(x) && length(x) == 1L && is.finite(x)
+  if (!is_num(ctrl$n_grid) || ctrl$n_grid < 7) {
+    abort("{.code control$n_grid} must be a single number of at least 7.")
+  }
+  ctrl$n_grid <- as.integer(round(ctrl$n_grid))
+  if (!is_num(ctrl$log_threshold) || ctrl$log_threshold >= 0) {
+    abort("{.code control$log_threshold} must be a single negative number.")
+  }
+  if (!is_num(ctrl$vb_maxit) || ctrl$vb_maxit < 1) {
+    abort("{.code control$vb_maxit} must be a single number of at least 1.")
+  }
+  ctrl$vb_maxit <- as.integer(round(ctrl$vb_maxit))
+  if (!is_num(ctrl$vb_tol) || ctrl$vb_tol <= 0) {
+    abort("{.code control$vb_tol} must be a single positive number.")
+  }
+  if (!is.list(ctrl$nlminb)) {
+    abort(
+      "{.code control$nlminb} must be a list of {.fn stats::nlminb} controls."
+    )
+  }
   ctrl$nlminb <- utils::modifyList(
     list(iter.max = 1000L, eval.max = 2000L),
     ctrl$nlminb
   )
-  if (
-    !is.numeric(ctrl$n_grid) ||
-      length(ctrl$n_grid) != 1L ||
-      ctrl$n_grid < 7
-  ) {
-    abort(
-      "{.code control$n_grid} must be a single number of at least 7."
-    )
-  }
-  if (
-    !is.numeric(ctrl$log_threshold) ||
-      length(ctrl$log_threshold) != 1L ||
-      ctrl$log_threshold >= 0
-  ) {
-    abort(
-      "{.code control$log_threshold} must be a single negative number."
-    )
-  }
   ctrl
 }
 
@@ -483,7 +526,7 @@ check_flag <- function(x, arg) {
   }
 }
 
-check_init <- function(init) {
+check_init <- function(init, verbose = TRUE) {
   if (!is.numeric(init) || length(init) == 0L) {
     abort(
       "{.arg init} must be a non-empty numeric vector, not {.obj_type_friendly {init}}."
@@ -498,9 +541,21 @@ check_init <- function(init) {
   } else if (any(is.na(nms) | nms == "")) {
     abort("{.arg init} must be fully named, or not named at all.")
   } else if (anyDuplicated(nms)) {
-    abort(
-      "{.arg init} has duplicated names: {.val {unique(nms[duplicated(nms)])}}."
-    )
+    # As TMB names obj$par: one repeated name per element of a vector
+    dup <- unique(nms[duplicated(nms)])
+    renamed <- nms %in% dup
+    for (d in dup) {
+      i <- which(nms == d)
+      nms[i] <- paste0(d, "[", seq_along(i), "]")
+    }
+    if (anyDuplicated(nms)) {
+      abort("{.arg init} has names that cannot be made unique.")
+    }
+    if (verbose) {
+      message(cli::format_message(c(
+        "i" = "Numbered the repeated names in {.arg init}: {.val {nms[renamed]}}."
+      )))
+    }
   }
   stats::setNames(as.numeric(init), nms)
 }

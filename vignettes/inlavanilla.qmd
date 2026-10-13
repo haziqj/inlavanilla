@@ -22,7 +22,7 @@ options(cli.num_colors = 1)
 ## The idea
 
 If you can write down a log-posterior, `{inlavanilla}` can approximate the
-posterior: no sampler, no tuning, and usually in milliseconds. It runs the
+posterior: no sampler, no tuning, and for small models in milliseconds. It runs the
 approximation pipeline of [INLAvaan](https://inlavaan.haziqj.ml/) on any
 log-density:
 

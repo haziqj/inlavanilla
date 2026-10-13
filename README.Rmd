@@ -25,8 +25,8 @@ options(cli.num_colors = 1)
 
 *INLA-style skew-normal marginals for any log-posterior.*
 
-Give `{inlavanilla}` a log-posterior and it returns an approximate posterior
-in milliseconds: no sampler, no tuning. It runs the approximation pipeline of
+Give `{inlavanilla}` a log-posterior and it returns an approximate posterior,
+in milliseconds for small models: no sampler, no tuning. It runs the approximation pipeline of
 [INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
 
 1. a **Laplace approximation** at the posterior mode, with the Laplace
@@ -79,6 +79,7 @@ posterior, and its `fun` argument maps each draw back to $p$, or to any other
 quantity of interest:
 
 ```{r draws}
+set.seed(1)
 p <- sampling(fit, nsamp = 1e5, fun = function(theta) plogis(theta[["logit_p"]]))
 rbind(
   inlavanilla = quantile(p, c(0.025, 0.5, 0.975)),

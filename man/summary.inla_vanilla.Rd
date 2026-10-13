@@ -26,23 +26,34 @@ scale of \code{logpost}, together with diagnostics of each stage of the
 approximation.
 }
 \details{
-The diagnostics are:
+The diagnostics, and the levels at which they are flagged, are:
 \itemize{
-\item \strong{Mode.} Whether \code{\link[stats:nlminb]{stats::nlminb()}} converged, and the largest gradient
-at the mode in whitened units (posterior SDs); a value well above zero
-means the optimiser stopped short.
+\item \strong{Mode.} The largest gradient at the mode in whitened units: how far, in
+posterior SDs, a Newton step would still move it. The mode is accepted
+when this is below 0.01, whatever the return code of \code{\link[stats:nlminb]{stats::nlminb()}},
+whose message is shown otherwise.
 \item \strong{VB correction.} The shift of each mean from the mode, in posterior
-SDs.
+SDs (\code{vb_shift}). It is flagged when it exceeds 1 SD, or when the
+fixed-point iteration failed and the fallback optimiser ran: both mean
+the posterior is far from the Laplace Gaussian.
 \item \strong{Tails.} Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
 \code{tails} is \code{FALSE} when the log-posterior had not yet fallen below
 \code{control$log_threshold} at an end of the scan: the Laplace SD understates
 a heavy tail there, and the skew-normal extrapolates it.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and the
-scanned density relative to its peak, and \code{sn_vs_vb}, the gap between the
+scanned density relative to its peak (flagged above 0.05), and
+\code{sn_vs_vb}, the gap between the
 skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 target the posterior mean, so they should agree closely (to
-\eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026). A large gap
-means the posterior is far from Gaussian along that parameter, where
-either approximation may be off.
+\eqn{O(n^{-2})}; Proposition 3.4 of Jamil and Rue, 2026a). A gap above
+0.1 SDs is flagged: the posterior is far from Gaussian along that
+parameter, and either approximation may be off.
 }
+
+With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
+}
+\references{
+Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for
+structural equation models using integrated nested Laplace approximations.
+\doi{10.48550/arXiv.2603.25690}
 }
