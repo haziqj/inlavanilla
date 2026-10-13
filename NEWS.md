@@ -50,3 +50,6 @@
 * `summary()` reports the 2.5%, 50% and 97.5% quantiles by default, as
   R-INLA does, instead of adding the quartiles, so its table fits in 80
   columns and matches `print()`. Pass `probs` for others.
+* `print()` and `summary()` wrap long lines to the console width (the
+  `width` option in R Markdown and Quarto), and split a table too wide for
+  it into blocks of columns, as R does for a matrix.
