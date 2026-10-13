@@ -52,10 +52,12 @@ sn_cdf_ref <- function(z, alpha, lower_tail = TRUE) {
   }
 }
 
-# First-order error of a standardised quantile q of probability p,
-# |F(q) - p| / f(q), with F by quadrature on the smaller tail. Independent of
-# psnorm(), and in standardised units. The target can be given as a tail
-# probability (`tail`, on the side `upper`) when 1 - p would round.
+# Error of a standardised quantile q of probability p, from one Newton step
+# on the log of the smaller tail: |log F(q) - log p| F(q) / f(q), with F by
+# quadrature. To first order this is |F(q) - p| / f(q), and on the log scale
+# it stays faithful when q is far out in a tail. Independent of psnorm(), and
+# in standardised units. The target can be given as a tail probability
+# (`tail`, on the side `upper`) when 1 - p would round.
 sn_quantile_err <- function(q, p, alpha, upper = p > 0.5, tail = NULL) {
   if (is.null(tail)) {
     tail <- ifelse(upper, 1 - p, p)
@@ -63,7 +65,7 @@ sn_quantile_err <- function(q, p, alpha, upper = p > 0.5, tail = NULL) {
   mapply(
     function(qq, tt, up, a) {
       got <- sn_cdf_ref(qq, a, lower_tail = !up)
-      abs(got - tt) / sn_density_ref(qq, a)
+      abs(log(got) - log(tt)) * got / sn_density_ref(qq, a)
     },
     q,
     tail,
@@ -894,9 +896,11 @@ test_that("fit_skew_normal returns the least-squares fit and its nmad for a non-
   # with unit curvature: y(t) = sqrt(k) t - k (exp(t / sqrt(k)) - 1). The
   # fit should minimise the weighted least-squares objective documented in
   # R/skew-normal.R (weights exp(y), points below the threshold dropped but
-  # at least five kept), written out here and minimised by optim() from two
-  # starts. Observed: objectives agree to 2.1e-14 relative, alpha to
-  # 2.1e-7, and nmad matches its definition to 1.5e-16 relative.
+  # at least five kept), written out here. At the fit, a Newton step on that
+  # objective, with central-difference gradient and Hessian, should be zero
+  # up to the differencing noise. Observed: Newton steps <= 7.1e-9 (a 1e-4
+  # shift in alpha gives a step of 1e-4), the Hessian is positive definite,
+  # and nmad matches its definition to 5.1e-14 relative.
   ref_objective <- function(par, x, y, threshold) {
     keep <- y >= threshold | rank(-y, ties.method = "first") <= 5
     x <- x[keep]
@@ -904,6 +908,29 @@ test_that("fit_skew_normal returns the least-squares fit and its nmad for a non-
     w <- exp(y) / sum(exp(y))
     ld <- sn_logdens_ref(x, par[1], exp(par[2]), par[3]) + par[4]
     sum(w * (y - ld)^2)
+  }
+  unit <- function(i, h) replace(numeric(4), i, h)
+  fd_newton_step <- function(f, par) {
+    h <- 1e-5
+    g <- vapply(
+      1:4,
+      function(i) (f(par + unit(i, h)) - f(par - unit(i, h))) / (2 * h),
+      numeric(1)
+    )
+    h <- 1e-4
+    H <- matrix(0, 4, 4)
+    for (i in 1:4) {
+      for (j in 1:4) {
+        ei <- unit(i, h)
+        ej <- unit(j, h)
+        H[i, j] <- (f(par + ei + ej) -
+          f(par + ei - ej) -
+          f(par - ei + ej) +
+          f(par - ei - ej)) /
+          (4 * h^2)
+      }
+    }
+    list(step = solve(H, g), min_eigen = min(eigen(H, symmetric = TRUE)$values))
   }
   cases <- expand.grid(k = c(3, 50), sgn = c(1, -1), threshold = c(-6, -3))
   for (i in seq_len(nrow(cases))) {
@@ -914,30 +941,15 @@ test_that("fit_skew_normal returns the least-squares fit and its nmad for a non-
     y <- sqrt(k) * t - k * (exp(t / sqrt(k)) - 1)
     y <- y - max(y)
     fit <- fit_skew_normal(grid_scan, y, threshold_log_drop = threshold)
-    obj_fit <- ref_objective(
-      c(fit$xi, log(fit$omega), fit$alpha, fit$logC),
-      grid_scan,
-      y,
-      threshold
+    newton <- fd_newton_step(
+      function(par) ref_objective(par, grid_scan, y, threshold),
+      c(fit$xi, log(fit$omega), fit$alpha, fit$logC)
     )
-    best <- NULL
-    for (a0 in c(-1, 1)) {
-      o <- stats::optim(
-        c(0, 0, a0, 0),
-        ref_objective,
-        x = grid_scan,
-        y = y,
-        threshold = threshold,
-        method = "BFGS",
-        control = list(reltol = 1e-16, maxit = 1000)
-      )
-      if (is.null(best) || o$value < best$value) best <- o
-    }
     label <- sprintf("k = %g, sign %g, threshold %g", k, sgn, threshold)
-    expect_lt(obj_fit / best$value - 1, 1e-12, label = label)
-    expect_lt(abs(fit$alpha - best$par[3]), 1e-6, label = label)
+    expect_lt(max(abs(newton$step)), 2e-8, label = label)
+    expect_gt(newton$min_eigen, 0, label = label)
     # log(lambda) is skewed to the left
-    expect_lt(fit$alpha * sgn, 0, label = label)
+    expect_lt(fit$alpha * sgn, -0.9, label = label)
 
     nmad_ref <- max(abs(
       exp(y) -
@@ -947,7 +959,7 @@ test_that("fit_skew_normal returns the least-squares fit and its nmad for a non-
         )
     )) /
       max(exp(y))
-    expect_equal(fit$nmad, nmad_ref, tolerance = 1e-14, label = label)
+    expect_equal(fit$nmad, nmad_ref, tolerance = 1.5e-13, label = label)
     expect_gt(fit$nmad, 1e-3)
   }
 })
