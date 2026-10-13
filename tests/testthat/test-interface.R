@@ -1227,7 +1227,7 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   expect_lt(sd_ratio[["slope"]], 1)
   bend <- summary(fit_reg)$diagnostics$bend
   expect_identical(bend > 0.1, c(FALSE, TRUE))
-  expect_lt(abs(fit_reg$logml - exact_logml), 0.04)
+  expect_lt(abs(fit_reg$logml - exact_logml), 0.035)
 })
 
 test_that("summary(probs = ) gives the requested quantile columns", {
@@ -1295,60 +1295,79 @@ test_that("summary() with no probabilities does not fail internally", {
 test_that("summary() flags each diagnostic at its documented level", {
   # The thresholds documented in ?summary.inla_vanilla: mode gradient 0.01,
   # VB shift 1 SD (or the fallback optimiser), bend 0.1 nats, NMAD 0.05,
-  # SN - VB gap 0.1 SDs, and tails. Every diagnostic is first set just
-  # below its level, where nothing may be flagged, and then each in turn
-  # just above it.
+  # SN - VB gap 0.1 SDs, and tails. Every diagnostic is first set 2% below
+  # its level, where nothing may be flagged, and then each in turn 2% above
+  # it, where that line alone must be.
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
   below <- summary(fit_reg)
-  below$optim$grad_mode <- 0.009
-  below$diagnostics$vb_shift <- c(0.9, -0.9)
-  below$diagnostics$bend <- c(0.09, 0.09)
-  below$diagnostics$nmad <- c(0.04, 0.04)
-  below$diagnostics$sn_vs_vb <- c(0.09, -0.09)
+  below$optim$grad_mode <- 0.0098
+  below$diagnostics$vb_shift <- c(0.98, -0.98)
+  below$diagnostics$bend <- c(0.098, 0.098)
+  below$diagnostics$nmad <- c(0.049, 0.049)
+  below$diagnostics$sn_vs_vb <- c(0.098, -0.098)
   below$diagnostics$tails <- c(TRUE, TRUE)
   below$vb$fallback <- FALSE
   printed <- function(s) capture_output(print(s))
+  flagged <- function(out) grep("^! ", strsplit(out, "\n")[[1]], value = TRUE)
 
   out <- printed(below)
+  expect_length(flagged(out), 0)
   expect_match(out, "v Mode found in")
-  expect_match(out, "v VB correction in")
-  expect_match(out, "v Skew-normal fits: max NMAD 0.04")
-  expect_match(out, "v Skew-normal and VB means agree to within 0.09 SDs")
-  expect_no_match(out, "!")
+  expect_match(out, "v VB correction in [0-9]+ iterations?: max shift 0.98 SDs")
+  expect_match(out, "v Skew-normal fits: max NMAD 0.049")
+  expect_match(out, "v Skew-normal and VB means agree to within 0.098 SDs")
 
   above <- list(
     list(
       c("optim", "grad_mode"),
-      0.011,
-      "! Mode search stopped with a gradient of 0.011 SDs"
+      0.0102,
+      "! Mode search stopped with a gradient of 0.01 SDs"
     ),
-    list(c("diagnostics", "vb_shift"), c(0.9, -1.1), "! VB correction in"),
-    list(c("vb", "fallback"), TRUE, "(via the fallback optimiser)"),
+    list(
+      c("diagnostics", "vb_shift"),
+      c(0.98, -1.02),
+      "! VB correction in"
+    ),
+    list(
+      c("vb", "fallback"),
+      TRUE,
+      "! VB correction in"
+    ),
     list(
       c("diagnostics", "bend"),
-      c(0.09, 0.11),
-      "! The straight scan misses up to 0.11 nats at +-2 SDs for slope"
+      c(0.098, 0.102),
+      "! The straight scan misses up to 0.1 nats at +-2 SDs for slope"
     ),
     list(
       c("diagnostics", "nmad"),
-      c(0.04, 0.06),
-      "! Skew-normal fit is poor for slope (NMAD 0.06)"
+      c(0.049, 0.051),
+      "! Skew-normal fit is poor for slope (NMAD 0.051)"
     ),
     list(
       c("diagnostics", "sn_vs_vb"),
-      c(0.09, -0.11),
-      "! Skew-normal and VB means differ by up to 0.11 SDs, for slope"
+      c(0.098, -0.102),
+      "! Skew-normal and VB means differ by up to 0.1 SDs, for slope"
     ),
-    list(c("diagnostics", "tails"), c(TRUE, FALSE), "! Heavy tails for slope")
+    list(
+      c("diagnostics", "tails"),
+      c(TRUE, FALSE),
+      "! Heavy tails for slope"
+    )
   )
   for (case in above) {
     s <- below
     s[[case[[1]]]] <- case[[2]]
-    out <- printed(s)
-    expect_match(out, case[[3]], fixed = TRUE)
-    # Only that line is flagged
-    expect_length(gregexpr("\n! ", paste0("\n", out))[[1]], 1)
+    lines <- flagged(printed(s))
+    expect_length(lines, 1)
+    expect_true(
+      startsWith(lines[1], case[[3]]),
+      label = paste0("the flag for ", case[[1]][2], " starts '", case[[3]], "'")
+    )
   }
+  # The fallback is named on its line
+  s <- below
+  s$vb$fallback <- TRUE
+  expect_match(printed(s), "(via the fallback optimiser)", fixed = TRUE)
 })
 
 test_that("a heavy-tailed posterior is flagged in summary()", {
