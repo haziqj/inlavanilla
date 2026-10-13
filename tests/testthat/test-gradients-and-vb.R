@@ -777,7 +777,7 @@ test_that("the VB shift is zero for an exactly Gaussian posterior", {
   )
   expect_lt(max(abs(vb$shift) / sds), 1e-14) # observed 3e-17
   expect_false(vb$fallback)
-  expect_lt(vb$kld, 1e-28)
+  expect_lt(vb$kld_global, 1e-28)
 
   # In a full fit the shift only absorbs where nlminb() stopped, so the VB
   # mean is the exact mean, and the log marginal likelihood is exact.
@@ -1013,13 +1013,17 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
   expect_identical(fit$logml, fit$logml_laplace)
   expect_null(fit$diagnostics$vb)
   expect_null(summary(fit)$vb)
-  expect_identical(fit$diagnostics$marginals$vb_shift, c(0, 0))
-  sds <- sqrt(diag(fit$cov))
-  expect_equal(
-    fit$diagnostics$marginals$sn_vs_vb,
-    unname((fit$summary[, "Mean"] - fit$mode) / sds),
-    tolerance = 1e-12
-  )
+  # The VB diagnostics did not run, so they are NA, as in INLAvaan's
+  # diagnostics(); the SN-VB gap needs a VB mean too
+  d <- fit$diagnostics$marginals
+  for (col in c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")) {
+    expect_identical(d[[col]], c(NA_real_, NA_real_))
+  }
+  g <- diagnostics(fit)
+  expect_identical(g[["vb_applied"]], 0)
+  for (nm in c("vb_shift_max", "vb_kld_global", "kld_max", "vb_fallback")) {
+    expect_identical(g[[nm]], NA_real_)
+  }
 })
 
 test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
@@ -1042,15 +1046,20 @@ test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
   kld <- 0.5 * drop(t(shift) %*% H %*% shift)
   expect_gt(kld, 0.01) # observed 0.033
   expect_equal(fit_vb$logml - fit_vb$logml_laplace, kld, tolerance = 1e-10)
-  expect_equal(fit_vb$diagnostics$vb$kld, kld, tolerance = 1e-10)
+  expect_equal(fit_vb$diagnostics$vb$kld_global, kld, tolerance = 1e-10)
   expect_identical(fit_vb$logml_laplace, fit_lap$logml)
 
+  # The shift on the scale of logpost, and in posterior SDs, and the KL
+  # divergence of each shifted marginal, as INLAvaan's diagnostics() has them
   sds <- sqrt(diag(fit_vb$cov))
-  expect_equal(
-    fit_vb$diagnostics$marginals$vb_shift,
-    unname(shift / sds),
-    tolerance = 1e-12
-  )
+  d <- fit_vb$diagnostics$marginals
+  expect_equal(d$vb_shift, unname(shift), tolerance = 1e-12)
+  expect_equal(d$vb_shift_sigma, unname(shift / sds), tolerance = 1e-12)
+  expect_equal(d$kld, 0.5 * d$vb_shift_sigma^2, tolerance = 1e-12)
+  g <- diagnostics(fit_vb)
+  expect_equal(g[["vb_kld_global"]], kld, tolerance = 1e-10)
+  expect_equal(g[["kld_max"]], max(d$kld))
+  expect_equal(g[["vb_shift_max"]], max(abs(d$vb_shift_sigma)))
   expect_equal(
     fit_vb$diagnostics$marginals$sn_vs_vb,
     unname((fit_vb$summary[, "Mean"] - fit_vb$mean_vb) / sds),

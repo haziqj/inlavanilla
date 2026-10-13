@@ -4,10 +4,12 @@
 # `lp` and `gr` are the wrapped log-posterior and gradient (`gr` is NULL when
 # the user gave no gradient). Returns the mode, the log-posterior there, the
 # upper Cholesky factor R of the precision (R'R = H), the covariance Sigma,
-# a whitening factor L (L L' = Sigma), the optimiser output, the largest
-# whitened gradient at the mode, and the Laplace log marginal likelihood.
-# For verbose output it also says how the Hessian was taken (`hessian`) and
-# whether nlminb() was restarted (`restart`, NULL when it was not).
+# a whitening factor L (L L' = Sigma), the optimiser output, the gradient of
+# the log-posterior at the mode with the checks built on it, the condition
+# number of the Hessian in posterior-SD units, and the Laplace log marginal
+# likelihood. For verbose output it also says how the Hessian was taken
+# (`hessian`) and whether nlminb() was restarted (`restart`, NULL when it was
+# not).
 laplace_fit <- function(lp, gr, init, ctrl) {
   ob <- function(x) {
     v <- lp(x)
@@ -65,11 +67,20 @@ laplace_fit <- function(lp, gr, init, ctrl) {
     )
   }
   m <- length(init)
+  # The condition number of the Hessian with each parameter in its own
+  # posterior-SD units, D^1/2 H D^1/2 with D = diag(Sigma): the eigenvalue
+  # ratio of its inverse, the correlation matrix cov2cor(Sigma). INLAvaan
+  # takes it on the raw scale, which a mere change of units can make large;
+  # posterior SDs here run from 1e-6 to 1e4.
+  ev <- eigen(stats::cov2cor(cur$Sigma), symmetric = TRUE, only.values = TRUE)
+  ev <- ev$values
+  hess_cond <- if (min(ev) > 0) max(ev) / min(ev) else Inf
   c(
     cur,
     list(
       opt = opt,
       restart = restart,
+      hess_cond = hess_cond,
       # log pi(y) ~ log pi(y, mode) - log N(mode | mode, Sigma), with
       # log det(Sigma) = -2 sum(log(diag(R)))
       logml = cur$lp_max + (m / 2) * log(2 * pi) - sum(log(diag(cur$R)))
@@ -124,14 +135,24 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
   out$L <- backsolve(R, diag(m)) # upper triangular, L L' = H^-1
   out$Sigma <- chol2inv(R)
   dimnames(out$Sigma) <- list(parnames, parnames)
-  # The gradient at the mode in whitened units: how far, in posterior SDs, a
-  # Newton step would still move the mode.
+  # The gradient of the log-posterior at the mode, and two measures of how
+  # far a Newton step would still move the mode. `grad_mode`, the largest
+  # whitened component, decides the restart in laplace_fit().
+  # `mode_shift` is INLAvaan's per-parameter Newton step in posterior SDs,
+  # |(Sigma g)_j| / sd_j, which decides the fit-time check; it does not
+  # depend on the order of the parameters.
+  sds <- sqrt(diag(out$Sigma))
   g <- if (is.null(gr)) {
-    fd_grad(lp, mode, h = 1e-3 * sqrt(diag(out$Sigma)))
+    fd_grad(lp, mode, h = 1e-3 * sds)
   } else {
     gr(mode)
   }
+  out$grad <- stats::setNames(as.numeric(g), parnames)
   out$grad_mode <- max(abs(crossprod(out$L, g)))
+  out$mode_shift <- stats::setNames(
+    abs(as.numeric(out$Sigma %*% g)) / sds,
+    parnames
+  )
   out
 }
 
