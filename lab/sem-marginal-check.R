@@ -5,64 +5,60 @@
 # `init`, `logpost_cpp()`, `grad_cpp()` and the fit with the gradient, `fit`,
 # exist. The full Laplace marginal of parameter j maximises the log-posterior
 # over the other parameters at each point of a grid in theta_j, and corrects
-# by half the log-determinant of their Hessian there. It is about 10 times the
-# cost of the skew-normal stage, and is the reference for the straight-scan
-# limitation recorded in lab/DESIGN.md.
+# by half the log-determinant of their Hessian there.
 #
-# Result (October 2026): the skew-normal SD is too small by about 25% for
-# logv_dem65 (bend 0.44), 19% for logv_x2 (bend 0.11), 6% for logv_x1 (bend
-# 0.14), 5.5% for b (bend 0.11) and 2.6% for the intercepts (bend about 0.05,
-# not flagged). For logv_dem65 the 2.5% quantile is -3.60 against -4.65.
+# The grid must be wide: for the two log residual variances below, the left
+# tail reaches 12 Laplace SDs from the mode. An earlier run on +-4.5 SDs cut
+# it off and understated the error (about 25% for logv_dem65).
+#
+# Result (October 2026), which agrees with HMC (lab/sem-hmc.R):
+#               mean    sd    2.5%    50%   97.5%
+# logv_x2     full Laplace -2.623 1.412 -6.707 -2.225 -1.257
+#             HMC          -2.659 1.470 -6.984 -2.237 -1.254
+#             skew-normal  -2.165 0.566 -3.461 -2.086 -1.271
+# logv_dem65  full Laplace -2.243 1.839 -7.340 -1.703 -0.275
+#             HMC          -2.251 1.864 -7.341 -1.707 -0.258
+#             skew-normal  -1.598 0.861 -3.598 -1.460 -0.302
+# The left tail of the log-density has slope 0.50 in both: the
+# gamma(1, 0.5) prior on the SD with its Jacobian.
 
-full_laplace <- function(j, ngrid = 31) {
-  sdj <- sqrt(fit$cov[j, j])
-  grid <- fit$mode[j] + seq(-4.5, 4.5, length.out = ngrid) * sdj
-  out <- numeric(ngrid)
+full_laplace <- function(j, lo, hi, ngrid = 81) {
+  grid <- seq(lo, hi, length.out = ngrid)
+  out <- rep(NA_real_, ngrid)
+  start <- fit$mode[-j]
   for (k in seq_along(grid)) {
-    f <- function(x) -logpost_cpp(append(x, grid[k], after = j - 1), Y)
+    f <- function(x) {
+      v <- -logpost_cpp(append(x, grid[k], after = j - 1), Y)
+      if (is.finite(v)) v else 1e10
+    }
     g <- function(x) -grad_cpp(append(x, grid[k], after = j - 1), Y)[-j]
-    start <- fit$mode[-j] +
-      fit$cov[-j, j] / fit$cov[j, j] * (grid[k] - fit$mode[j])
-    o <- nlminb(start, f, g, control = list(iter.max = 500, rel.tol = 1e-12))
+    o <- nlminb(
+      start,
+      f,
+      g,
+      control = list(iter.max = 1000, eval.max = 2000, rel.tol = 1e-12)
+    )
+    start <- o$par # warm start along the grid
     H <- sapply(seq_along(o$par), function(i) {
-      h <- 1e-5
-      e <- replace(numeric(length(o$par)), i, h)
-      (g(o$par + e) - g(o$par - e)) / (2 * h)
+      e <- replace(numeric(length(o$par)), i, 1e-5)
+      (g(o$par + e) - g(o$par - e)) / 2e-5
     })
-    H <- (H + t(H)) / 2
-    out[k] <- -o$objective - 0.5 * determinant(H, logarithm = TRUE)$modulus
+    d <- determinant((H + t(H)) / 2, logarithm = TRUE)
+    out[k] <- if (d$sign > 0) -o$objective - 0.5 * d$modulus else NA
   }
-  fine <- seq(min(grid), max(grid), length.out = 2001)
-  p <- exp(stats::spline(grid, out - max(out), xout = fine)$y)
+  ok <- is.finite(out)
+  fine <- seq(lo, hi, length.out = 4001)
+  p <- exp(stats::spline(grid[ok], out[ok] - max(out[ok]), xout = fine)$y)
   p <- p / sum(p)
   m <- sum(fine * p)
   s <- sqrt(sum((fine - m)^2 * p))
   q <- stats::approx(cumsum(p), fine, c(0.025, 0.5, 0.975), ties = mean)$y
-  c(mean = m, sd = s, q = q)
+  c(mean = m, sd = s, q025 = q[1], q50 = q[2], q975 = q[3])
 }
 
-parnames <- names(init)
-pars <- c(
-  "logv_dem65",
-  "logv_x2",
-  "logv_x1",
-  "b",
-  "z_y4_y8",
-  "beta_dem65_ind60",
-  "lam_x2",
-  "nu_y1"
-)
-res <- t(sapply(pars, function(p) {
-  fl <- full_laplace(match(p, parnames))
+for (p in c("logv_x2", "logv_dem65")) {
+  j <- match(p, names(init))
+  fl <- full_laplace(j, -16, fit$mode[[j]] + 6 * sqrt(fit$cov[j, j]))
   sn <- fit$summary[p, c("Mean", "SD", "2.5%", "50%", "97.5%")]
-  c(
-    sd_ratio = sn[[2]] / fl[[2]],
-    mean_diff_sd = (sn[[1]] - fl[[1]]) / fl[[2]],
-    fl_q025 = fl[[3]],
-    sn_q025 = sn[[3]],
-    fl_q975 = fl[[5]],
-    sn_q975 = sn[[5]]
-  )
-}))
-print(round(res, 3))
-print(fit$diagnostics$marginals[pars, c("bend", "nmad", "tails")])
+  print(round(rbind(full_laplace = fl, skew_normal = sn), 3))
+}
