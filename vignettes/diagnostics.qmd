@@ -107,9 +107,9 @@ $10^4$, so it measures it in posterior SDs instead.
 The VB correction recentres the Gaussian at the shift that minimises its
 Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026, Section
 3.1). `vb_shift_sigma` is how far it moved each mean from the mode, in
-posterior SDs (`vb_shift` is the same shift on the scale of `logpost`, and
-`kld`, half its square, the Kullback-Leibler divergence of each shifted
-marginal). A shift of a few tenths is normal for a skewed posterior; a shift
+posterior SDs. `vb_shift` is the same shift on the scale of `logpost`, and
+`kld`, half the square of `vb_shift_sigma`, is the Kullback-Leibler divergence
+of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift
 above 1 SD means that the posterior is far from the Laplace Gaussian. When
 the fixed-point iteration hands over to the optimiser, `fit$diagnostics$vb`
 records it, and `summary()` and the verbose output report it, but, as in

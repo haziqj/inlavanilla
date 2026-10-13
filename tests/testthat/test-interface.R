@@ -1352,7 +1352,11 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     text,
     "whitened gradient [0-9.e-]+ SD, Newton step [0-9.e-]+ SD! \\(warning above"
   )
-  expect_match(text, "! Fell back to nlminb, as a step was over 1 posterior SD")
+  expect_match(
+    text,
+    "\n *Fell back to nlminb, as a step was over 1 posterior SD"
+  )
+  expect_no_match(text, "! Fell back")
   expect_match(text, "heavy!")
   # the unreached mode and what it leads to, in one diagnostics warning
   expect_match(text, "Done: .*, with 1 warning\n")

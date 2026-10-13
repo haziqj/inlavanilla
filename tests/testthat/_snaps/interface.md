@@ -82,7 +82,7 @@
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
         Converged in <n> iteration(s), <anderson>; no fallback
-        Largest shift # SD, for intercept
+        Largest shift # SD, for intercept (warning above 1 SD)
         KL term #, giving a log marginal likelihood of #
         <n> logpost calls
       v Fitted 2 skew-normal marginals [<time>]
@@ -113,7 +113,7 @@
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
         Converged in <n> iteration(s), <anderson>; no fallback
-        Largest shift # SD, for intercept
+        Largest shift # SD, for intercept (warning above 1 SD)
         KL term #, giving a log marginal likelihood of #
         <n> grad calls
       v Fitted 2 skew-normal marginals [<time>]
