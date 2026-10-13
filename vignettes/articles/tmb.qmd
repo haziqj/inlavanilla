@@ -367,7 +367,7 @@ loo_sem <- loo(fit, function(theta) obj$report(theta)$loglik)
 loo_sem
 ```
 
-With 39 parameters this takes $39^2 + 39 + 1 = 1{,}561$ evaluations of the
+With 39 parameters this takes $39^2 + 39 + 1$, or 1,561, evaluations of the
 template, each giving all 75 terms. See
 [Model comparison with LOO and WAIC](model-comparison.html) for what the
 numbers mean and how to compare models with them.
