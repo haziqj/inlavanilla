@@ -258,10 +258,11 @@ With both, the fit is the Laplace approximation alone.
 fit_fast <- function(...) {
   inla_vanilla(logpost, init, X = X, y = y, silent = TRUE, ...)
 }
+# Named as the header of print() names them
 fits <- list(
-  `skew-normal + VB` = fit,
-  `skew-normal` = fit_fast(vb = FALSE),
-  `Gaussian + VB` = fit_fast(marginals = "gaussian"),
+  `Skew-normal + VB` = fit,
+  `Skew-normal` = fit_fast(vb = FALSE),
+  `Laplace + VB` = fit_fast(marginals = "gaussian"),
   Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
 )
 round(t(sapply(fits, function(f) {

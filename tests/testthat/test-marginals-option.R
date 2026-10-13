@@ -36,7 +36,6 @@ fit_g <- inla_vanilla(
 
 scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
-  x <- gsub("-+ <time> --", "-- <time> --", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
   x <- gsub("gradient [-+0-9.e]+ SDs", "gradient <g> SDs", x)
