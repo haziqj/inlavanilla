@@ -4,10 +4,15 @@
 # the conditional mode path (CMP) of the Laplace Gaussian,
 #   theta(t) = mode + t v_j,  v_j = Sigma[, j] / sqrt(Sigma[j, j]),
 # so theta_j(t) = mode_j + t sd_j and the other parameters sit at their
-# Gaussian conditional means (Lemma 3.1). The log-heights are corrected for
-# the change in the volume of the other parameters along the path by adding
-# t gamma1_j (Corollary 3.3), and a skew-normal is fitted to the corrected
-# log-heights on a grid of t.
+# Gaussian conditional means (Jamil & Rue, 2026, Lemma 3.1). The log-heights
+# are corrected for the change in the volume of the other parameters along
+# the path by adding t gamma1_j (Jamil & Rue, 2026, Corollary 3.3), and a
+# skew-normal is fitted to the corrected log-heights on a grid of t.
+#
+# Jamil, H., & Rue, H. (2026). Approximate Bayesian inference for structural
+# equation models using integrated nested Laplace approximations
+# (arXiv:2603.25690 [stat.ME]). arXiv.
+# https://doi.org/10.48550/arXiv.2603.25690
 
 # The volume correction gamma1_j: the rate of change, along v_j, of minus half
 # the log-determinant of the conditional precision of the other parameters,
@@ -81,6 +86,13 @@ whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
 # and rejected: it improved some heavy tails but pulled the fit away from the
 # bulk of others (a Fisher-z correlation lost an order of magnitude in SD
 # accuracy), so the problem is reported instead.
+#
+# Returns `sn`, a matrix with a row per parameter (the skew-normal on the
+# theta scale, the diagnostics, and `logC`, the log scale factor that sets
+# the fitted density's height against the scan normalised to a peak of 1),
+# the scan grid `z`, and `logpost`, the raw log-heights along each scan (a
+# column per parameter). plot(type = "sn_fit") draws them as INLAvaan's
+# visual_debug() does.
 fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   mode <- lap$mode
   Sigma <- lap$Sigma
@@ -99,11 +111,17 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   out <- matrix(
     NA_real_,
     m,
-    7,
+    8,
     dimnames = list(
       names(mode),
-      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "bend")
+      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "bend", "logC")
     )
+  )
+  heights <- matrix(
+    NA_real_,
+    length(z),
+    m,
+    dimnames = list(NULL, names(mode))
   )
   # Scan points for the bend check (see scan_bend())
   i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
@@ -146,11 +164,13 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
       g1,
       fit$nmad,
       tails,
-      bend
+      bend,
+      fit$logC
     )
+    heights[, j] <- raw
     tick()
   }
-  out
+  list(sn = out, z = z, logpost = heights)
 }
 
 # The mass each fitted marginal puts outside the window that was scanned to
@@ -158,7 +178,9 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
 # when this is large the outer quantiles are the ones to distrust. This is
 # INLAvaan's `scan_end_mass` (in its diagnostics()). A Gaussian marginal
 # gives 2 pnorm(-4) = 6.3e-5; larger values mean more of the marginal is
-# extrapolated. summary() flags it, and the fit warns, above 0.05.
+# extrapolated. summary() flags it, and the fit warns, above 0.05. INLAvaan's
+# docs give 1e-3 to 1e-2 as the healthy range; its lower end fails for
+# healthy fits here (see lab/DESIGN.md), so no range is given.
 scan_end_mass <- function(sn, mode, sds) {
   lo <- psnorm(mode - 4 * sds, sn[, "xi"], sn[, "omega"], sn[, "alpha"])
   hi <- psnorm(
@@ -172,10 +194,13 @@ scan_end_mass <- function(sn, mode, sds) {
 }
 
 # How far the straight scan path misses the conditional mode of the other
-# parameters. At scan points t (near +-2 posterior SDs), one Newton step in
-# the other parameters, with the Laplace curvature, would raise the
-# log-posterior by 0.5 g' C g, where g is the gradient in the other parameters
-# and C their conditional covariance given theta_j,
+# parameters: the linear CMP is a first-order approximation to a possibly
+# curved ridge (Jamil & Rue, 2026, Section 3.2.1), and this measures the
+# curvature it ignores, a check of inlavanilla's own. At scan points t (near
+# +-2 posterior SDs), one Newton step in the other parameters, with the
+# Laplace curvature, would raise the log-posterior by 0.5 g' C g, where g is
+# the gradient in the other parameters and C their conditional covariance
+# given theta_j,
 #   C = Sigma[-j, -j] - Sigma[-j, j] Sigma[j, -j] / Sigma[j, j].
 # That is the height the scan misses there, in log-density units. When it is
 # large, the other parameters' conditional mode bends away from the line (as
