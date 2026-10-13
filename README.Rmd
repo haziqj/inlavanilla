@@ -11,7 +11,7 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
-options(cli.num_colors = 1, cli.dynamic = FALSE)
+options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
 ```
 
 # inlavanilla
