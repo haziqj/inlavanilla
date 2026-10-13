@@ -7,6 +7,11 @@
   log marginal likelihood. `sampling()` gives Gaussian-copula draws of the
   parameters or of any function of them. `print()`, `summary()` and `plot()`
   methods report the fit and its diagnostics.
+* `loo()` and `waic()` estimate predictive accuracy from the fit and a
+  pointwise log-likelihood `loglik(theta, ...)`, by the deterministic
+  second-order Taylor approximation of Alhyari et al. (2026): no refits and no
+  draws. The results work with `loo::loo_compare()`. A new vignette,
+  "Model comparison with LOO and WAIC", shows how.
 * The VB correction (`vb`) and the skew-normal marginals (`marginals =
   "skewnormal"` or `"gaussian"`) can each be switched off, down to the
   Laplace approximation alone.

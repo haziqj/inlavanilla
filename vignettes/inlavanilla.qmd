@@ -21,10 +21,11 @@ options(cli.num_colors = 1)
 
 ## The idea
 
-If you can write down an unnormalised log-posterior, the log-likelihood plus
-the log-prior, `{inlavanilla}` gives you approximate Bayesian inference:
-posterior marginals, posterior draws and the marginal likelihood. There is no
-sampler and no tuning, and small models take milliseconds. It runs the
+If you can write down the log-likelihood plus the log-prior, `{inlavanilla}`
+gives you approximate Bayesian inference for the parameters of your model:
+posterior marginals and draws, the marginal likelihood, and leave-one-out
+cross-validation. There is no sampler and no tuning, and small models take
+milliseconds. It runs the
 approximation pipeline of [INLAvaan](https://inlavaan.haziqj.ml/) on any
 log-posterior:
 
@@ -352,6 +353,10 @@ by a factor of about `r round(exp(log_bf))`.
 The log marginal likelihood estimates $\log p(y)$ only when `logpost`
 returns the full $\log p(y, \vartheta)$, with every normalising constant of
 the likelihood and the prior. Here `dbinom()` and `dnorm()` include theirs.
+
+To compare models by how well they predict new data instead, write the
+log-likelihood as one term per observation and use `loo()`: see
+`vignette("model-comparison", package = "inlavanilla")`.
 
 ## Constrained parameters
 
