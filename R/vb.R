@@ -4,26 +4,40 @@
 # gradient vanishes, E[grad log pi(mode + shift + z)] = 0 for z ~ N(0, Sigma).
 #
 # Ported from INLAvaan: the same fixed-point iteration with Anderson(1)
-# acceleration and an nlminb() fallback, using its deterministic Gauss-Hermite
-# node set (see vb_nodes()).
+# acceleration and an nlminb() fallback. The Gaussian expectation uses a
+# deterministic cubature rule (see vb_nodes()) rather than INLAvaan's Sobol
+# points.
 
-# Node set for the Gaussian expectation: the three-point Gauss-Hermite rule
-# along each principal axis of Sigma, sharing the centre, so 2m + 1 nodes.
-# Nodes are the centre and +/- sqrt(3) times each principal axis, with weights
-# 1 - m/3 and 1/6. In whitened coordinates every odd moment and every cross
-# moment E[z_r z_s] vanishes, so the rule is exact for the Gaussian expectation
-# of the gradient whenever the log-posterior is a quartic polynomial in
-# whitened coordinates. It gives the same shift on every run. The centre
-# weight is negative once m > 3; sums are taken as differences from the centre
-# so the large terms do not cancel.
+# Node set for the Gaussian expectation: the fully symmetric degree-5 rule on
+# the principal axes a_1, ..., a_m of Sigma, with 2m^2 + 1 nodes,
+#   the centre                          weight 1 + (m^2 - 7m) / 18,
+#   +/- sqrt(3) a_i                     weight (4 - m) / 18 each,
+#   +/- sqrt(3) a_i +/- sqrt(3) a_j     weight 1 / 36 each (i < j).
+# In whitened coordinates the rule integrates every monomial of degree five
+# or less exactly against N(0, I), including the mixed moments
+# E[z_r^2 z_s^2] = 1 that axis-only rules miss. The expected gradient is
+# therefore exact whenever the log-posterior is a polynomial of degree six or
+# less in whitened coordinates, and the shift is the same on every run. In a
+# benchmark against exact VB solutions (lab/vb-benchmark.R) it was 10 to 150
+# times more accurate than INLAvaan's 64 Sobol points in one and two
+# dimensions, and still the most accurate at 30 parameters. The cost is
+# 2m^2 + 1 gradient calls per sweep. Some weights are negative, so sums are
+# taken as differences from the centre to keep large terms from cancelling.
 vb_nodes <- function(Sigma) {
   m <- ncol(Sigma)
   e <- eigen(Sigma, symmetric = TRUE)
-  axes <- sweep(e$vectors, 2, sqrt(pmax(e$values, 0)), "*")
-  list(
-    nodes = rbind(0, sqrt(3) * t(axes), -sqrt(3) * t(axes)),
-    weights = c(1 - m / 3, rep(1 / 6, 2 * m))
-  )
+  A <- sqrt(3) * sweep(e$vectors, 2, sqrt(pmax(e$values, 0)), "*")
+  At <- t(A)
+  nodes <- rbind(0, At, -At)
+  weights <- c(1 + (m^2 - 7 * m) / 18, rep((4 - m) / 18, 2 * m))
+  if (m > 1) {
+    pairs <- utils::combn(m, 2)
+    Ai <- At[pairs[1, ], , drop = FALSE]
+    Aj <- At[pairs[2, ], , drop = FALSE]
+    nodes <- rbind(nodes, Ai + Aj, Ai - Aj, -Ai + Aj, -Ai - Aj)
+    weights <- c(weights, rep(1 / 36, 4 * ncol(pairs)))
+  }
+  list(nodes = nodes, weights = weights)
 }
 
 vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
