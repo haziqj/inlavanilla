@@ -105,6 +105,20 @@ normalising constant of the likelihood and the prior. Otherwise it is off by
 the missing constants.
 }
 
+\section{Accuracy}{
+
+The skew-normal marginals capture skewness that the Laplace approximation
+misses, and they are accurate to the extent that a skew-normal fits each
+marginal (see the diagnostics in \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}). Like INLAvaan,
+each marginal is scanned along a straight line through the mode, and the
+changing volume of the other parameters enters only to first order. When a
+parameter's spread depends strongly on another, poorly determined
+parameter, its marginal comes out too narrow, by a factor that vanishes as
+O(1/n). Examples are a regression coefficient or a mean when the noise SD
+is uncertain. For a normal mean with unknown variance the SD is about 11\\%
+too small at n = 12, 3\\% at n = 50, and under 1\\% at n = 200.
+}
+
 \section{Gradients}{
 
 \code{grad} is optional. Without it, derivatives come from finite differences
