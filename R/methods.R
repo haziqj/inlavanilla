@@ -476,7 +476,7 @@ check_flags <- function(diag, optim, vb, gaussian) {
   sn <- !gaussian
   sem <- diag$scan_end_mass
   flags <- list(
-    mode = optim$grad_mode >= 1e-2,
+    mode = !isTRUE(optim$grad_mode <= 1e-2),
     vb = !is.null(vb) && (vb$fallback || max(abs(diag$vb_shift)) > 1),
     scan_end_mass = sn && !is.null(sem) && any(sem > 0.05, na.rm = TRUE),
     tails = sn && !all(diag$tails),
