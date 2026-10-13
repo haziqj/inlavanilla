@@ -1157,6 +1157,28 @@ test_that("by default each stage prints one line, and nothing else", {
   expect_match(msgs, "Fitted 1 skew-normal marginal\\b", all = FALSE)
 })
 
+test_that("progress bars are drawn only in a dynamic terminal", {
+  # Elsewhere (knitr and Quarto, Rscript writing to a log file) cli prints
+  # each update of a bar as a line of its own: in a rendered document,
+  # several "Applying the VB mean correction 31792 calls" lines.
+  # cli::is_dynamic_tty() decides, and follows the cli.dynamic option. (A
+  # test that knits a document cannot catch the spill reliably: cli prints
+  # those lines only on some fits.)
+  old <- options(cli.dynamic = TRUE)
+  on.exit(options(old))
+  expect_true(progress_new(show = TRUE)$bars)
+  expect_false(progress_new(show = FALSE)$bars)
+  options(cli.dynamic = FALSE)
+  expect_false(progress_new(show = TRUE)$bars)
+
+  # So only the stage lines are printed, even when the bars, if drawn, would
+  # show at once (the user's cli.progress_show_after is respected)
+  options(cli.progress_show_after = 0)
+  msgs <- capture_messages(inla_vanilla(lp_reg, init_reg))
+  expect_length(msgs, 3)
+  expect_no_match(msgs, "Finding the posterior mode|Applying the VB|Fitting")
+})
+
 test_that("verbose = TRUE adds detail lines under the stage lines", {
   stage_text <- function(x) sub(" \\[[0-9.]+m?s\\]\\s*$", "", x)
   default <- stage_text(capture_messages(inla_vanilla(lp_reg, init_reg)))

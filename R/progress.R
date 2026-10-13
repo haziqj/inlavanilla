@@ -1,11 +1,12 @@
 # Progress reporting, at three levels: `silent = TRUE` shows nothing, the
 # default shows one line per stage, and `verbose = TRUE` adds indented grey
-# detail lines under each one. Each stage gets a cli spinner or progress bar
-# that appears only when the stage runs for longer than half a second, and
-# ends with one coloured line. The lines are built directly from cli's styles
-# rather than through its glue-based formatters, which cost a few
-# milliseconds a call: as long as a whole fit of a small model. The detail
-# lines are only built when they are shown.
+# detail lines under each one. In a dynamic terminal each stage also gets a
+# cli spinner or progress bar, which appears only when the stage runs for
+# longer than `cli.progress_show_after` seconds (half a second unless the
+# user has set it). Each stage ends with one coloured line. The lines are
+# built directly from cli's styles rather than through its glue-based
+# formatters, which cost a few milliseconds a call: as long as a whole fit of
+# a small model. The detail lines are only built when they are shown.
 
 # `show`: print anything at all; `detail`: add the detail lines. The warnings
 # raised during the fit are recorded in `warnings`.
@@ -13,6 +14,7 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p <- new.env(parent = emptyenv())
   p$show <- show
   p$detail <- show && detail
+  p$bars <- show && progress_bars_ok()
   p$frame <- frame
   p$id <- NULL
   p$calls <- FALSE # whether the log-posterior wrapper should tick the bar
@@ -20,13 +22,24 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p
 }
 
+# Progress bars only where they can redraw in place: a terminal, or the
+# RStudio console. Elsewhere (knitr and Quarto, Rscript writing to a log
+# file) cli prints each update as a new line, and only the stage lines are
+# wanted. cli::is_dynamic_tty() checks the stream cli's bars write to, and
+# follows the `cli.dynamic` option and the R_CLI_DYNAMIC variable.
+progress_bars_ok <- function() {
+  cli::is_dynamic_tty()
+}
+
 # Start a stage. With `total`, a bar over that many items; without, a spinner
 # that counts log-posterior calls.
 progress_start <- function(p, msg, total = NA) {
-  if (!p$show) {
+  if (!p$bars) {
     return(invisible(p))
   }
-  old <- options(cli.progress_show_after = 0.5)
+  old <- options(
+    cli.progress_show_after = getOption("cli.progress_show_after", 0.5)
+  )
   on.exit(options(old))
   fmt <- if (is.na(total)) {
     paste0(
