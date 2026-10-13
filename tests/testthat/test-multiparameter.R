@@ -27,6 +27,48 @@ trapezoid_weights <- function(k, h) {
   h * c(0.5, rep(1, k - 2), 0.5)
 }
 
+# Central differences written here, so that the reference checks do not lean
+# on the package's own finite differences (fd_grad(), fd_jacobian()).
+num_grad <- function(fn, x, h = 1e-5) {
+  vapply(
+    seq_along(x),
+    function(j) {
+      e <- replace(numeric(length(x)), j, h)
+      (fn(x + e) - fn(x - e)) / (2 * h)
+    },
+    numeric(1)
+  )
+}
+
+num_jacobian <- function(gr, x, h = 1e-5) {
+  vapply(
+    seq_along(x),
+    function(j) {
+      e <- replace(numeric(length(x)), j, h)
+      (gr(x + e) - gr(x - e)) / (2 * h)
+    },
+    numeric(length(x))
+  )
+}
+
+# Checks of the Laplace step against an independent mode and Hessian: the
+# exact gradient `grad_ref` at fit$mode in whitened units (how many posterior
+# SDs the mode is off, to first order), the covariance against the inverse of
+# `hess_ref` at fit$mode (relative to the SDs), and logml_laplace against
+# lp(mode) + m/2 log(2 pi) + 1/2 log det(Sigma) from that covariance.
+laplace_errors <- function(fit, logpost, grad_ref, hess_ref) {
+  S <- solve(-hess_ref(fit$mode))
+  sds <- sqrt(diag(S))
+  m <- length(fit$mode)
+  list(
+    # chol(S) = U with U'U = S, so U g is the gradient in whitened units
+    grad = max(abs(chol(S) %*% grad_ref(fit$mode))),
+    cov = max(abs(fit$cov - S) / outer(sds, sds)),
+    logml_laplace = fit$logml_laplace -
+      (logpost(fit$mode) + m / 2 * log(2 * pi) + 0.5 * log(det(S)))
+  )
+}
+
 # A reference marginal from log-density values `log_f` (up to a constant) on
 # an equally spaced grid `x` that covers all of the mass: the normalised
 # density, the mean and SD by the trapezoid rule, quantiles by linear
@@ -264,6 +306,25 @@ weibull_model <- function(y, prior_sd = c(1, 2)) {
         -n * k + k * sum(e) - b / prior_sd[2]^2
       )
     },
+    # With u_i = log y_i - b and e_i = exp(k u_i), the gradient is
+    # (n + k sum(u) - k sum(e u) - a / sd_a^2, -n k + k sum(e) - b / sd_b^2)
+    hess = function(theta) {
+      a <- theta[["log_shape"]]
+      b <- theta[["log_scale"]]
+      k <- exp(a)
+      u <- ly - b
+      e <- exp(k * u)
+      h_ab <- -n * k + k * sum(e) + k^2 * sum(e * u)
+      matrix(
+        c(
+          k * sum(u) - k * sum(e * u) - k^2 * sum(e * u^2) - 1 / prior_sd[1]^2,
+          h_ab,
+          h_ab,
+          -k^2 * sum(e) - 1 / prior_sd[2]^2
+        ),
+        2
+      )
+    },
     log_joint = log_joint
   )
 }
@@ -356,14 +417,14 @@ test_that("the normal-inverse-gamma references agree with quadrature", {
     c(0, 0),
     tolerance = 1e-12
   )
-  H <- -fd_jacobian(nig$grad, nig$joint_mode, h = 1e-6)
+  H <- -num_jacobian(nig$grad, nig$joint_mode, h = 1e-6)
   expect_equal(solve(H), nig$joint_cov, tolerance = 1e-7)
   # The analytic gradient matches finite differences of logpost away from
   # the mode
   th <- c(mu = 0.3, log_sigma = 0.9)
   expect_equal(
     nig$grad(th),
-    fd_grad(nig$logpost, th, h = 1e-6),
+    num_grad(nig$logpost, th, h = 1e-6),
     tolerance = 1e-7
   )
 
@@ -435,17 +496,18 @@ test_that("normal data with unknown mean and variance give the exact Laplace ste
       verbose = FALSE
     )
     sds <- sqrt(diag(nig$joint_cov))
-    # Mode: observed error below 1e-7 SDs
-    expect_lt(max(abs(fit$mode - nig$joint_mode) / sds), 1e-4)
-    # Covariance: observed relative error 1e-6 with finite differences, 1e-8
-    # with the gradient
-    expect_equal(unname(fit$cov), nig$joint_cov, tolerance = 1e-5)
+    # Mode: observed error 6e-8 SDs (the optimiser's tolerance)
+    expect_lt(max(abs(fit$mode - nig$joint_mode) / sds), 1e-6)
+    # Covariance, relative to the SDs: observed error 3.3e-6 with finite
+    # differences, 1.4e-8 with the gradient
+    cov_err <- max(abs(fit$cov - nig$joint_cov) / outer(sds, sds))
+    expect_lt(cov_err, if (is.null(gr)) 1e-5 else 1e-7)
     # The Laplace log marginal likelihood from the exact mode and covariance
     logml_laplace <- nig$logpost(nig$joint_mode) +
       log(2 * pi) +
       0.5 * log(det(nig$joint_cov))
     # Observed error 6e-7 with finite differences, 1e-9 with the gradient
-    expect_lt(abs(fit$logml_laplace - logml_laplace), 5e-6)
+    expect_lt(abs(fit$logml_laplace - logml_laplace), 2e-6)
   }
 })
 
@@ -492,10 +554,20 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
     err <- marginal_errors(fit, "mu", nig$mu)
     ratio <- sqrt(2 * (nig$an - 1) / (2 * nig$an + 1))
     expect_equal(err$sd_sn + 1, ratio, tolerance = 1e-4)
-    # Observed shape 9e-6
-    expect_lt(abs(fit$sn["mu", "alpha"]), 0.015)
-    # Mean and median: observed SN error 3e-4 SDs with finite differences
-    # (the volume correction is 3e-4 rather than 0), 1e-8 with the gradient
+    # The whole skew-normal is that exact Gaussian. Its shape alpha is not
+    # checked: near alpha = 0 a skew-normal differs from a shifted Gaussian
+    # only at third order, so alpha is weakly identified (it came out between
+    # -0.026 and 9e-6 on equivalent runs, a skewness below 1e-5). Observed:
+    # SD equal to 1e-8 relative; quantiles shifted by -3.3e-4 Laplace SDs
+    # with or without the gradient, which is the volume correction gamma1:
+    # its forward difference of 0.01 SDs picks up the curvature of a
+    # log-determinant that is flat at the mode, so it is O(0.01), not 0.
+    lap_sd <- sqrt(nig$joint_cov[1, 1])
+    tab <- summary(fit, probs = probs)$table
+    expect_lt(abs(tab["mu", "SD"] / lap_sd - 1), 1e-6)
+    q_lap <- qnorm(probs, nig$joint_mode[["mu"]], lap_sd)
+    expect_lt(max(abs(tab["mu", q_cols] - q_lap)) / lap_sd, 1e-3)
+    # Mean and median against the t: the same -3e-4 SDs
     expect_lt(abs(err$mean_sn), 1e-3)
     expect_lt(abs(err$quantile_sn[[4]]), 1e-3)
     # Quantiles: observed worst SN error 0.233 SDs at the 2.5% and 97.5%
@@ -507,7 +579,7 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
 
     # Log marginal likelihood: observed error 0.0011 with the VB term,
     # -0.063 for plain Laplace
-    expect_lt(abs(fit$logml - nig$logml), 0.005)
+    expect_lt(abs(fit$logml - nig$logml), 0.003)
     expect_lt(
       abs(fit$logml - nig$logml),
       abs(fit$logml_laplace - nig$logml)
@@ -518,6 +590,18 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
 # (b) Bivariate normal with an unknown correlation ----------------------------
 
 test_that("the bivariate normal references agree with quadrature", {
+  # The logpost is the bivariate normal likelihood plus the priors and the
+  # Jacobian, written another way
+  th <- c(mu1 = 0.4, mu2 = -1.2, z = 0.9)
+  S <- matrix(c(1, tanh(0.9), tanh(0.9), 1), 2)
+  expect_equal(
+    bvn$logpost(th),
+    sum(apply(bvn_y, 1, function(y) mvn_logdens(y - th[1:2], S))) +
+      sum(dnorm(th[1:2], 0, 5, log = TRUE)) +
+      log((1 - tanh(0.9)^2) / 2),
+    tolerance = 1e-12
+  )
+
   # The edges of the z grid carry no mass
   expect_lt(bvn_ref_z$edge, 1e-20)
 
@@ -581,6 +665,23 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
     verbose = FALSE
   )
 
+  # The Laplace step against a Hessian by nested central differences written
+  # here. Observed: whitened gradient at the mode 3e-7, covariance error
+  # 1.4e-5 relative to the SDs (the package's second differences of logpost),
+  # logml_laplace error 9e-7.
+  lp <- function(x) bvn$logpost(stats::setNames(x, c("mu1", "mu2", "z")))
+  lap <- laplace_errors(
+    fit,
+    lp,
+    grad_ref = function(x) num_grad(lp, x),
+    hess_ref = function(x) {
+      num_jacobian(function(y) num_grad(lp, y, 1e-4), x, 1e-4)
+    }
+  )
+  expect_lt(lap$grad, 1e-5)
+  expect_lt(lap$cov, 5e-5)
+  expect_lt(abs(lap$logml_laplace), 3e-6)
+
   # z is strongly skewed to the left (rho near 0.8 with n = 15)
   err <- marginal_errors(fit, "z", bvn_ref_z)
   # Quantiles: observed worst SN error 0.047 SDs (at 10%), Laplace 1.02 SDs
@@ -591,8 +692,8 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   # Mean: observed SN error 0.012 SDs, Laplace 0.44 SDs
   expect_lt(abs(err$mean_sn), 0.03)
   expect_lt(abs(err$mean_sn), abs(err$mean_laplace))
-  # SD: observed relative error 2e-4 for SN, 0.14 for Laplace
-  expect_lt(abs(err$sd_sn), 0.01)
+  # SD: observed relative error 2.4e-4 for SN, 0.14 for Laplace
+  expect_lt(abs(err$sd_sn), 1e-3)
   expect_lt(abs(err$sd_sn), abs(err$sd_laplace))
   # Left skew, and the VB mean moves left: observed shift -0.44 SDs, VB mean
   # error 0.066 SDs
@@ -636,7 +737,7 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   # Log marginal likelihood, the log integral of p(y, z): observed error
   # -0.0013 with the VB term, -0.098 for plain Laplace
   logml <- bvn_ref_z$log_norm
-  expect_lt(abs(fit$logml - logml), 0.005)
+  expect_lt(abs(fit$logml - logml), 0.004)
   expect_lt(abs(fit$logml - logml), abs(fit$logml_laplace - logml))
 })
 
@@ -655,9 +756,16 @@ test_that("the Weibull grid reference is converged and matches the logpost", {
     ),
     tolerance = 1e-12
   )
+  th <- c(log_shape = 0.3, log_scale = 0.4)
   expect_equal(
-    weib$grad(c(log_shape = 0.3, log_scale = 0.4)),
-    fd_grad(weib$logpost, c(log_shape = 0.3, log_scale = 0.4), h = 1e-6),
+    weib$grad(th),
+    num_grad(weib$logpost, th, h = 1e-6),
+    tolerance = 1e-7
+  )
+  # The analytic Hessian matches differences of the analytic gradient
+  expect_equal(
+    weib$hess(th),
+    num_jacobian(weib$grad, th, h = 1e-6),
     tolerance = 1e-7
   )
 
@@ -714,6 +822,15 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
     err_shape <- marginal_errors(fit, "log_shape", ref$log_shape)
     err_scale <- marginal_errors(fit, "log_scale", ref$log_scale)
 
+    # The Laplace step against the analytic gradient and Hessian. Observed:
+    # whitened gradient at the mode 1e-7; covariance error 1.8e-6 relative to
+    # the SDs with finite differences, 2.5e-10 with the gradient;
+    # logml_laplace error 1.2e-6 and 1e-10.
+    lap <- laplace_errors(fit, weib$logpost, weib$grad, weib$hess)
+    expect_lt(lap$grad, 1e-6)
+    expect_lt(lap$cov, if (is.null(gr)) 1e-5 else 1e-8)
+    expect_lt(abs(lap$logml_laplace), if (is.null(gr)) 5e-6 else 1e-8)
+
     # log_shape is skewed to the left (skewness -0.27). Quantiles: observed
     # worst SN error 0.0044 SDs, Laplace 0.56 SDs
     expect_lt(fit$sn["log_shape", "alpha"], -1)
@@ -723,10 +840,10 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
       max(abs(err_shape$quantile_laplace))
     )
     # Mean: observed SN error 1.5e-4 SDs, Laplace 0.34 SDs
-    expect_lt(abs(err_shape$mean_sn), 1e-3)
+    expect_lt(abs(err_shape$mean_sn), 5e-4)
     expect_lt(abs(err_shape$mean_sn), abs(err_shape$mean_laplace))
-    # SD: observed relative error 1.1e-4 for SN, 0.047 for Laplace
-    expect_lt(abs(err_shape$sd_sn), 1e-3)
+    # SD: observed relative error 1.2e-4 for SN, 0.047 for Laplace
+    expect_lt(abs(err_shape$sd_sn), 4e-4)
     expect_lt(abs(err_shape$sd_sn), abs(err_shape$sd_laplace))
 
     # log_scale is nearly symmetric (skewness -0.06) but heavy-tailed (excess
@@ -745,8 +862,13 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
     expect_lt(abs(err_scale$mean_sn), 0.025)
     expect_lt(abs(err_scale$mean_sn), abs(err_scale$mean_laplace))
     # SD: observed relative error -0.110 for SN, -0.118 for Laplace
-    expect_lt(abs(err_scale$sd_sn), 0.15)
+    expect_lt(abs(err_scale$sd_sn), 0.13)
     expect_lt(abs(err_scale$sd_sn), abs(err_scale$sd_laplace))
+
+    # The VB means, against the reference means: observed errors 0.020 SDs
+    # (log_shape, moved by -0.34 SDs from the mode) and 0.004 SDs (log_scale)
+    expect_lt(abs(err_shape$mean_vb), 0.05)
+    expect_lt(abs(err_scale$mean_vb), 0.05)
 
     # Averaged over the quantiles, the skew-normal beats Laplace for each
     # parameter (observed 0.003 against 0.37 SDs for log_shape, 0.110 against
@@ -771,28 +893,31 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
 
 # Compare two fits of the same posterior with the parameters in different
 # orders, matching parameters by name. Location differences are in posterior
-# SDs. The skew-normal parameters themselves are not compared: for a
-# near-Gaussian marginal (the means in (b)) xi and alpha are weakly
-# identified, and they differ by 1e-4 between the orders while the fitted
-# distributions agree to 1e-8 SDs.
-expect_same_marginals <- function(fit1, fit2, tol) {
+# SDs. The Laplace and VB stages (mode, covariance, VB mean, logml) are held
+# to `tol_laplace`, and everything that passes through a skew-normal fit to
+# `tol_sn`, since nlminb() stops the fit at a tolerance of its own. The
+# skew-normal parameters themselves are not compared: for a near-Gaussian
+# marginal (the means in (b)) xi and alpha are weakly identified, and they
+# differ by 1e-4 between the orders while the fitted distributions agree to
+# 1e-8 SDs.
+expect_same_marginals <- function(fit1, fit2, tol_laplace, tol_sn) {
   pars <- names(fit1$mode)
   expect_setequal(names(fit2$mode), pars)
   sds <- sqrt(diag(fit1$cov))
-  tab1 <- summary(fit1, probs = probs)$table
-  tab2 <- summary(fit2, probs = probs)$table[pars, ]
-  expect_lt(max(abs(tab2 - tab1) / sds), tol)
-  expect_lt(max(abs(fit2$mode[pars] - fit1$mode) / sds), tol)
-  expect_lt(max(abs(fit2$mean_vb[pars] - fit1$mean_vb) / sds), tol)
+  expect_lt(max(abs(fit2$mode[pars] - fit1$mode) / sds), tol_laplace)
+  expect_lt(max(abs(fit2$mean_vb[pars] - fit1$mean_vb) / sds), tol_laplace)
   expect_lt(
     max(abs(fit2$cov[pars, pars] - fit1$cov) / outer(sds, sds)),
-    tol
+    tol_laplace
   )
+  expect_lt(abs(fit2$logml - fit1$logml), tol_laplace)
+  tab1 <- summary(fit1, probs = probs)$table
+  tab2 <- summary(fit2, probs = probs)$table[pars, ]
+  expect_lt(max(abs(tab2 - tab1) / sds), tol_sn)
   d1 <- summary(fit1)$diagnostics
   d2 <- summary(fit2)$diagnostics[pars, ]
-  expect_lt(max(abs(d2$vb_shift - d1$vb_shift)), tol)
-  expect_lt(max(abs(d2$sn_vs_vb - d1$sn_vs_vb)), tol)
-  expect_equal(fit2$logml, fit1$logml, tolerance = tol)
+  expect_lt(max(abs(d2$vb_shift - d1$vb_shift)), tol_laplace)
+  expect_lt(max(abs(d2$sn_vs_vb - d1$sn_vs_vb)), tol_sn)
 }
 
 test_that("permuting the parameters permutes the marginals (finite differences)", {
@@ -801,19 +926,21 @@ test_that("permuting the parameters permutes the marginals (finite differences)"
     init = c(mu1 = 0, mu2 = 0, z = 0),
     verbose = FALSE
   )
-  # The same posterior with the parameters in the order (z, mu2, mu1)
+  # The same posterior with the parameters in the order (mu2, z, mu1), a
+  # cycle rather than a reversal, so that the permutation is not its own
+  # inverse
   logpost_perm <- function(theta) {
-    bvn$logpost(c(mu1 = theta[[3]], mu2 = theta[[2]], z = theta[[1]]))
+    bvn$logpost(c(mu1 = theta[[3]], mu2 = theta[[1]], z = theta[[2]]))
   }
   fit2 <- inla_vanilla(
     logpost_perm,
-    init = c(z = 0, mu2 = 0, mu1 = 0),
+    init = c(mu2 = 0, z = 0, mu1 = 0),
     verbose = FALSE
   )
-  expect_equal(rownames(fit2$summary), c("z", "mu2", "mu1"))
-  # Observed differences: 1.1e-8 SDs in the summaries, 1e-10 in the mode and
-  # 5e-11 in the log marginal likelihood
-  expect_same_marginals(fit1, fit2, tol = 1e-6)
+  expect_equal(rownames(fit2$summary), c("mu2", "z", "mu1"))
+  # Observed differences: 3.4e-8 SDs in the summaries, up to 5e-10 in the
+  # mode, VB mean and covariance, and 3e-10 in the log marginal likelihood
+  expect_same_marginals(fit1, fit2, tol_laplace = 1e-8, tol_sn = 1e-7)
 })
 
 test_that("permuting the parameters permutes the marginals (analytic gradient)", {
@@ -836,6 +963,7 @@ test_that("permuting the parameters permutes the marginals (analytic gradient)",
     verbose = FALSE
   )
   expect_equal(rownames(fit2$summary), c("log_scale", "log_shape"))
-  # Observed difference: 8e-9 SDs in the summaries
-  expect_same_marginals(fit1, fit2, tol = 1e-6)
+  # Observed differences: 4e-9 SDs in the summaries, 1e-15 or less in the
+  # Laplace and VB stages
+  expect_same_marginals(fit1, fit2, tol_laplace = 1e-8, tol_sn = 1e-7)
 })

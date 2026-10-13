@@ -506,7 +506,7 @@ expect_house_prices_exact <- function(fit) {
 test_that("a Gaussian posterior in dollars is recovered exactly with finite differences", {
   # Fails (package bug): the first pass of the finite-difference Hessian steps
   # a fixed 1e-4, where the second difference of logpost is pure rounding
-  # error (H h^2 is 1e-17 against |logpost| eps of 3e-14), so the rough
+  # error (H h^2 is 1.2e-17 against |logpost| eps of 3.7e-14), so the rough
   # Hessian is often not positive definite and inla_vanilla() aborts with
   # "The Hessian at the posterior mode is not positive definite".
   fit <- NULL
@@ -742,12 +742,15 @@ test_that("copula draws reproduce the exact beta posterior of p", {
   expect_equal(dim(p), c(20000L, 1L))
   expect_true(all(p > 0 & p < 1))
 
-  # Monte Carlo SE of the mean is about 0.0006 (observed error 0.0003; up to
-  # 0.0009 over other seeds)
+  # The tolerances here are set by the Monte Carlo noise rather than by the
+  # error at this seed, so that a change of seed or of RNG does not break them.
+  # Mean: Monte Carlo SE about 0.0006; observed error 0.0004 at seed 42, and
+  # 0.0014 (99th percentile) and 0.0017 (max) over seeds 1 to 300.
   expect_lt(abs(mean(p) - bb_skewed$natural_mean), 0.003)
-  # Quantiles in exact SDs of p: observed worst error 0.0011 (up to 0.042
-  # over other seeds), nearly all Monte Carlo noise, whose SE is about 0.02 at
-  # 97.5%. The plain Laplace quantiles mapped to p are off by up to 0.49.
+  # Quantiles in exact SDs of p: observed worst error 0.0011 at seed 42, and
+  # 0.068 (99th percentile) and 0.084 (max) over seeds 1 to 300, nearly all
+  # Monte Carlo noise, whose SE is about 0.02 at 97.5%. The plain Laplace
+  # quantiles mapped to p are off by up to 0.49.
   pp <- c(0.025, 0.5, 0.975)
   q_draws <- quantile(p, pp, names = FALSE)
   q_exact <- bb_skewed$natural_quantile(pp)
@@ -853,14 +856,15 @@ test_that("copula draws reproduce the exact gamma posterior of lambda", {
   set.seed(42)
   lambda <- sampling(fit, nsamp = 20000, fun = function(theta) exp(theta))
 
-  # In exact SDs of lambda. Monte Carlo SE of the mean is about 0.007
-  # (observed error 0.0013; up to 0.0086 over other seeds)
+  # In exact SDs of lambda, with tolerances set by the Monte Carlo noise. Mean:
+  # Monte Carlo SE about 0.007; observed error 0.0013 at seed 42, and 0.017
+  # (99th percentile) and 0.021 (max) over seeds 1 to 300.
   err_mean <- (mean(lambda) - gp_skewed$natural_mean) / gp_skewed$natural_sd
   expect_lt(abs(err_mean), 0.03)
-  # Quantiles: observed worst error 0.017 (up to 0.068 over other seeds),
-  # nearly all Monte Carlo noise, whose SE is about 0.03 at 97.5% in the long
-  # right tail. The plain Laplace quantiles mapped to lambda are off by up to
-  # 0.79.
+  # Quantiles: observed worst error 0.017 at seed 42, and 0.086 (99th
+  # percentile) and 0.104 (max) over seeds 1 to 300, nearly all Monte Carlo
+  # noise, whose SE is about 0.03 at 97.5% in the long right tail. The plain
+  # Laplace quantiles mapped to lambda are off by up to 0.79.
   pp <- c(0.025, 0.5, 0.975)
   q_draws <- quantile(lambda, pp, names = FALSE)
   q_exact <- gp_skewed$natural_quantile(pp)
