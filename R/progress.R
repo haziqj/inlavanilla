@@ -338,16 +338,13 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   lines <- c(
     lines,
     if (vbc$fallback) {
-      paste0(
-        flag(),
-        grey(
-          " Fell back to nlminb, as ",
-          h$reason,
-          ": ",
-          h$nlminb,
-          ", after ",
-          plural(vbc$iterations, "iteration")
-        )
+      grey(
+        "Fell back to nlminb, as ",
+        h$reason,
+        ": ",
+        h$nlminb,
+        ", after ",
+        plural(vbc$iterations, "iteration")
       )
     } else {
       grey(
@@ -366,11 +363,16 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   j <- which.max(abs(shift_sd))
   lines <- c(
     lines,
-    grey(
-      "Largest shift ",
-      with_sd(shift_sd[[j]]),
-      ", for ",
-      names(vbc$shift)[j]
+    paste0(
+      grey("Largest shift ", with_sd(shift_sd[[j]])),
+      if (off_level(abs(shift_sd[[j]]), warn_levels$vb_shift)) flag() else "",
+      grey(
+        ", for ",
+        names(vbc$shift)[j],
+        " (warning above ",
+        with_sd(warn_levels$vb_shift),
+        ")"
+      )
     ),
     grey(
       "KL term ",
