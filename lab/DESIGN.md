@@ -11,6 +11,7 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
 - **S3, not S7.** S4 and R6 are ruled out. The fit is a classed list built by one internal constructor, `new_inla_vanilla()`. `summary()` returns a `summary.inla_vanilla` object with its own `print()` method. S7 would add an Imports entry and an `@` workaround for R < 4.3, for features we don't use (validated properties, inheritance, multiple dispatch).
 - **cli is a required Imports entry.** It is used for formatted messages, warnings and errors (`cli_abort()` etc.) and for progress bars and steps, as in INLAvaan. It may be dropped at a later optimisation stage, but not before. Add it to `DESCRIPTION` with the first code that uses it, to avoid an unused-Imports NOTE.
 - **VB mean correction on by default.** It feeds the log marginal likelihood (+½ δᵀHδ, as in INLAvaan) and later LOO/WAIC. It is also a diagnostic of the skew-normal fit, because skew-normal means should agree with ϑ̃ (Prop. 3.4). In INLAvaan the skew-normal scan is centred at the mode ϑ*, so the VB shift does not move the marginals themselves.
+- **Posterior draws use `sampling()` only**, matching INLAvaan's exported generic. There is no `draws()` alias, and no `sample()` method, since `base::sample` is not generic.
 - **One method per stage**, keeping INLAvaan's defaults:
   - skew-normal marginals
   - `nlminb`
@@ -26,7 +27,6 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
 
 ## Open
 
-- Posterior draws: `sampling()` to match INLAvaan's exported generic (`base::sample` is not generic, so `sample()` would mask base R). Is a `draws()` alias wanted?
 
 ## Later
 
