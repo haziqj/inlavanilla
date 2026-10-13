@@ -23,7 +23,11 @@ sampling(object, nsamp = 1000L, fun = NULL, ...)
 
 - ...:
 
-  For the `inla_vanilla` method, further arguments passed to `fun`.
+  For the `inla_vanilla` method, further arguments passed to `fun`. As
+  in [`stats::optim()`](https://rdrr.io/r/stats/optim.html), a name that
+  abbreviates `nsamp` or `fun` would be taken as that argument: a data
+  argument named `n` would set the number of draws. Give such data a
+  longer name, or wrap it in `fun`.
 
 - nsamp:
 
@@ -43,6 +47,10 @@ unconstrained scale, or the values of `fun`.
 
 ## Details
 
+For a fit with `marginals = "gaussian"` this is a draw from the joint
+Gaussian \\N(\tilde\vartheta, \Omega)\\, centred at the VB mean (or at
+the mode when `vb = FALSE`).
+
 Draws never call the log-posterior, so they are cheap: large `nsamp`
 costs little. Use `fun` for natural-scale or derived quantities, such as
 `exp(log_sigma)` or a covariance matrix built from several parameters.
@@ -58,7 +66,7 @@ logpost <- function(theta, y) {
     dnorm(theta[["mu"]], 0, 10, log = TRUE) +
     dexp(sigma, log = TRUE) + theta[["log_sigma"]]
 }
-fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, verbose = FALSE)
+fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 
 draws <- sampling(fit, nsamp = 2000)
 head(draws)

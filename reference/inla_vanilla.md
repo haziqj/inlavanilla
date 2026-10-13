@@ -23,6 +23,17 @@ and nothing model-specific. The pipeline has four stages:
     couples the skew-normal marginals through the correlations of
     \\\Omega\\.
 
+Stages 2 and 3 are optional and independent of each other. `vb = FALSE`
+skips the VB correction, which leaves the marginals unchanged (they are
+scanned around the mode) but gives the Laplace log marginal likelihood.
+`marginals = "gaussian"` skips the scans and uses the Gaussian's own
+marginals \\N(\tilde\vartheta_j, \Omega\_{jj})\\, centred at the VB mean
+(or at the mode when `vb = FALSE`);
+[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) then
+draws from the joint Gaussian. So `vb = FALSE, marginals = "gaussian"`
+is the Laplace approximation alone, and `marginals = "gaussian"` alone
+is the Laplace approximation with the VB correction.
+
 ## Usage
 
 ``` r
@@ -32,7 +43,9 @@ inla_vanilla(
   grad = NULL,
   ...,
   vb = TRUE,
-  verbose = TRUE,
+  marginals = c("skewnormal", "gaussian"),
+  verbose = FALSE,
+  silent = FALSE,
   control = list()
 )
 ```
@@ -63,9 +76,12 @@ inla_vanilla(
   Further arguments passed to `logpost` and `grad`, such as the data. As
   in [`stats::optim()`](https://rdrr.io/r/stats/optim.html) and
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), they come
-  after the gradient, and the arguments after them (`vb`, `verbose`,
-  `control`) must be given by their full names, so data arguments cannot
-  partially match them.
+  after the gradient, and the arguments after them (`vb`, `marginals`,
+  `verbose`, `silent`, `control`) must be given by their full names, so
+  data arguments cannot partially match them. The arguments before them
+  can be matched, as in [`optim()`](https://rdrr.io/r/stats/optim.html):
+  a data argument named `g` or `gr` would be taken as `grad`, so give it
+  a longer name.
 
 - vb:
 
@@ -74,9 +90,24 @@ inla_vanilla(
   it (see
   [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
 
+- marginals:
+
+  The marginal of each parameter: `"skewnormal"` (the default) fits a
+  skew-normal to a scan of the log-posterior; `"gaussian"` uses the
+  Gaussian marginal of the Laplace approximation, centred at the VB mean
+  when `vb = TRUE`, with no scans. Abbreviations such as `"skew"` and
+  `"gauss"` work too.
+
 - verbose:
 
-  Logical. Show progress? Default `TRUE`.
+  Logical. Print a full diagnostic of each stage under its progress
+  line? Default `FALSE`. See the section on output.
+
+- silent:
+
+  Logical. Print nothing at all, and muffle the warnings and messages
+  raised during the fit? Default `FALSE`. The warnings are still
+  recorded in `fit$warnings`. Cannot be combined with `verbose = TRUE`.
 
 - control:
 
@@ -98,9 +129,15 @@ is a list holding, among other things:
 - `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
 
 - `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
-  parameter.
+  parameter (with `alpha = 0` for Gaussian marginals).
+
+- `vb`, `marginals`, `verbose`, `silent`: the settings the fit used.
 
 - `logml`: the log marginal likelihood.
+
+- `warnings`: the messages of the warnings raised during the fit, as a
+  character vector of plain text, each message once (empty when there
+  were none). They are recorded whether or not `silent` is `TRUE`.
 
 ## Writing `logpost`
 
@@ -146,7 +183,23 @@ first order. When a parameter's spread depends strongly on another,
 poorly determined parameter, its marginal comes out too narrow, by a
 factor that vanishes as O(1/n). Examples are a regression coefficient or
 a mean when the noise SD is uncertain. For a normal mean with unknown
-variance the SD is about 11\\ too small at n = 12, 3\\
+variance the SD is about 11% too small at n = 12, 3% at n = 50, and
+under 1% at n = 200.
+
+A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
+structural equation model with 39 parameters and n = 75, the data could
+not keep two residual variances away from zero, so on the log scale
+their posteriors had a long, exponential left tail, set by the prior.
+Checked against MCMC, those two skew-normal marginals were less than
+half as wide as the posterior, with the 2.5% quantile about 2 posterior
+SDs too high; the other 37 were within 7% in SD. On the variance scale,
+where the tail near zero is compressed, the two were much closer: means
+0.2 posterior SDs too high and SDs 10 to 15% too small. INLAvaan's
+marginals of this model are the same as inlavanilla's. The `bend`
+diagnostic of
+[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+flagged both, but its size does not say how far off a marginal is, and
+the `tails` check, which looks only 4 Laplace SDs out, missed them.
 
 ## Gradients
 
@@ -159,7 +212,9 @@ beyond a handful of parameters: at m = 20 a fit makes on the order of
 50,000 calls. With `grad`, the VB correction takes 2m^2 + 1 gradient
 calls per sweep instead, and the fit is faster and more accurate. For
 more than about 10 parameters, supply `grad`, or set `vb = FALSE` to
-skip the VB correction (and its term in the log marginal likelihood).
+skip the VB correction (and its term in the log marginal likelihood):
+the skew-normal marginals do not depend on it. `marginals = "gaussian"`
+saves the calls of the scans.
 
 A supplied `grad` is checked against finite differences at `init`, and
 its Jacobian at the mode is checked for symmetry, with a warning if
@@ -186,18 +241,75 @@ names (one per element of a parameter vector) are numbered, as
 - `nlminb`: a list of
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) controls for
   the mode search. `iter.max` and `eval.max` default to `1000` and
-  `2000`.
+  `2000`, and `trace = 1` prints its iterations.
+
+## Output
+
+By default each stage prints one line as it finishes, with the time it
+took, and shows a progress bar while it runs for longer than half a
+second, or than the option `cli.progress_show_after` when it is set. In
+knitr or Quarto documents, where a bar cannot redraw in place, a larger
+`cli.progress_show_after` in the setup chunk keeps bars out of the
+output. Warnings, such as a mode that was not reached or a gradient that
+does not match `logpost`, are signalled as usual.
+
+`verbose = TRUE` adds a full diagnostic of the fit, in grey lines under
+each stage. It reports what the fit computes anyway, with no further
+calls of `logpost` or `grad`:
+
+- Before the mode search: the parameters, where the derivatives come
+  from, `logpost` at `init`, and for a supplied `grad` its largest
+  relative discrepancy from finite differences there.
+
+- The mode: the message, iterations and evaluations of
+  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), and whether
+  it was restarted with the parameters rescaled; the log-posterior and
+  the whitened gradient at the mode; how the Hessian was taken (and, for
+  a supplied `grad`, the asymmetry of its Jacobian); the largest
+  posterior correlation and the smallest eigenvalue of the correlation
+  matrix, which is near zero when some combination of the parameters is
+  poorly identified; and the Laplace log marginal likelihood.
+
+- The VB correction: the largest step, in posterior SDs, at each
+  fixed-point iteration, whether Anderson acceleration or the fallback
+  optimiser was used, the largest shift, and the term it adds to the log
+  marginal likelihood.
+
+- The marginals: the shape, NMAD, bend, tails and volume correction
+  `gamma1` of each parameter, with the values that
+  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  flags marked.
+
+- The calls of `logpost` and `grad` in each stage, and in all, with the
+  total time.
+
+For the iteration trace of
+[`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) itself, pass
+`control = list(nlminb = list(trace = 1))`.
+
+`silent = TRUE` prints nothing, for simulations and other repeated fits:
+no progress bars and no stage lines, and every warning and message
+raised during the fit, including those of `logpost` and `grad`, is
+muffled. Errors are still raised. Output printed with
+[`cat()`](https://rdrr.io/r/base/cat.html) or
+[`print()`](https://rdrr.io/r/base/print.html), by `logpost`, `grad` or
+the trace of [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
+is not captured.
+
+Whatever the level, the warnings raised during the fit are recorded in
+`fit$warnings`, so that a simulation can check them afterwards.
 
 ## References
 
-Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for
+Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
-approximations.
-[doi:10.48550/arXiv.2603.25690](https://doi.org/10.48550/arXiv.2603.25690)
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
 
-Jamil, H. and Rue, H. (2026). Implementation and workflows for
-INLA-based approximate Bayesian structural equation modelling.
-[doi:10.48550/arXiv.2604.00671](https://doi.org/10.48550/arXiv.2604.00671)
+Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling*
+(arXiv:2604.00671 \[stat.CO\]). arXiv.
+<https://doi.org/10.48550/arXiv.2604.00671>
 
 ## See also
 
@@ -224,11 +336,11 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [5ms]
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ Found the posterior mode in 10 iterations [4ms]
+#> ✔ VB mean correction, max shift 0.24σ [3ms]
+#> ✔ Fitted 2 skew-normal marginals [9ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────────────────────── 20ms ──
+#> ── INLAvanilla ───────────────────────────────────────────────────────── 19ms ──
 #> 2 parameters · skew-normal marginals · VB-corrected
 #> 
 #>             Mean     SD   2.5%    50%  97.5%   Mode
@@ -242,4 +354,45 @@ sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
 quantile(sigma, c(0.025, 0.5, 0.975))
 #>     2.5%      50%    97.5% 
 #> 1.444354 1.832695 2.455869 
+
+# A full diagnostic of each stage
+fit <- inla_vanilla(
+  logpost,
+  init = c(mu = 0, log_sigma = 0),
+  y = y,
+  verbose = TRUE
+)
+#> ℹ 2 parameters: mu and log_sigma
+#>   Derivatives by finite differences of logpost
+#>   logpost at init -481.47
+#> ✔ Found the posterior mode in 10 iterations [1ms]
+#>   nlminb: relative convergence (4), after 10 iterations (14 function and 26 gradient evaluations)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ (warning above 0.01σ)
+#>   Hessian by second differences of logpost: 6 calls, and 12 more to set the steps
+#>   Posterior correlation matrix: largest correlation -0.0042 (mu, log_sigma), smallest eigenvalue 1
+#>   Laplace log marginal likelihood -66.41
+#>   63 logpost calls
+#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0081, 2.4e-04
+#>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
+#>   Largest shift 0.24σ, for log_sigma
+#>   KL term 0.03, giving a log marginal likelihood of -66.38
+#>   81 logpost calls
+#> ✔ Fitted 2 skew-normal marginals [7ms]
+#>              Shape     NMAD     Bend  Tails    gamma1
+#>   mu         -0.25  4.2e-05     0.13!    ok  -0.00014
+#>   log_sigma   1.32   0.0076  5.5e-06     ok      0.13
+#>   ! marks what summary() flags: NMAD above 0.05, bend above 0.1, heavy tails
+#>   66 logpost calls
+#> ℹ Done: 210 logpost calls in 20ms
+
+# Nothing printed, as in a simulation; any warnings are kept in the fit
+fit <- inla_vanilla(
+  logpost,
+  init = c(mu = 0, log_sigma = 0),
+  y = y,
+  silent = TRUE
+)
+fit$warnings
+#> character(0)
 ```

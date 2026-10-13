@@ -21,6 +21,15 @@ approximation."></head><body>
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/inlavanilla.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+    <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
+    <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -86,7 +95,7 @@ fixed-point iteration failed and the fallback optimiser ran: both mean
 the posterior is far from the Laplace Gaussian.</p></li>
 <li><p><strong>Tails.</strong> Each parameter is scanned over \(\pm 4\) Laplace SDs.
 <code>tails</code> is <code>FALSE</code> (and flagged) when the density at an end of the scan
-is still over 5\<!-- % of its peak: the Laplace SD badly understates a heavy -->
+is still over 5% of its peak: the Laplace SD badly understates a heavy
 tail there, and the skew-normal extrapolates it.</p></li>
 <li><p><strong>Scan path.</strong> <code>bend</code> is the log-density, in nats, that the straight
 scan misses at \(\pm 2\) posterior SDs: the gain from one Newton step
@@ -101,16 +110,32 @@ scanned density relative to its peak (flagged above 0.05), and
 <code>sn_vs_vb</code>, the gap between the
 skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 target the posterior mean, so they should agree closely (to
-\(O(n^{-2})\); Proposition 3.4 of Jamil and Rue, 2026a). A gap above
+\(O(n^{-2})\); Jamil &amp; Rue, 2026, Proposition 3.4). A gap above
 0.1 SDs is flagged: the posterior is far from Gaussian along that
 parameter, and either approximation may be off.</p></li>
-</ul><p>With <code>vb = FALSE</code> there is no VB mean, and the VB columns are left out.</p>
+<li><p><strong>Scan-end mass.</strong> <code>scan_end_mass</code>, the mass each fitted skew-normal
+puts outside the scanned window (the mode \(\pm 4\) Laplace SDs),
+where the marginal is extrapolated, as INLAvaan's <code>diagnostics()</code>
+reports it. A Gaussian marginal gives \(2\Phi(-4) = 6.3 \times
+  10^{-5}\); the larger it is, the more of the marginal is extrapolated.
+It is flagged above 0.05.</p></li>
+</ul><p>Some problems also raise one warning at the end of the fit, of class
+<code>inlavanilla_diagnostics_warning</code>: heavy tails, an NMAD above 0.1, a
+scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
+levels match INLAvaan's fit-time warning; the flags here are more
+sensitive. With <code>silent = TRUE</code> the warning is only recorded in
+<code>fit$warnings</code>. <code><a href="../articles/diagnostics.html">vignette("diagnostics", package = "inlavanilla")</a></code>
+explains every check with examples.</p>
+<p>With <code>vb = FALSE</code> there is no VB mean, and the VB columns are left out.
+With <code>marginals = "gaussian"</code> there are no scans, so only the VB shift is
+reported.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
-    <p>Jamil, H. and Rue, H. (2026a). Approximate Bayesian inference for
-structural equation models using integrated nested Laplace approximations.
-<a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link">doi:10.48550/arXiv.2603.25690</a></p>
+    <p>Jamil, H., &amp; Rue, H. (2026). <em>Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations</em> (arXiv:2603.25690 [stat.ME]). arXiv.
+<a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link">https://doi.org/10.48550/arXiv.2603.25690</a></p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

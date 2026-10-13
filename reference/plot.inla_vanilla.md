@@ -1,9 +1,11 @@
 # Plot the posterior marginals of an INLAvanilla fit
 
-Draws the skew-normal marginal density of each parameter, on the
-unconstrained scale, with the Gaussian marginal of the Laplace
-approximation for comparison. The vertical line marks the posterior
-mean.
+Draws the marginal density of each parameter, on the unconstrained
+scale, with the Gaussian marginal of the Laplace approximation for
+comparison. The vertical line marks the posterior mean. For a fit with
+`marginals = "gaussian"` the marginals are Gaussian: centred at the VB
+mean, or, with `vb = FALSE`, the Laplace marginals themselves, drawn
+without a second copy.
 
 ## Usage
 
@@ -24,7 +26,8 @@ plot(x, pars = NULL, laplace = TRUE, ...)
 
 - laplace:
 
-  Logical. Overlay the Laplace (Gaussian) marginals? Default `TRUE`.
+  Logical. Overlay the Laplace (Gaussian) marginals? Default `TRUE`;
+  ignored when the marginals are the Laplace ones.
 
 - ...:
 

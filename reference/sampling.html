@@ -25,6 +25,15 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\)."></head><body
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/inlavanilla.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+    <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
+    <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -68,7 +77,9 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\).</p>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>For the <code>inla_vanilla</code> method, further arguments passed to
-<code>fun</code>.</p></dd>
+<code>fun</code>. As in <code><a href="https://rdrr.io/r/stats/optim.html" class="external-link">stats::optim()</a></code>, a name that abbreviates <code>nsamp</code> or <code>fun</code>
+would be taken as that argument: a data argument named <code>n</code> would set the
+number of draws. Give such data a longer name, or wrap it in <code>fun</code>.</p></dd>
 
 
 <dt id="arg-nsamp">nsamp<a class="anchor" aria-label="anchor" href="#arg-nsamp"></a></dt>
@@ -89,7 +100,10 @@ unconstrained scale, or the values of <code>fun</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Draws never call the log-posterior, so they are cheap: large <code>nsamp</code> costs
+    <p>For a fit with <code>marginals = "gaussian"</code> this is a draw from the joint
+Gaussian \(N(\tilde\vartheta, \Omega)\), centred at the VB mean (or at
+the mode when <code>vb = FALSE</code>).</p>
+<p>Draws never call the log-posterior, so they are cheap: large <code>nsamp</code> costs
 little. Use <code>fun</code> for natural-scale or derived quantities, such as
 <code>exp(log_sigma)</code> or a covariance matrix built from several parameters.</p>
     </div>
@@ -104,7 +118,7 @@ little. Use <code>fun</code> for natural-scale or derived quantities, such as
 <span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"mu"</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">10</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/stats/Exponential.html" class="external-link">dexp</a></span><span class="op">(</span><span class="va">sigma</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="va">theta</span><span class="op">[[</span><span class="st">"log_sigma"</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu">sampling</span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span><span class="op">)</span></span></span>

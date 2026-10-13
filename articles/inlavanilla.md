@@ -2,11 +2,13 @@
 
 ## The idea
 
-If you can write down a log-posterior,
-[inlavanilla](http://haziqj.ml/inlavanilla/) can approximate the
-posterior: no sampler, no tuning, and for small models in milliseconds.
+If you can write down the log-likelihood plus the log-prior,
+[inlavanilla](http://haziqj.ml/inlavanilla/) gives you approximate
+Bayesian inference for the parameters of your model: posterior marginals
+and draws, the marginal likelihood, and leave-one-out cross-validation.
+There is no sampler and no tuning, and small models take milliseconds.
 It runs the approximation pipeline of
-[INLAvaan](https://inlavaan.haziqj.ml/) on any log-density:
+[INLAvaan](https://inlavaan.haziqj.ml/) on any log-posterior:
 
 1.  **Joint Gaussian (Laplace).** Find the posterior mode and the
     curvature there. This gives a Gaussian approximation and the Laplace
@@ -84,10 +86,10 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
 #> ✔ Found the posterior mode in 10 iterations [7ms]
-#> ✔ VB mean correction, max shift 0.43σ [17ms]
-#> ✔ Fitted 3 skew-normal marginals [9ms]
+#> ✔ VB mean correction, max shift 0.43σ [18ms]
+#> ✔ Fitted 3 skew-normal marginals [11ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────────────────────── 40ms ──
+#> ── INLAvanilla ───────────────────────────────────────────────────────── 41ms ──
 #> 3 parameters · skew-normal marginals · VB-corrected
 #> 
 #>         Mean     SD    2.5%     50%  97.5%    Mode
@@ -100,7 +102,10 @@ fit
 
 The table summarises each parameter’s skew-normal marginal: the mean,
 standard deviation, quantiles and mode. Each step of the fit reports as
-it finishes, with the time it took.
+it finishes, with the time it took. `verbose = TRUE` adds a full
+diagnostic of each step, and `silent = TRUE` prints nothing at all, as
+in a simulation; the warnings it would have shown are kept in
+`fit$warnings`. The fits below use `silent = TRUE`.
 
 [`summary()`](https://rdrr.io/r/base/summary.html) adds the quartiles
 and diagnostics for each stage:
@@ -129,7 +134,7 @@ summary(fit)
 #> ✔ Skew-normal and VB means agree to within 0.076 SDs.
 #> 
 #> Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)
-#> 511 logpost calls in 40ms (mode 7ms, VB 18ms, marginals 9ms)
+#> 511 logpost calls in 41ms (mode 7ms, VB 18ms, marginals 12ms)
 ```
 
 - **VB shift** is how far the VB mean correction moved each mean from
@@ -192,32 +197,43 @@ exact_quantiles <- function(j, probs) {
 }
 ```
 
-The 2.5%, 50% and 97.5% quantiles from the exact posterior, the
-skew-normal marginals and the Laplace Gaussian:
+A caterpillar plot compares the exact posterior with the skew-normal
+marginals and the Laplace Gaussian: thick bars are the central 50%
+intervals, thin bars the 95% intervals, and dots the medians. The dotted
+line is the exact median.
 
 ``` r
 
-probs <- c(0.025, 0.5, 0.975)
-compare <- do.call(rbind, lapply(seq_len(3), function(j) {
-  rbind(
-    exact = exact_quantiles(j, probs),
-    `skew-normal` = s[j, c("2.5%", "50%", "97.5%")],
+probs <- c(0.025, 0.25, 0.5, 0.75, 0.975)
+sn_q <- summary(fit, probs = probs)$table[, paste0(100 * probs, "%")]
+cols <- c(Exact = "grey20", `Skew-normal` = "#C2410C", Laplace = "#0F766E")
+
+op <- par(mfrow = c(3, 1), mar = c(2.5, 7.5, 1.8, 1), mgp = c(2, 0.6, 0), las = 1)
+for (j in seq_len(3)) {
+  q <- rbind(
+    Exact = exact_quantiles(j, probs),
+    `Skew-normal` = sn_q[j, ],
     Laplace = qnorm(probs, fit$mode[j], sqrt(fit$cov[j, j]))
   )
-}))
-rownames(compare) <- paste(rep(names(init), each = 3), rownames(compare))
-colnames(compare) <- c("2.5%", "50%", "97.5%")
-round(compare, 2)
-#>                   2.5%   50% 97.5%
-#> b0 exact         -2.47 -1.08  0.08
-#> b0 skew-normal   -2.40 -1.07  0.02
-#> b0 Laplace       -2.22 -1.03  0.16
-#> b_wt exact       -7.89 -5.00 -2.68
-#> b_wt skew-normal -8.00 -5.03 -2.72
-#> b_wt Laplace     -6.97 -4.51 -2.05
-#> b_hp exact        0.25  1.50  3.04
-#> b_hp skew-normal  0.31  1.52  3.07
-#> b_hp Laplace      0.09  1.35  2.61
+  at <- 3:1
+  plot(range(q), c(0.5, 3.5), type = "n", yaxt = "n", xlab = "", ylab = "",
+    main = names(init)[j], font.main = 1, bty = "n")
+  abline(v = q["Exact", 3], lty = 3, col = "grey60")
+  segments(q[, 1], at, q[, 5], at, col = cols, lwd = 1.5)
+  segments(q[, 2], at, q[, 4], at, col = cols, lwd = 6, lend = 1)
+  points(q[, 3], at, pch = 21, bg = "white", col = cols, cex = 1.3, lwd = 1.5)
+  mtext(rownames(q), side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8)
+}
+```
+
+![Three panels, one per coefficient, each with three horizontal
+intervals: exact, skew-normal and Laplace. The skew-normal intervals
+line up with the exact ones; the Laplace intervals are symmetric and
+shifted towards zero.](inlavanilla_files/figure-html/compare-1.png)
+
+``` r
+
+par(op)
 ```
 
 The skew-normal intervals track the exact ones closely. The intercept’s
@@ -256,13 +272,13 @@ grad <- function(theta, X, y) {
   eta <- as.numeric(X %*% theta)
   as.numeric(crossprod(X, y - plogis(eta))) - theta / 2.5^2
 }
-fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, verbose = FALSE)
+fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
-#> [1] 1.813245e-06
+#> [1] 1.813216e-06
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 #>                    logpost grad
 #> finite_differences     511    0
-#> gradient               127  124
+#> gradient               134  124
 ```
 
 The two fits agree to several decimal places, and the gradient version
@@ -271,6 +287,46 @@ calls `logpost` far less often.
 checks a supplied gradient against finite differences at `init` and
 warns if they disagree, which catches most slips in hand-derived
 gradients.
+
+## Cheaper approximations
+
+The VB correction and the skew-normal marginals are optional, and
+independent of each other. `vb = FALSE` skips the VB correction, and
+`marginals = "gaussian"` skips the scans and keeps the Gaussian
+marginals. With both, the fit is the Laplace approximation alone.
+
+``` r
+
+fit_fast <- function(...) {
+  inla_vanilla(logpost, init, X = X, y = y, silent = TRUE, ...)
+}
+fits <- list(
+  `skew-normal + VB` = fit,
+  `skew-normal` = fit_fast(vb = FALSE),
+  `Gaussian + VB` = fit_fast(marginals = "gaussian"),
+  Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
+)
+round(t(sapply(fits, function(f) {
+  c(
+    calls = f$counts[["logpost"]],
+    logml = f$logml,
+    f$summary["b_wt", c("Mean", "2.5%", "97.5%")]
+  )
+})), 2)
+#>                  calls  logml  Mean  2.5% 97.5%
+#> skew-normal + VB   511 -11.62 -5.12 -8.00 -2.72
+#> skew-normal        207 -11.71 -5.12 -8.00 -2.72
+#> Gaussian + VB      400 -11.62 -5.05 -7.51 -2.59
+#> Laplace             96 -11.71 -4.51 -6.97 -2.05
+```
+
+Without the VB correction the skew-normal marginals are the same,
+because they are scanned around the mode, but the log marginal
+likelihood is the Laplace one. The VB correction moves the Gaussian’s
+centre most of the way to the posterior mean, but a Gaussian cannot
+follow the long tail. Without a gradient the VB correction is the most
+expensive stage, and its cost grows fastest with the number of
+parameters.
 
 ## Derived quantities
 
@@ -285,7 +341,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008176
+#> [1,] -0.7657929 -5.309342 0.3008175
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```
@@ -348,7 +404,7 @@ fit_wt <- inla_vanilla(
   c(b0 = 0, b_wt = 0),
   X = X[, 1:2],
   y = y,
-  verbose = FALSE
+  silent = TRUE
 )
 log_bf <- fit$logml - fit_wt$logml
 log_bf
@@ -363,6 +419,11 @@ returns the full $`\log p(y, \vartheta)`$, with every normalising
 constant of the likelihood and the prior. Here
 [`dbinom()`](https://rdrr.io/r/stats/Binomial.html) and
 [`dnorm()`](https://rdrr.io/r/stats/Normal.html) include theirs.
+
+To compare models by how well they predict new data instead, write the
+log-likelihood as one term per observation and use
+[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md): see
+[`vignette("model-comparison", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/model-comparison.md).
 
 ## Constrained parameters
 
@@ -388,7 +449,7 @@ logpost_p <- function(theta, y) {
     dbeta(p, 1, 1, log = TRUE) + # prior on p ...
     log(p) + log1p(-p) # ... and the Jacobian
 }
-fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, verbose = FALSE)
+fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, silent = TRUE)
 ```
 
 Natural-scale summaries come from the draws, and match the exact Beta
@@ -429,11 +490,12 @@ fit <- inla_vanilla(
 
 ## References
 
-Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for
+Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
-approximations.
-[arXiv:2603.25690](https://doi.org/10.48550/arXiv.2603.25690).
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
 
-Jamil, H. and Rue, H. (2026). Implementation and workflows for
-INLA-based approximate Bayesian structural equation modelling.
-[arXiv:2604.00671](https://doi.org/10.48550/arXiv.2604.00671).
+Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling*
+(arXiv:2604.00671 \[stat.CO\]). arXiv.
+<https://doi.org/10.48550/arXiv.2604.00671>

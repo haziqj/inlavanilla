@@ -2,9 +2,12 @@
 
 *INLA-style skew-normal marginals for any log-posterior.*
 
-Give [inlavanilla](http://haziqj.ml/inlavanilla/) a log-posterior and it
-returns an approximate posterior, in milliseconds for small models: no
-sampler, no tuning. It runs the approximation pipeline of
+If you can write down the log-likelihood plus the log-prior,
+[inlavanilla](http://haziqj.ml/inlavanilla/) gives you approximate
+Bayesian inference for the parameters of your model: posterior marginals
+and draws, the marginal likelihood, and leave-one-out cross-validation.
+There is no sampler and no tuning, and small models take milliseconds.
+It runs the approximation pipeline of
 [INLAvaan](https://inlavaan.haziqj.ml/) with nothing model-specific:
 
 1.  a **Laplace approximation** at the posterior mode, with the Laplace
@@ -14,6 +17,17 @@ sampler, no tuning. It runs the approximation pipeline of
 3.  **skew-normal marginals**, one per parameter, fitted to scans of the
     log-posterior;
 4.  **Gaussian copula draws** for any function of the parameters.
+
+Stages 2 and 3 are optional and independent: `vb = FALSE` skips the VB
+correction, and `marginals = "gaussian"` keeps the Gaussian marginals
+instead of scanning for skew-normal ones. With both, you get the Laplace
+approximation alone.
+
+Give [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) or
+[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) the
+log-likelihood as one term per observation, and they estimate the
+model’s predictive accuracy from the fit alone, with no refits and no
+draws.
 
 The package is pure R and small. Its only dependency outside base R is
 [cli](https://cli.r-lib.org/).
@@ -52,11 +66,11 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [29ms]
-#> ✔ VB mean correction, max shift 0.17σ [36ms]
-#> ✔ Fitted 1 skew-normal marginal [66ms]
+#> ✔ Found the posterior mode in 6 iterations [27ms]
+#> ✔ VB mean correction, max shift 0.17σ [34ms]
+#> ✔ Fitted 1 skew-normal marginal [75ms]
 fit
-#> ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──
+#> ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──
 #> 1 parameter · skew-normal marginals · VB-corrected
 #> 
 #>            Mean     SD    2.5%     50%   97.5%    Mode
@@ -105,14 +119,15 @@ and model comparison.
 
 ## References
 
-Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for
+Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
-approximations.
-[arXiv:2603.25690](https://doi.org/10.48550/arXiv.2603.25690).
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
 
-Jamil, H. and Rue, H. (2026). Implementation and workflows for
-INLA-based approximate Bayesian structural equation modelling.
-[arXiv:2604.00671](https://doi.org/10.48550/arXiv.2604.00671).
+Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling*
+(arXiv:2604.00671 \[stat.CO\]). arXiv.
+<https://doi.org/10.48550/arXiv.2604.00671>
 
 # Package index
 
@@ -120,6 +135,9 @@ INLA-based approximate Bayesian structural equation modelling.
 
 - [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   : INLA-style posterior approximation for any log-posterior
+- [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)
+  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) :
+  Leave-one-out cross-validation and WAIC for an INLAvanilla fit
 - [`plot(`*`<inla_vanilla>`*`)`](http://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.md)
   : Plot the posterior marginals of an INLAvanilla fit
 - [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) :
@@ -129,7 +147,30 @@ INLA-based approximate Bayesian structural equation modelling.
 
 # Articles
 
-### All vignettes
+### Get started
 
 - [Get started with
   inlavanilla](http://haziqj.ml/inlavanilla/articles/inlavanilla.md):
+
+### Checking a fit
+
+- [Diagnostics](http://haziqj.ml/inlavanilla/articles/diagnostics.md):
+- [Model comparison with LOO and
+  WAIC](http://haziqj.ml/inlavanilla/articles/model-comparison.md):
+
+### Compiled code
+
+Faster log-posteriors for larger models. Both articles fit the same
+structural equation model, with 39 parameters.
+
+- [Speeding up with
+  Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md):
+
+  A structural equation model with 39 parameters, its log-posterior
+  written first in R and then in C++ with Rcpp and RcppEigen, with an
+  analytic gradient.
+
+- [Using TMB](http://haziqj.ml/inlavanilla/articles/tmb.md):
+
+  The structural equation model of the Rcpp article as a TMB template,
+  with the gradient from automatic differentiation.

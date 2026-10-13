@@ -11,8 +11,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="INLA-Style Skew-Normal Marginals for Any Log-Posterior">
-<meta name="description" content="Approximates a posterior distribution from its log density alone, using the approximation pipeline of the INLAvaan package (Jamil and Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;.">
-<meta property="og:description" content="Approximates a posterior distribution from its log density alone, using the approximation pipeline of the INLAvaan package (Jamil and Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;.">
+<meta name="description" content="Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the INLAvaan package (Jamil &amp; Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) &lt;doi:10.48550/arXiv.2609.00670&gt;.">
+<meta property="og:description" content="Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the INLAvaan package (Jamil &amp; Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) &lt;doi:10.48550/arXiv.2609.00670&gt;.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,6 +33,17 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="articles/inlavanilla.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/diagnostics.html">Diagnostics</a></li>
+    <li><a class="dropdown-item" href="articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="articles/rcpp.html">Speeding up with Rcpp</a></li>
+    <li><a class="dropdown-item" href="articles/tmb.html">Using TMB</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="articles/index.html">More articles...</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -53,7 +64,7 @@
 <!-- badges: start -->
 
 <p><em>INLA-style skew-normal marginals for any log-posterior.</em></p>
-<p>Give <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> a log-posterior and it returns an approximate posterior, in milliseconds for small models: no sampler, no tuning. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> with nothing model-specific:</p>
+<p>If you can write down the log-likelihood plus the log-prior, <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> with nothing model-specific:</p>
 <ol style="list-style-type: decimal">
 <li>a <strong>Laplace approximation</strong> at the posterior mode, with the Laplace estimate of the log marginal likelihood;</li>
 <li>a <strong>VB mean correction</strong> that recentres the Gaussian at a better estimate of the posterior mean;</li>
@@ -62,6 +73,8 @@
 <li>
 <strong>Gaussian copula draws</strong> for any function of the parameters.</li>
 </ol>
+<p>Stages 2 and 3 are optional and independent: <code>vb = FALSE</code> skips the VB correction, and <code>marginals = "gaussian"</code> keeps the Gaussian marginals instead of scanning for skew-normal ones. With both, you get the Laplace approximation alone.</p>
+<p>Give <code><a href="reference/loo.html">loo()</a></code> or <code><a href="reference/loo.html">waic()</a></code> the log-likelihood as one term per observation, and they estimate the model’s predictive accuracy from the fit alone, with no refits and no draws.</p>
 <p>The package is pure R and small. Its only dependency outside base R is <a href="https://cli.r-lib.org/" class="external-link">cli</a>.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -87,11 +100,11 @@
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [29ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [36ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [66ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [27ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [34ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [75ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ──────────────────────────────────────────────────────── 140ms ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ──────────────────────────────────────────────────────── 142ms ──</span></span>
 <span><span class="co">#&gt; 1 parameter · skew-normal marginals · VB-corrected</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            Mean     SD    2.5%     50%   97.5%    Mode</span></span>
@@ -120,8 +133,8 @@
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<p>Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural equation models using integrated nested Laplace approximations. <a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link">arXiv:2603.25690</a>.</p>
-<p>Jamil, H. and Rue, H. (2026). Implementation and workflows for INLA-based approximate Bayesian structural equation modelling. <a href="https://doi.org/10.48550/arXiv.2604.00671" class="external-link">arXiv:2604.00671</a>.</p>
+<p>Jamil, H., &amp; Rue, H. (2026a). <em>Approximate Bayesian inference for structural equation models using integrated nested Laplace approximations</em> (arXiv:2603.25690 [stat.ME]). arXiv. <a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link uri">https://doi.org/10.48550/arXiv.2603.25690</a></p>
+<p>Jamil, H., &amp; Rue, H. (2026b). <em>Implementation and workflows for INLA-based approximate Bayesian structural equation modelling</em> (arXiv:2604.00671 [stat.CO]). arXiv. <a href="https://doi.org/10.48550/arXiv.2604.00671" class="external-link uri">https://doi.org/10.48550/arXiv.2604.00671</a></p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

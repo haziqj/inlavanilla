@@ -33,6 +33,17 @@
       <ul class="navbar-nav me-auto">
 <li class="active nav-item"><a class="nav-link" href="../articles/inlavanilla.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+    <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
+    <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -65,7 +76,7 @@
 
     <section class="level2"><h2 id="the-idea">The idea<a class="anchor" aria-label="anchor" href="#the-idea"></a>
 </h2>
-<p>If you can write down a log-posterior, <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> can approximate the posterior: no sampler, no tuning, and for small models in milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> on any log-density:</p>
+<p>If you can write down the log-likelihood plus the log-prior, <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> on any log-posterior:</p>
 <ol type="1">
 <li>
 <strong>Joint Gaussian (Laplace).</strong> Find the posterior mode and the curvature there. This gives a Gaussian approximation and the Laplace estimate of the log marginal likelihood.</li>
@@ -115,10 +126,10 @@
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [7ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [17ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [9ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [18ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [11ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────────────────── 40ms ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────────────────── 41ms ──</span></span>
 <span><span class="co">#&gt; 3 parameters · skew-normal marginals · VB-corrected</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;         Mean     SD    2.5%     50%  97.5%    Mode</span></span>
@@ -128,7 +139,7 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -11.62</span></span></code></pre></div>
 </div>
-<p>The table summarises each parameter’s skew-normal marginal: the mean, standard deviation, quantiles and mode. Each step of the fit reports as it finishes, with the time it took.</p>
+<p>The table summarises each parameter’s skew-normal marginal: the mean, standard deviation, quantiles and mode. Each step of the fit reports as it finishes, with the time it took. <code>verbose = TRUE</code> adds a full diagnostic of each step, and <code>silent = TRUE</code> prints nothing at all, as in a simulation; the warnings it would have shown are kept in <code>fit$warnings</code>. The fits below use <code>silent = TRUE</code>.</p>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds the quartiles and diagnostics for each stage:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
@@ -154,7 +165,7 @@
 <span><span class="co">#&gt; ✔ Skew-normal and VB means agree to within 0.076 SDs.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)</span></span>
-<span><span class="co">#&gt; 511 logpost calls in 40ms (mode 7ms, VB 18ms, marginals 9ms)</span></span></code></pre></div>
+<span><span class="co">#&gt; 511 logpost calls in 41ms (mode 7ms, VB 18ms, marginals 12ms)</span></span></code></pre></div>
 </div>
 <ul>
 <li>
@@ -203,35 +214,42 @@
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/approxfun.html" class="external-link">approx</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cumsum.html" class="external-link">cumsum</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">-</span> <span class="va">p</span> <span class="op">/</span> <span class="fl">2</span>, <span class="va">axes</span><span class="op">[[</span><span class="va">j</span><span class="op">]</span><span class="op">]</span>, <span class="va">probs</span>, ties <span class="op">=</span> <span class="va">mean</span><span class="op">)</span><span class="op">$</span><span class="va">y</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
-<p>The 2.5%, 50% and 97.5% quantiles from the exact posterior, the skew-normal marginals and the Laplace Gaussian:</p>
+<p>A caterpillar plot compares the exact posterior with the skew-normal marginals and the Laplace Gaussian: thick bars are the central 50% intervals, thin bars the 95% intervals, and dots the medians. The dotted line is the exact median.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">probs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span></span>
-<span><span class="va">compare</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">j</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
-<span>    exact <span class="op">=</span> <span class="fu">exact_quantiles</span><span class="op">(</span><span class="va">j</span>, <span class="va">probs</span><span class="op">)</span>,</span>
-<span>    `skew-normal` <span class="op">=</span> <span class="va">s</span><span class="op">[</span><span class="va">j</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2.5%"</span>, <span class="st">"50%"</span>, <span class="st">"97.5%"</span><span class="op">)</span><span class="op">]</span>,</span>
+<code class="sourceCode R"><span><span class="va">probs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="fl">0.975</span><span class="op">)</span></span>
+<span><span class="va">sn_q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span>, probs <span class="op">=</span> <span class="va">probs</span><span class="op">)</span><span class="op">$</span><span class="va">table</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fl">100</span> <span class="op">*</span> <span class="va">probs</span>, <span class="st">"%"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Exact <span class="op">=</span> <span class="st">"grey20"</span>, `Skew-normal` <span class="op">=</span> <span class="st">"#C2410C"</span>, Laplace <span class="op">=</span> <span class="st">"#0F766E"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">op</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2.5</span>, <span class="fl">7.5</span>, <span class="fl">1.8</span>, <span class="fl">1</span><span class="op">)</span>, mgp <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">0.6</span>, <span class="fl">0</span><span class="op">)</span>, las <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">j</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>    Exact <span class="op">=</span> <span class="fu">exact_quantiles</span><span class="op">(</span><span class="va">j</span>, <span class="va">probs</span><span class="op">)</span>,</span>
+<span>    `Skew-normal` <span class="op">=</span> <span class="va">sn_q</span><span class="op">[</span><span class="va">j</span>, <span class="op">]</span>,</span>
 <span>    Laplace <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">qnorm</a></span><span class="op">(</span><span class="va">probs</span>, <span class="va">fit</span><span class="op">$</span><span class="va">mode</span><span class="op">[</span><span class="va">j</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">cov</span><span class="op">[</span><span class="va">j</span>, <span class="va">j</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">compare</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">compare</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">compare</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2.5%"</span>, <span class="st">"50%"</span>, <span class="st">"97.5%"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">compare</span>, <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                   2.5%   50% 97.5%</span></span>
-<span><span class="co">#&gt; b0 exact         -2.47 -1.08  0.08</span></span>
-<span><span class="co">#&gt; b0 skew-normal   -2.40 -1.07  0.02</span></span>
-<span><span class="co">#&gt; b0 Laplace       -2.22 -1.03  0.16</span></span>
-<span><span class="co">#&gt; b_wt exact       -7.89 -5.00 -2.68</span></span>
-<span><span class="co">#&gt; b_wt skew-normal -8.00 -5.03 -2.72</span></span>
-<span><span class="co">#&gt; b_wt Laplace     -6.97 -4.51 -2.05</span></span>
-<span><span class="co">#&gt; b_hp exact        0.25  1.50  3.04</span></span>
-<span><span class="co">#&gt; b_hp skew-normal  0.31  1.52  3.07</span></span>
-<span><span class="co">#&gt; b_hp Laplace      0.09  1.35  2.61</span></span></code></pre></div>
+<span>  <span class="va">at</span> <span class="op">&lt;-</span> <span class="fl">3</span><span class="op">:</span><span class="fl">1</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">3.5</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"n"</span>, yaxt <span class="op">=</span> <span class="st">"n"</span>, xlab <span class="op">=</span> <span class="st">""</span>, ylab <span class="op">=</span> <span class="st">""</span>,</span>
+<span>    main <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">init</span><span class="op">)</span><span class="op">[</span><span class="va">j</span><span class="op">]</span>, font.main <span class="op">=</span> <span class="fl">1</span>, bty <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="va">q</span><span class="op">[</span><span class="st">"Exact"</span>, <span class="fl">3</span><span class="op">]</span>, lty <span class="op">=</span> <span class="fl">3</span>, col <span class="op">=</span> <span class="st">"grey60"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/segments.html" class="external-link">segments</a></span><span class="op">(</span><span class="va">q</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="va">at</span>, <span class="va">q</span><span class="op">[</span>, <span class="fl">5</span><span class="op">]</span>, <span class="va">at</span>, col <span class="op">=</span> <span class="va">cols</span>, lwd <span class="op">=</span> <span class="fl">1.5</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/segments.html" class="external-link">segments</a></span><span class="op">(</span><span class="va">q</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span>, <span class="va">at</span>, <span class="va">q</span><span class="op">[</span>, <span class="fl">4</span><span class="op">]</span>, <span class="va">at</span>, col <span class="op">=</span> <span class="va">cols</span>, lwd <span class="op">=</span> <span class="fl">6</span>, lend <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/points.html" class="external-link">points</a></span><span class="op">(</span><span class="va">q</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span>, <span class="va">at</span>, pch <span class="op">=</span> <span class="fl">21</span>, bg <span class="op">=</span> <span class="st">"white"</span>, col <span class="op">=</span> <span class="va">cols</span>, cex <span class="op">=</span> <span class="fl">1.3</span>, lwd <span class="op">=</span> <span class="fl">1.5</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/graphics/mtext.html" class="external-link">mtext</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span>, side <span class="op">=</span> <span class="fl">2</span>, at <span class="op">=</span> <span class="va">at</span>, line <span class="op">=</span> <span class="fl">0.5</span>, col <span class="op">=</span> <span class="va">cols</span>, adj <span class="op">=</span> <span class="fl">1</span>, cex <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="inlavanilla_files/figure-html/compare-1.png" class="quarto-figure quarto-figure-center" alt="Three panels, one per coefficient, each with three horizontal intervals: exact, skew-normal and Laplace. The skew-normal intervals line up with the exact ones; the Laplace intervals are symmetric and shifted towards zero." width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">op</span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>The skew-normal intervals track the exact ones closely. The intercept’s is a little narrow, as its bend flag warned. The Laplace intervals are symmetric about the mode, so they cut the long tails short and miss values on the far side.</p>
 <p>The grid also gives the exact log marginal likelihood:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cell</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">axes</span>, <span class="kw">function</span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html" class="external-link">diff</a></span><span class="op">(</span><span class="va">a</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">lp</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="op">*</span> <span class="va">cell</span><span class="op">)</span>,</span>
@@ -246,36 +264,64 @@
 </h2>
 <p>Without a gradient, <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> uses finite differences of <code>logpost</code>. An analytic gradient makes the fit faster and more accurate, and it pays off more as the number of parameters grows. For logistic regression it is short:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grad</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">X</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">eta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">theta</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/crossprod.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">eta</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">-</span> <span class="va">theta</span> <span class="op">/</span> <span class="fl">2.5</span><span class="op">^</span><span class="fl">2</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">fit_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="va">fit_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_g</span><span class="op">$</span><span class="va">summary</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 1.813245e-06</span></span>
+<span><span class="co">#&gt; [1] 1.813216e-06</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>finite_differences <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">counts</span>, gradient <span class="op">=</span> <span class="va">fit_g</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                    logpost grad</span></span>
 <span><span class="co">#&gt; finite_differences     511    0</span></span>
-<span><span class="co">#&gt; gradient               127  124</span></span></code></pre></div>
+<span><span class="co">#&gt; gradient               134  124</span></span></code></pre></div>
 </div>
 <p>The two fits agree to several decimal places, and the gradient version calls <code>logpost</code> far less often. <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> checks a supplied gradient against finite differences at <code>init</code> and warns if they disagree, which catches most slips in hand-derived gradients.</p>
+</section><section class="level2"><h2 id="cheaper-approximations">Cheaper approximations<a class="anchor" aria-label="anchor" href="#cheaper-approximations"></a>
+</h2>
+<p>The VB correction and the skew-normal marginals are optional, and independent of each other. <code>vb = FALSE</code> skips the VB correction, and <code>marginals = "gaussian"</code> skips the scans and keeps the Gaussian marginals. With both, the fit is the Laplace approximation alone.</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit_fast</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  `skew-normal + VB` <span class="op">=</span> <span class="va">fit</span>,</span>
+<span>  `skew-normal` <span class="op">=</span> <span class="fu">fit_fast</span><span class="op">(</span>vb <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>,</span>
+<span>  `Gaussian + VB` <span class="op">=</span> <span class="fu">fit_fast</span><span class="op">(</span>marginals <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span>,</span>
+<span>  Laplace <span class="op">=</span> <span class="fu">fit_fast</span><span class="op">(</span>vb <span class="op">=</span> <span class="cn">FALSE</span>, marginals <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>    calls <span class="op">=</span> <span class="va">f</span><span class="op">$</span><span class="va">counts</span><span class="op">[[</span><span class="st">"logpost"</span><span class="op">]</span><span class="op">]</span>,</span>
+<span>    logml <span class="op">=</span> <span class="va">f</span><span class="op">$</span><span class="va">logml</span>,</span>
+<span>    <span class="va">f</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="st">"b_wt"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Mean"</span>, <span class="st">"2.5%"</span>, <span class="st">"97.5%"</span><span class="op">)</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                  calls  logml  Mean  2.5% 97.5%</span></span>
+<span><span class="co">#&gt; skew-normal + VB   511 -11.62 -5.12 -8.00 -2.72</span></span>
+<span><span class="co">#&gt; skew-normal        207 -11.71 -5.12 -8.00 -2.72</span></span>
+<span><span class="co">#&gt; Gaussian + VB      400 -11.62 -5.05 -7.51 -2.59</span></span>
+<span><span class="co">#&gt; Laplace             96 -11.71 -4.51 -6.97 -2.05</span></span></code></pre></div>
+</div>
+<p>Without the VB correction the skew-normal marginals are the same, because they are scanned around the mode, but the log marginal likelihood is the Laplace one. The VB correction moves the Gaussian’s centre most of the way to the posterior mean, but a Gaussian cannot follow the long tail. Without a gradient the VB correction is the most expensive stage, and its cost grows fastest with the number of parameters.</p>
 </section><section class="level2"><h2 id="derived-quantities">Derived quantities<a class="anchor" aria-label="anchor" href="#derived-quantities"></a>
 </h2>
 <p><code><a href="../reference/sampling.html">sampling()</a></code> draws from the approximate joint posterior. The draws come from the skew-normal marginals, coupled by a Gaussian copula, and never call <code>logpost</code>, so even large numbers of draws are cheap:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;              b0      b_wt      b_hp</span></span>
-<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008176</span></span>
+<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008175</span></span>
 <span><span class="co">#&gt; [2,] -1.7688214 -3.819659 1.2958502</span></span>
 <span><span class="co">#&gt; [3,] -0.9887956 -4.875465 1.0419254</span></span></code></pre></div>
 </div>
 <p>Its <code>fun</code> argument maps each draw to any quantity of interest. Here is the weight, in pounds, at which a car of average horsepower is equally likely to be manual or automatic. That is where the linear predictor crosses zero, a ratio of coefficients and so skewed:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wt_mean</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">wt</span><span class="op">)</span></span>
 <span><span class="va">wt_sd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">wt</span><span class="op">)</span></span>
 <span><span class="va">crossover</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
@@ -287,7 +333,7 @@
 </div>
 <p>The same idea gives the whole fitted curve. Here is the probability of a manual gearbox against weight, for a car of average horsepower, with a 95% credible band:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wt_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">5.5</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">z_grid</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">wt_grid</span> <span class="op">-</span> <span class="va">wt_mean</span><span class="op">)</span> <span class="op">/</span> <span class="va">wt_sd</span></span>
 <span><span class="va">prob</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">4000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
@@ -316,13 +362,13 @@
 </h2>
 <p>The log marginal likelihood compares models through Bayes factors. Does horsepower help, once weight is known?</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_wt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">logpost</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  X <span class="op">=</span> <span class="va">X</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>,</span>
 <span>  y <span class="op">=</span> <span class="va">y</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  silent <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">log_bf</span> <span class="op">&lt;-</span> <span class="va">fit</span><span class="op">$</span><span class="va">logml</span> <span class="op">-</span> <span class="va">fit_wt</span><span class="op">$</span><span class="va">logml</span></span>
 <span><span class="va">log_bf</span></span>
@@ -330,23 +376,24 @@
 </div>
 <p>A log Bayes factor of 1.4 favours the model with horsepower, by a factor of about 4.</p>
 <p>The log marginal likelihood estimates <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\log p(y)</annotation></semantics></math> only when <code>logpost</code> returns the full <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mi>y</mi><mo>,</mo><mi>ϑ</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\log p(y, \vartheta)</annotation></semantics></math>, with every normalising constant of the likelihood and the prior. Here <code><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">dbinom()</a></code> and <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm()</a></code> include theirs.</p>
+<p>To compare models by how well they predict new data instead, write the log-likelihood as one term per observation and use <code><a href="../reference/loo.html">loo()</a></code>: see <code><a href="../articles/model-comparison.html">vignette("model-comparison", package = "inlavanilla")</a></code>.</p>
 </section><section class="level2"><h2 id="constrained-parameters">Constrained parameters<a class="anchor" aria-label="anchor" href="#constrained-parameters"></a>
 </h2>
 <p>The approximation works on an unconstrained scale: each parameter must be free to take any real value. Reparameterise anything constrained, such as a standard deviation as its log, a probability as its logit, or a correlation as its Fisher <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>z</mi><annotation encoding="application/x-tex">z</annotation></semantics></math>. The parameterisation also matters for accuracy, since each parameter’s skew-normal lives on the scale you choose, and scales on which the posterior is closer to Gaussian work better.</p>
 <p><code>logpost</code> is then the log density of the parameters you pass. A prior stated on the natural scale needs the log-Jacobian of the transformation. For the share of manual cars <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>, with a uniform prior, on the logit scale <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϑ</mi><mo>=</mo><mrow><mi mathvariant="normal">logit</mi><mo>⁡</mo></mrow><mi>p</mi></mrow><annotation encoding="application/x-tex">\vartheta = \operatorname{logit} p</annotation></semantics></math>, the Jacobian is <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>d</mi><mi>p</mi><mi>/</mi><mi>d</mi><mi>ϑ</mi><mo>=</mo><mi>p</mi><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><mi>p</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">dp / d\vartheta = p(1 - p)</annotation></semantics></math>:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">logpost_p</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">dbinom</a></span><span class="op">(</span><span class="va">y</span>, <span class="fl">1</span>, <span class="va">p</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">dbeta</a></span><span class="op">(</span><span class="va">p</span>, <span class="fl">1</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span> <span class="co"># prior on p ...</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log1p</a></span><span class="op">(</span><span class="op">-</span><span class="va">p</span><span class="op">)</span> <span class="co"># ... and the Jacobian</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">fit_p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">fit_p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>Natural-scale summaries come from the draws, and match the exact Beta posterior:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p_draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_p</span>, nsamp <span class="op">=</span> <span class="fl">20000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
@@ -363,8 +410,8 @@
 </h2>
 <p>Any R function works as <code>logpost</code> and <code>grad</code>, including compiled code from Rcpp, TMB or RTMB. TMB minimises, so negate its objective and gradient:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">TMB</span><span class="fu">::</span><span class="fu">MakeADFun</span><span class="op">(</span><span class="va">data</span>, <span class="va">parameters</span>, DLL <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
+<div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">TMB</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/TMB/man/MakeADFun.html" class="external-link">MakeADFun</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">parameters</span>, DLL <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span>,</span>
 <span>  init <span class="op">=</span> <span class="va">obj</span><span class="op">$</span><span class="va">par</span>,</span>
@@ -373,8 +420,8 @@
 </div>
 </section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<p>Jamil, H. and Rue, H. (2026). Approximate Bayesian inference for structural equation models using integrated nested Laplace approximations. <a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link">arXiv:2603.25690</a>.</p>
-<p>Jamil, H. and Rue, H. (2026). Implementation and workflows for INLA-based approximate Bayesian structural equation modelling. <a href="https://doi.org/10.48550/arXiv.2604.00671" class="external-link">arXiv:2604.00671</a>.</p>
+<p>Jamil, H., &amp; Rue, H. (2026a). <em>Approximate Bayesian inference for structural equation models using integrated nested Laplace approximations</em> (arXiv:2603.25690 [stat.ME]). arXiv. <a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link uri">https://doi.org/10.48550/arXiv.2603.25690</a></p>
+<p>Jamil, H., &amp; Rue, H. (2026b). <em>Implementation and workflows for INLA-based approximate Bayesian structural equation modelling</em> (arXiv:2604.00671 [stat.CO]). arXiv. <a href="https://doi.org/10.48550/arXiv.2604.00671" class="external-link uri">https://doi.org/10.48550/arXiv.2604.00671</a></p>
 </section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
