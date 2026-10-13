@@ -41,7 +41,7 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder:
     quarto
-Config/Needs/website: lavaan, Rcpp, RcppEigen, TMB
+Config/Needs/website: haziqj/INLAvaan, lavaan, Rcpp, RcppEigen, TMB
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
