@@ -1974,7 +1974,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   fallback$vb$fallback <- TRUE
   expect_length(flagged(fallback), 0)
   expect_match(
-    capture_output(print(fallback)),
+    capture_output(print(fallback), width = 200),
     "v VB correction in 3 iterations (via the fallback optimiser): max shift 0.98 posterior SDs.",
     fixed = TRUE
   )
