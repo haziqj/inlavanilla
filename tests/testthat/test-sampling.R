@@ -96,6 +96,12 @@ sn_normal_score_ref <- function(x, xi, omega, alpha, n_knots = 301) {
   splinefun(zk, sk)(z)
 }
 
+# SD of SN(xi, omega, alpha): omega sqrt(1 - 2 delta^2 / pi), with
+# delta = alpha / sqrt(1 + alpha^2)
+sn_sd_ref <- function(omega, alpha) {
+  omega * sqrt(1 - 2 * alpha^2 / ((1 + alpha^2) * pi))
+}
+
 sn_par <- function(fit, j) {
   list(
     xi = fit$sn[j, "xi"],
@@ -231,14 +237,35 @@ test_that("sampling() is reproducible under set.seed()", {
 })
 
 test_that("sampling() has no method for objects that are not fits", {
-  expect_error(sampling(list(sn = pois_fit$sn, cov = pois_fit$cov)))
+  expect_error(
+    sampling(list(sn = pois_fit$sn, cov = pois_fit$cov)),
+    "no applicable method"
+  )
+})
+
+test_that("sampling() never calls the log-posterior", {
+  # Documented: draws never call logpost, so a large nsamp is cheap
+  n_calls <- 0
+  counting_logpost <- function(theta) {
+    n_calls <<- n_calls + 1
+    gp_logpost(theta)
+  }
+  fit <- inla_vanilla(counting_logpost, c(log_lambda = 0), verbose = FALSE)
+  n_calls <- 0
+  set.seed(7)
+  sampling(fit, nsamp = 5000)
+  sampling(fit, nsamp = 50, fun = function(theta) exp(theta))
+  expect_identical(n_calls, 0)
 })
 
 # (b) Marginals -----------------------------------------------------------------
 
-test_that("the quadrature references agree with the fit's quantiles", {
+test_that("the quadrature references agree with the fit's quantiles and moments", {
   # Anchors the references used below: fit$summary and qsnorm() on fit$sn
-  # against the skew-normal quantiles solved here by quadrature.
+  # against the skew-normal quantiles solved here by quadrature, and the
+  # summary's Mean and SD against the moments by quadrature. Observed: about
+  # 5e-14 (quantiles) and 1e-16 (moments); the tolerance is set by the
+  # quadrature's own rel.tol of 1e-11, not by the observed error.
   tab_probs <- c(0.025, 0.5, 0.975)
   for (j in rownames(pois_fit$sn)) {
     sn <- sn_par(pois_fit, j)
@@ -246,13 +273,29 @@ test_that("the quadrature references agree with the fit's quantiles", {
     expect_equal(
       qsnorm(probs, sn$xi, sn$omega, sn$alpha),
       q_ref,
-      tolerance = 1e-8
+      tolerance = 1e-10
     )
     expect_equal(
       unname(pois_fit$summary[j, c("2.5%", "50%", "97.5%")]),
       sn_quantile_ref(tab_probs, sn$xi, sn$omega, sn$alpha),
-      tolerance = 1e-8
+      tolerance = 1e-10
     )
+
+    dens <- function(x) sn_density_ref(x, sn$xi, sn$omega, sn$alpha)
+    mean_ref <- integrate(
+      function(x) x * dens(x),
+      -Inf,
+      Inf,
+      rel.tol = 1e-12
+    )$value
+    var_ref <- integrate(
+      function(x) (x - mean_ref)^2 * dens(x),
+      -Inf,
+      Inf,
+      rel.tol = 1e-12
+    )$value
+    expect_equal(pois_fit$summary[j, "Mean"], mean_ref, tolerance = 1e-10)
+    expect_equal(pois_fit$summary[j, "SD"], sqrt(var_ref), tolerance = 1e-10)
   }
 })
 
@@ -309,24 +352,55 @@ test_that("each column passes a Kolmogorov-Smirnov test against its marginal", {
 })
 
 test_that("a one-parameter draw is the skew-normal quantile of a normal", {
-  # With m = 1 the copula is the identity, so the draws are Q(Phi(z)) for
-  # the standard normals z that rnorm() gives under the same seed. This
-  # checks the quantile map to far below Monte Carlo error. Observed: largest
-  # error 4.8e-8 posterior SDs; the tolerance is the 1e-6 SDs that
-  # sn_score_map() documents.
+  # With m = 1 the copula is the identity, so draw i is Q(Phi(z_i)) for the
+  # i-th standard normal z_i that rnorm() gives under the same seed. This
+  # checks the quantile map, row by row, to far below Monte Carlo error.
+  # Observed: largest error 4.85e-8 posterior SDs, which is the spline's
+  # largest error anywhere on |z| <= 7 for this alpha (-1.9), between the
+  # knots near z = -0.55. sn_score_map() documents 1e-6 SDs for any alpha
+  # (5e-7 at |alpha| = 20); halving its knots would give about 8e-7 here.
   sn <- sn_par(gp_fit, 1)
   set.seed(21)
-  z <- rnorm(300)
+  z <- rnorm(2000)
   set.seed(21)
-  draws <- sampling(gp_fit, nsamp = 300)[, 1]
-  # Sorted, so the check does not depend on the order of the rows
-  z <- sort(z)
-  draws <- sort(draws)
+  draws <- sampling(gp_fit, nsamp = 2000)[, 1]
   s <- sn_normal_score_ref(draws, sn$xi, sn$omega, sn$alpha)
   # the error in z, mapped to the parameter scale through dQ/dz
   dq_dz <- dnorm(z) / sn_density_ref(draws, sn$xi, sn$omega, sn$alpha)
-  sd_sn <- sn_moments(sn$xi, sn$omega, sn$alpha)$sd
-  expect_lt(max(abs(s - z) * dq_dz) / sd_sn, 1e-6)
+  sd_sn <- sn_sd_ref(sn$omega, sn$alpha)
+  expect_lt(max(abs(s - z) * dq_dz) / sd_sn, 1.5e-7)
+})
+
+test_that("each column is its skew-normal quantile of a linear map of iid normals", {
+  # A deterministic version of the copula checks, free of Monte Carlo error.
+  # The normal scores S = qnorm(F_j(draws)) of the draws should be Z A for
+  # the iid normals Z of the same seed and some square root A of R. Any
+  # square root passes, so the test does not depend on the use of chol().
+  # It does assume that sampling() takes its normals as one rnorm(nsamp * m)
+  # call, filled column by column, as R/sampling.R does now; if that ever
+  # changes, rebuild Z here to match. Observed over five seeds: largest
+  # residual 1.5e-8 posterior SDs (the spline map's error at alpha = -1.35),
+  # and A'A within 5e-9 of R (the same smooth map error, projected onto the
+  # regression). A fitted A is chol(R) to six decimals.
+  n <- 2000
+  R <- cov2cor(pois_fit$cov)
+  set.seed(61)
+  z_iid <- matrix(rnorm(n * 3), n, 3)
+  set.seed(61)
+  draws <- sampling(pois_fit, nsamp = n)
+  s <- draws
+  dq_dz <- draws
+  for (j in 1:3) {
+    sn <- sn_par(pois_fit, j)
+    s[, j] <- sn_normal_score_ref(draws[, j], sn$xi, sn$omega, sn$alpha)
+    dq_dz[, j] <- dnorm(s[, j]) /
+      sn_density_ref(draws[, j], sn$xi, sn$omega, sn$alpha) /
+      sn_sd_ref(sn$omega, sn$alpha)
+  }
+  A <- qr.solve(z_iid, s)
+  resid_sd <- abs(s - z_iid %*% A) * dq_dz
+  expect_lt(max(resid_sd), 5e-8)
+  expect_lt(max(abs(crossprod(A) - R)), 1.5e-8)
 })
 
 # (c) Dependence ----------------------------------------------------------------
@@ -370,11 +444,15 @@ test_that("normal scores of the draws are N(0, R)", {
 })
 
 test_that("for a Gaussian posterior the draws are the exact normal", {
-  # The Laplace step is exact here, so fit$cov is V and the skew-normals are
-  # (near) normal: |alpha| is at most 0.0052 (observed), an SN mean shift of
-  # 0.002 SDs.
-  expect_equal(unname(lm_fit$mode), lm_mu, tolerance = 1e-6)
-  expect_equal(unname(lm_fit$cov), lm_V, tolerance = 1e-8)
+  # The Laplace step is exact here, so fit$mode is mu, fit$cov is V and the
+  # skew-normals are (near) normal. Observed: mode error 4.2e-7 posterior SDs
+  # (nlminb's stopping point; up to 4.4e-6 over 100 other data sets), cov
+  # error 3.9e-12 relative (up to 1.2e-11), and |alpha| at most 0.0053 on
+  # every data set, where the skew-normal fit stops on a shape that is flat
+  # to sixth order.
+  sd_exact <- sqrt(diag(lm_V))
+  expect_lt(max(abs(lm_fit$mode - lm_mu) / sd_exact), 1e-5)
+  expect_lt(max(abs(lm_fit$cov - lm_V)) / max(abs(lm_V)), 5e-11)
   expect_lt(max(abs(lm_fit$sn[, "alpha"])), 0.015)
 
   # Pearson correlations against R and against the exact correlations.
@@ -396,7 +474,6 @@ test_that("for a Gaussian posterior the draws are the exact normal", {
   # Means and covariances against the exact posterior. The SE of a sample
   # covariance of normal draws is sqrt((V_jj V_kk + V_jk^2) / n). Observed:
   # largest deviations 1.1 SEs (means) and 0.9 SEs (covariances).
-  sd_exact <- sqrt(diag(lm_V))
   expect_lt(
     max(abs(colMeans(lm_draws) - lm_mu) / (sd_exact / sqrt(n_big))),
     z_mc
@@ -422,20 +499,26 @@ test_that("for a Gaussian posterior the draws are the exact normal", {
 
 # (d) fun -----------------------------------------------------------------------
 
-test_that("fun receives each draw as a named numeric vector", {
+test_that("fun receives each draw once, in order, as a named numeric vector", {
   seen <- list()
   record <- function(theta) {
     seen[[length(seen) + 1L]] <<- theta
     theta[["b1"]]
   }
   set.seed(31)
+  draws <- sampling(pois_fit, nsamp = 5)
+  set.seed(31)
   out <- sampling(pois_fit, nsamp = 5, fun = record)
-  expect_gte(length(seen), 5L)
+  # one call per draw, so a fun with side effects (or a costly one) is not
+  # run more often than asked
+  expect_length(seen, 5L)
   for (theta in seen) {
     expect_type(theta, "double")
     expect_null(dim(theta))
     expect_named(theta, c("b0", "b1", "b2"))
   }
+  # call i receives row i of the draws
+  expect_identical(do.call(rbind, seen), draws)
 
   # with one parameter, too
   seen <- list()
@@ -565,10 +648,13 @@ test_that("a fun returning a non-numeric or empty value errors clearly", {
     sampling(pois_fit, 10, fun = function(theta) numeric(0)),
     "empty"
   )
-  # a length that changes between draws is an error, not silent recycling
+  # a length that changes between draws is the package's own clear error,
+  # not silent recycling or vapply()'s error (the message wraps, hence \\s+)
   set.seed(46)
   expect_error(
-    sampling(pois_fit, 50, fun = function(theta) theta[theta > 0])
+    sampling(pois_fit, 50, fun = function(theta) theta[theta > 0]),
+    "same\\s+length",
+    class = "inlavanilla_error"
   )
 })
 
