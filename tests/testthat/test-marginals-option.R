@@ -259,6 +259,7 @@ test_that("print() and summary() describe Gaussian marginals", {
   out <- capture_output(print(summary(fit_g)))
   expect_no_match(out, "VB shift")
   expect_true(all(is.na(summary(fit_g)$diagnostics$nmad)))
+  expect_true(all(is.na(summary(fit_g)$diagnostics$scan_end_mass)))
 })
 
 test_that("plot() labels the curves by the marginals", {

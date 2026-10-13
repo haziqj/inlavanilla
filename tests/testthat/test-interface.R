@@ -1596,7 +1596,16 @@ test_that("summary() returns the table and the diagnostics", {
   expect_s3_class(s$diagnostics, "data.frame")
   expect_identical(
     names(s$diagnostics),
-    c("vb_shift", "sn_vs_vb", "alpha", "gamma1", "nmad", "tails", "bend")
+    c(
+      "vb_shift",
+      "sn_vs_vb",
+      "alpha",
+      "gamma1",
+      "nmad",
+      "tails",
+      "bend",
+      "scan_end_mass"
+    )
   )
   expect_identical(rownames(s$diagnostics), names(init_reg))
   expect_identical(s$logml, fit_reg$logml)
@@ -1993,4 +2002,40 @@ test_that("plot() passes axis labels, titles and other arguments to each panel",
   # main replaces the default title, the parameter name
   expect_false(any(c("intercept", "slope") %in% strs))
   expect_no_error(record_plot(plot(fit_reg, pars = 1, ylab = "density")))
+})
+
+test_that("scan_end_mass is the fitted mass outside the scanned window", {
+  # The fitted skew-normal integrated outside mode +- 4 Laplace SDs, with the
+  # density written out independently of the package
+  d <- fit_reg$diagnostics$marginals
+  sds <- sqrt(diag(fit_reg$cov))
+  for (j in 1:2) {
+    f <- function(x) {
+      sn_density(
+        x,
+        fit_reg$sn[j, "xi"],
+        fit_reg$sn[j, "omega"],
+        fit_reg$sn[j, "alpha"]
+      )
+    }
+    lo <- fit_reg$mode[[j]] - 4 * sds[[j]]
+    hi <- fit_reg$mode[[j]] + 4 * sds[[j]]
+    ref <- integrate(f, -Inf, lo, rel.tol = 1e-10)$value +
+      integrate(f, hi, Inf, rel.tol = 1e-10)$value
+    expect_equal(d$scan_end_mass[j], ref, tolerance = 1e-6)
+  }
+  expect_true(all(d$scan_end_mass > 0 & d$scan_end_mass < 0.05))
+
+  # A Gaussian posterior: the fit is Gaussian, so the mass is 2 pnorm(-4)
+  lp <- function(theta) sum(dnorm(theta, c(1, -2), c(0.5, 3), log = TRUE))
+  fit <- inla_vanilla(lp, c(a = 0, b = 0), silent = TRUE)
+  expect_equal(
+    fit$diagnostics$marginals$scan_end_mass,
+    rep(2 * pnorm(-4), 2),
+    tolerance = 1e-3
+  )
+
+  # Recorded, not flagged or printed
+  out <- capture_output(print(summary(fit_reg)))
+  expect_no_match(out, "mass")
 })

@@ -597,6 +597,11 @@ vanilla_fit <- function(
       nmad = sn[, "nmad"],
       tails = as.logical(sn[, "tails"]),
       bend = sn[, "bend"],
+      scan_end_mass = if (marginals == "skewnormal") {
+        scan_end_mass(sn, lap$mode, sds)
+      } else {
+        NA_real_
+      },
       row.names = parnames
     )
   )

@@ -57,7 +57,7 @@ The stages run in order, one file each:
    - The marginals are scanned around the mode ϑ*, so VB does not move them.
    - `scan_bend()` computes the diagnostic `bend`: the log-density, in nats, that the straight scan misses at ±2 SDs, from one Newton step in the other parameters. `summary()` flags it above 0.1. It catches the documented small-n narrowing.
    - `marginals = "gaussian"` skips this stage: `sn` holds the Gaussian marginals N(mean_vb, Σ_jj) as skew-normals with `alpha = 0`, the scan diagnostics are `NA`, and `print()`, `summary()`, `plot()` and `sampling()` branch on `is_gaussian()` or `alpha == 0`. VB and the marginals are independent switches, not a ladder: VB never moves the skew-normal marginals.
-   - The scan is a fixed ±4 SDs, as in INLAvaan. `tails` records a scan whose ends stay above `log_threshold`. Extending the scan into heavy tails was tried and rejected, because it hurt the fit in other cases.
+   - The scan is a fixed ±4 SDs, as in INLAvaan. `tails` records a scan whose ends stay above `log_threshold`. `scan_end_mass()` gives INLAvaan's `scan_end_mass`, the fitted mass outside that window; it is stored in the diagnostics but deliberately not flagged or printed (the package owner's decision, for now). Extending the scan into heavy tails was tried and rejected, because it hurt the fit in other cases.
 4. **Copula draws** (`R/sampling.R`). `sampling()` is an S3 generic, matching INLAvaan's exported `sampling()`. Draws go through `sn_score_map()`, a spline from normal scores to skew-normal quantiles; do not use `qsnorm_fast()` directly, because it is only a starting value, accurate to about 5e-2.
 
 Supporting files:
