@@ -26,7 +26,6 @@
   default output is what `verbose = TRUE` used to give, so code that passed
   `verbose = FALSE` to keep a fit quiet should now pass `silent = TRUE`. The
   warnings raised during a fit are kept in `fit$warnings` whatever the level.
-* Progress bars are drawn only in a terminal or the RStudio console, so they
-  no longer spill into knitr and Quarto documents or log files as one line
-  per update, and they follow the `cli.progress_show_after` option when it is
-  set.
+* Progress bars follow the `cli.progress_show_after` option when it is set
+  (half a second otherwise), so a knitr or Quarto setup chunk can keep them
+  out of a rendered document.
