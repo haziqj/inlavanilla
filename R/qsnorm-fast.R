@@ -221,6 +221,9 @@ qsnorm_fast <- function(p, xi = 0, omega = 1, alpha = 0) {
   }
 
   res[mask] <- final_vals
+  # Unmasked points (alpha of 0 or 1, or u at 0 or 1) take the normal
+  # quantile, as in the early return above
+  res[!mask] <- z[!mask]
 
   # Apply symmetry flip for originally-negative alpha
   res[flip] <- -res[flip]
