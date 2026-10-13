@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-`inlavanilla` (styled "INLAvanilla" in prose) is a freshly scaffolded R package (usethis template). There is no `R/` directory, no tests and no exported functions yet. The full specification lives in `lab/IDEA.md`. Read it before starting any feature work: it defines the API, the maths pipeline, the test plan and the required order of work. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
+`inlavanilla` (styled "INLAvanilla" in prose) is a freshly scaffolded R package (usethis template). There is no `R/` directory, no tests and no exported functions yet. The original specification is `lab/IDEA.md`, and `lab/DESIGN.md` records the decisions made since. Read both before starting any feature work. Where they disagree, `DESIGN.md` wins. Together they define the API, the maths pipeline, the test plan and the required order of work. `lab/` is excluded from the package build (`.Rbuildignore`), so it is a safe place for design notes.
 
 Tagline: *INLA-style skew-normal marginals for any log-posterior.* The package runs the INLAvaan approximation pipeline on any user-supplied log-density, with no latent field and nothing SEM-specific.
 
@@ -33,25 +33,26 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 - `test-coverage.yaml` runs covr and uploads to Codecov. The Codecov checks are informational only.
 - `pkgdown.yaml` builds the site and deploys it to `gh-pages` on pushes to main.
 
-## Planned architecture (from `lab/IDEA.md`)
+## Planned architecture (from `lab/IDEA.md` and `lab/DESIGN.md`)
 
-Main entry point: `inla_vanilla(logpost = , init = , grad = NULL, transform = NULL, ...)`. The user supplies either `loglik` + `logprior` or a single unnormalised `logpost`. Per-parameter transforms (`"identity"`, `"log"`, `"tanh"`) let the user work on the natural scale while the engine works on the unconstrained scale ϑ. Gradients fall back to numerical ones (numDeriv) when `grad` is missing.
+Main entry point: `inla_vanilla(logpost, init, grad = NULL, <transforms>, vb = TRUE, control = list(), ...)`. The user supplies a single `logpost(theta, ...)` on the natural scale, and `...` is passed through as in `optim()`. Per-parameter transforms (identity, log, logit, tanh) let the user work on the natural scale while the engine works on the unconstrained scale ϑ and adds the log-Jacobian. Whether the transforms are given by name or by bounds is still open. When `grad` is missing, gradients fall back to INLAvaan's own finite differences, not numDeriv.
 
 The pipeline has four stages. Implement them in this order, each with tests passing before moving on:
 
-1. **1a. Joint Gaussian (Laplace).** Find the mode ϑ* and set Ω = H(ϑ*)⁻¹. The log marginal likelihood is log π(y, ϑ*) − log π̃_G(ϑ* | y). It is only meaningful when `loglik`/`logprior` are given separately or `logpost` is asserted to be properly normalised, and the docs must say so.
-2. **1b. VB mean correction.** ϑ̃ = ϑ* + δ̂, with the covariance unchanged. It is optional, and the default should match INLAvaan.
+1. **1a. Joint Gaussian (Laplace).** Find the mode ϑ* and set Ω = H(ϑ*)⁻¹. The log marginal likelihood is log π(y, ϑ*) − log π̃_G(ϑ* | y). It is only meaningful when `logpost` includes every normalising constant, and the docs must say so. With VB on, INLAvaan adds ½ δᵀHδ.
+2. **1b. VB mean correction.** ϑ̃ = ϑ* + δ̂, with the covariance unchanged. It is on by default. In INLAvaan's skew-normal path it does not move the marginals, which are scanned around ϑ*. It feeds the log marginal likelihood and serves as a check on the skew-normal fit (Prop. 3.4).
 3. **2. Skew-normal marginals per parameter.** Scan the height along the CMP direction (Lemma 3.1), add the volume correction (Corollary 3.3), then fit SN(ξ, ω, α). Back-transform the densities with the Jacobian (log → f(log ψ)/ψ; tanh → f(artanh ρ)/(1 − ρ²)).
 4. **3. Gaussian copula draws.** Set R = cor(Ω), draw z ~ N(0, R), take u = Φ(z) and apply the SN quantile per margin. Return draws on both the unconstrained and natural scales.
 
-Outputs form a minimal S3 class with `print()`, `summary()` (natural-scale moments, quantiles and mode, plus the log marginal likelihood), `marginals()`, `sample()`/`draws()` (optionally of a derived `g(theta)`), and `plot()`.
+Outputs: `print()`, `summary()` (natural-scale moments, quantiles and mode, plus the log marginal likelihood), `plot()`, and `sampling()` for copula draws, optionally of a derived `g(theta)`. The name `sampling()` matches INLAvaan's exported generic; `base::sample` is not generic. The OOP system (S3 or S7) is still open, and S4 and R6 are ruled out.
 
-Out of scope for v0.1: factor scores, PPP/DIC, multiple chains, and compiled code.
+Out of scope for v0.1: factor scores, PPP/DIC/LOO/WAIC, multiple chains, compiled code, and INLAvaan's alternative methods (other marginal types, NORTA, other optimisers, Gauss–Hermite VB, parallel cores).
 
 ## Source-of-truth rules for the maths
 
 - Port and adapt the implementations in the INLAvaan source (github.com/haziqj/INLAvaan): joint Gaussian, VB correction, SN fitting with the volume correction, and copula sampling. Do not re-derive them from generic INLA knowledge. The references are the papers arXiv 2603.25690 and 2604.00671.
-- If INLAvaan's code and `lab/IDEA.md` disagree, flag the disagreement and ask the user. Do not guess.
+- If INLAvaan's code and `lab/IDEA.md` / `lab/DESIGN.md` disagree, flag the disagreement and ask the user. Do not guess.
+- The pipeline to lift is `R/inlavaan.R` from mode-finding through copula sampling. It reaches the model only through the `joint_lp()` / `joint_lp_grad()` closures and the per-parameter transform functions `g`, `ginv`, `g_prime` and `ginv_prime` (`R/partable.R`). Its helpers are all pure R: `R/utils-optim.R`, `R/utils-inlavaan.R` (`compute_gamma1j`), `R/skew-normal.R`, `R/qsnorm_fast.R`, `R/sobol.R` (with the `SobolOwen` table in `R/sysdata.rda`), `R/posterior-marginals.R` and `R/posterior-sampling.R`.
 - The first step in `lab/IDEA.md` is a written plan mapping INLAvaan functions to INLAvanilla functions, shown to the user before any coding.
 
 ## Testing philosophy
@@ -61,7 +62,7 @@ The tests are described as "the main point of the package." They use closed-form
 ## Known scaffold inconsistencies
 
 - `DESCRIPTION` still has template placeholders (Title, Description, Authors@R).
-- `DESCRIPTION` declares `LinkingTo: Rcpp` / `Imports: Rcpp` and a `src/` directory exists, but the spec puts compiled code out of scope. Clarify with the user before adding C++ or removing Rcpp. Planned Imports are numDeriv and possibly sn; keep dependencies minimal.
+- Imports should stay limited to base packages (stats, graphics, utils). Do not add numDeriv, sn or Rcpp.
 - The license is GPL (>= 3).
 - `CONTRIBUTING.md` asks for a `NEWS.md` bullet for user-facing changes, but there is no `NEWS.md` yet.
 
