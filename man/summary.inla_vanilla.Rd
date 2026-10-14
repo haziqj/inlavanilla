@@ -26,6 +26,10 @@ scale of \code{logpost}, together with diagnostics of each stage of the
 approximation.
 }
 \details{
+Printed, the summary gives the fit first (the log marginal likelihood,
+and the calls and time each stage took), then the posterior marginals,
+then the diagnostics.
+
 Most of the checks are those of INLAvaan's \code{diagnostics()}, and
 \code{\link[=diagnostics]{diagnostics()}} returns them under the same names. Jamil and Rue (2026) use
 the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
