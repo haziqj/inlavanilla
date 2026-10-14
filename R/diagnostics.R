@@ -4,8 +4,8 @@
 # warn_fit_diagnostics() do, and the flags of summary() and print() come from
 # check_flags() (R/methods.R) on the same numbers, so none of them can
 # disagree. The warning checks, in INLAvaan's order, the mode shift, NMAD,
-# the scan-end mass, the VB shift and the Hessian condition number, at
-# INLAvaan's levels; the heavy-tails check, after the scan-end mass, is
+# the unscanned mass, the VB shift and the Hessian condition number, at
+# INLAvaan's levels; the heavy-tails check, after the unscanned mass, is
 # inlavanilla's own. INLAvaan's bullet for a non-zero return code of
 # nlminb() is left out: without a gradient nlminb() reports false
 # convergence at accurate modes. The VB fallback is recorded only, as in
@@ -16,7 +16,7 @@
 warn_levels <- list(
   mode_shift = 0.1,
   nmad = 0.1,
-  scan_end_mass = 0.05,
+  unscanned_mass = 0.05,
   vb_shift = 1,
   hess_cond = 1e8
 )
@@ -35,7 +35,7 @@ off_level <- function(x, level) {
 # VB mean (`pars`, for grad_inf_rel and grad_rel; NA when not given). It runs
 # before the fit object exists, for the warning. The definitions are
 # INLAvaan's (R/method-diagnostics.R), with `grad` the gradient of minus the
-# log-posterior; the scan-end mass, the VB shifts and the KL divergences are
+# log-posterior; the unscanned mass, the VB shifts and the KL divergences are
 # computed in vanilla_fit(). The per-parameter frame has no row names, as
 # INLAvaan's. `message` is nlminb()'s, for the warning.
 diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
@@ -66,7 +66,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     kld_mean = mean_na(d$kld),
     nmad_max = max_na(d$nmad),
     nmad_mean = mean_na(d$nmad),
-    scan_end_mass_max = max_na(d$scan_end_mass),
+    unscanned_mass_max = max_na(d$unscanned_mass),
     # inlavanilla's own
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
     mean_gap_max = max_na(abs(d$mean_gap)),
@@ -90,7 +90,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     vb_shift_sigma = d$vb_shift_sigma,
     nmad = d$nmad,
     alpha = d$alpha,
-    scan_end_mass = d$scan_end_mass,
+    unscanned_mass = d$unscanned_mass,
     # inlavanilla's own
     mean_gap = d$mean_gap,
     gamma1 = d$gamma1,
@@ -182,17 +182,17 @@ problem_text <- function(check, dg, env, n = 3L) {
       flagged_list(env, "nmad", dg, "nmad", warn_levels$nmad, n),
       "."
     ),
-    scan_end_mass = paste0(
+    unscanned_mass = paste0(
       "The fitted marginal puts more than ",
-      warn_levels$scan_end_mass,
+      warn_levels$unscanned_mass,
       " of its mass beyond the scanned window (4 posterior SDs either side ",
       "of the mode) for ",
       flagged_list(
         env,
         "sem",
         dg,
-        "scan_end_mass",
-        warn_levels$scan_end_mass,
+        "unscanned_mass",
+        warn_levels$unscanned_mass,
         n
       ),
       "; its credible limits rely on extrapolation."
@@ -246,13 +246,13 @@ problem_text <- function(check, dg, env, n = 3L) {
 }
 
 # The bullets of the fit-time warning, in INLAvaan's order with tails after
-# the scan-end mass, as cli templates with the environment that fills them
+# the unscanned mass, as cli templates with the environment that fills them
 # in attribute "envir". A flagged mode adds nlminb()'s message and a hint.
 diagnostic_problems <- function(dg, gaussian) {
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = baseenv())
   out <- character()
-  warned <- c("mode", "nmad", "scan_end_mass", "tails", "vb", "hess_cond")
+  warned <- c("mode", "nmad", "unscanned_mass", "tails", "vb", "hess_cond")
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
     if (check == "mode") {
@@ -312,7 +312,7 @@ warn_diagnostics <- function(dg, gaussian) {
 #' Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 #' (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
 #' (`mean_gap`) as an internal check (Section 5.1). The mode shift, the
-#' Hessian condition number and the scan-end mass come from INLAvaan's
+#' Hessian condition number and the unscanned mass come from INLAvaan's
 #' `diagnostics()`, not from the paper. `tails` and `ridge_bend` are
 #' inlavanilla's own.
 #'
@@ -351,7 +351,7 @@ warn_diagnostics <- function(dg, gaussian) {
 #'   the VB term of the log marginal likelihood.
 #' * `kld_max`, `kld_mean`: the largest and the mean `kld`.
 #' * `nmad_max`, `nmad_mean`: the largest and the mean `nmad`.
-#' * `scan_end_mass_max`: the largest `scan_end_mass`.
+#' * `unscanned_mass_max`: the largest `unscanned_mass`.
 #'
 #' and then inlavanilla's own:
 #' * `vb_fallback`: 1 if the VB fixed-point iteration handed over to the
@@ -384,7 +384,7 @@ warn_diagnostics <- function(dg, gaussian) {
 #' * `vb_shift_sigma`: the same in posterior SDs.
 #' * `nmad`: the NMAD of the skew-normal fit.
 #' * `alpha`: the shape of the fitted skew-normal marginal.
-#' * `scan_end_mass`: the mass the fitted skew-normal puts beyond the
+#' * `unscanned_mass`: the mass the fitted skew-normal puts beyond the
 #'   scanned window.
 #'
 #' and then inlavanilla's own: `mean_gap`, `gamma1`, `tails` and `ridge_bend`.
@@ -485,7 +485,7 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
     "vb_fallback",
     "n_heavy_tails"
   )
-  sci_names <- c("hess_cond", "mode_shift_max", "scan_end_mass_max")
+  sci_names <- c("hess_cond", "mode_shift_max", "unscanned_mass_max")
   formatted <- vapply(
     seq_along(x),
     function(i) {
@@ -508,13 +508,13 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
   invisible(x)
 }
 
-# A healthy scan-end mass is below the last of four decimals, so it keeps
+# A healthy unscanned mass is below the last of four decimals, so it keeps
 # three significant figures instead, as in INLAvaan.
 #' @export
 print.inla_vanilla_diagnostics_param <- function(x, digits = 4, ...) {
   out <- x
   for (nm in names(out)[vapply(out, is.numeric, logical(1))]) {
-    out[[nm]] <- if (nm == "scan_end_mass") {
+    out[[nm]] <- if (nm == "unscanned_mass") {
       signif(out[[nm]], 3)
     } else {
       round(out[[nm]], digits)

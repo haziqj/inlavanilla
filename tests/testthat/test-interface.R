@@ -1252,7 +1252,7 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
     "Fixed-point steps, largest over the parameters \\(SD\\): ",
     "KL term [0-9.e-]+, giving a log marginal likelihood of -?[0-9.]+",
     "Largest shift -0.2[0-9]* SD, for intercept",
-    "Shape +NMAD +Ridge bend +Tails +End mass +gamma1",
+    "Shape +NMAD +Ridge bend +Tails +Unscanned +gamma1",
     "marks what summary\\(\\) flags",
     "i Done: [0-9]+ logpost calls in [0-9.]+m?s"
   )) {
@@ -1585,8 +1585,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$nmad[2] <- 0.2
       f
     },
-    scan_end_mass = function(f) {
-      f$diagnostics$marginals$scan_end_mass[1] <- 0.3
+    unscanned_mass = function(f) {
+      f$diagnostics$marginals$unscanned_mass[1] <- 0.3
       f
     },
     tails = function(f) {
@@ -1781,7 +1781,7 @@ test_that("summary() returns the table and the diagnostics", {
       "vb_shift_sigma",
       "nmad",
       "alpha",
-      "scan_end_mass",
+      "unscanned_mass",
       "mean_gap",
       "gamma1",
       "tails",
@@ -1910,7 +1910,7 @@ test_that("summary() with no probabilities gives a table without quantiles", {
 test_that("summary() flags each diagnostic at its documented level", {
   # The levels documented in ?summary.inla_vanilla, those of the fit-time
   # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
-  # number 1e8, the VB shift 1 SD, NMAD 0.1, the scan-end mass 0.05 and
+  # number 1e8, the VB shift 1 SD, NMAD 0.1, the unscanned mass 0.05 and
   # tails; and, flagged by summary() alone, the ridge bend 0.25 nats and the
   # mean gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
   # nothing may be flagged, and then 2% above it, where each must be, with
@@ -1922,7 +1922,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$diagnostics$vb_shift_sigma <- c(0.98, -0.98)
   below$diagnostics$ridge_bend <- c(0.245, 0.245)
   below$diagnostics$nmad <- c(0.098, 0.098)
-  below$diagnostics$scan_end_mass <- c(0.049, 0.049)
+  below$diagnostics$unscanned_mass <- c(0.049, 0.049)
   below$diagnostics$mean_gap <- c(0.098, -0.098)
   below$diagnostics$tails <- c(TRUE, TRUE)
   below$vb$fallback <- FALSE
@@ -1953,7 +1953,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   above$diagnostics$vb_shift_sigma <- c(0.98, -1.02)
   above$diagnostics$ridge_bend <- c(0.245, 0.255)
   above$diagnostics$nmad <- c(0.098, 0.102)
-  above$diagnostics$scan_end_mass <- c(0.049, 0.051)
+  above$diagnostics$unscanned_mass <- c(0.049, 0.051)
   above$diagnostics$mean_gap <- c(0.098, -0.102)
   above$diagnostics$tails <- c(TRUE, FALSE)
   expect_identical(
@@ -2291,7 +2291,7 @@ test_that("plot(type = \"sn_fit\") draws each skew-normal fit against its scan",
   )
 })
 
-test_that("scan_end_mass is the fitted mass outside the scanned window", {
+test_that("unscanned_mass is the fitted mass outside the scanned window", {
   # The fitted skew-normal integrated outside mode +- 4 Laplace SDs, with the
   # density written out independently of the package
   d <- fit_reg$diagnostics$marginals
@@ -2309,22 +2309,22 @@ test_that("scan_end_mass is the fitted mass outside the scanned window", {
     hi <- fit_reg$mode[[j]] + 4 * sds[[j]]
     ref <- integrate(f, -Inf, lo, rel.tol = 1e-10)$value +
       integrate(f, hi, Inf, rel.tol = 1e-10)$value
-    expect_equal(d$scan_end_mass[j], ref, tolerance = 1e-6)
+    expect_equal(d$unscanned_mass[j], ref, tolerance = 1e-6)
   }
-  expect_true(all(d$scan_end_mass > 0 & d$scan_end_mass < 0.05))
+  expect_true(all(d$unscanned_mass > 0 & d$unscanned_mass < 0.05))
 
   # A Gaussian posterior: the fit is Gaussian, so the mass is 2 pnorm(-4)
   lp <- function(theta) sum(dnorm(theta, c(1, -2), c(0.5, 3), log = TRUE))
   fit <- inla_vanilla(lp, c(a = 0, b = 0), silent = TRUE)
   expect_equal(
-    fit$diagnostics$marginals$scan_end_mass,
+    fit$diagnostics$marginals$unscanned_mass,
     rep(2 * pnorm(-4), 2),
     tolerance = 1e-3
   )
 
   # Shown in the table, and not flagged
   out <- capture_output(print(summary(fit_reg)))
-  expect_match(out, "End mass")
+  expect_match(out, "Unscanned")
   expect_no_match(out, "beyond the scanned window")
 })
 

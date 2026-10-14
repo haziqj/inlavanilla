@@ -176,12 +176,12 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
 # The mass each fitted marginal puts outside the window that was scanned to
 # fit it, mode +- 4 Laplace SDs: there the skew-normal is extrapolated, so
 # when this is large the outer quantiles are the ones to distrust. This is
-# INLAvaan's `scan_end_mass` (in its diagnostics()). A Gaussian marginal
+# INLAvaan's `scan_end_mass` (in its diagnostics()), renamed. A Gaussian marginal
 # gives 2 pnorm(-4) = 6.3e-5; larger values mean more of the marginal is
 # extrapolated. summary() flags it, and the fit warns, above 0.05. INLAvaan's
 # docs give 1e-3 to 1e-2 as the healthy range; its lower end fails for
 # healthy fits here (see lab/DESIGN.md), so no range is given.
-scan_end_mass <- function(sn, mode, sds) {
+unscanned_mass <- function(sn, mode, sds) {
   lo <- psnorm(mode - 4 * sds, sn[, "xi"], sn[, "omega"], sn[, "alpha"])
   hi <- psnorm(
     mode + 4 * sds,

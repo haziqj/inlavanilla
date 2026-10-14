@@ -257,12 +257,12 @@ test_that("print() and summary() describe Gaussian marginals", {
   # No skew-normal diagnostics or warnings: the ridge bend that the
   # skew-normal fit of this model flags is not computed
   out <- capture_output(print(summary(fit_g_vb)))
-  expect_no_match(out, "Shape|NMAD|Ridge bend|End mass|Mean gap|straight scan")
+  expect_no_match(out, "Shape|NMAD|Ridge bend|Unscanned|Mean gap|straight scan")
   expect_match(out, "VB shift")
   out <- capture_output(print(summary(fit_g)))
   expect_no_match(out, "VB shift")
   expect_true(all(is.na(summary(fit_g)$diagnostics$nmad)))
-  expect_true(all(is.na(summary(fit_g)$diagnostics$scan_end_mass)))
+  expect_true(all(is.na(summary(fit_g)$diagnostics$unscanned_mass)))
 
   # Nor any scans to plot
   expect_null(fit_g$scan)

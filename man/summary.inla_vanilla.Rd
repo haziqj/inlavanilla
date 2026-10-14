@@ -30,7 +30,7 @@ Most of the checks are those of INLAvaan's \code{diagnostics()}, and
 \code{\link[=diagnostics]{diagnostics()}} returns them under the same names. Jamil and Rue (2026) use
 the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 gap between the skew-normal and VB means as an internal check (Section
-5.1). The mode shift, the Hessian condition number and the scan-end mass
+5.1). The mode shift, the Hessian condition number and the unscanned mass
 come from INLAvaan's \code{diagnostics()}, not from the paper. \code{tails} and
 \code{ridge_bend} are inlavanilla's own.
 
@@ -74,7 +74,7 @@ log-heights, per posterior SD along the scan, for the changing volume of
 the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
 \code{summary(fit)$diagnostics} and in the verbose output of the fit, not in
 the printed table, and it is not flagged.
-\item \strong{Scan-end mass.} \code{scan_end_mass}, the mass each fitted skew-normal
+\item \strong{Unscanned mass.} \code{unscanned_mass}, the mass each fitted skew-normal
 puts outside the scanned window (4 posterior SDs either side of the
 mode), where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
 reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
@@ -113,7 +113,7 @@ either approximation may be off.
 Every check flagged here but the ridge bend and the mean gap also raises
 one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
-mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
+mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
 are those of INLAvaan's fit-time warning; the heavy-tails check is
 inlavanilla's own, as are the ridge bend and mean gap flags. Every level
 is a package default, chosen so that a healthy fit stays silent, and not

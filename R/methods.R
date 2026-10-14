@@ -42,7 +42,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' [diagnostics()] returns them under the same names. Jamil and Rue (2026) use
 #' the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 #' gap between the skew-normal and VB means as an internal check (Section
-#' 5.1). The mode shift, the Hessian condition number and the scan-end mass
+#' 5.1). The mode shift, the Hessian condition number and the unscanned mass
 #' come from INLAvaan's `diagnostics()`, not from the paper. `tails` and
 #' `ridge_bend` are inlavanilla's own.
 #'
@@ -85,7 +85,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
 #'   `summary(fit)$diagnostics` and in the verbose output of the fit, not in
 #'   the printed table, and it is not flagged.
-#' * **Scan-end mass.** `scan_end_mass`, the mass each fitted skew-normal
+#' * **Unscanned mass.** `unscanned_mass`, the mass each fitted skew-normal
 #'   puts outside the scanned window (4 posterior SDs either side of the
 #'   mode), where the marginal is extrapolated, as INLAvaan's `diagnostics()`
 #'   reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
@@ -123,7 +123,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' Every check flagged here but the ridge bend and the mean gap also raises
 #' one warning at the end of the fit, of class
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
-#' mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
+#' mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
 #' are those of INLAvaan's fit-time warning; the heavy-tails check is
 #' inlavanilla's own, as are the ridge bend and mean gap flags. Every level
 #' is a package default, chosen so that a healthy fit stays silent, and not
@@ -215,9 +215,9 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     "alpha",
     "nmad",
     "ridge_bend",
-    "scan_end_mass"
+    "unscanned_mass"
   )
-  heads <- c("VB shift", "Mean gap", "Shape", "NMAD", "Ridge bend", "End mass")
+  heads <- c("VB shift", "Mean gap", "Shape", "NMAD", "Ridge bend", "Unscanned")
   keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)) &
     (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
   if (any(keep)) {
@@ -324,7 +324,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       max_nmad <- glob[["nmad_max"]]
       cat_status("ok", "Skew-normal fits: max NMAD {fmt_num(max_nmad)}.")
     }
-    for (check in c("scan_end_mass", "tails", "ridge_bend")) {
+    for (check in c("unscanned_mass", "tails", "ridge_bend")) {
       if (flags[[check]]) {
         flagged_line(check)
       }
@@ -731,7 +731,7 @@ method_label <- function(gaussian, vb) {
 
 # The checks that summary() flags, each TRUE when flagged: the mode, the
 # Hessian condition number, the VB shift, and, for skew-normal marginals,
-# NMAD, the scan-end mass, the tails, the ridge bend and the mean gap.
+# NMAD, the unscanned mass, the tails, the ridge bend and the mean gap.
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
 # warning (warn_levels), which raises every one of these but the ridge bend
 # and the mean gap (summary_levels). A check that did not run is not
@@ -746,8 +746,8 @@ check_flags <- function(dg, gaussian) {
     hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
     vb = vb && any(off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift)),
     nmad = sn && any(off_level(p$nmad, warn_levels$nmad)),
-    scan_end_mass = sn &&
-      any(off_level(p$scan_end_mass, warn_levels$scan_end_mass)),
+    unscanned_mass = sn &&
+      any(off_level(p$unscanned_mass, warn_levels$unscanned_mass)),
     tails = sn && !all(p$tails %in% TRUE),
     ridge_bend = sn && any(off_level(p$ridge_bend, summary_levels$ridge_bend)),
     mean_gap = sn &&
