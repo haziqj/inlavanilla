@@ -1285,6 +1285,14 @@ test_that("a running stage shows its sentence and the time, not a cli bar", {
   expect_identical(format_clock(0.2), "1s")
   expect_identical(format_clock(119.6), "2m 0s")
 
+  # The finished line's time: the unit is chosen after rounding
+  expect_identical(format_time(0.5934), "593ms")
+  expect_identical(format_time(0.9996), "1.0s")
+  expect_identical(format_time(2.83), "2.8s")
+  expect_identical(format_time(59.96), "1m 0s")
+  expect_identical(format_time(65.2), "1m 5s")
+  expect_identical(format_time(119.6), "2m 0s")
+
   # The format of every line, for the fit's three stages and for LOO: a
   # cli bar would stretch the line to the width of the console
   formats <- NULL

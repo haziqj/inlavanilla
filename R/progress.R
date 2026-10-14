@@ -80,11 +80,7 @@ progress_clock <- function(secs, total, left) {
 # Whole seconds, at least one: "3s", "1m 5s"
 format_clock <- function(s) {
   s <- max(1, round(s))
-  if (s < 60) {
-    paste0(s, "s")
-  } else {
-    paste0(s %/% 60, "m ", s %% 60, "s")
-  }
+  if (s < 60) paste0(s, "s") else format_time(s)
 }
 
 progress_tick <- function(p, set = NULL) {

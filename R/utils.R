@@ -76,14 +76,17 @@ fd_curvature <- function(fn, x, v, h, f0 = fn(x)) {
   (fn(x + h * v) - 2 * f0 + fn(x - h * v)) / h^2
 }
 
-# Format a number of seconds for messages.
+# Format a number of seconds for messages: "593ms", "2.8s", "1m 5s". The
+# unit is chosen after rounding, so 0.9996 is "1.0s", not "1000ms", and 119.6
+# is "2m 0s", not "1m 60s".
 format_time <- function(s) {
-  if (s < 1) {
+  if (round(1000 * s) < 1000) {
     paste0(round(1000 * s), "ms")
-  } else if (s < 60) {
+  } else if (round(s, 1) < 60) {
     paste0(format(round(s, 1), nsmall = 1), "s")
   } else {
-    paste0(floor(s / 60), "m ", round(s %% 60), "s")
+    s <- round(s)
+    paste0(s %/% 60, "m ", s %% 60, "s")
   }
 }
 
