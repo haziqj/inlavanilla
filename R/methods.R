@@ -39,6 +39,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' scale of `logpost`, together with diagnostics of each stage of the
 #' approximation.
 #'
+#' Printed, the summary gives the fit first (the log marginal likelihood,
+#' and the calls and time each stage took), then the posterior marginals,
+#' then the diagnostics.
+#'
 #' Most of the checks are those of INLAvaan's `diagnostics()`, and
 #' [diagnostics()] returns them under the same names. Jamil and Rue (2026) use
 #' the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
@@ -208,11 +212,47 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     line_col = "cyan"
   )
   cli::cat_line()
-  cli::cat_line(cli::style_bold("Posterior marginals"))
+  # The fit, then its parameters, then how far to trust them
+  vb_term <- x$logml - x$logml_laplace
+  cat_wrap(paste0(
+    cli::style_bold("Log marginal likelihood: "),
+    cli::col_cyan(format(round(x$logml, 3), nsmall = 3)),
+    if (!is.null(x$vb)) {
+      cli::col_grey(
+        " (Laplace ",
+        format(round(x$logml_laplace, 3), nsmall = 3),
+        ", VB term ",
+        format(signif(vb_term, 2)),
+        ")"
+      )
+    }
+  ))
+  calls <- paste0(x$counts[["logpost"]], " logpost")
+  if (x$has_grad) {
+    calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
+  }
+  tm <- x$timing
+  cat_wrap(
+    cli::col_grey(
+      calls,
+      " calls in ",
+      format_time(tm[["total"]]),
+      " (mode ",
+      format_time(tm[["laplace"]]),
+      ", VB ",
+      format_time(tm[["vb"]]),
+      ", marginals ",
+      format_time(tm[["marginals"]]),
+      ")"
+    )
+  )
+  cli::cat_line()
+
+  cat_heading("Posterior marginals")
   cat_table(x$table, digits = digits, scale = x$table[, "SD"])
   cli::cat_line()
 
-  cli::cat_line(cli::style_bold("Diagnostics"))
+  cat_heading("Diagnostics")
   diag <- x$diagnostics
   gaussian <- is_gaussian(x)
   has_vb <- !is.null(x$vb)
@@ -355,41 +395,6 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       }
     }
   }
-  cli::cat_line()
-
-  vb_term <- x$logml - x$logml_laplace
-  cat_wrap(paste0(
-    cli::style_bold("Log marginal likelihood: "),
-    cli::col_cyan(format(round(x$logml, 3), nsmall = 3)),
-    if (!is.null(x$vb)) {
-      cli::col_grey(
-        " (Laplace ",
-        format(round(x$logml_laplace, 3), nsmall = 3),
-        ", VB term ",
-        format(signif(vb_term, 2)),
-        ")"
-      )
-    }
-  ))
-  calls <- paste0(x$counts[["logpost"]], " logpost")
-  if (x$has_grad) {
-    calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
-  }
-  tm <- x$timing
-  cat_wrap(
-    cli::col_grey(
-      calls,
-      " calls in ",
-      format_time(tm[["total"]]),
-      " (mode ",
-      format_time(tm[["laplace"]]),
-      ", VB ",
-      format_time(tm[["vb"]]),
-      ", marginals ",
-      format_time(tm[["marginals"]]),
-      ")"
-    )
-  )
   invisible(x)
 }
 
@@ -815,6 +820,14 @@ format_sigfig <- function(x, sigfig = 3) {
     styled[k] <- paste0(pad_l[k], body, pad_r[k])
   }
   list(plain = plain, styled = styled)
+}
+
+# A section heading, as cli's level-two headings look: "── Title ──", and
+# a blank line under it.
+cat_heading <- function(title) {
+  line <- strrep(cli::symbol$line, 2)
+  cli::cat_line(line, " ", cli::style_bold(title), " ", line)
+  cli::cat_line()
 }
 
 cat_status <- function(type, msg, .envir = parent.frame()) {

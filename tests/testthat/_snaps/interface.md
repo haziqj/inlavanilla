@@ -148,12 +148,17 @@
     Output
       -- INLAvanilla summary ------------------------------------- Skew-normal + VB --
       
-      Posterior marginals
+      Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
+      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
+      
+      -- Posterior marginals --
+      
                   Mean     SD    2.5%    50%  97.5%   Mode
       intercept  0.582  0.286  -0.025  0.598  1.098  0.632
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
-      Diagnostics
+      -- Diagnostics --
+      
                  VB shift   NMAD  Unscanned  Ridge bend  Mean gap
       intercept    -0.23   0.010    0.00078       0.037   -0.0068
       slope         0.084  0.015    0.00013       0.14    -0.0042
@@ -163,9 +168,6 @@
       v VB correction in <n> iteration(s): max shift 0.23 SD.
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14,
         mean gap 0.0068 SD.
-      
-      Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
-      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
 
 ---
 
@@ -174,12 +176,17 @@
     Output
       -- INLAvanilla summary ------------------------------------------ Skew-normal --
       
-      Posterior marginals
+      Log marginal likelihood: -16.277
+      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
+      
+      -- Posterior marginals --
+      
                   Mean     SD    2.5%    50%  97.5%   Mode
       intercept  0.582  0.286  -0.025  0.598  1.098  0.632
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
-      Diagnostics
+      -- Diagnostics --
+      
                   NMAD  Unscanned  Ridge bend
       intercept  0.010    0.00078       0.037
       slope      0.015    0.00013       0.14 
@@ -188,9 +195,6 @@
       v Hessian condition number 3.6, in SD units.
       i No VB correction (vb = FALSE).
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14.
-      
-      Log marginal likelihood: -16.277
-      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
 
 # summary() rejects probabilities outside (0, 1)
 
