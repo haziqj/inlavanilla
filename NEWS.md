@@ -111,3 +111,8 @@
   finite at every node, the fit goes ahead. Otherwise, as for a posterior
   truncated within reach of the nodes, the fit stops with an error that says
   so and suggests a reparameterisation or `vb = FALSE`.
+* With a gradient, a VB fallback that lands short of settled is rerun once
+  from where it landed. That happens when the optimiser starts where a node
+  fails, and it then reported convergence well short of the VB mean: 0.29
+  posterior SDs on a one-parameter posterior with a boundary. Fits whose
+  fallback settles are unchanged, and `verbose = TRUE` reports the rerun.

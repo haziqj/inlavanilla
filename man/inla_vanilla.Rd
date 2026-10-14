@@ -272,8 +272,8 @@ units; and the Laplace log marginal likelihood.
 \item The VB correction: the largest step, in posterior SDs, at each
 fixed-point iteration, whether Anderson acceleration or the fallback
 optimiser was used (and, after the fallback, the step still to go where
-it landed), the largest shift, and the term it adds to the log marginal
-likelihood.
+it landed, and whether it was rerun from there), the largest shift, and
+the term it adds to the log marginal likelihood.
 \item The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 volume correction \code{gamma1} of each parameter, with the values that
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.

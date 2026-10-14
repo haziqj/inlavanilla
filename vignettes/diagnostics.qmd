@@ -145,6 +145,19 @@ but the VB mean itself: from `logpost` values alone it is exact only for a
 log-posterior of degree four, and on a strongly skewed posterior it can be
 about 0.1 SDs out. Supplying `grad` is the fix.
 
+With a gradient the fallback takes one more step of its own. If it lands
+short of settled, it is run once more from where it landed, much as the mode
+search reruns its optimiser when the gradient at the mode is not yet small.
+This can happen when the optimiser starts where a node fails: the lowest node
+around the mode sits on a boundary of the support, say, so its first value
+is a failure, and it then reports convergence too early. The rerun costs
+nothing when the first run settles, and one more run of the optimiser when it
+does not. It is not a check, so `summary()` does not mention it, but
+`verbose = TRUE` reports it: "Fell back to nlminb, as …, rerun once from
+where it landed". Without a gradient no rerun is made, since its optimiser
+is steered by the same estimate of the expected gradient and cannot settle
+any closer.
+
 The skew-normal mean and the VB mean both estimate the posterior mean, by
 different routes. Both recover the leading, $O(n^{-1})$ shift from the mode
 to the mean, so they agree to $O(n^{-2})$ (Jamil & Rue, 2026, Proposition
