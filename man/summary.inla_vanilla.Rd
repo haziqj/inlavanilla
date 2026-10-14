@@ -128,7 +128,8 @@ its Supplementary Material.
 The table gives each value to two significant figures, as a tibble
 prints numbers, with the flagged values in red where the console shows
 colour. The status lines list every flagged parameter, worst first, with
-its value; the warning lists at most three, as INLAvaan's does. With
+its value (the heavy-tails line, a yes/no check, lists names only, in
+parameter order); the warning lists at most three, as INLAvaan's does. With
 \code{silent = TRUE} the warning is only recorded in \code{fit$warnings}. Printing
 the fit ends with a line for its warnings and one counting the checks
 flagged here, each shown only when there are any.

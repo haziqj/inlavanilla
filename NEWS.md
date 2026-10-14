@@ -60,7 +60,8 @@
   fallback. `summary()` flags the same checks at the same levels, and also
   a ridge bend above 0.25 nats, where the marginal SD may be about 10% too
   small, and a mean gap (between the skew-normal and VB means) above 0.1
-  SDs; its lines list every flagged parameter, worst first, with its value.
+  SDs; its lines list every flagged parameter, worst first, with its value
+  (names only for the heavy-tails check, which is yes or no).
   Healthy fits stay silent. A new vignette, "Diagnostics", explains every
   check, with citations of Jamil and Rue (2026a).
 * `summary()` prints its table of diagnostics (VB shift, NMAD, unscanned

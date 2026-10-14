@@ -181,7 +181,7 @@ test_that("the VB fallback is recorded, not warned about, as in INLAvaan", {
   expect_length(problems(d, vb = NULL), 0)
 })
 
-test_that("lists name at most three parameters, worst first, with values", {
+test_that("lists name at most three parameters, worst first, with values where the check has one", {
   # Five parameters, one of them named with braces, which must not be read
   # as cli markup
   nm <- c("p1", "b{1}", "p3", "p4", "p5")
@@ -222,9 +222,9 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   text <- warning_text(d, o)
   lines <- strsplit(text, "\n")[[1]]
   expect_identical(lines[1], "Fit diagnostics flagged 6 potential issues:")
-  # each line shows its own value
-  for (pattern in c(
-    "^x The gradient at the posterior mode .* by 0.5 SD",
+  # each line shows its own value, in INLAvaan's order
+  patterns <- c(
+    "^x The gradient at the posterior mode .* by 0.5 posterior SDs",
     "^i `nlminb\\(\\)` says",
     "^i Try other starting values",
     "^x The fitted marginal deviates .* `a` \\(0.20\\)",
@@ -233,13 +233,24 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
     "^x The VB correction shifted `a` by 2 SD",
     "^x The Hessian at the mode is near-singular \\(condition number = 1e\\+09\\)",
     "^i Inspect with `diagnostics\\(fit\\)` and `diagnostics\\(fit, type = \"param\"\\)`; `vignette\\(\"diagnostics\", package = \"inlavanilla\"\\)` explains each check\\.$"
-  )) {
+  )
+  for (pattern in patterns) {
     expect_length(grep(pattern, lines), 1)
   }
   expect_identical(
-    grep("^[xi] ", lines),
+    vapply(patterns, function(p) grep(p, lines)[1], 1L, USE.NAMES = FALSE),
     2:10
   )
+})
+
+test_that("bend and the SN-VB gap are flagged by summary() but never warn", {
+  d <- healthy
+  d$bend[1] <- 0.5
+  d$sn_vs_vb[2] <- -0.3
+  expect_length(problems(d), 0)
+  expect_identical(warning_text(d), "")
+  flags <- check_flags(dg_of(d), gaussian = FALSE)
+  expect_identical(names(flags)[flags], c("bend", "sn_vs_vb"))
 })
 
 test_that("a value that is not finite is flagged; a check that did not run is not", {
@@ -424,12 +435,45 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
   expect_identical(g[["mode_shift_max"]], max(d$mode_shift_sigma))
   expect_identical(g[["vb_kld_global"]], fit$diagnostics$vb$kld_global)
   expect_equal(g[["vb_kld_global"]], fit$logml - fit$logml_laplace)
+  expect_identical(g[["vb_shift_max"]], max(abs(d$vb_shift_sigma)))
+  expect_identical(g[["kld_max"]], max(d$kld))
   expect_identical(g[["kld_mean"]], mean(d$kld))
   expect_identical(g[["nmad_max"]], max(d$nmad))
+  expect_identical(g[["nmad_mean"]], mean(d$nmad))
+  expect_identical(g[["mean_gap_max"]], max(abs(d$mean_gap)))
+  expect_identical(g[["vb_fallback"]], 0)
   expect_identical(g[["unscanned_mass_max"]], max(d$unscanned_mass))
   expect_identical(g[["ridge_bend_max"]], max(d$ridge_bend))
   expect_identical(g[["n_heavy_tails"]], 0)
   expect_equal(p$grad, unname(grad))
+  expect_equal(p$grad_abs, abs(unname(grad)))
+  expect_equal(
+    p$grad_rel,
+    abs(unname(grad)) / (abs(unname(fit$mean_vb)) + 1e-6)
+  )
+  # n_heavy_tails counts the parameters, rather than saying whether any is
+  expect_identical(dg_of()$global[["n_heavy_tails"]], 0)
+  d2 <- healthy
+  d2$tails <- c(FALSE, FALSE)
+  expect_identical(dg_of(d2)$global[["n_heavy_tails"]], 2)
+
+  # Gaussian marginals have no scans, so their diagnostics are NA
+  fit_n <- inla_vanilla(lp_reg, init_reg, marginals = "gaussian", silent = TRUE)
+  g_n <- diagnostics(fit_n)
+  for (nm in c(
+    "nmad_max",
+    "nmad_mean",
+    "scan_end_mass_max",
+    "bend_max",
+    "n_heavy_tails"
+  )) {
+    expect_identical(g_n[[nm]], NA_real_, label = nm)
+  }
+  p_n <- diagnostics(fit_n, type = "param")
+  for (col in c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "bend")) {
+    expect_true(all(is.na(p_n[[col]])), label = col)
+  }
+  expect_false(anyNA(p_n$vb_shift_sigma))
   for (col in setdiff(names(p), c("names", "grad", "grad_abs", "grad_rel"))) {
     expect_identical(p[[col]], d[[col]])
   }
@@ -445,6 +489,20 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
     unname(fit_g$diagnostics$optim$grad),
     -unname(gr_reg(fit_g$mode)),
     tolerance = 1e-12
+  )
+  # Away from the mode the finite differences are checked against the
+  # analytic gradient, sign and size
+  fit_off <- inla_vanilla(
+    lp_reg,
+    init_reg,
+    silent = TRUE,
+    control = list(nlminb = list(iter.max = 1))
+  )
+  expect_gt(max(abs(fit_off$diagnostics$optim$grad)), 1)
+  expect_equal(
+    unname(fit_off$diagnostics$optim$grad),
+    -unname(gr_reg(fit_off$mode)),
+    tolerance = 1e-4
   )
 
   expect_error(
@@ -478,8 +536,10 @@ test_that("diagnostics() prints in INLAvaan's formats", {
   expect_match(fmt("grad_inf"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("hess_cond"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("unscanned_mass_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
+  expect_match(fmt("mode_shift_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("nmad_max"), "^0\\.[0-9]{4}$")
   expect_identical(fmt("n_heavy_tails"), "0")
+  expect_identical(fmt("vb_fallback"), "0")
 
   # The table rounds to four decimals, but keeps three significant figures
   # of the unscanned mass, which is below the fourth decimal when healthy
@@ -501,8 +561,17 @@ test_that("diagnostics() of other objects is an error, or INLAvaan's", {
     "There is no `diagnostics\\(\\)` method for an integer vector",
     class = "inlavanilla_error"
   )
-  # An S4 object is passed on to INLAvaan's diagnostics() only when INLAvaan
-  # is loaded
+  # An S4 object is passed on to INLAvaan's diagnostics() when INLAvaan is
+  # loaded, with its arguments; anything else is not
+  s4 <- asS4(structure(list(), class = "not_inlavaan"))
+  local({
+    local_mocked_bindings(
+      inlavaan_diagnostics = function() function(object, ...) list(object, ...)
+    )
+    expect_identical(diagnostics(s4, "param"), list(s4, "param"))
+    expect_error(diagnostics(1:3), class = "inlavanilla_error")
+  })
+  # Without INLAvaan, an S4 object is an error too
   skip_if(isNamespaceLoaded("INLAvaan"))
   expect_error(
     diagnostics(asS4(structure(list(), class = "not_inlavaan"))),

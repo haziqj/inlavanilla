@@ -176,8 +176,8 @@ down to p = 1e-40.
   convergence. SEM parameters are usually near unit scale, so the risk is
   small. inlavanilla checks the whitened gradient at the mode,
   max |L' g|. When it exceeds 1e-3 it reruns `nlminb(..., scale =
-  sqrt(diag(H)))`, and it warns from the whitened gradient rather than from
-  nlminb's return code.
+  sqrt(diag(H)))`. It warns from INLAvaan's Newton step in posterior SDs,
+  |(Sigma g)_j| / sd_j above 0.1, rather than from nlminb's return code.
 - **`fast_hessian()`** (`R/utils-optim.R:17`, used when
   `numerical_grad = TRUE`) takes second differences with a fixed absolute
   step of 1e-5. That is too small for rounding at posterior SDs above about
