@@ -87,6 +87,8 @@ and then inlavanilla's own:
 fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 but flags nothing: the fallback is a route of the solver, not a measure
 of the approximation.
+\item \code{vb_step_max}: the largest \code{vb_step_sigma}. Like \code{mode_shift_max} it
+should be close to 0.
 \item \code{mean_gap_max}: the largest absolute \code{mean_gap}.
 \item \code{ridge_bend_max}: the largest \code{ridge_bend}.
 \item \code{n_heavy_tails}: the number of parameters whose \code{tails} is \code{FALSE}.
@@ -119,7 +121,15 @@ the mode, on the scale of \code{logpost}.
 scanned window.
 }
 
-and then inlavanilla's own: \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}.
+and then inlavanilla's own:
+\itemize{
+\item \code{vb_step_sigma}: the step still to go at the VB mean, in posterior SDs:
+the fixed-point step there, the Newton step of the VB stationarity
+condition, as \code{mode_shift_sigma} is for the mode. It should be close to
+0 (\code{Inf} where the step is not finite).
+\item \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, which
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} describes.
+}
 
 Some of INLAvaan's diagnostics are left out. \code{nsamp} counts posterior
 draws, which \code{\link[=sampling]{sampling()}} makes on demand rather than during the fit.

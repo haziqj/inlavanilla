@@ -352,13 +352,23 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   lines <- c(
     lines,
     if (vbc$fallback) {
-      grey(
-        "Fell back to nlminb, as ",
-        h$reason,
-        ": ",
-        h$nlminb,
-        ", after ",
-        plural(vbc$iterations, "iteration")
+      # Where it landed: the step still to go there, marked when the
+      # correction did not settle
+      step_max <- max(vbc$step_sigma)
+      c(
+        grey(
+          "Fell back to nlminb, as ",
+          h$reason,
+          ": ",
+          h$nlminb,
+          ", after ",
+          plural(vbc$iterations, "iteration")
+        ),
+        paste0(
+          grey("One more step would move a mean by ", with_sd(step_max)),
+          if (off_level(step_max, warn_levels$vb_step)) flag() else "",
+          grey(" (warning > ", with_sd(warn_levels$vb_step), ")")
+        )
       )
     } else {
       grey(

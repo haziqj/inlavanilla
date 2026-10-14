@@ -5,11 +5,13 @@
 # check_flags() (R/methods.R) on the same numbers, so none of them can
 # disagree. The warning checks, in INLAvaan's order, the mode shift, NMAD,
 # the unscanned mass, the VB shift and the Hessian condition number, at
-# INLAvaan's levels; the heavy-tails check, after the unscanned mass, is
-# inlavanilla's own. INLAvaan's bullet for a non-zero return code of
-# nlminb() is left out: without a gradient nlminb() reports false
-# convergence at accurate modes. The VB fallback is recorded only, as in
-# INLAvaan. summary() flags every warned check at the same level, and also
+# INLAvaan's levels. Two checks are inlavanilla's own: whether the VB
+# correction settled, after the mode shift, since the two together are what
+# print() calls converged, and the heavy tails, after the unscanned mass.
+# INLAvaan's bullet for a non-zero return code of nlminb() is left out:
+# without a gradient nlminb() reports false convergence at accurate modes.
+# The VB fallback is recorded only, as in INLAvaan: it is a route of the
+# solver, and the settling check judges where it lands. summary() flags every warned check at the same level, and also
 # the ridge bend and the mean gap, which never warn. A check that did
 # not run (VB with vb = FALSE, the scans with Gaussian marginals) is NA and
 # never flagged; one that ran and gave a value that is not finite is.
@@ -18,7 +20,9 @@ warn_levels <- list(
   nmad = 0.1,
   unscanned_mass = 0.05,
   vb_shift = 1,
-  hess_cond = 1e8
+  hess_cond = 1e8,
+  # inlavanilla's own: the VB correction settles as the mode search does
+  vb_step = 0.1
 )
 # The ridge bend level is a marginal SD about 10% too small,
 # 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
@@ -69,6 +73,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     unscanned_mass_max = max_na(d$unscanned_mass),
     # inlavanilla's own
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
+    vb_step_max = max_na(d$vb_step_sigma),
     mean_gap_max = max_na(abs(d$mean_gap)),
     ridge_bend_max = max_na(d$ridge_bend),
     n_heavy_tails = if (all(is.na(d$tails))) {
@@ -92,6 +97,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     alpha = d$alpha,
     unscanned_mass = d$unscanned_mass,
     # inlavanilla's own
+    vb_step_sigma = d$vb_step_sigma,
     mean_gap = d$mean_gap,
     gamma1 = d$gamma1,
     tails = d$tails,
@@ -178,6 +184,16 @@ problem_text <- function(check, dg, env, n = 3L) {
         "."
       )
     },
+    vb_step = {
+      env$vbs_worst <- p$names[worst_first(p$vb_step_sigma)[1L]]
+      env$vbs_step <- fmt_g3(glob[["vb_step_max"]])
+      paste0(
+        "The VB correction did not settle: one more step would move ",
+        "{.code {vbs_worst}} by {vbs_step}",
+        sd_unit(),
+        "."
+      )
+    },
     nmad = paste0(
       "The fitted marginal deviates from the scanned posterior (NMAD > ",
       warn_levels$nmad,
@@ -257,9 +273,26 @@ diagnostic_problems <- function(dg, gaussian) {
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = baseenv())
   out <- character()
-  warned <- c("mode", "nmad", "unscanned_mass", "tails", "vb", "hess_cond")
+  warned <- c(
+    "mode",
+    "vb_step",
+    "nmad",
+    "unscanned_mass",
+    "tails",
+    "vb",
+    "hess_cond"
+  )
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
+    if (check == "vb_step") {
+      out <- c(
+        out,
+        i = paste0(
+          "The skew-normal marginals do not depend on it; ",
+          "{.code vb = FALSE} leaves it out."
+        )
+      )
+    }
     if (check == "mode") {
       env$mode_message <- dg$message
       out <- c(
@@ -363,6 +396,8 @@ warn_diagnostics <- function(dg, gaussian) {
 #'   fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 #'   but flags nothing: the fallback is a route of the solver, not a measure
 #'   of the approximation.
+#' * `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
+#'   should be close to 0.
 #' * `mean_gap_max`: the largest absolute `mean_gap`.
 #' * `ridge_bend_max`: the largest `ridge_bend`.
 #' * `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
@@ -392,7 +427,13 @@ warn_diagnostics <- function(dg, gaussian) {
 #' * `unscanned_mass`: the mass the fitted skew-normal puts beyond the
 #'   scanned window.
 #'
-#' and then inlavanilla's own: `mean_gap`, `gamma1`, `tails` and `ridge_bend`.
+#' and then inlavanilla's own:
+#' * `vb_step_sigma`: the step still to go at the VB mean, in posterior SDs:
+#'   the fixed-point step there, the Newton step of the VB stationarity
+#'   condition, as `mode_shift_sigma` is for the mode. It should be close to
+#'   0 (`Inf` where the step is not finite).
+#' * `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
+#'   [summary.inla_vanilla()] describes.
 #'
 #' Some of INLAvaan's diagnostics are left out. `nsamp` counts posterior
 #' draws, which [sampling()] makes on demand rather than during the fit.
@@ -498,7 +539,12 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
     "vb_fallback",
     "n_heavy_tails"
   )
-  sci_names <- c("hess_cond", "mode_shift_max", "unscanned_mass_max")
+  sci_names <- c(
+    "hess_cond",
+    "mode_shift_max",
+    "unscanned_mass_max",
+    "vb_step_max"
+  )
   formatted <- vapply(
     seq_along(x),
     function(i) {

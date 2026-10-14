@@ -166,7 +166,7 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction in <n> iteration(s): max shift 0.23 SD.
+      v VB correction settled in <n> iteration(s): max shift 0.23 SD.
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14,
         mean gap 0.0068 SD.
 

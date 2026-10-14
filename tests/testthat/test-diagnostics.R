@@ -41,6 +41,7 @@ healthy <- data.frame(
   nmad = c(0.01, 0.02),
   alpha = c(0.5, -0.3),
   unscanned_mass = c(1e-3, 2e-3),
+  vb_step_sigma = c(1e-4, 2e-4),
   mean_gap = c(0.01, 0.02),
   gamma1 = c(0, 0),
   tails = c(TRUE, TRUE),
@@ -152,6 +153,25 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   )
   expect_no_match(text, "`a`")
 
+  # A VB correction that did not settle names the worst parameter, with a
+  # hint; strictly above the level, as the mode check
+  d <- healthy
+  d$vb_step_sigma <- c(0.2, 0.5)
+  text <- warning_text(d)
+  expect_match(
+    text,
+    paste0(
+      "x The VB correction did not settle: one more step would move `b` by ",
+      "0.5 SD.\n",
+      "i The skew-normal marginals do not depend on it; `vb = FALSE` leaves ",
+      "it out."
+    ),
+    fixed = TRUE
+  )
+  expect_no_match(text, "`a`")
+  d$vb_step_sigma <- c(0.1, 0.1)
+  expect_length(problems(d), 0)
+
   o <- healthy_optim
   o$hess_cond <- 2e10
   expect_match(
@@ -177,7 +197,8 @@ test_that("the VB fallback is recorded, not warned about, as in INLAvaan", {
   expect_length(bullets, 1)
   expect_match(bullets, "The VB correction shifted")
   # No VB correction, no VB check
-  d[c("kld", "vb_shift", "vb_shift_sigma", "mean_gap")] <- NA_real_
+  d[c("kld", "vb_shift", "vb_shift_sigma", "vb_step_sigma", "mean_gap")] <-
+    NA_real_
   expect_length(problems(d, vb = NULL), 0)
 })
 
@@ -217,16 +238,23 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   d$nmad[1] <- 0.2
   d$unscanned_mass[1] <- 0.3
   d$vb_shift_sigma[1] <- 2
+  d$vb_step_sigma[2] <- 0.4
   bullets <- problems(d, o)
-  expect_identical(names(bullets), c("x", "i", "i", "x", "x", "x", "x", "x"))
+  expect_identical(
+    names(bullets),
+    c("x", "i", "i", "x", "i", "x", "x", "x", "x", "x")
+  )
   text <- warning_text(d, o)
   lines <- strsplit(text, "\n")[[1]]
-  expect_identical(lines[1], "Fit diagnostics flagged 6 potential issues:")
-  # each line shows its own value, in INLAvaan's order
+  expect_identical(lines[1], "Fit diagnostics flagged 7 potential issues:")
+  # each line shows its own value, in INLAvaan's order, with the VB check of
+  # inlavanilla's own after the mode, the other half of converged
   patterns <- c(
     "^x The gradient at the posterior mode .* by 0.5 SD",
     "^i `nlminb\\(\\)` says",
     "^i Try other starting values",
+    "^x The VB correction did not settle: .* `b` by 0.4 SD",
+    "^i The skew-normal marginals do not depend on it",
     "^x The fitted marginal deviates .* `a` \\(0.20\\)",
     "^x The fitted marginal puts .* `a` \\(0.30\\)",
     "^x Heavy tails for `a`",
@@ -239,7 +267,7 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   }
   expect_identical(
     vapply(patterns, function(p) grep(p, lines)[1], 1L, USE.NAMES = FALSE),
-    2:10
+    2:12
   )
 })
 
@@ -387,6 +415,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "nmad_mean",
       "unscanned_mass_max",
       "vb_fallback",
+      "vb_step_max",
       "mean_gap_max",
       "ridge_bend_max",
       "n_heavy_tails"
@@ -409,6 +438,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "nmad",
       "alpha",
       "unscanned_mass",
+      "vb_step_sigma",
       "mean_gap",
       "gamma1",
       "tails",
