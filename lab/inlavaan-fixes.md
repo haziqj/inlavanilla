@@ -12,7 +12,7 @@ is fixed in inlavanilla. The fixed code is in `haziqj/inlavanilla`, branch
 functions have the same names except where noted.
 
 Items 1 to 5 are bugs that change results. Items 6 to 8 are latent or
-low-impact. Items 9 to 11 are not bugs.
+low-impact. Items 9 to 12 are not bugs.
 
 ## 1. `qsnorm_fast()` is a starting value, not an accurate quantile (high)
 
@@ -269,3 +269,17 @@ names in both packages.
 
 inlavanilla also renamed two checks of its own that INLAvaan does not have:
 `bend` became `ridge_bend` and `sn_vs_vb` became `mean_gap`.
+
+## 12. Suggestion: check where the VB fallback lands
+
+inlavanilla's VB correction, ported from INLAvaan, accepted the fallback
+optimiser's result without checking it. It now measures the step still to go
+at the VB mean, in posterior SDs: the fixed-point step there, which is the
+Newton step of the VB stationarity condition, as `mode_shift_sigma` is for
+the mode. On the fixed-point path it is the last step, below the tolerance;
+after the fallback it costs one more sweep. Above 0.1, the mode check's
+level, the correction has not settled: the fit warns, `summary()` flags it,
+and `print()` says the fit has not converged. `diagnostics()` reports it as
+`vb_step_sigma` per parameter and `vb_step_max` globally. INLAvaan's VB mean
+feeds its marginal likelihood and its LOO in the same way, so the same check
+would help there.

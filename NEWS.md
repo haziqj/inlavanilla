@@ -70,8 +70,15 @@
   shift, NMAD, unscanned mass, ridge bend and mean gap) has numbers
   formatted as a tibble prints them and the flagged values in red. One line
   gives the largest value of each skew-normal check that passes, and each
-  flagged check has a line of its own. `print()` says whether the fit
-  converged, with the iterations and the time the fit took.
+  flagged check has a line of its own.
+* `print()` and `summary()` open with the log marginal likelihood and whether
+  the fit converged, with the iterations and the time the fit took.
+  Converged means that the computation reached its solution: no further
+  Newton step at the mode, and no further fixed-point step at the VB mean,
+  would move a parameter by more than 0.1 posterior SDs. The second is a new
+  check, `vb_step_sigma` in `diagnostics(fit, type = "param")`: where the
+  fallback optimiser of the VB correction lands was not checked before. A
+  correction that has not settled is flagged and raises a warning.
 * Printed output is never wider than 80 columns, or the console if it is
   narrower: the summaries, the verbose report and the fit-time warning wrap
   their long lines. The rendered documentation is 76 columns wide, so that
