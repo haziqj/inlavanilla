@@ -4,10 +4,10 @@
 # (vignettes/articles/multilevel.qmd), so that the site build needs neither
 # brms nor Stan. Fits lme4's sleepstudy with correlated random intercepts and
 # slopes, on all 18 subjects and on the first 6, with long chains, and saves
-# each parameter's posterior summary and a kernel density estimate to
-# vignettes/articles/multilevel-brms.rds. The model and priors must match the
-# article's logpost. Takes about two minutes, most of it compiling Stan. Run
-# from the package root:
+# each parameter's posterior summary and a kernel density estimate, and each
+# subject's random effects, to vignettes/articles/multilevel-brms.rds. The
+# model and priors must match the article's logpost. Takes about two minutes,
+# most of it compiling Stan. Run from the package root:
 #   Rscript lab/multilevel-article.R
 #
 ################################################################################
@@ -53,6 +53,7 @@ fit_case <- function(n_subjects) {
   draws <- as.matrix(fit, variable = unname(brms_pars))
   colnames(draws) <- names(brms_pars)
   np <- nuts_params(fit)
+  re <- ranef(fit, summary = FALSE)$Subject  # draws x subjects x terms
   list(
     summary = data.frame(
       mean = colMeans(draws),
@@ -64,6 +65,14 @@ fit_case <- function(n_subjects) {
       as.data.frame(draws),
       function(d) density(d, n = 256)[c("x", "y")]
     ),
+    ranef = lapply(c(u0 = "Intercept", u1 = "Days"), function(term) {
+      d <- re[, , term]
+      data.frame(
+        mean = colMeans(d),
+        t(apply(d, 2, quantile, probs)),
+        check.names = FALSE
+      )
+    }),
     draws = nrow(draws),
     rhat = max(rhat(fit, pars = unname(brms_pars))),
     divergences = sum(np$Value[np$Parameter == "divergent__"])
