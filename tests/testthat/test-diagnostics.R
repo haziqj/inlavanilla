@@ -3,7 +3,7 @@
 #
 # One warning, of class inlavanilla_diagnostics_warning, in INLAvaan's words
 # and order: the mode shift above 0.1 posterior SDs, NMAD above 0.1, the
-# scan-end mass above 0.05, heavy tails (inlavanilla's own), the VB shift
+# unscanned mass above 0.05, heavy tails (inlavanilla's own), the VB shift
 # above 1 SD and the Hessian condition number above 1e8. A healthy fit stays
 # silent. diagnostics() returns INLAvaan's global and per-parameter
 # diagnostics, computed by the same function as the warning.
@@ -40,7 +40,7 @@ healthy <- data.frame(
   vb_shift_sigma = c(0.1, -0.2),
   nmad = c(0.01, 0.02),
   alpha = c(0.5, -0.3),
-  scan_end_mass = c(1e-3, 2e-3),
+  unscanned_mass = c(1e-3, 2e-3),
   mean_gap = c(0.01, 0.02),
   gamma1 = c(0, 0),
   tails = c(TRUE, TRUE),
@@ -115,7 +115,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   expect_length(problems(d), 0)
 
   d <- healthy
-  d$scan_end_mass[2] <- 0.06
+  d$unscanned_mass[2] <- 0.06
   expect_match(
     warning_text(d),
     paste0(
@@ -189,7 +189,7 @@ test_that("lists name at most three parameters, worst first, with values", {
   rownames(d) <- nm
   o <- modifyList(healthy_optim, list(grad = setNames(rep(1e-7, 5), nm)))
   d$nmad <- c(0.2, 0.5, 0.01, 0.3, 0.15)
-  d$scan_end_mass <- c(0.06, 0.01, 0.01, 0.01, 0.07)
+  d$unscanned_mass <- c(0.06, 0.01, 0.01, 0.01, 0.07)
   d$tails <- c(TRUE, FALSE, TRUE, FALSE, TRUE)
   text <- warning_text(d, o)
   expect_match(
@@ -215,7 +215,7 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   d$mode_shift_sigma[1] <- 0.5
   d$tails[1] <- FALSE
   d$nmad[1] <- 0.2
-  d$scan_end_mass[1] <- 0.3
+  d$unscanned_mass[1] <- 0.3
   d$vb_shift_sigma[1] <- 2
   bullets <- problems(d, o)
   expect_identical(names(bullets), c("x", "i", "i", "x", "x", "x", "x", "x"))
@@ -252,7 +252,7 @@ test_that("a value that is not finite is flagged; a check that did not run is no
 
   # Gaussian marginals: no scans, so only the mode, Hessian and VB checks
   d <- healthy
-  d[c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "ridge_bend")] <- NA
+  d[c("nmad", "alpha", "unscanned_mass", "gamma1", "tails", "ridge_bend")] <- NA
   d$mean_gap <- NA_real_
   expect_length(problems(d, gaussian = TRUE), 0)
   d$vb_shift_sigma[1] <- 3
@@ -374,7 +374,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "kld_mean",
       "nmad_max",
       "nmad_mean",
-      "scan_end_mass_max",
+      "unscanned_mass_max",
       "vb_fallback",
       "mean_gap_max",
       "ridge_bend_max",
@@ -397,7 +397,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "vb_shift_sigma",
       "nmad",
       "alpha",
-      "scan_end_mass",
+      "unscanned_mass",
       "mean_gap",
       "gamma1",
       "tails",
@@ -426,7 +426,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
   expect_equal(g[["vb_kld_global"]], fit$logml - fit$logml_laplace)
   expect_identical(g[["kld_mean"]], mean(d$kld))
   expect_identical(g[["nmad_max"]], max(d$nmad))
-  expect_identical(g[["scan_end_mass_max"]], max(d$scan_end_mass))
+  expect_identical(g[["unscanned_mass_max"]], max(d$unscanned_mass))
   expect_identical(g[["ridge_bend_max"]], max(d$ridge_bend))
   expect_identical(g[["n_heavy_tails"]], 0)
   expect_equal(p$grad, unname(grad))
@@ -477,17 +477,17 @@ test_that("diagnostics() prints in INLAvaan's formats", {
   )
   expect_match(fmt("grad_inf"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("hess_cond"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
-  expect_match(fmt("scan_end_mass_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
+  expect_match(fmt("unscanned_mass_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("nmad_max"), "^0\\.[0-9]{4}$")
   expect_identical(fmt("n_heavy_tails"), "0")
 
   # The table rounds to four decimals, but keeps three significant figures
-  # of the scan-end mass, which is below the fourth decimal when healthy
+  # of the unscanned mass, which is below the fourth decimal when healthy
   p <- diagnostics(fit, type = "param")
   out <- capture_output(res <- withVisible(print(p)))
   expect_identical(res$value, p)
-  expect_match(out, "scan_end_mass")
-  expect_match(out, format(signif(p$scan_end_mass[1], 3)), fixed = TRUE)
+  expect_match(out, "unscanned_mass")
+  expect_match(out, format(signif(p$unscanned_mass[1], 3)), fixed = TRUE)
 
   # Missing values print as NA
   fit <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)

@@ -38,7 +38,7 @@ flagged.
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
 (\code{mean_gap}) as an internal check (Section 5.1). The mode shift, the
-Hessian condition number and the scan-end mass come from INLAvaan's
+Hessian condition number and the unscanned mass come from INLAvaan's
 \code{diagnostics()}, not from the paper. \code{tails} and \code{ridge_bend} are
 inlavanilla's own.
 }
@@ -78,7 +78,7 @@ Gaussian and its VB-shifted copy,
 the VB term of the log marginal likelihood.
 \item \code{kld_max}, \code{kld_mean}: the largest and the mean \code{kld}.
 \item \code{nmad_max}, \code{nmad_mean}: the largest and the mean \code{nmad}.
-\item \code{scan_end_mass_max}: the largest \code{scan_end_mass}.
+\item \code{unscanned_mass_max}: the largest \code{unscanned_mass}.
 }
 
 and then inlavanilla's own:
@@ -115,7 +115,7 @@ the mode, on the scale of \code{logpost}.
 \item \code{vb_shift_sigma}: the same in posterior SDs.
 \item \code{nmad}: the NMAD of the skew-normal fit.
 \item \code{alpha}: the shape of the fitted skew-normal marginal.
-\item \code{scan_end_mass}: the mass the fitted skew-normal puts beyond the
+\item \code{unscanned_mass}: the mass the fitted skew-normal puts beyond the
 scanned window.
 }
 

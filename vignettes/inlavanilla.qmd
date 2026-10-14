@@ -134,7 +134,7 @@ summary(fit)
   flagged: the marginal SD may then be about 10% too small. The
   intercept's ridge bend is below that, and its marginal is only a little
   narrow, as the check against the exact posterior below shows.
-* **End mass** is the mass each skew-normal puts beyond the scanned window,
+* **Unscanned** is the mass each skew-normal puts beyond the scanned window,
   4 posterior SDs either side of the mode, where it is extrapolated. It is
   flagged above 0.05.
 

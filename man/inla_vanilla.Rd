@@ -80,7 +80,7 @@ the iterations of the VB correction, whether it fell back to
 \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb = FALSE}. \code{marginals}
 is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
-\code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{scan_end_mass},
+\code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
 \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with \code{NA} for the
 checks the fit did not run.
 \item \code{scan}: the scans the skew-normals were fitted to, for
@@ -268,7 +268,7 @@ units; and the Laplace log marginal likelihood.
 fixed-point iteration, whether Anderson acceleration or the fallback
 optimiser was used, the largest shift, and the term it adds to the log
 marginal likelihood.
-\item The marginals: the shape, NMAD, ridge bend, tails, scan-end mass and
+\item The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 volume correction \code{gamma1} of each parameter, with the values that
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.
 \item The calls of \code{logpost} and \code{grad} in each stage, and in all, with the

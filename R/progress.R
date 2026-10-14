@@ -394,7 +394,7 @@ report_marginals <- function(p, sn, calls) {
     NMAD = formatC(sn[, "nmad"], digits = 2, format = "g"),
     `Ridge bend` = formatC(sn[, "ridge_bend"], digits = 2, format = "g"),
     Tails = ifelse(sn[, "tails"] == 1, "ok", "heavy"),
-    `End mass` = formatC(sn[, "scan_end_mass"], digits = 2, format = "g"),
+    Unscanned = formatC(sn[, "unscanned_mass"], digits = 2, format = "g"),
     gamma1 = formatC(sn[, "gamma1"], digits = 2, format = "g")
   )
   none <- logical(length(rn))
@@ -403,7 +403,7 @@ report_marginals <- function(p, sn, calls) {
     NMAD = off_level(sn[, "nmad"], warn_levels$nmad),
     `Ridge bend` = off_level(sn[, "ridge_bend"], summary_levels$ridge_bend),
     Tails = !sn[, "tails"] %in% 1,
-    `End mass` = off_level(sn[, "scan_end_mass"], warn_levels$scan_end_mass),
+    Unscanned = off_level(sn[, "unscanned_mass"], warn_levels$unscanned_mass),
     gamma1 = none
   )
   rw <- max(nchar(rn))
@@ -455,8 +455,8 @@ report_marginals <- function(p, sn, calls) {
           warn_levels$nmad,
           ", ridge bend above ",
           summary_levels$ridge_bend,
-          ", heavy tails, scan-end mass above ",
-          warn_levels$scan_end_mass
+          ", heavy tails, unscanned mass above ",
+          warn_levels$unscanned_mass
         )
       ),
       grey(format_calls(calls[[1]], calls[[2]]))

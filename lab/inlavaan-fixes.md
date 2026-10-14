@@ -12,7 +12,7 @@ is fixed in inlavanilla. The fixed code is in `haziqj/inlavanilla`, branch
 functions have the same names except where noted.
 
 Items 1 to 5 are bugs that change results. Items 6 to 8 are latent or
-low-impact. Items 9 and 10 are not bugs.
+low-impact. Items 9 to 11 are not bugs.
 
 ## 1. `qsnorm_fast()` is a starting value, not an accurate quantile (high)
 
@@ -254,3 +254,18 @@ narrow by a factor that vanishes as O(1/n).
 
 See `lab/DESIGN.md`, `lab/scan-path-prototype.R`, `lab/sem-marginal-check.R`
 and `lab/sem-hmc.R` in inlavanilla.
+
+## 11. Not a bug: rename `scan_end_mass` to `unscanned_mass`
+
+In October 2026 the owner renamed this diagnostic in inlavanilla so that its
+name says what it measures: the mass of the fitted marginal that no scan
+point supports. INLAvaan is to follow, so that `diagnostics()` uses the same
+names in both packages.
+
+- Per parameter: `scan_end_mass` becomes `unscanned_mass`.
+- Global: `scan_end_mass_max` becomes `unscanned_mass_max`.
+- The printed name is "Unscanned", and prose says "unscanned mass".
+- The level, 0.05, and the definition are unchanged.
+
+inlavanilla also renamed two checks of its own that INLAvaan does not have:
+`bend` became `ridge_bend` and `sn_vs_vb` became `mean_gap`.

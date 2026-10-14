@@ -162,7 +162,7 @@
 #'   fixed-point iteration, whether Anderson acceleration or the fallback
 #'   optimiser was used, the largest shift, and the term it adds to the log
 #'   marginal likelihood.
-#' * The marginals: the shape, NMAD, ridge bend, tails, scan-end mass and
+#' * The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 #'   volume correction `gamma1` of each parameter, with the values that
 #'   [summary.inla_vanilla()] flags marked.
 #' * The calls of `logpost` and `grad` in each stage, and in all, with the
@@ -233,7 +233,7 @@
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
 #'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
-#'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `scan_end_mass`,
+#'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
 #'     `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with `NA` for the
 #'     checks the fit did not run.
 #'   * `scan`: the scans the skew-normals were fitted to, for
@@ -559,7 +559,7 @@ vanilla_fit <- function(
     )
     sn <- cbind(
       mar$sn,
-      scan_end_mass = scan_end_mass(mar$sn, lap$mode, sds)
+      unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
     )
     # The scans, kept for plot(type = "sn_fit"): no further calls
     scan <- list(z = mar$z, logpost = mar$logpost, logC = sn[, "logC"])
@@ -587,7 +587,7 @@ vanilla_fit <- function(
       tails = na,
       ridge_bend = na,
       logC = na,
-      scan_end_mass = na
+      unscanned_mass = na
     )
     rownames(sn) <- parnames
     scan <- NULL
@@ -630,7 +630,7 @@ vanilla_fit <- function(
       vb_shift_sigma = if (vb) shift / sds else na,
       nmad = sn[, "nmad"],
       alpha = if (skew) sn[, "alpha"] else na,
-      scan_end_mass = sn[, "scan_end_mass"],
+      unscanned_mass = sn[, "unscanned_mass"],
       mean_gap = if (vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),

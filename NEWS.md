@@ -46,15 +46,15 @@
   the mode in posterior SDs (`mode_shift_sigma`), the VB shift on the scale
   of `logpost` (`vb_shift`) and in posterior SDs (`vb_shift_sigma`), with the
   Kullback-Leibler divergence of each shifted marginal (`kld`), and
-  `scan_end_mass`, the mass each fitted skew-normal puts outside the scanned
+  `unscanned_mass`, the mass each fitted skew-normal puts outside the scanned
   window; the VB columns are `NA` when `vb = FALSE`. The fit also records
   the condition number of the Hessian in posterior-SD units (`hess_cond`).
-  `summary()` and `verbose = TRUE` show the scan-end mass.
+  `summary()` and `verbose = TRUE` show the unscanned mass.
 * A fit whose checks look off ends with one warning, of class
   `inlavanilla_diagnostics_warning`, headed "Fit diagnostics flagged N
   potential issues", in INLAvaan's words and at its levels: a Newton step at
   the mode above 0.1 posterior SDs (whatever `nlminb()`'s return code, with
-  its message and a hint), an NMAD above 0.1, a scan-end mass above 0.05, a
+  its message and a hint), an NMAD above 0.1, a unscanned mass above 0.05, a
   VB shift above 1 SD, and a Hessian condition number above 1e8; heavy tails
   are inlavanilla's own check. Like INLAvaan, the fit only records the VB
   fallback. `summary()` flags the same checks at the same levels, and also
