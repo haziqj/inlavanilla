@@ -20,11 +20,12 @@ knitr:
 options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
 ```
 
-`inla_vanilla()` calls `logpost` many times, and the count grows quickly
-with the number of parameters $m$. Without a gradient, the VB correction
-alone needs $(m + 1)(2m^2 + 1)$ calls per sweep. That is 76 calls for 3
-parameters, and 121,720 for 39. Two things help: a faster `logpost`, and a
-gradient.
+`inla_vanilla()` calls `logpost` many times, and without a gradient the
+count grows with the square of the number of parameters $m$: the Hessian by
+finite differences takes about $m^2$ calls, the skew-normal scans about
+$2m^2$, and the VB correction $(m + 1)(m + 2)$ per sweep, over a few sweeps.
+For 39 parameters that is over 20,000 calls. Two things help: a faster
+`logpost`, and a gradient.
 
 This article does both for a structural equation model (SEM) with 39
 parameters. We write the log-posterior in plain R first, then in C++ with
@@ -299,10 +300,9 @@ fit_r$counts
 
 These two stages take
 `r format(fit_r$counts[["logpost"]], big.mark = ",")` calls. The VB
-correction would add far more: it evaluates the gradient at
-$2m^2 + 1 = 3{,}043$ points per sweep, and without `grad` each gradient costs
-$m + 1 = 40$ calls, over a few sweeps. We come back to the cost of a full fit
-below.
+correction would add $(m + 1)(m + 2) = 1{,}640$ calls per sweep, over a few
+sweeps: without a gradient it takes the expected gradient from values of
+`logpost` alone. We come back to the cost of a full fit below.
 
 ## The log-posterior in C++
 
@@ -556,10 +556,10 @@ Now the full fit, with the VB correction, first without a gradient:
 fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
 ```
 
-It took `r format(fit_cpp$counts[["logpost"]], big.mark = ",")` calls, nearly
-all in the VB correction. In R, at `r round(us_r)` microseconds a call, these
-would take about `r round(fit_cpp$counts[["logpost"]] * us_r / 1e6)` seconds.
-With the gradient:
+It took `r format(fit_cpp$counts[["logpost"]], big.mark = ",")` calls. In R,
+at `r round(us_r)` microseconds a call, these would take about
+`r round(fit_cpp$counts[["logpost"]] * us_r / 1e6, 1)` seconds. With the
+gradient:
 
 ```{r}
 #| label: fit-grad
@@ -575,6 +575,12 @@ Here neither does. The calls and times (in seconds) of the three fits:
 fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 ```
+
+With the gradient, the VB correction is the slowest stage: it takes the
+gradient at $2m^2 + 1 = 3{,}043$ points per sweep, where without one it takes
+`logpost` at 1,640. The gradient buys accuracy there: its VB mean is exact
+when the log-posterior is a polynomial of degree six, against degree four from
+`logpost` alone.
 
 The three fits agree. The skew-normal marginals do not depend on the VB
 correction, so even `fit_r` gives the same table. The largest difference in a
