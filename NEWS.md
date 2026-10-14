@@ -34,6 +34,9 @@
   in R, in C++ with an analytic gradient, and as a TMB template.
 * A website article, "Multilevel models", fits a linear mixed model with the
   random effects integrated out, and checks its marginals against brms.
+* A website article, "Diagnostic classification models", fits the DINA model
+  to the ECPE data with the latent classes summed out, checks its marginals
+  against Stan, and classifies examinees from draws.
 * Three output levels: by default each stage prints one line; `verbose =
   TRUE` adds a full diagnostic of each stage (the optimiser's report, how the
   Hessian was taken, the posterior correlations, the VB iterations, a line per

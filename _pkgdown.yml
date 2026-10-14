@@ -20,6 +20,7 @@ articles:
   navbar: ~
   contents:
   - articles/multilevel
+  - articles/dcm
 - title: Compiled code
   desc: >
     Faster log-posteriors for larger models. Both articles fit the same
