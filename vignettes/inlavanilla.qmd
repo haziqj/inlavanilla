@@ -443,9 +443,6 @@ rbind(
 )
 ```
 
-Leaving the Jacobian out would target a different posterior, not a worse
-approximation of this one, and nothing downstream could detect it.
-
 ## Bringing your own compiled code
 
 Any R function works as `logpost` and `grad`, including compiled code from
