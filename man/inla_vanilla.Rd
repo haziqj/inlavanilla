@@ -232,8 +232,9 @@ vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on.
 below the maximum are ignored in the skew-normal fit (default \code{-6}).
 \item \code{vb_maxit}, \code{vb_tol}: iteration limit (default \code{25}) and convergence
 tolerance in posterior SDs (default \code{1e-3}) for the VB correction's
-fixed-point iteration. If it has not converged after \code{vb_maxit} steps,
-\code{\link[stats:nlminb]{stats::nlminb()}} takes over.
+fixed-point iteration. A step over 1.5 posterior SDs is cut to 1.5. If
+two steps in a row are cut, or it has not converged after \code{vb_maxit}
+steps, \code{\link[stats:nlminb]{stats::nlminb()}} takes over.
 \item \code{nlminb}: a list of \code{\link[stats:nlminb]{stats::nlminb()}} controls for the mode search.
 \code{iter.max} and \code{eval.max} default to \code{1000} and \code{2000}, and \code{trace = 1}
 prints its iterations.

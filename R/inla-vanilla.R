@@ -130,8 +130,9 @@
 #'   below the maximum are ignored in the skew-normal fit (default `-6`).
 #' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
 #'   tolerance in posterior SDs (default `1e-3`) for the VB correction's
-#'   fixed-point iteration. If it has not converged after `vb_maxit` steps,
-#'   [stats::nlminb()] takes over.
+#'   fixed-point iteration. A step over 1.5 posterior SDs is cut to 1.5. If
+#'   two steps in a row are cut, or it has not converged after `vb_maxit`
+#'   steps, [stats::nlminb()] takes over.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
 #'   `iter.max` and `eval.max` default to `1000` and `2000`, and `trace = 1`
 #'   prints its iterations.

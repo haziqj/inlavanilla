@@ -1197,39 +1197,49 @@ test_that("the VB term of the log marginal likelihood is positive and uses the e
 
 # (g) The nlminb() fallback ---------------------------------------------------
 
-test_that("a strongly skewed Poisson posterior falls back to nlminb() at a stationary point", {
+test_that("a strongly skewed Poisson posterior settles at a stationary point, with or without the fallback", {
   # One zero count and a Gamma(0.5, 1) prior on the rate: on the log scale
   # the posterior is log-gamma with shape 0.5 and the Laplace SD is sqrt(2).
-  # The first Newton step is over one SD, which triggers the fallback.
+  # The first Newton step overshoots, by 1.1 SDs, and the iteration comes
+  # back. With vb_maxit = 1 the fallback takes over, and must land at the
+  # same point.
   mod <- poisson_gamma_model(y = 0, a = 0.5, b = 1)
-  fit <- inla_vanilla(mod$logpost, mod$init, grad = mod$grad, silent = TRUE)
-  expect_true(fit$diagnostics$vb$fallback)
-  s <- sqrt(fit$cov[1, 1])
-  expect_equal(s, sqrt(2), tolerance = 1e-6)
+  for (maxit in c(25, 1)) {
+    fit <- inla_vanilla(
+      mod$logpost,
+      mod$init,
+      grad = mod$grad,
+      silent = TRUE,
+      control = list(vb_maxit = maxit)
+    )
+    expect_identical(fit$diagnostics$vb$fallback, maxit == 1)
+    s <- sqrt(fit$cov[1, 1])
+    expect_equal(s, sqrt(2), tolerance = 1e-6)
 
-  # A stationary point of the rule's expected log-posterior ...
-  expect_lt(
-    max(abs(rule_stationarity(mod$grad, fit$mean_vb, fit$cov))),
-    6e-7 # observed 2.0e-7
-  )
-  expect_gt(max(abs(rule_stationarity(mod$grad, fit$mode, fit$cov))), 0.5)
-  # ... which in 1D is closed form
-  expect_lt(abs(fit$mean_vb[[1]] - mod$vb_rule(s)) / s, 6e-7) # observed 2.0e-7
-  # and close to exact VB, unlike the mode: observed 0.028 SDs, against 0.71
-  vb_err <- abs(fit$mean_vb[[1]] - mod$vb_exact(s)) / s
-  expect_lt(vb_err, 0.06)
-  expect_lt(vb_err, abs(fit$mode[[1]] - mod$vb_exact(s)) / s / 10)
+    # A stationary point of the rule's expected log-posterior ...
+    expect_lt(
+      max(abs(rule_stationarity(mod$grad, fit$mean_vb, fit$cov))),
+      2e-3 # observed 2.6e-4 by the fixed point, 2.0e-7 by the fallback
+    )
+    expect_gt(max(abs(rule_stationarity(mod$grad, fit$mode, fit$cov))), 0.5)
+    # ... which in 1D is closed form
+    expect_lt(abs(fit$mean_vb[[1]] - mod$vb_rule(s)) / s, 1e-3) # obs. 2.4e-7
+    # and close to exact VB, unlike the mode: observed 0.028 SDs, against 0.71
+    vb_err <- abs(fit$mean_vb[[1]] - mod$vb_exact(s)) / s
+    expect_lt(vb_err, 0.06)
+    expect_lt(vb_err, abs(fit$mode[[1]] - mod$vb_exact(s)) / s / 10)
 
-  # The marginal likelihood still takes the VB term
-  shift <- fit$mean_vb - fit$mode
-  expect_equal(
-    fit$logml - fit$logml_laplace,
-    0.5 * sum(shift^2) / fit$cov[1, 1],
-    tolerance = 1e-10
-  )
+    # The marginal likelihood still takes the VB term
+    shift <- fit$mean_vb - fit$mode
+    expect_equal(
+      fit$logml - fit$logml_laplace,
+      0.5 * sum(shift^2) / fit$cov[1, 1],
+      tolerance = 1e-10
+    )
+  }
 })
 
-test_that("a strongly skewed 2D posterior falls back to nlminb() at a stationary point", {
+test_that("a strongly skewed 2D posterior settles at a stationary point, with or without the fallback", {
   # theta_1 as above, theta_2 | theta_1 ~ N(0.8 theta_1, 0.5^2). Exact VB has
   # mu_1 = log(A / B) - Sigma_11 / 2 and mu_2 = 0.8 mu_1.
   pg <- poisson_gamma_model(y = 0, a = 0.5, b = 1)
@@ -1241,19 +1251,30 @@ test_that("a strongly skewed 2D posterior falls back to nlminb() at a stationary
     c(pg$grad(t[1]) + 0.8 * r, -r)
   }
   init <- c(a = 0, b = 0)
-  fit <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
-  expect_true(fit$diagnostics$vb$fallback)
-  sds <- sqrt(diag(fit$cov))
-  expect_lt(max(abs(rule_stationarity(grad, fit$mean_vb, fit$cov))), 6e-7) # obs. 1.9e-7
-  # theta_2 enters linearly, so mu_2 = 0.8 mu_1 holds under any rule
-  expect_equal(fit$mean_vb[[2]], 0.8 * fit$mean_vb[[1]], tolerance = 1e-10)
-  mu1_exact <- log(pg$A / pg$B) - fit$cov[1, 1] / 2
-  mode_err <- abs(fit$mode[[1]] - mu1_exact) / sds[[1]]
-  expect_lt(abs(fit$mean_vb[[1]] - mu1_exact) / sds[[1]], 0.06) # obs. 0.026
+  for (maxit in c(25, 1)) {
+    fit <- inla_vanilla(
+      logpost,
+      init,
+      grad = grad,
+      silent = TRUE,
+      control = list(vb_maxit = maxit)
+    )
+    expect_identical(fit$diagnostics$vb$fallback, maxit == 1)
+    sds <- sqrt(diag(fit$cov))
+    expect_lt(
+      max(abs(rule_stationarity(grad, fit$mean_vb, fit$cov))),
+      2e-3 # observed 1.9e-7 by the fallback
+    )
+    # theta_2 enters linearly, so mu_2 = 0.8 mu_1 holds under any rule, to
+    # the tolerance of the fixed-point iteration
+    expect_lt(abs(fit$mean_vb[[2]] - 0.8 * fit$mean_vb[[1]]) / sds[[2]], 2e-3)
+    mu1_exact <- log(pg$A / pg$B) - fit$cov[1, 1] / 2
+    mode_err <- abs(fit$mode[[1]] - mu1_exact) / sds[[1]]
+    expect_lt(abs(fit$mean_vb[[1]] - mu1_exact) / sds[[1]], 0.06) # obs. 0.026
+  }
 
   # Without a gradient the expected gradient comes from Stein's identity on
-  # the simplex rule, whose first step here is under one SD, so there is no
-  # fallback. The rule is exact for log-densities of degree four only, and
+  # the same rule. The rule is exact for log-densities of degree four only, and
   # this posterior is far from that: observed 0.096 SDs from exact VB, against
   # 0.026 with the gradient and 0.71 for the mode.
   fit_fd <- inla_vanilla(logpost, init, silent = TRUE)
@@ -1512,36 +1533,53 @@ test_that("the fallback moves to where logpost is finite at every node", {
   expect_lt(max_sd_diff(fit_fd$mean_vb, fit$mean_vb, sds), 0.1) # obs. 0.034
 })
 
-test_that("with a gradient a fallback that stops short is rerun and settles", {
+test_that("an oversized step is cut, and a fallback that stops short is rerun", {
   # a + 1 ~ Gamma(4, 1), with a barrier at a = -1. At the mode, a = 2, the
-  # lowest node of the rule sits on the barrier, so the fallback starts where
-  # the objective fails, and nlminb() reported relative convergence 0.29 SDs
-  # short of the optimum. Rerun from where it landed, it settles at the shift
-  # of 0.649 SDs that a tighter tolerance also finds.
+  # lowest node of the rule sits on the barrier, where the gradient is huge:
+  # the first step is 1.7e8 SDs. Cut to 1.5 SDs, the iteration settles at the
+  # shift of 0.649 SDs.
   lp <- function(t) if (t[1] <= -1) -Inf else 3 * log(t[1] + 1) - (t[1] + 1)
   gr <- function(t) if (t[1] <= -1) NaN else 3 / (t[1] + 1) - 1
-  fit <- inla_vanilla(
-    lp,
-    c(a = 2),
-    grad = gr,
-    marginals = "gaussian",
-    silent = TRUE
+  text <- paste(
+    capture_messages(
+      fit <- inla_vanilla(
+        lp,
+        c(a = 2),
+        grad = gr,
+        marginals = "gaussian",
+        verbose = TRUE
+      )
+    ),
+    collapse = ""
+  )
+  d <- fit$diagnostics$marginals
+  expect_false(fit$diagnostics$vb$fallback)
+  expect_lt(d$vb_step_sigma, 1e-3)
+  expect_equal(d$vb_shift_sigma, 0.649, tolerance = 1e-3)
+  expect_length(fit$warnings, 0)
+  expect_match(gsub("\n +", " ", text), "1 step cut to 1.5 ?(SD|σ)")
+
+  # With vb_maxit = 1 the fallback starts after that one step, and nlminb()
+  # reports relative convergence short of the optimum. Rerun from where it
+  # landed, it settles at the same shift.
+  text <- paste(
+    capture_messages(
+      fit <- inla_vanilla(
+        lp,
+        c(a = 2),
+        grad = gr,
+        marginals = "gaussian",
+        verbose = TRUE,
+        control = list(vb_maxit = 1)
+      )
+    ),
+    collapse = ""
   )
   d <- fit$diagnostics$marginals
   expect_true(fit$diagnostics$vb$fallback)
   expect_lt(d$vb_step_sigma, 1e-6)
   expect_equal(d$vb_shift_sigma, 0.649, tolerance = 1e-3)
   expect_length(fit$warnings, 0)
-  text <- paste(
-    capture_messages(inla_vanilla(
-      lp,
-      c(a = 2),
-      grad = gr,
-      marginals = "gaussian",
-      verbose = TRUE
-    )),
-    collapse = ""
-  )
   expect_match(gsub("\n +", " ", text), "rerun once from where it landed")
 
   # Without a gradient a rerun cannot help, and none is made: the landing is
@@ -1552,7 +1590,8 @@ test_that("with a gradient a fallback that stops short is rerun and settles", {
         lp,
         c(a = 2),
         marginals = "gaussian",
-        verbose = TRUE
+        verbose = TRUE,
+        control = list(vb_maxit = 1)
       )
     )),
     collapse = ""

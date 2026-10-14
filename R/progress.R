@@ -349,6 +349,7 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
     paste(steps, collapse = ", ")
   )
   n_acc <- sum(h$accelerated)
+  n_cut <- sum(h$cut)
   lines <- c(
     lines,
     if (vbc$fallback) {
@@ -375,6 +376,9 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
       grey(
         "Converged in ",
         plural(vbc$iterations, "iteration"),
+        if (n_cut > 0) {
+          paste0(", ", plural(n_cut, "step"), " cut to ", with_sd(vb_maxstep))
+        },
         if (n_acc > 0) {
           paste0(", Anderson acceleration at ", n_acc, " of them")
         } else {

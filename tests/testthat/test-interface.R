@@ -1419,10 +1419,14 @@ test_that("a VB correction that does not settle is flagged from end to end", {
   # Without a gradient the fallback minimises the rule's mean of logpost with
   # Stein's identity as its gradient. On a log-posterior of degree six the
   # two disagree, and nlminb() stops short. Observed: a step of 0.14 SDs
-  # still to go.
+  # still to go. vb_maxit = 1 forces the fallback, which the fixed point
+  # would not need.
   lp_x6 <- function(theta) -theta[[1]]^6 - 0.5 * theta[[1]]^2 + theta[[1]]
+  ctrl_x6 <- list(vb_maxit = 1)
   w <- expect_warning(
-    msgs <- capture_messages(fit <- inla_vanilla(lp_x6, c(t = 0.3))),
+    msgs <- capture_messages(
+      fit <- inla_vanilla(lp_x6, c(t = 0.3), control = ctrl_x6)
+    ),
     class = "inlavanilla_diagnostics_warning"
   )
   expect_true(fit$diagnostics$vb$fallback)
@@ -1446,7 +1450,7 @@ test_that("a VB correction that does not settle is flagged from end to end", {
   )
   # The verbose report marks the step where the fallback landed
   text <- unwrap_msgs(capture_messages(suppressWarnings(
-    inla_vanilla(lp_x6, c(t = 0.3), verbose = TRUE)
+    inla_vanilla(lp_x6, c(t = 0.3), verbose = TRUE, control = ctrl_x6)
   )))
   expect_match(
     text,
@@ -1475,7 +1479,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   )
   expect_match(
     text,
-    "\n *Fell back to nlminb, as a step was over 1 posterior SD"
+    "\n *Fell back to nlminb, as two steps in a row were over 1.5 SD"
   )
   expect_match(text, "\n *One more step would move a mean by [0-9.e-]+ SD")
   expect_no_match(text, "! Fell back")

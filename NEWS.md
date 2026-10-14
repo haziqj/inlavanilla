@@ -131,3 +131,9 @@
   fails, and it then reported convergence well short of the VB mean: 0.29
   posterior SDs on a one-parameter posterior with a boundary. Fits whose
   fallback settles are unchanged, and `verbose = TRUE` reports the rerun.
+* A VB fixed-point step over 1.5 posterior SDs is now cut to 1.5, and the
+  iteration goes on; only two such steps in a row hand over to the fallback
+  optimiser. INLAvaan hands over at the first step over 1 SD, but on a skewed
+  posterior the first step overshoots and the iteration then comes back. On
+  a DINA model with 63 parameters and a gradient the handover cost 54,000
+  calls to reach the point that six fixed-point steps reach.

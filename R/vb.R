@@ -110,6 +110,9 @@ simplex_rule <- function(m) {
   )
 }
 
+# The largest fixed-point step, in posterior SDs (see vb_correct())
+vb_maxstep <- 1.5
+
 vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   m <- length(mode)
   stein <- is.null(gr)
@@ -220,13 +223,17 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   # Fixed-point iteration shift <- shift + step_at(shift): with the curvature
   # of the Laplace approximation, the Newton step for the stationarity
   # condition is one multiplication by Sigma. Convergence is judged on the
-  # step in posterior SDs. A step over `maxstep` SDs, or a non-finite step,
-  # means the quadratic premise has failed (a strongly skewed posterior), and
-  # the solve falls back to nlminb().
-  # The history (the step at each iteration, in posterior SDs, and whether
-  # the Anderson secant replaced it) and the reason for a fallback are kept
-  # for verbose output.
-  maxstep <- 1
+  # step in posterior SDs. On a skewed posterior the first step can overshoot
+  # the root, by over a posterior SD, and the iteration then comes back, so a
+  # step over `maxstep` SDs is cut to `maxstep` SDs. Two such steps in a row,
+  # or a non-finite step, mean the quadratic premise has failed, and the solve
+  # falls back to nlminb(). INLAvaan falls back at the first step over 1 SD,
+  # which on the ECPE DINA model (m = 63) cost 54,000 calls to reach the
+  # point that six fixed-point steps reach.
+  # The history (the step at each iteration, in posterior SDs, whether it was
+  # cut and whether the Anderson secant replaced it) and the reason for a
+  # fallback are kept for verbose output.
+  maxstep <- vb_maxstep
   shift <- numeric(m)
   iter <- 0L
   move <- Inf
@@ -234,6 +241,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   rerun <- FALSE
   reason <- NULL
   steps <- numeric()
+  cut <- logical()
   accelerated <- logical()
   step_prev <- shift_prev <- NULL
   for (it in seq_len(ctrl$vb_maxit)) {
@@ -249,10 +257,15 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     }
     move <- max(abs(step) / sds)
     steps[it] <- move
-    if (move > maxstep) {
-      fallback <- TRUE
-      reason <- "a step was over 1 posterior SD"
-      break
+    raw <- step
+    cut[it] <- move > maxstep
+    if (cut[it]) {
+      if (it > 1L && cut[it - 1L]) {
+        fallback <- TRUE
+        reason <- paste0("two steps in a row were over ", with_sd(maxstep))
+        break
+      }
+      step <- step * maxstep / move
     }
     if (move < ctrl$vb_tol) {
       shift <- shift + step
@@ -261,10 +274,11 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     }
     # Anderson(1) acceleration: a secant estimate from consecutive steps
     # removes the dominant error mode. The plain step is kept whenever the
-    # secant is degenerate or would move too far.
+    # secant is degenerate or would move too far, and after a cut step. The
+    # secant uses the steps before any cut, the fixed-point map's values.
     update <- step
     accelerated[it] <- FALSE
-    if (!is.null(step_prev)) {
+    if (!is.null(step_prev) && !cut[it]) {
       df <- step - step_prev
       dx <- shift - shift_prev
       denom <- sum(df^2)
@@ -280,7 +294,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
         }
       }
     }
-    step_prev <- step
+    step_prev <- raw
     shift_prev <- shift
     shift <- shift + update
     iter <- it
@@ -395,6 +409,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     step_sigma = stats::setNames(step_sigma, names(mode)),
     history = list(
       steps = steps,
+      cut = cut,
       accelerated = accelerated,
       reason = reason,
       nlminb = if (fallback) nl$message,
