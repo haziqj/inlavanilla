@@ -176,12 +176,45 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   # Negative expected log-posterior, for the fallback optimiser. A failed node
   # fails the objective, since the negative centre weight would otherwise
   # reward a -Inf there.
+  failed <- 1e40
   objective <- function(shift) {
     lps <- c(lp(mode + shift), node_lp(shift))
     if (!all(is.finite(lps))) {
-      return(1e40)
+      return(failed)
     }
     -(lps[1] + sum(w[-1] * (lps[-1] - lps[1])))
+  }
+
+  # The fallback can end with no mean at which logpost is finite at every
+  # node, or at the edge of the region where it is, with the optimum beyond.
+  # The rule does not define the correction there, and a mean on that edge
+  # would only show where the nodes are, so the fit stops. The message names
+  # a node around `mode + shift` where logpost is -Inf.
+  stop_failed_nodes <- function(shift, pinned) {
+    mu <- mode + shift
+    lps <- vapply(seq_len(nn), function(b) lp(mu + Z[b, ]), 0)
+    x <- mu + Z[which.max(!is.finite(lps)), ]
+    at <- paste(names(mode), "=", signif(x, 4), collapse = ", ")
+    reach <- with_sd(max(sweep(abs(Z), 2, sds, "/")))
+    abort(
+      c(
+        "The VB mean correction cannot be computed.",
+        "x" = if (pinned) {
+          "It stopped at the edge of the region where {.arg logpost} is
+           finite at all of its nodes, and its next step puts a node at
+           {at}, where {.arg logpost} is {.code -Inf}."
+        } else {
+          "{.arg logpost} is {.code -Inf} at some of its nodes around every
+           mean tried, for example at {at}."
+        },
+        "i" = "The nodes reach {reach} from the mean, and the correction
+               needs {.arg logpost} finite at all of them.",
+        "i" = "Reparameterise any bounded parameter so that every real value
+               is allowed (for example its log or logit, with the
+               log-Jacobian), or set {.code vb = FALSE}."
+      ),
+      call = quote(inla_vanilla())
+    )
   }
 
   # Fixed-point iteration shift <- shift + step_at(shift): with the curvature
@@ -264,23 +297,61 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     # -L' Sigma^-1 step = -R step. That is the expected gradient by Stein's
     # identity, which agrees with the gradient of the objective to the error of
     # the rule, and costs no calls beyond the objective's at the same point.
+    #
+    # The gradient is not finite where logpost is -Inf at a node, as the
+    # objective is failed there, or where grad is not finite at one.
+    # nlminb() asks for it only at its start and at the points it accepts,
+    # which have a finite objective, but the start, the mode, has failed
+    # nodes when logpost is -Inf within their reach. There the gradient is
+    # the mean of the failed nodes in whitened coordinates, so that nlminb()
+    # moves the mean away from them, back towards the region where every node
+    # is finite. Finding the failed nodes takes no calls without a gradient,
+    # and one more sweep with one.
+    U <- Z %*% t(R) # whitened nodes, since L = R^-1
+    away <- function(shift) {
+      bad <- if (stein) {
+        c(FALSE, !is.finite(node_lp(shift)))
+      } else {
+        mu <- mode + shift
+        vapply(seq_len(nn), function(b) !all(is.finite(gr(mu + Z[b, ]))), NA)
+      }
+      if (any(bad)) colMeans(U[bad, , drop = FALSE]) else numeric(m)
+    }
     nl <- stats::nlminb(
       start = numeric(m),
       objective = function(d) objective(as.numeric(L %*% d)),
       gradient = function(d) {
-        if (stein) {
-          -as.numeric(R %*% step_at(as.numeric(L %*% d)))
+        shift <- as.numeric(L %*% d)
+        g <- if (stein) {
+          -as.numeric(R %*% step_at(shift))
         } else {
-          as.numeric(crossprod(L, -score(as.numeric(L %*% d))))
+          as.numeric(crossprod(L, -score(shift)))
         }
+        if (all(is.finite(g))) g else away(shift)
       },
       control = list(rel.tol = 1e-8)
     )
     shift <- as.numeric(L %*% nl$par)
     iter <- nl$iterations
+    if (nl$objective >= failed) {
+      stop_failed_nodes(shift, pinned = FALSE)
+    }
     # Where the fallback landed: the fixed-point step there, the Newton step
     # for the stationarity condition. One more sweep.
     step <- step_at(shift)
+    # A landing that did not settle may be pinned to the edge of the region
+    # where every node is finite, with the optimum beyond it. nlminb() then
+    # stops as close to the edge as its tolerance allows, so a thousandth of
+    # the step still to go leads out of the region. A landing short of an
+    # interior optimum is not that close to the edge. One more sweep, only
+    # when the landing did not settle.
+    if (
+      all(is.finite(step)) &&
+        max(abs(step) / sds) >= warn_levels$vb_step &&
+        objective(shift + step / 1000) >= failed
+    ) {
+      stop_failed_nodes(shift + step / 1000, pinned = TRUE)
+    }
   } else if (max(abs(step) / sds) >= warn_levels$vb_step) {
     # The iteration met a vb_tol above the settling level, so the step just
     # taken says little about the one still to go: take it. One more sweep,

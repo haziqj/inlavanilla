@@ -1390,3 +1390,124 @@ test_that("without a gradient a forced fallback lands close to the fixed point",
   expect_lt(max_sd_diff(fit_forced$mean_vb, ref, sds), 0.015)
   expect_lt(abs(fit_forced$logml - fit_fixed$logml), 5e-4) # observed 1.2e-4
 })
+
+test_that("the fallback stops with its own error where logpost is -Inf at the nodes", {
+  # A normal posterior truncated at a = cut. The nodes reach 2 SDs, so
+  # logpost is -Inf at some of them around the mode, and the fallback
+  # starts there. Its gradient used to be NaN at that start, and the fit
+  # stopped with "NA/NaN gradient evaluation" and a hint to return -Inf,
+  # which this logpost already does.
+  truncated <- function(cut) {
+    list(
+      logpost = function(t) {
+        if (t[[1]] < cut) {
+          -Inf
+        } else {
+          stats::dnorm(t[[1]], log = TRUE) +
+            stats::dnorm(t[[2]], t[[1]], log = TRUE)
+        }
+      },
+      grad = function(t) {
+        if (t[[1]] < cut) {
+          c(NaN, NaN)
+        } else {
+          c(t[[2]] - 2 * t[[1]], t[[1]] - t[[2]])
+        }
+      }
+    )
+  }
+  init <- c(a = 0.2, b = 0)
+  vb_error <- function(mod, grad) {
+    err <- expect_error(
+      inla_vanilla(mod$logpost, init, grad = grad, silent = TRUE),
+      class = "inlavanilla_error"
+    )
+    msg <- cli::ansi_strip(conditionMessage(err))
+    expect_match(
+      msg,
+      "The VB mean correction cannot be computed.",
+      fixed = TRUE
+    )
+    expect_match(msg, "or set `vb = FALSE`.", fixed = TRUE)
+    expect_no_match(msg, "instead of failing")
+    expect_no_match(msg, "NA/NaN")
+    msg
+  }
+
+  # Truncated half an SD below the mode: no mean within nlminb()'s reach
+  # has every node finite
+  mod <- truncated(-0.5)
+  for (grad in list(NULL, mod$grad)) {
+    msg <- vb_error(mod, grad)
+    expect_match(msg, "some of its nodes around every mean tried", fixed = TRUE)
+  }
+  # Truncated 1.5 SDs below: such means exist, but the optimum lies beyond
+  # the edge of their region, where the fallback stops
+  mod <- truncated(-1.5)
+  for (grad in list(NULL, mod$grad)) {
+    msg <- vb_error(mod, grad)
+    expect_match(msg, "It stopped at the edge of the region", fixed = TRUE)
+  }
+  # Without the VB correction the fit goes ahead
+  fit <- inla_vanilla(mod$logpost, init, vb = FALSE, silent = TRUE)
+  expect_s3_class(fit, "inla_vanilla")
+})
+
+test_that("the fallback moves to where logpost is finite at every node", {
+  # a + 1 ~ Gamma(3, 1) and b | a ~ N(a, 1). logpost is -Inf for a <= -1,
+  # 1.4 SDs below the mode and within reach of the nodes, but it falls to
+  # -Inf continuously there, so the rule's optimum lies where every node is
+  # finite. The fallback starts at the mode, where one node is not, and its
+  # gradient there moves it away from that node.
+  logpost <- function(t) {
+    if (t[[1]] <= -1) {
+      -Inf
+    } else {
+      2 *
+        log(t[[1]] + 1) -
+        (t[[1]] + 1) +
+        stats::dnorm(t[[2]], t[[1]], log = TRUE)
+    }
+  }
+  grad <- function(t) {
+    if (t[[1]] <= -1) {
+      c(NaN, NaN)
+    } else {
+      c(2 / (t[[1]] + 1) - 1 + t[[2]] - t[[1]], t[[1]] - t[[2]])
+    }
+  }
+  init <- c(a = 1, b = 1)
+  nodes_finite <- function(fit, mu) {
+    nodes <- sweep(vb_nodes(fit$cov)$nodes, 2, mu, "+")
+    all(is.finite(apply(nodes, 1, logpost)))
+  }
+
+  # With a gradient it settles at a stationary point of the rule
+  fit <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_false(nodes_finite(fit, fit$mode))
+  expect_true(nodes_finite(fit, fit$mean_vb))
+  step <- fit$diagnostics$marginals$vb_step_sigma
+  expect_true(all(is.finite(step)))
+  expect_lt(max(step), 1e-5) # observed 1.9e-6
+  expect_lt(
+    max(abs(rule_stationarity(grad, fit$mean_vb, fit$cov))),
+    1e-5 # observed 3.0e-6
+  )
+  expect_no_match(fit$warnings, "did not settle")
+
+  # Without a gradient it also lands where every node is finite, so its
+  # step there is finite. On this skewed posterior it stops short of
+  # Stein's root (observed 0.19 SDs), and the settling check says so.
+  fit_fd <- inla_vanilla(logpost, init, silent = TRUE)
+  expect_true(fit_fd$diagnostics$vb$fallback)
+  expect_true(nodes_finite(fit_fd, fit_fd$mean_vb))
+  step <- fit_fd$diagnostics$marginals$vb_step_sigma
+  expect_true(all(is.finite(step)))
+  expect_identical(
+    any(grepl("did not settle", fit_fd$warnings)),
+    max(step) > warn_levels$vb_step
+  )
+  sds <- sqrt(diag(fit$cov))
+  expect_lt(max_sd_diff(fit_fd$mean_vb, fit$mean_vb, sds), 0.1) # obs. 0.034
+})
