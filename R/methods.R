@@ -89,9 +89,9 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   approximation. Where the solver lands is checked, as the mode is:
 #'   `vb_step_sigma` is the step still to go at the VB mean, in posterior
 #'   SDs (the fixed-point step there, which is the Newton step of the VB
-#'   stationarity condition). It is flagged above 0.1, the level of the mode
-#'   check, as a correction that did not settle. That check is inlavanilla's
-#'   own.
+#'   stationarity condition; see [diagnostics()]). It is flagged above 0.1,
+#'   the level of the mode check, as a correction that did not settle. That
+#'   check is inlavanilla's own.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and
 #'   the scanned density, relative to its peak (Jamil & Rue, 2026, Section
 #'   4.4), flagged above 0.1. `alpha` is the shape of the fitted skew-normal
@@ -144,8 +144,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' one warning at the end of the fit, of class
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
 #' mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
-#' are those of INLAvaan's fit-time warning; the VB and heavy-tails checks
-#' are inlavanilla's own, as are the ridge bend and mean gap flags. Every
+#' are those of INLAvaan's fit-time warning; the VB settling and
+#' heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap flags. Every
 #' level is a package default, chosen so that a healthy fit stays silent, and
 #' not a calibrated cut-off: a tripped check is a prompt to look again, and
 #' silence is not a certificate of accuracy. In the simulations of Jamil and
@@ -926,9 +926,10 @@ method_label <- function(gaussian, vb) {
   paste0(if (gaussian) "Laplace" else "Skew-normal", if (vb) " + VB")
 }
 
-# The checks that summary() flags, each TRUE when flagged: the mode, the
-# Hessian condition number, the VB shift, and, for skew-normal marginals,
-# NMAD, the unscanned mass, the tails, the ridge bend and the mean gap.
+# The checks that summary() flags, each TRUE when flagged: the mode, the VB
+# step, the Hessian condition number, the VB shift, and, for skew-normal
+# marginals, NMAD, the unscanned mass, the tails, the ridge bend and the mean
+# gap.
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
 # warning (warn_levels), which raises every one of these but the ridge bend
 # and the mean gap (summary_levels). A check that did not run is not

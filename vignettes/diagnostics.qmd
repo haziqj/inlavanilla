@@ -68,8 +68,8 @@ names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics,
 and the gap between the skew-normal and VB means as an internal check; the
 mode shift, the Hessian condition number and the unscanned mass come from
 INLAvaan's `diagnostics()`, not from the paper. The levels of those five
-checks are INLAvaan's, and the fit-time warning uses its words. The VB and
-tails checks are inlavanilla's own, and so are the ridge bend and mean gap
+checks are INLAvaan's, and the fit-time warning uses its words. The VB
+settling and tails checks are inlavanilla's own, and so are the ridge bend and mean gap
 checks, which only `summary()` flags. Every level is a package default, chosen so
 that a healthy fit stays silent, and not a calibrated cut-off: a tripped
 check is a prompt to look again, and silence is not a certificate of

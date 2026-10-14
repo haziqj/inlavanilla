@@ -11,10 +11,11 @@
 # INLAvaan's bullet for a non-zero return code of nlminb() is left out:
 # without a gradient nlminb() reports false convergence at accurate modes.
 # The VB fallback is recorded only, as in INLAvaan: it is a route of the
-# solver, and the settling check judges where it lands. summary() flags every warned check at the same level, and also
-# the ridge bend and the mean gap, which never warn. A check that did
-# not run (VB with vb = FALSE, the scans with Gaussian marginals) is NA and
-# never flagged; one that ran and gave a value that is not finite is.
+# solver, and the settling check judges where it lands. summary() flags
+# every warned check at the same level, and also the ridge bend and the mean
+# gap, which never warn. A check that did not run (VB with vb = FALSE, the
+# scans with Gaussian marginals) is NA and never flagged; one that ran and
+# gave a value that is not finite is.
 warn_levels <- list(
   mode_shift = 0.1,
   nmad = 0.1,
@@ -361,8 +362,8 @@ warn_diagnostics <- function(dg, gaussian) {
 #' (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
 #' (`mean_gap`) as an internal check (Section 5.1). The mode shift, the
 #' Hessian condition number and the unscanned mass come from INLAvaan's
-#' `diagnostics()`, not from the paper. `tails` and `ridge_bend` are
-#' inlavanilla's own.
+#' `diagnostics()`, not from the paper. `vb_step_sigma`, `tails` and
+#' `ridge_bend` are inlavanilla's own.
 #'
 #' @details
 #' A posterior SD here is the Laplace SD at the mode,

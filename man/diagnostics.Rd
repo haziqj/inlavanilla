@@ -39,8 +39,8 @@ Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
 (\code{mean_gap}) as an internal check (Section 5.1). The mode shift, the
 Hessian condition number and the unscanned mass come from INLAvaan's
-\code{diagnostics()}, not from the paper. \code{tails} and \code{ridge_bend} are
-inlavanilla's own.
+\code{diagnostics()}, not from the paper. \code{vb_step_sigma}, \code{tails} and
+\code{ridge_bend} are inlavanilla's own.
 }
 \details{
 A posterior SD here is the Laplace SD at the mode,
