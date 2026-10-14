@@ -167,6 +167,9 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' check pass, so no further step at the mode or at the VB mean would move
 #' a parameter by more than 0.1 posterior SDs. It says nothing of how well
 #' the approximation fits the posterior, which the other checks judge.
+#' Without a gradient a strongly skewed posterior can read "Not converged:
+#' VB did not settle": the VB mean from `logpost` values alone is then
+#' approximate, and supplying `grad` is the fix.
 #' Printing the fit ends with a line for its warnings and one counting the
 #' checks flagged here, each shown only when there are any.
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check

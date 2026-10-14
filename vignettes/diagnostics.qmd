@@ -140,7 +140,10 @@ marginal likelihood and the expansions of `loo()` and `waic()`. The
 skew-normal marginals do not depend on it, since they are scanned around the
 mode, and `vb = FALSE` leaves it out. Gaussian marginals
 (`marginals = "gaussian"`) are centred on it, and `vb = FALSE` centres them
-at the mode instead.
+at the mode instead. Without a gradient, the usual cause is not the solver
+but the VB mean itself: from `logpost` values alone it is exact only for a
+log-posterior of degree four, and on a strongly skewed posterior it can be
+about 0.1 SDs out. Supplying `grad` is the fix.
 
 The skew-normal mean and the VB mean both estimate the posterior mean, by
 different routes. Both recover the leading, $O(n^{-1})$ shift from the mode

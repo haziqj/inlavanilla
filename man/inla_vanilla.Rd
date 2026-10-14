@@ -200,8 +200,11 @@ because Stein's identity gives the expected gradient from values of
 \code{logpost} alone. Its VB mean is then exact when the log-posterior is a
 polynomial of degree four in whitened coordinates, and up to degree six
 with \code{grad}. On test models it was about 0.01 posterior SDs from exact VB
-(0.003 with \code{grad}), and up to 0.1 on a strongly skewed posterior, against
-a VB error of 0.01 to 0.2 SDs from the posterior mean itself.
+(0.003 with \code{grad}), and up to 0.1 on a strongly skewed posterior (0.03
+with \code{grad}), against a VB error of 0.01 to 0.2 SDs from the posterior mean
+itself. On the most skewed posteriors the VB correction may then not
+settle, and the fit says it has not converged (see
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}); \code{grad} is the remedy.
 
 With \code{grad}, every stage is faster and more accurate. The VB correction
 then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
