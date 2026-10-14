@@ -169,6 +169,15 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     fixed = TRUE
   )
   expect_no_match(text, "`a`")
+  # Gaussian marginals are centred on the VB mean, so the hint says so
+  expect_match(
+    warning_text(d, gaussian = TRUE),
+    paste0(
+      "i The Gaussian marginals are centred on the VB mean; `vb = FALSE` ",
+      "centres them at the mode."
+    ),
+    fixed = TRUE
+  )
   d$vb_step_sigma <- c(0.1, 0.1)
   expect_length(problems(d), 0)
 
