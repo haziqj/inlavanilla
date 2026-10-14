@@ -47,6 +47,15 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
     - With a gradient, every γ₁ can come from 4m gradient calls instead of 2m² + 2m: the second differences of the gradient along the whitened axes, summed, give the trace part for all j at once. It agreed with `gamma1_grad()` to 6e-4 and would make a fit at m = 40 about 1.5× faster, but the owner judged it not worth changing INLAvaan's shortcut. Without a gradient there is no such saving.
   - PPP and DIC
 
+- **An optional `hess`** (owner's decision, October 2026, after first parking it as a v1.1 idea). The package is meant to be reached for instead of `optim()` or `nlminb()` for a MAP, and `nlminb()` takes a Hessian, so `inla_vanilla(logpost, init, grad = NULL, hess = NULL, ...)` does too, after `grad` as in `nlminb()`. It needs `grad` (an error otherwise). Each stage uses it where it can, and falls back to the current route without it:
+  - `nlminb()` gets it as `hessian`, in the first run and the restart. Newton steps take far fewer iterations (10 against 87 on PolDem) and land much closer to the mode (whitened gradient 6e-7 against 1e-4), but each costs a Hessian: on PolDem the mode stage is a little slower (29 to 37 ms), on a sparse model faster (16 to 2 ms). On a correlated Gaussian with SDs from 1e-6 to 1e4, started one unit off, it lands on the mode without the restart that the gradient route needs.
+  - The Hessian at the mode is the user's, symmetrised, and the curvature scales come from its diagonal (no `fd_scales()`). `hess_discrepancy()` checks it against central differences of `grad` along two fixed whitened directions (all ones, alternating signs), 4 gradient calls whatever m, with a warning above 1e-3.
+  - The volume correction gets a third route, `gamma1_hess()`: one Hessian at ϑ* + 0.01 vⱼ gives tr(HΣ) and vⱼᵀHvⱼ, against 2m + 2 gradient calls. It agrees with `gamma1_grad()` to 1e-9 and has the same O(d_outer) error against the exact slope.
+  - VB, the scans, `scan_bend()` and `loo()` do not use it: VB averages gradients, and `loo()` needs Hessians of `loglik`.
+  - Measured with RTMB on five models, warm, median of three fits each, gradient alone against gradient and a Hessian tape (`MakeTape(f, x)$jacfun()$jacfun()`, a little faster than `obj$he`): logistic regression with m = 10, 0.19 to 0.16 s (14%); with m = 40, 8.4 to 6.7 s (20%); the PolDem SEM, m = 39, 0.99 to 0.86 s (13%); a Poisson regression with 50 group intercepts and a slope (an arrow-shaped Hessian), m = 51, 0.64 to 0.42 s (35%); Michaelis–Menten, m = 3, 5 ms either way. The marginals stage was 1.4 to 3.9 times as fast. A dense AD Hessian costs about m gradients (43 at m = 39), a sparse one far fewer (7 at m = 53), and VB, which takes no Hessian, caps the gain. The fits agreed with the gradient route to 2e-5 SDs at most, a difference that comes from the more precise mode.
+  - On a degenerate model (non-centred random intercepts as parameters, joint mode of log τ far from the truth, four diagnostics warnings with or without `hess`), the two routes' marginals differed by SDs. The gradient route stopped 3e-4 SDs from the mode, under the 1e-3 restart level, and the posterior amplified that. Newton steps from there land on the Hessian route's mode.
+  - TMB gives no Hessian for a model with random effects (`obj$he()` stops, and `sdreport()` itself takes `optimHess()` of the gradient).
+
 ## Open
 
 Nothing at present.
@@ -103,23 +112,11 @@ Nothing at present.
 
   A structured `init` such as `list(Sigma = diag(p))` could sit on top. None of this changes the engine.
 - A TMB adaptor: with random effects, TMB's `fn` is already the Laplace-integrated π(y | ϑ).
-- **A `hess` argument (v1.1 idea, parked October 2026).** `inla_vanilla(logpost, init, grad = NULL, hess = NULL, ...)` would use a supplied Hessian, such as RTMB's `obj$he`, and fall back to the current finite differences without one. Measured on the PolDem SEM with RTMB (m = 39, a 1.15 s fit, one Mac; the benchmark scripts were not kept):
-  - One `obj$he()` costs as much as about 43 `obj$gr()` calls (3.9 ms against 90 µs), because a dense AD Hessian takes about m reverse sweeps.
-  - One Hessian per parameter instead of 2m + 2 gradient calls takes the γ₁ volume correction from 0.28 s to 0.15 s. One Hessian instead of `fd_scales()` and 2m gradient calls takes the Hessian at the mode from 22 ms to 4 ms. Together that is 10–13% of the fit. Even a free Hessian would save at most these two parts, about 26%: VB, half the fit, averages gradients, and `loo()` needs the Hessians of `loglik`, not of `logpost`.
-  - There is no accuracy gain. Central differences of the gradient match the AD Hessian to 2e-9 relative, the posterior SDs to 1.4e-9 and γ₁ to 2e-7.
-  - `nlminb(hessian = )` finds the mode in 10 iterations instead of 87, but is 4.5× slower (41 ms against 9 ms). On a badly scaled Gaussian (SDs from 1e-6 to 1e4), the gradient-only first pass missed the mode by more than 1e-3 SD from 14 of 20 starts, and the Hessian pass reached it from all 20. `inla_vanilla()`'s restart already rescues all 20, to within 1.4e-8 SD.
-  - With random effects there is no AD Hessian: TMB's `obj$he()` stops, and `sdreport()` itself takes `optimHess()` of the gradient.
-  - Decision: a third input route through every stage is not worth about 10%. If it is taken up:
-    - require `grad` whenever `hess` is given;
-    - use `hess` after the mode only, for the Laplace Hessian and for γ₁ as a third route beside `gamma1_grad()` and `gamma1_lp()`, and keep `nlminb()` on the gradient, or use Newton steps in the restart only;
-    - check a user Hessian once at the mode against differences of the gradient, as the asymmetry check does for `grad`;
-    - place `hess` after `grad`, as `nlminb()` does, and add a `hess` count to `fit$counts`.
-  - It pays more for a closed-form Hessian that costs about one gradient, such as a GLM's XᵀWX: there γ₁ costs about 1/m of what it does now, but VB still costs the same.
 
 ## API sketch (v0.1)
 
 ```r
-fit <- inla_vanilla(logpost, init, grad = NULL, ..., vb = TRUE,
+fit <- inla_vanilla(logpost, init, grad = NULL, hess = NULL, ..., vb = TRUE,
                     marginals = c("skewnormal", "gaussian"), verbose = FALSE,
                     silent = FALSE, control = list())
 fit; summary(fit); plot(fit)

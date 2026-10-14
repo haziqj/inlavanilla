@@ -125,6 +125,15 @@
 * The check of a user `grad` also compares it with finite differences one
   curvature scale from `init`, so a gradient that is wrong by a constant
   factor is caught even when `init` is at the mode.
+* `inla_vanilla()` takes the Hessian of `logpost` as an optional `hess`,
+  after `grad`, as `nlminb()` does. With it, `nlminb()` takes Newton steps to
+  the mode, the Hessian at the mode is the supplied one, and the volume
+  correction of each skew-normal marginal takes one `hess` call instead of
+  2m + 2 `grad` calls. RTMB gives it with the gradient, as `obj$he`. The fit
+  is the same, except that the mode is found more precisely, and on test
+  models it took 13% to 35% less time. A supplied `hess` is checked at the
+  mode against central differences of `grad`, and `fit$counts` counts its
+  calls.
 * `print()` names the approximation on its header rule ("Skew-normal + VB",
   "Skew-normal", "Laplace + VB" or "Laplace"), as `summary()` now does,
   instead of the run time, which `summary()` still reports. It ends with a
