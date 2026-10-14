@@ -105,7 +105,7 @@ scrub_numbers <- function(x) {
     x
   )
   x <- gsub(
-    "(?<![A-Za-z0-9_.])(?<!above )-?([0-9]+\\.[0-9]+(e[-+]?[0-9]+)?|[0-9]+e[-+]?[0-9]+)",
+    "(?<![A-Za-z0-9_.])(?<!> )-?([0-9]+\\.[0-9]+(e[-+]?[0-9]+)?|[0-9]+e[-+]?[0-9]+)",
     "#",
     x,
     perl = TRUE
@@ -1326,10 +1326,10 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   )
   expect_match(
     text,
-    "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning above 0.001\\), [0-9]+ logpost calls"
+    "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning > 0.001\\), [0-9]+ logpost calls"
   )
   expect_match(text, "Hessian by central differences of grad: 4 calls")
-  expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning above 0.001\\)")
+  expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning > 0.001\\)")
   expect_match(text, "Done: [0-9]+ logpost and [0-9]+ grad calls")
 
   # Without VB or scans, it says so
@@ -1379,7 +1379,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   expect_match(text, "Restarted nlminb with each parameter scaled")
   expect_match(
     text,
-    "whitened gradient [0-9.e-]+ SD, Newton step [0-9.e-]+ SD! \\(warning above"
+    "whitened gradient [0-9.e-]+ SD, Newton step [0-9.e-]+ SD! \\(warning >"
   )
   expect_match(
     text,
@@ -1389,7 +1389,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   # The VB shift and the scan-end mass are marked where they are shown
   expect_match(
     text,
-    "Largest shift -?[0-9.]+ SD!, for theta\\[1\\] \\(warning above 1 SD\\)"
+    "Largest shift -?[0-9.]+ SD!, for theta\\[1\\] \\(warning > 1 SD\\)"
   )
   expect_match(text, "heavy! +0\\.9[0-9]*! +")
   expect_match(text, "heavy!")
@@ -2068,14 +2068,14 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_identical(
     flagged(above),
     c(
-      "! Mode search stopped short (\"relative convergence (4)\"): the Newton step is more than 0.1 SD for `slope` (0.10).",
+      "! Mode search stopped short (\"relative convergence (4)\"): Newton step > 0.1 SD for `slope` (0.10).",
       "! The Hessian at the mode is near-singular (condition number = 1.02e+08); some parameters may be weakly identified.",
-      "! VB correction in 3 iterations: the shift is more than 1 SD for `slope` (1.02).",
+      "! VB correction in 3 iterations: shift > 1 SD for `slope` (1.02).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.10).",
       "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 SD either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
       "! Heavy tails for `slope`: the density is still over 5% of its peak at the ends of the scanned window (4 SD either side of the mode), and the skew-normal extrapolates beyond it.",
-      "! Ridge bend above 0.25 for `slope` (0.26): the marginal SD may be about 10% or more too small.",
-      "! Mean gap above 0.1 SD for `slope` (0.10): the posterior is far from Gaussian there, and either mean may be off."
+      "! Ridge bend > 0.25 for `slope` (0.26): the marginal SD may be >10% too small.",
+      "! Mean gap > 0.1 SD for `slope` (0.10): the posterior is far from Gaussian there, and either mean may be off."
     )
   )
 
@@ -2087,7 +2087,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_identical(
     flagged(both),
     c(
-      "! VB correction in 3 iterations: the shift is more than 1 SD for `intercept` (1.50), `slope` (1.20).",
+      "! VB correction in 3 iterations: shift > 1 SD for `intercept` (1.50), `slope` (1.20).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.25), `intercept` (0.12)."
     )
   )

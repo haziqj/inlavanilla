@@ -264,8 +264,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status(
       "warn",
       paste0(
-        "Mode search stopped short ({.val {opt$message}}): the Newton step ",
-        "is more than ",
+        "Mode search stopped short ({.val {opt$message}}): Newton step > ",
         with_sd(warn_levels$mode_shift),
         " for ",
         listed,
@@ -302,8 +301,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       cat_status(
         "warn",
         paste0(
-          "VB correction in {x$vb$iterations} iteration{?s}{how}: the ",
-          "shift is more than ",
+          "VB correction in {x$vb$iterations} iteration{?s}{how}: shift > ",
           with_sd(warn_levels$vb_shift),
           " for ",
           listed,

@@ -73,23 +73,23 @@
         logpost at init #
       v Found the posterior mode in <n> iteration(s) [<time>]
         nlminb: <message>, after <n> iteration(s) (<n> function and <n> gradient evaluations)
-        logpost at the mode #, whitened gradient # SD, Newton step <g> SD (warning above 0.1 SD)
+        logpost at the mode #, whitened gradient # SD, Newton step <g> SD (warning > 0.1 SD)
         Hessian by second differences of logpost: 6 calls, and <n> more to set the steps
         Posterior correlation matrix: largest correlation # (intercept, slope), smallest eigenvalue #
-        Hessian condition number #, in SD units (warning above 1e+08)
+        Hessian condition number #, in SD units (warning > 1e+08)
         Laplace log marginal likelihood #
         <n> logpost calls
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
         Converged in <n> iteration(s), <anderson>; no fallback
-        Largest shift # SD, for intercept (warning above 1 SD)
+        Largest shift # SD, for intercept (warning > 1 SD)
         KL term #, giving a log marginal likelihood of #
         <n> logpost calls
       v Fitted 2 skew-normal marginals [<time>]
                    Shape NMAD Ridge bend Tails Unscanned gamma1
         intercept # # # ok # #
         slope # # # ok # #
-        ! marks what summary() flags: NMAD above 0.1, ridge bend above 0.25, heavy tails, unscanned mass above 0.05
+        ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails, unscanned mass > 0.05
         <n> logpost calls
       i Done: <n> logpost calls in <time>
 
@@ -99,28 +99,28 @@
       invisible(inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE))
     Message
       i 2 parameters: intercept and slope
-        Gradient from grad, checked at init: relative discrepancy # (warning above 0.001), <n> logpost calls
+        Gradient from grad, checked at init: relative discrepancy # (warning > 0.001), <n> logpost calls
         logpost at init #
       v Found the posterior mode in <n> iteration(s) [<time>]
         nlminb: <message>, after <n> iteration(s) (<n> function and <n> gradient evaluations)
-        logpost at the mode #, whitened gradient # SD, Newton step <g> SD (warning above 0.1 SD)
+        logpost at the mode #, whitened gradient # SD, Newton step <g> SD (warning > 0.1 SD)
         Hessian by central differences of grad: 4 calls, and <n> logpost calls to set the steps
-        Jacobian asymmetry # (warning above 0.001)
+        Jacobian asymmetry # (warning > 0.001)
         Posterior correlation matrix: largest correlation # (intercept, slope), smallest eigenvalue #
-        Hessian condition number #, in SD units (warning above 1e+08)
+        Hessian condition number #, in SD units (warning > 1e+08)
         Laplace log marginal likelihood #
         <n> logpost and <n> grad calls
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
         Converged in <n> iteration(s), <anderson>; no fallback
-        Largest shift # SD, for intercept (warning above 1 SD)
+        Largest shift # SD, for intercept (warning > 1 SD)
         KL term #, giving a log marginal likelihood of #
         <n> grad calls
       v Fitted 2 skew-normal marginals [<time>]
                    Shape NMAD Ridge bend Tails Unscanned gamma1
         intercept # # # ok # #
         slope # # # ok # #
-        ! marks what summary() flags: NMAD above 0.1, ridge bend above 0.25, heavy tails, unscanned mass above 0.05
+        ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails, unscanned mass > 0.05
         <n> logpost and <n> grad calls
       i Done: <n> logpost and <n> grad calls in <time>
 
