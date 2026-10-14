@@ -225,12 +225,12 @@ init <- c(
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
 fit <- inla_vanilla(logpost, init, x = x, eta = 2)
-#> ✔ Found the posterior mode in 34 iterations [1.5s]
-#> ✔ VB mean correction, max shift 0.38σ [2.1s]
-#> ✔ Fitted 54 skew-normal marginals [3.2s]
+#> ✔ Found the posterior mode in 34 iterations [2.2s]
+#> ✔ VB mean correction, max shift 0.38σ [3.1s]
+#> ✔ Fitted 54 skew-normal marginals [4.7s]
 ```
 
-The fit takes about 7 seconds, and `summary(fit)` flags nothing. The
+The fit takes about 10 seconds, and `summary(fit)` flags nothing. The
 first six CPCs, on the atanh scale:
 
 ``` r

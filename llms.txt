@@ -209,8 +209,9 @@ articles fit the same structural equation model, with 39 parameters.
   written first in R and then in C++ with Rcpp and RcppEigen, with an
   analytic gradient.
 
-- [Gradients with RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md):
+- [Gradients and Hessians with
+  RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md):
 
   The structural equation model of the Rcpp article written for RTMB,
-  which differentiates R code automatically, and compared with R and C++
-  for speed and accuracy.
+  which differentiates R code automatically to give the gradient and the
+  Hessian, and compared with R and C++ for speed and accuracy.

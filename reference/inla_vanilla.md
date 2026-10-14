@@ -42,6 +42,7 @@ inla_vanilla(
   logpost,
   init,
   grad = NULL,
+  hess = NULL,
   ...,
   vb = TRUE,
   marginals = c("skewnormal", "gaussian"),
@@ -72,17 +73,25 @@ inla_vanilla(
   `logpost` as a numeric vector. When `NULL` (the default), finite
   differences are used.
 
+- hess:
+
+  Optional function `hess(theta, ...)` returning the Hessian of
+  `logpost`, the m x m matrix of its second derivatives (a sparse matrix
+  from the Matrix package, and a number when m = 1, work too). It needs
+  `grad`. When `NULL` (the default), finite differences of `grad` are
+  used.
+
 - ...:
 
-  Further arguments passed to `logpost` and `grad`, such as the data. As
-  in [`stats::optim()`](https://rdrr.io/r/stats/optim.html) and
-  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), they come
-  after the gradient, and the arguments after them (`vb`, `marginals`,
-  `verbose`, `silent`, `control`) must be given by their full names, so
-  data arguments cannot partially match them. The arguments before them
-  can be matched, as in [`optim()`](https://rdrr.io/r/stats/optim.html):
-  a data argument named `g` or `gr` would be taken as `grad`, so give it
-  a longer name.
+  Further arguments passed to `logpost`, `grad` and `hess`, such as the
+  data. As in [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
+  they come after the gradient and the Hessian, and the arguments after
+  them (`vb`, `marginals`, `verbose`, `silent`, `control`) must be given
+  by their full names, so data arguments cannot partially match them.
+  The arguments before them can be matched, as in
+  [`nlminb()`](https://rdrr.io/r/stats/nlminb.html): a data argument
+  named `g` or `gr` would be taken as `grad`, and one named `h` or `he`
+  as `hess`, so give it a longer name.
 
 - vb:
 
@@ -234,7 +243,7 @@ larger than that of marginals within 7% in SD, and the `tails` check,
 which looks only 4 posterior SDs either side of the mode (the Laplace
 SDs), missed both.
 
-## Gradients
+## Gradients and Hessians
 
 `grad` is optional. Without it, derivatives come from finite differences
 of `logpost`, and the number of calls grows with the square of the
@@ -264,16 +273,32 @@ slowest stages. `vb = FALSE` skips the VB correction (and its term in
 the log marginal likelihood), and the skew-normal marginals do not
 depend on it; `marginals = "gaussian"` saves the calls of the scans.
 
+`hess` is optional too, and needs `grad`, as in
+[`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html). With it,
+[`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes Newton
+steps to the mode, the Hessian at the mode is the supplied one, and the
+volume correction of each skew-normal marginal takes one `hess` call
+instead of 2m + 2 `grad` calls. The VB correction and the scans do not
+use it. The fit is the one `grad` alone gives, to the error of its
+finite differences (about 1e-8, relative), except that the mode is found
+more precisely, so `hess` saves time rather than adding accuracy. On
+test models with an automatic-differentiation Hessian (RTMB) the fits
+took 13% to 35% less time, the most where the Hessian was sparse.
+
 A supplied `grad` is checked against finite differences at `init`, and
 its Jacobian at the mode is checked for symmetry, with a warning if
-either check fails. Any R function works for `logpost` and `grad`,
-including compiled code (Rcpp, TMB) and RTMB, which differentiates R
-code. An RTMB function can return the log-posterior itself, and its
-`obj$fn` and `obj$gr` are then passed as they are. For a TMB template
-that returns the negative log-posterior, pass `function(x) -obj$fn(x)`
-and `function(x) -as.vector(obj$gr(x))`, with `init = obj$par`; its
-repeated names (one per element of a parameter vector) are numbered, as
-`beta[1]`, `beta[2]`, and so on.
+either check fails. A supplied `hess` is checked at the mode against
+central differences of `grad`, along two directions, with a warning if
+it does not match. Any R function works for `logpost`, `grad` and
+`hess`, including compiled code (Rcpp, TMB) and RTMB, which
+differentiates R code. An RTMB function can return the log-posterior
+itself, and its `obj$fn`, `obj$gr` and `obj$he` are then passed as they
+are. For a TMB template that returns the negative log-posterior, pass
+`function(x) -obj$fn(x)`, `function(x) -as.vector(obj$gr(x))` and
+`function(x) -obj$he(x)`, with `init = obj$par`; its repeated names (one
+per element of a parameter vector) are numbered, as `beta[1]`,
+`beta[2]`, and so on. TMB gives no Hessian for a model with random
+effects.
 
 ## Control
 
@@ -326,11 +351,12 @@ calls of `logpost` or `grad`:
   the mode, the whitened gradient there (which decides the restart) and
   the largest Newton step in posterior SDs (which the fit-time warning
   checks); how the Hessian was taken (and, for a supplied `grad`, the
-  asymmetry of its Jacobian); the largest posterior correlation and the
-  smallest eigenvalue of the correlation matrix, which is near zero when
-  some combination of the parameters is poorly identified, and the
-  condition number of the Hessian in posterior-SD units; and the Laplace
-  log marginal likelihood.
+  asymmetry of its Jacobian, or, for a supplied `hess`, how far it is
+  from central differences of `grad`); the largest posterior correlation
+  and the smallest eigenvalue of the correlation matrix, which is near
+  zero when some combination of the parameters is poorly identified, and
+  the condition number of the Hessian in posterior-SD units; and the
+  Laplace log marginal likelihood.
 
 - The VB correction: the largest step, in posterior SDs, at each
   fixed-point iteration, whether Anderson acceleration or the fallback
@@ -343,8 +369,8 @@ calls of `logpost` or `grad`:
   [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   flags marked.
 
-- The calls of `logpost` and `grad` in each stage, and in all, with the
-  total time.
+- The calls of `logpost`, `grad` and `hess` in each stage, and in all,
+  with the total time.
 
 For the iteration trace of
 [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) itself, pass
@@ -352,12 +378,13 @@ For the iteration trace of
 
 `silent = TRUE` prints nothing, for simulations and other repeated fits:
 no progress bars and no stage lines, and every warning and message
-raised during the fit, including those of `logpost` and `grad`, is
-muffled. Errors are still raised. Output printed with
+raised during the fit, including those of `logpost`, `grad` and `hess`,
+is muffled. Errors are still raised. Output printed with
 [`cat()`](https://rdrr.io/r/base/cat.html) or
-[`print()`](https://rdrr.io/r/base/print.html), by `logpost`, `grad` or
-the trace of [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
-is not captured.
+[`print()`](https://rdrr.io/r/base/print.html), by `logpost`, `grad`,
+`hess` or the trace of
+[`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), is not
+captured.
 
 Whatever the level, the warnings raised during the fit are recorded in
 `fit$warnings`, so that a simulation can check them afterwards.
@@ -401,13 +428,13 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ Found the posterior mode in 10 iterations [3ms]
 #> ✔ VB mean correction, max shift 0.24σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [8ms]
+#> ✔ Fitted 2 skew-normal marginals [11ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (13ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (19ms)
 #> 
 #>               Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu         5.159  0.327  4.517  5.159  5.800  5.159
@@ -432,8 +459,8 @@ fit <- inla_vanilla(
 #> ✔ Found the posterior mode in 10 iterations [1ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
-#>     (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
+#>     8.8e-08σ (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -441,20 +468,20 @@ fit <- inla_vanilla(
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [1ms]
+#> ✔ VB mean correction, max shift 0.24σ [2ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
 #>   Largest shift 0.24σ, for log_sigma (warning > 1σ)
 #>   KL term 0.029, giving a log marginal likelihood of -66.38
 #>   18 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     5.5e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   66 logpost calls
-#> ℹ Done: 147 logpost calls in 19ms
+#> ℹ Done: 147 logpost calls in 27ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

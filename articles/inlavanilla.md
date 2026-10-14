@@ -76,13 +76,13 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [6ms]
-#> ✔ VB mean correction, max shift 0.44σ [12ms]
-#> ✔ Fitted 3 skew-normal marginals [8ms]
+#> ✔ Found the posterior mode in 10 iterations [8ms]
+#> ✔ VB mean correction, max shift 0.44σ [16ms]
+#> ✔ Fitted 3 skew-normal marginals [10ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.61 · Converged in 10 iterations (30ms)
+#> Log marginal likelihood: -11.61 · Converged in 10 iterations (40ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -111,9 +111,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.612 · Converged in 10 iterations (30ms)
+#> Log marginal likelihood: -11.612 · Converged in 10 iterations (40ms)
 #> Laplace -11.709 + VB term 0.097
-#> 263 logpost calls: mode 6ms, VB 12ms, marginals 8ms
+#> 263 logpost calls: mode 8ms, VB 16ms, marginals 10ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -295,11 +295,11 @@ grad <- function(theta, X, y) {
 }
 fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
-#> [1] 1.813245e-06
+#> [1] 1.813216e-06
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
-#>                    logpost grad
-#> finite_differences     263    0
-#> gradient               134  108
+#>                    logpost grad hess
+#> finite_differences     263    0    0
+#> gradient               134  108    0
 ```
 
 The two fits agree to several decimal places, and the gradient version
@@ -364,7 +364,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008176
+#> [1,] -0.7657929 -5.309342 0.3008175
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```
@@ -514,16 +514,26 @@ obj <- RTMB::MakeADFun(
 fit_rtmb <- inla_vanilla(obj$fn, init, grad = obj$gr)
 ```
 
-Any R function works as `logpost` and `grad`, including compiled code
-from Rcpp or TMB. A TMB template usually returns the negative
-log-posterior, to be minimised, so negate its `obj$fn` and `obj$gr`.
+RTMB gives the Hessian too, as `obj$he`, and
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+takes it as `hess`, after `grad`, as
+[`nlminb()`](https://rdrr.io/r/stats/nlminb.html) does:
+`inla_vanilla(obj$fn, init, grad = obj$gr, hess = obj$he)`. The fit is
+the same, but its mode is found more precisely and it takes a little
+less time.
+
+Any R function works as `logpost`, `grad` and `hess`, including compiled
+code from Rcpp or TMB. A TMB template usually returns the negative
+log-posterior, to be minimised, so negate its `obj$fn`, `obj$gr` and
+`obj$he`.
 
 The articles [Speeding up with
-Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md) and [Gradients with
-RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md) work through both
-routes for a structural equation model with 39 parameters. C++ makes
-each call about ten times faster than R. A gradient from RTMB makes the
-fit more accurate, at about the speed of R.
+Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md) and [Gradients and
+Hessians with RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md) work
+through both routes for a structural equation model with 39 parameters.
+C++ makes each call about ten times faster than R. A gradient from RTMB
+makes the fit more accurate, at about the speed of R, and its Hessian
+makes it a little faster.
 
 ## References
 

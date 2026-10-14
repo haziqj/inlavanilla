@@ -13,7 +13,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,7 +33,7 @@
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
-    <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients with RTMB</a></li>
+    <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
@@ -52,6 +52,12 @@
       <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.1" id="inlavanilla-011">inlavanilla 0.1.1<a class="anchor" aria-label="anchor" href="#inlavanilla-011"></a></h2>
+<ul><li>
+<code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> takes the Hessian of <code>logpost</code> as an optional <code>hess</code>, after <code>grad</code>, as <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> does. With it, <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> takes Newton steps to the mode, the Hessian at the mode is the supplied one, and the volume correction of each skew-normal marginal takes one <code>hess</code> call instead of 2m + 2 <code>grad</code> calls. RTMB gives it with the gradient, as <code>obj$he</code>. The fit is the same, except that the mode is found more precisely, and on test models it took 13% to 35% less time. A supplied <code>hess</code> is checked at the mode against central differences of <code>grad</code>, and <code>fit$counts</code> counts its calls.</li>
+<li>The website article “Gradients with RTMB” is now “Gradients and Hessians with RTMB”. It passes RTMB’s Hessian too, and shows where the fit uses it, the time it saves and the more precise mode it finds.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="inlavanilla-010">inlavanilla 0.1.0<a class="anchor" aria-label="anchor" href="#inlavanilla-010"></a></h2>
 <ul><li>Initial version. <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> approximates the posterior of any log-posterior written on an unconstrained scale with the INLAvaan pipeline: a Laplace approximation, a VB mean correction (by a deterministic degree-5 cubature rule), skew-normal marginals with the volume correction, and the log marginal likelihood. <code><a href="../reference/sampling.html">sampling()</a></code> gives Gaussian-copula draws of the parameters or of any function of them. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> methods report the fit and its diagnostics.</li>
@@ -88,7 +94,8 @@
 <li>With a gradient, a VB fallback that lands short of settled is rerun once from where it landed. That happens when the optimiser starts where a node fails, and it then reported convergence well short of the VB mean: 0.29 posterior SDs on a one-parameter posterior with a boundary. Fits whose fallback settles are unchanged, and <code>verbose = TRUE</code> reports the rerun.</li>
 <li>A VB fixed-point step over 1.5 posterior SDs is now cut to 1.5, and the iteration goes on; only two such steps in a row hand over to the fallback optimiser. INLAvaan hands over at the first step over 1 SD, but on a skewed posterior the first step overshoots and the iteration then comes back. On a DINA model with 63 parameters and a gradient the handover cost 54,000 calls to reach the point that six fixed-point steps reach.</li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

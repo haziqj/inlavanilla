@@ -109,9 +109,9 @@ init <- c(
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
 fit <- inla_vanilla(logpost, init, y = y, eta = eta)
-#> ✔ Found the posterior mode in 190 iterations [19.4s]
-#> ✔ VB mean correction, max shift 0.44σ [26.8s]
-#> ✔ Fitted 63 skew-normal marginals [15.2s]
+#> ✔ Found the posterior mode in 186 iterations [36.2s]
+#> ✔ VB mean correction, max shift 0.44σ [1m 4s]
+#> ✔ Fitted 63 skew-normal marginals [27.6s]
 ```
 
 Draws give the parameters on the probability scale, and the share of

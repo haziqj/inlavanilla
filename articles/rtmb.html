@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Gradients with RTMB • inlavanilla</title>
+<title>Gradients and Hessians with RTMB • inlavanilla</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -23,7 +23,7 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="rtmb_files/libs/quarto-html/popper.min.js"></script><script src="rtmb_files/libs/quarto-html/tippy.umd.min.js"></script><link href="rtmb_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="rtmb_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Gradients with RTMB">
+<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Gradients and Hessians with RTMB">
 <meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
@@ -34,7 +34,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -56,7 +56,7 @@
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
-    <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients with RTMB</a></li>
+    <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
@@ -76,7 +76,7 @@
 </nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Gradients with RTMB</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Gradients and Hessians with RTMB</h1>
 
 
 
@@ -90,8 +90,8 @@
 
 
 
-    <p><a href="https://github.com/kaskr/RTMB" class="external-link">RTMB</a> (Kristensen, 2026) differentiates a function written in R. <code>RTMB::MakeADFun()</code> runs the function once on RTMB’s own type of number and records every operation. <code>obj$fn</code> and <code>obj$gr</code> then replay that record, the <em>tape</em>, to give the value and the exact gradient at any parameter value. RTMB is the R interface to TMB (Kristensen et al., 2016), whose models are written as C++ templates. RTMB needs neither C++ nor a compiler.</p>
-<p>This article writes the structural equation model of <a href="rcpp.html">Speeding up with Rcpp</a>, with 39 parameters, for RTMB, and compares the fit with the R and C++ fits of that article, for speed and for accuracy. The model, its parameterisation and its priors are described there.</p>
+    <p><a href="https://github.com/kaskr/RTMB" class="external-link">RTMB</a> (Kristensen, 2026) differentiates a function written in R. <code>RTMB::MakeADFun()</code> runs the function once on RTMB’s own type of number and records every operation. <code>obj$fn</code>, <code>obj$gr</code> and <code>obj$he</code> then replay that record, the <em>tape</em>, to give the value, the exact gradient and the exact Hessian at any parameter value. RTMB is the R interface to TMB (Kristensen et al., 2016), whose models are written as C++ templates. RTMB needs neither C++ nor a compiler.</p>
+<p>This article writes the structural equation model of <a href="rcpp.html">Speeding up with Rcpp</a>, with 39 parameters, for RTMB, and compares the fit with the R and C++ fits of that article, for speed and for accuracy, with and without RTMB’s Hessian. The model, its parameterisation and its priors are described there.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
@@ -347,7 +347,7 @@
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">loglik</span><span class="op">)</span> <span class="op">+</span> <span class="va">logprior</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
-<p><code>RTMB::MakeADFun()</code> takes a function of a list of parameters. TMB’s objectives are usually negative log-likelihoods, to be minimised, but the sign matters only when random effects are integrated out. There are none here, so the function returns the log-posterior itself, and <code>obj$fn</code> and <code>obj$gr</code> go to <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> as they are.</p>
+<p><code>RTMB::MakeADFun()</code> takes a function of a list of parameters. TMB’s objectives are usually negative log-likelihoods, to be minimised, but the sign matters only when random effects are integrated out. There are none here, so the function returns the log-posterior itself, and <code>obj$fn</code>, <code>obj$gr</code> and <code>obj$he</code> go to <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> as they are.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">RTMB</span><span class="fu">::</span><span class="fu">MakeADFun</span><span class="op">(</span></span>
@@ -356,9 +356,17 @@
 <span>  silent <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>At 200 points around the starting values, the value matches the R log-posterior, and the gradient the hand-written one, to rounding error:</p>
+<p><code>obj$he</code> works out the Hessian from the recorded function at each call. A <em>Hessian tape</em> is faster: <code><a href="https://rdrr.io/pkg/RTMB/man/Tape.html" class="external-link">RTMB::MakeTape()</a></code> records the function, which here takes the parameter vector itself, <code>$jacfun()</code> records the computation of its gradient, and a second <code>$jacfun()</code> that of its Hessian, so that each call replays the Hessian’s own computation.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">hess_tape</span> <span class="op">&lt;-</span> <span class="fu">RTMB</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/RTMB/man/Tape.html" class="external-link">MakeTape</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu">logpost_rtmb</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">init</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">$</span><span class="fu">jacfun</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">jacfun</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<p>At 200 points around the starting values, the value matches the R log-posterior, and the gradient the hand-written one, to rounding error:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">points</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="fl">200</span>, <span class="va">init</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">39</span>, sd <span class="op">=</span> <span class="fl">0.05</span><span class="op">)</span>, simplify <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="va">value_error</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">th</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">th</span><span class="op">)</span> <span class="op">-</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">th</span>, <span class="va">Y</span><span class="op">)</span><span class="op">)</span></span>
@@ -374,7 +382,7 @@
 </h2>
 <p>The time per call, in microseconds, over the same 200 points. (Repeated calls at one point come back faster than calls at new points, as in a fit.)</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">time_per_call</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">f</span>, <span class="va">reps</span> <span class="op">=</span> <span class="fl">50</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">elapsed</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span></span>
 <span>    <span class="kw">for</span> <span class="op">(</span><span class="va">r</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">reps</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -393,19 +401,28 @@
 <span>    R <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>    RTMB <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="va">gr</span><span class="op">)</span>,</span>
 <span>    `C++` <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">th</span><span class="op">)</span> <span class="fu">grad_cpp</span><span class="op">(</span><span class="va">th</span>, <span class="va">Y</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  hessian <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>R <span class="op">=</span> <span class="cn">NA</span>, RTMB <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="va">hess_tape</span>, reps <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, `C++` <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">us</span>, <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="co">#&gt;             R  RTMB C++</span></span>
-<span><span class="co">#&gt; logpost  73.7 123.4 7.5</span></span>
-<span><span class="co">#&gt; gradient   NA 266.9 9.2</span></span></code></pre></div>
+<span><span class="co">#&gt;              R    RTMB  C++</span></span>
+<span><span class="co">#&gt; logpost  108.5   147.4  9.2</span></span>
+<span><span class="co">#&gt; gradient    NA   323.0 11.9</span></span>
+<span><span class="co">#&gt; hessian     NA 16575.0   NA</span></span></code></pre></div>
 </div>
-<p>Replaying the tape takes 1.7 times as long as a call of <code>logpost_r()</code>, and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++ is 10 times faster than R, and the hand-written gradient costs as much as 1.2 calls of its log-posterior. The four fits:</p>
+<p>Replaying the tape takes 1.4 times as long as a call of <code>logpost_r()</code>, and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++ is 12 times faster than R, and the hand-written gradient costs as much as 1.3 calls of its log-posterior. RTMB’s Hessian tape costs as much as 51 gradients, about one for each of the 39 parameters, and <code>obj$he</code> 55. The five fits, with the Hessian tape in the third:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  R <span class="op">=</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_r</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>  RTMB <span class="op">=</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="va">fn</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">obj</span><span class="op">$</span><span class="va">gr</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
+<span>  `RTMB and Hessian` <span class="op">=</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
+<span>    <span class="va">obj</span><span class="op">$</span><span class="va">fn</span>,</span>
+<span>    <span class="va">init</span>,</span>
+<span>    grad <span class="op">=</span> <span class="va">obj</span><span class="op">$</span><span class="va">gr</span>,</span>
+<span>    hess <span class="op">=</span> <span class="va">hess_tape</span>,</span>
+<span>    silent <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  `C++` <span class="op">=</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
 <span>  `C++ and gradient` <span class="op">=</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>    <span class="va">logpost_cpp</span>,</span>
@@ -417,18 +434,19 @@
 <span><span class="op">)</span></span>
 <span><span class="va">seconds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">timing</span><span class="op">[[</span><span class="st">"total"</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span>, seconds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">seconds</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  logpost grad seconds</span></span>
-<span><span class="co">#&gt; R                  22255    0    1.99</span></span>
-<span><span class="co">#&gt; RTMB                1530 9928    3.05</span></span>
-<span><span class="co">#&gt; C++                22437    0    0.42</span></span>
-<span><span class="co">#&gt; C++ and gradient    1535 9931    0.26</span></span></code></pre></div>
+<span><span class="co">#&gt;                  logpost grad hess seconds</span></span>
+<span><span class="co">#&gt; R                  22495    0    0    2.94</span></span>
+<span><span class="co">#&gt; RTMB                1537 9931    0    3.68</span></span>
+<span><span class="co">#&gt; RTMB and Hessian    1199 6658   51    3.35</span></span>
+<span><span class="co">#&gt; C++                22192    0    0    0.57</span></span>
+<span><span class="co">#&gt; C++ and gradient    1537 9933    0    0.35</span></span></code></pre></div>
 </div>
-<p>Without a gradient the fit calls <code>logpost</code> 22,255 times. With one it calls <code>logpost</code> 1,530 times and the gradient 9,928 times. Both counts grow with the square of the number of parameters, so a gradient saves time only when it costs less than 2.1 calls of <code>logpost</code>. RTMB’s costs about that, and its fit takes 1.5 times as long as R’s. The speed comes from C++, and a hand-written gradient in C++ is the fastest of all.</p>
+<p>Without a gradient the fit calls <code>logpost</code> 22,495 times. With one it calls <code>logpost</code> 1,537 times and the gradient 9,931 times. Both counts grow with the square of the number of parameters, so a gradient saves time only when it costs less than 2.1 calls of <code>logpost</code>. RTMB’s costs about that, and its fit takes 1.3 times as long as R’s. The speed comes from C++, and a hand-written gradient in C++ is the fastest of all.</p>
 </section><section class="level2"><h2 id="accuracy">Accuracy<a class="anchor" aria-label="anchor" href="#accuracy"></a>
 </h2>
 <p>Each fit against the one with the hand-written gradient: the skew-normal marginals (means, SDs and quantiles) and the VB mean in posterior SDs, and the log marginal likelihood in nats.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ref</span> <span class="op">&lt;-</span> <span class="va">fits</span><span class="op">[[</span><span class="st">"C++ and gradient"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">sds</span> <span class="op">&lt;-</span> <span class="va">ref</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span>, <span class="st">"SD"</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span></span>
@@ -442,16 +460,45 @@
 <span>  <span class="fl">2</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  marginals vb_mean    logml</span></span>
-<span><span class="co">#&gt; R                  4.5e-05 4.3e-02 -2.9e-02</span></span>
-<span><span class="co">#&gt; RTMB               5.8e-05 5.4e-05  2.1e-05</span></span>
-<span><span class="co">#&gt; C++                3.0e-05 4.3e-02 -2.9e-02</span></span>
+<span><span class="co">#&gt; R                  5.7e-05 4.3e-02 -2.9e-02</span></span>
+<span><span class="co">#&gt; RTMB               6.0e-05 7.5e-05 -2.7e-05</span></span>
+<span><span class="co">#&gt; RTMB and Hessian   4.2e-05 2.9e-05  1.2e-05</span></span>
+<span><span class="co">#&gt; C++                5.0e-05 4.4e-02 -2.9e-02</span></span>
 <span><span class="co">#&gt; C++ and gradient   0.0e+00 0.0e+00  0.0e+00</span></span></code></pre></div>
 </div>
-<p>RTMB’s fit is the hand-written gradient’s fit, since the two gradients agree to rounding error. The skew-normal marginals are the same on every route: they are scanned around the mode and do not depend on the VB correction. The gradient changes the VB correction. With it, the VB mean is exact when the log-posterior is a polynomial of degree six in whitened coordinates, against degree four from values of <code>logpost</code> alone (see the Gradients section of <code><a href="../reference/inla_vanilla.html">?inla_vanilla</a></code>). Here the fits without a gradient move the VB mean by up to 0.04 posterior SDs and the log marginal likelihood by 0.03. That is small, but it carries over to everything built on the VB mean: the log marginal likelihood, <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code>, and the Gaussian marginals of <code>marginals = "gaussian"</code>.</p>
+<p>RTMB’s fit is the hand-written gradient’s fit, since the two gradients agree to rounding error, and so is the fit with RTMB’s Hessian. The skew-normal marginals are the same on every route: they are scanned around the mode and do not depend on the VB correction. Their differences, about a ten-thousandth of a posterior SD, come from where <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> stopped (see the next section). The gradient changes the VB correction. With it, the VB mean is exact when the log-posterior is a polynomial of degree six in whitened coordinates, against degree four from values of <code>logpost</code> alone (see the section on gradients and Hessians in <code><a href="../reference/inla_vanilla.html">?inla_vanilla</a></code>). Here the fits without a gradient move the VB mean by up to 0.04 posterior SDs and the log marginal likelihood by 0.03. That is small, but it carries over to everything built on the VB mean: the log marginal likelihood, <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code>, and the Gaussian marginals of <code>marginals = "gaussian"</code>.</p>
+</section><section class="level2"><h2 id="the-hessian">The Hessian<a class="anchor" aria-label="anchor" href="#the-hessian"></a>
+</h2>
+<p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> takes the Hessian as <code>hess</code>, after <code>grad</code>, as <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> does, and uses it in three places. <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> takes Newton steps to the mode. The Hessian at the mode, which gives the covariance of the Laplace approximation, is RTMB’s rather than central differences of the gradient. And the volume correction of each skew-normal marginal reads the two curvatures it needs off one Hessian, instead of taking them by central differences of 2m + 2 = 80 gradients. The time each stage took, in seconds:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">rtmb_fits</span> <span class="op">&lt;-</span> <span class="va">fits</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"RTMB"</span>, <span class="st">"RTMB and Hessian"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">rtmb_fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">timing</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                  laplace  vb marginals total</span></span>
+<span><span class="co">#&gt; RTMB                0.10 2.2      1.32  3.68</span></span>
+<span><span class="co">#&gt; RTMB and Hessian    0.17 2.2      0.89  3.35</span></span></code></pre></div>
+</div>
+<p>The marginals stage is 1.5 times as fast. A Hessian costs about as much as m gradients, so it saves about half of the volume correction, and the VB correction, the slowest stage, uses none. The whole fit takes 9% less time. The saving is larger where the Hessian is sparse, as when each of many parameters enters only a few terms of the log-posterior: a Hessian tape then costs far fewer than m gradients.</p>
+<p>The Hessian also finds the mode more precisely. <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> stops when its steps become small. The whitened gradient where it stopped in each fit is about how far it was from the mode, in posterior SDs:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">optim</span><span class="op">$</span><span class="va">grad_mode</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                R             RTMB RTMB and Hessian              C++ </span></span>
+<span><span class="co">#&gt;            9e-05            8e-05            4e-07            1e-04 </span></span>
+<span><span class="co">#&gt; C++ and gradient </span></span>
+<span><span class="co">#&gt;            8e-05</span></span></code></pre></div>
+</div>
+<p>Without the Hessian, <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> stops about a ten-thousandth of a posterior SD from the mode, which is also about how much the marginals of the five fits differ. With the Hessian it stops within a millionth. Either is far inside the check of the mode, which asks for a tenth. A supplied <code>hess</code> is itself checked at the mode against central differences of <code>grad</code>, with a warning if they do not match. With random effects integrated out, TMB gives no Hessian.</p>
 </section><section class="level2"><h2 id="choosing-a-route">Choosing a route<a class="anchor" aria-label="anchor" href="#choosing-a-route"></a>
 </h2>
 <p>In order of the work they take, with the first two about equal:</p>
 <table class="table caption-top">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 40%">
+<col style="width: 17%">
+<col style="width: 25%">
+</colgroup>
 <thead><tr class="header">
 <th style="text-align: left;">Route</th>
 <th style="text-align: left;">What you write</th>
@@ -469,7 +516,8 @@
 <tr class="even">
 <td style="text-align: left;">RTMB</td>
 <td style="text-align: left;">
-<code>logpost</code> in R, with RTMB’s functions</td>
+<code>logpost</code> in R, with RTMB’s functions, which give <code>grad</code> and <code>hess</code>
+</td>
 <td style="text-align: center;">✗</td>
 <td style="text-align: center;">✓</td>
 </tr>
@@ -496,7 +544,7 @@
 </tr>
 </tbody>
 </table>
-<p>Start with R. If RTMB has the functions your log-posterior needs, it gives the gradient’s accuracy for the same work and about the same time. C++ buys speed, which matters when each call is expensive, as with a large data set, or when there are many, as with many parameters or many fits in a simulation study. A gradient by hand is the most work, since it has to be derived, checked and kept in step with the log-posterior, and only in C++ does it buy both.</p>
+<p>Start with R. If RTMB has the functions your log-posterior needs, it gives the gradient’s accuracy for the same work, and with its Hessian the fit takes 1.1 times as long as R’s. A Hessian speeds up only part of the fit, the mode and the marginals but not the VB correction, so it is worth passing when it comes free, as from RTMB, but seldom worth deriving by hand. C++ buys speed, which matters when each call is expensive, as with a large data set, or when there are many, as with many parameters or many fits in a simulation study. A gradient by hand is the most work, since it has to be derived, checked and kept in step with the log-posterior, and only in C++ does it buy both.</p>
 </section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <p>Kristensen, K. (2026). <em>RTMB: R bindings for TMB</em> (Version 2.0) [Computer software]. <a href="https://doi.org/10.32614/CRAN.package.RTMB" class="external-link uri">https://doi.org/10.32614/CRAN.package.RTMB</a></p>
