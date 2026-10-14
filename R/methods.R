@@ -4,14 +4,14 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
     width = out_width(),
     left = cli::style_bold("INLAvanilla"),
     right = cli::col_grey(method_label(is_gaussian(x), isTRUE(x$vb))),
-    line_col = "cyan"
+    line_col = vanilla_hex
   )
   cli::cat_line()
   cat_table(x$summary, digits = digits, scale = x$summary[, "SD"])
   cli::cat_line()
   cli::cat_line(
     cli::style_bold("Log marginal likelihood: "),
-    cli::col_cyan(format(round(x$logml, 2), nsmall = 2))
+    col_vanilla(format(round(x$logml, 2), nsmall = 2))
   )
   # Converged means the mode check of summary() passes, whatever the return
   # code of nlminb(): the Newton step at the mode is within its level
@@ -225,14 +225,14 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     width = out_width(),
     left = cli::style_bold("INLAvanilla summary"),
     right = cli::col_grey(method_label(is_gaussian(x), !is.null(x$vb))),
-    line_col = "cyan"
+    line_col = vanilla_hex
   )
   cli::cat_line()
   # The fit, then its parameters, then how far to trust them
   vb_term <- x$logml - x$logml_laplace
   cat_wrap(paste0(
     cli::style_bold("Log marginal likelihood: "),
-    cli::col_cyan(format(round(x$logml, 3), nsmall = 3)),
+    col_vanilla(format(round(x$logml, 3), nsmall = 3)),
     if (!is.null(x$vb)) {
       cli::col_grey(
         " (Laplace ",
@@ -675,7 +675,7 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
   )
 }
 
-# Print a numeric matrix as an aligned table: bold column headers, cyan row
+# Print a numeric matrix as an aligned table: bold column headers, plain row
 # names. With `scale` (one value per row, such as the posterior SD), each row
 # is printed to `digits` significant figures of its scale, so parameters on
 # different scales each get a sensible number of decimals. Without it, each
@@ -747,7 +747,7 @@ cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
     )
     for (i in seq_len(nrow(cells))) {
       cli::cat_line(
-        cli::col_cyan(formatC(rn[i], width = -rw)),
+        formatC(rn[i], width = -rw),
         paste0("  ", pad_cells(i, cols), collapse = "")
       )
     }
@@ -841,7 +841,7 @@ format_sigfig <- function(x, sigfig = 3) {
 # A section heading, as cli's level-two headings look: "── Title ──", and
 # a blank line under it.
 cat_heading <- function(title) {
-  line <- strrep(cli::symbol$line, 2)
+  line <- col_vanilla(strrep(cli::symbol$line, 2))
   cli::cat_line(line, " ", cli::style_bold(title), " ", line)
   cli::cat_line()
 }
@@ -852,7 +852,7 @@ cat_status <- function(type, msg, .envir = parent.frame()) {
     ok = cli::col_green(cli::symbol$tick),
     warn = cli::col_yellow("!"),
     fail = cli::col_red(cli::symbol$cross),
-    info = cli::col_cyan(cli::symbol$info)
+    info = col_vanilla(cli::symbol$info)
   )
   cat_wrap(paste(sym, cli::format_inline(msg, .envir = .envir)), exdent = 2)
 }

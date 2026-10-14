@@ -91,6 +91,16 @@ elapsed <- function() {
   proc.time()[["elapsed"]]
 }
 
+# The package's colour in the console: vanilla, the amber of a cured vanilla
+# pod, between the bean and the orchid's throat of the logo
+# (lab/logo/logo.R). It marks the rules and the values to read first. cli
+# shows the nearest colour a console has, or none.
+vanilla_hex <- "#B5772E"
+
+col_vanilla <- function(x) {
+  cli::make_ansi_style(vanilla_hex)(x)
+}
+
 # The width of everything the package prints: the console's, but never more
 # than 80 columns. cli::console_width() follows options(width) in knitr, so a
 # document can set a narrower width for its output.

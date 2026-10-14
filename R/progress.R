@@ -91,7 +91,7 @@ progress_done <- function(p, text, secs, ok = TRUE) {
 
 # Highlight a value in a progress line.
 hl <- function(x) {
-  cli::col_cyan(x)
+  col_vanilla(x)
 }
 
 # Verbose detail ---------------------------------------------------------------
@@ -100,10 +100,10 @@ hl <- function(x) {
 # only what the fit has already computed, with no further calls of logpost or
 # grad.
 
-# A line of its own, marked with a cyan i.
+# A line of its own, marked with an i in the package's colour.
 progress_info <- function(p, text) {
   if (p$detail) {
-    message(wrap_detail(paste(cli::col_cyan(cli::symbol$info), text), 0))
+    message(wrap_detail(paste(col_vanilla(cli::symbol$info), text), 0))
   }
 }
 
