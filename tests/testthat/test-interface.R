@@ -1907,6 +1907,38 @@ test_that("summary() with no probabilities gives a table without quantiles", {
   expect_output(print(res), "Posterior marginals")
 })
 
+test_that("the diagnostics table formats numbers as a tibble prints them", {
+  # The expected cells are what tibble 3.3 prints with pillar.sigfig = 2:
+  # decimal points lined up, a trailing zero kept only where it is
+  # significant, and a point left on a number rounded to a whole one
+  cells <- function(x) format_sigfig(x, sigfig = 2)$plain
+  expect_identical(cells(c(-0.0017, 0.38)), c("-0.0017", " 0.38  "))
+  expect_identical(cells(c(4.5e-05, 0.011)), c("0.000045", "0.011   "))
+  expect_identical(cells(c(0.33, 1e-05)), c("0.33   ", "0.00001"))
+  expect_identical(cells(c(123.456, 1.5)), c("123. ", "  1.5"))
+  expect_identical(cells(c(0.3001, 9.99)), c(" 0.30", "10.0 "))
+  expect_identical(cells(c(0, 2)), c("0", "2"))
+  expect_identical(cells(c(NA, Inf, -Inf)), c("  NA", " Inf", "-Inf"))
+  # A column too wide for fixed notation goes scientific
+  expect_identical(cells(c(1e-14, 2)), c("1e-14", "  2e0"))
+
+  # Leading zeros are grey; a flagged cell is red, and keeps its width
+  local_reproducible_output(crayon = TRUE)
+  styled <- format_sigfig(c(0.0017, 12345), sigfig = 2)$styled
+  expect_identical(cli::ansi_strip(styled), c("    0.0017", "12345     "))
+  expect_match(styled[1], cli::col_grey("0.00"), fixed = TRUE)
+  expect_match(styled[2], cli::col_grey("345"), fixed = TRUE)
+  tab <- matrix(c(0.33, 0.01), 2, dimnames = list(c("a", "b"), "Ridge bend"))
+  out <- capture_output(
+    cat_table(tab, digits = 2, flag = matrix(c(TRUE, FALSE), 2))
+  )
+  expect_match(out, cli::col_red("0.33"), fixed = TRUE)
+  expect_identical(
+    cli::ansi_strip(strsplit(out, "\n")[[1]]),
+    c("   Ridge bend", "a        0.33", "b        0.01")
+  )
+})
+
 test_that("summary() flags each diagnostic at its documented level", {
   # The levels documented in ?summary.inla_vanilla, those of the fit-time
   # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
