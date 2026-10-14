@@ -216,15 +216,17 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   opt <- x$optim
   dg <- diagnostics_internal(opt, x$vb, diag)
   glob <- dg$global
+  # VB first, then the skew-normal checks in the order of their status
+  # lines, ending with the comparison of the two means
   cols <- c(
     "vb_shift_sigma",
-    "mean_gap",
     "nmad",
+    "unscanned_mass",
     "ridge_bend",
-    "unscanned_mass"
+    "mean_gap"
   )
-  heads <- c("VB shift", "Mean gap", "NMAD", "Ridge bend", "Unscanned")
-  keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE)) &
+  heads <- c("VB shift", "NMAD", "Unscanned", "Ridge bend", "Mean gap")
+  keep <- (has_vb | c(FALSE, TRUE, TRUE, TRUE, FALSE)) &
     (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE))
   if (any(keep)) {
     dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
@@ -234,8 +236,8 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cli::cat_line()
   }
 
-  # One status line per check, and one "!" line for each flag, so that the
-  # count in print() matches. Flagged lines list every flagged parameter,
+  # A status line per stage, and one "!" line for each flagged check, so that
+  # the count in print() matches. Flagged lines list every flagged parameter,
   # worst first, through variables in `env` (see list_template()).
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = environment())
@@ -244,10 +246,10 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   }
 
   if (!flags[["mode"]]) {
-    msm <- glob[["mode_shift_max"]]
+    msm <- with_sd(glob[["mode_shift_max"]])
     cat_status(
       "ok",
-      "Mode found in {opt$iterations} iteration{?s} (Newton step {fmt_num(msm)} posterior SDs)."
+      "Mode found in {opt$iterations} iteration{?s} (Newton step {msm})."
     )
   } else {
     listed <- flagged_list(
@@ -263,8 +265,8 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       paste0(
         "Mode search stopped short ({.val {opt$message}}): the Newton step ",
         "is more than ",
-        warn_levels$mode_shift,
-        " posterior SDs for ",
+        with_sd(warn_levels$mode_shift),
+        " for ",
         listed,
         "."
       ),
@@ -276,19 +278,16 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     flagged_line("hess_cond")
   } else if (glob[["npar"]] > 1) {
     hc <- glob[["hess_cond"]]
-    cat_status(
-      "ok",
-      "Hessian condition number {fmt_num(hc)}, in posterior-SD units."
-    )
+    cat_status("ok", "Hessian condition number {fmt_num(hc)}, in SD units.")
   }
 
   if (has_vb) {
     how <- if (isTRUE(x$vb$fallback)) " (via the fallback optimiser)" else ""
     if (!flags[["vb"]]) {
-      max_shift <- glob[["vb_shift_max"]]
+      max_shift <- with_sd(glob[["vb_shift_max"]])
       cat_status(
         "ok",
-        "VB correction in {x$vb$iterations} iteration{?s}{how}: max shift {fmt_num(max_shift)} posterior SDs."
+        "VB correction in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
       )
     } else {
       listed <- flagged_list(
@@ -304,8 +303,8 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         paste0(
           "VB correction in {x$vb$iterations} iteration{?s}{how}: the ",
           "shift is more than ",
-          warn_levels$vb_shift,
-          " posterior SD for ",
+          with_sd(warn_levels$vb_shift),
+          " for ",
           listed,
           "."
         ),
@@ -322,26 +321,36 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       "Gaussian marginals: no scans, so no skew-normal checks."
     )
   } else {
-    if (flags[["nmad"]]) {
-      flagged_line("nmad")
-    } else {
-      max_nmad <- glob[["nmad_max"]]
-      cat_status("ok", "Skew-normal fits: max NMAD {fmt_num(max_nmad)}.")
+    # One line for the checks that pass, with the largest value of each as
+    # the table shows it, then a line for each that does not
+    fmt_cell <- function(v) trimws(format_sigfig(v, 2)$plain)
+    healthy <- c(
+      if (!flags[["nmad"]]) {
+        paste("NMAD", fmt_cell(glob[["nmad_max"]]))
+      },
+      if (!flags[["unscanned_mass"]]) {
+        paste("unscanned mass", fmt_cell(glob[["unscanned_mass_max"]]))
+      },
+      if (!flags[["ridge_bend"]]) {
+        paste("ridge bend", fmt_cell(glob[["ridge_bend_max"]]))
+      },
+      if (has_vb && !flags[["mean_gap"]]) {
+        paste0("mean gap ", fmt_cell(glob[["mean_gap_max"]]), sd_unit())
+      }
+    )
+    if (length(healthy) > 0L) {
+      sn_ok <- paste(healthy, collapse = ", ")
+      cat_status("ok", "Skew-normal fits: max {sn_ok}.")
     }
-    for (check in c("unscanned_mass", "tails", "ridge_bend")) {
+    for (check in c(
+      "nmad",
+      "unscanned_mass",
+      "tails",
+      "ridge_bend",
+      "mean_gap"
+    )) {
       if (flags[[check]]) {
         flagged_line(check)
-      }
-    }
-    if (has_vb) {
-      if (flags[["mean_gap"]]) {
-        flagged_line("mean_gap")
-      } else {
-        max_gap <- glob[["mean_gap_max"]]
-        cat_status(
-          "ok",
-          "Skew-normal and VB means agree to within {fmt_num(max_gap)} posterior SDs."
-        )
       }
     }
   }

@@ -85,7 +85,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     text,
     paste0(
       "x The gradient at the posterior mode is not zero (max |grad| = 0.5): ",
-      "a Newton step would move `b` by 0.15 posterior SDs.\n",
+      "a Newton step would move `b` by 0.15 SD.\n",
       "i `nlminb()` says: \"relative convergence (4)\".\n",
       "i Try other starting values, or supply `grad`."
     ),
@@ -120,8 +120,8 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     warning_text(d),
     paste0(
       "x The fitted marginal puts more than 0.05 of its mass beyond the ",
-      "scanned window (4 posterior SDs either side of the mode) for `b` ",
-      "(0.06); its credible limits rely on extrapolation."
+      "scanned window (4 SD either side of the mode) for `b` (0.06); its ",
+      "credible limits rely on extrapolation."
     ),
     fixed = TRUE
   )
@@ -132,8 +132,8 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     warning_text(d),
     paste0(
       "x Heavy tails for `b`: the density is still over 5% of its peak at ",
-      "the ends of the scanned window (4 posterior SDs either side of the ",
-      "mode), and the skew-normal extrapolates beyond it."
+      "the ends of the scanned window (4 SD either side of the mode), and ",
+      "the skew-normal extrapolates beyond it."
     ),
     fixed = TRUE
   )
@@ -145,8 +145,8 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   expect_match(
     text,
     paste0(
-      "x The VB correction shifted `b` by 3 posterior SDs; the Gaussian ",
-      "approximation at the mode may be inaccurate."
+      "x The VB correction shifted `b` by 3 SD; the Gaussian approximation ",
+      "at the mode may be inaccurate."
     ),
     fixed = TRUE
   )
@@ -224,13 +224,13 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   expect_identical(lines[1], "Fit diagnostics flagged 6 potential issues:")
   # each line shows its own value
   for (pattern in c(
-    "^x The gradient at the posterior mode .* by 0.5 posterior SDs",
+    "^x The gradient at the posterior mode .* by 0.5 SD",
     "^i `nlminb\\(\\)` says",
     "^i Try other starting values",
     "^x The fitted marginal deviates .* `a` \\(0.20\\)",
     "^x The fitted marginal puts .* `a` \\(0.30\\)",
     "^x Heavy tails for `a`",
-    "^x The VB correction shifted `a` by 2 posterior SDs",
+    "^x The VB correction shifted `a` by 2 SD",
     "^x The Hessian at the mode is near-singular \\(condition number = 1e\\+09\\)",
     "^i Inspect with `diagnostics\\(fit\\)` and `diagnostics\\(fit, type = \"param\"\\)`; `vignette\\(\"diagnostics\", package = \"inlavanilla\"\\)` explains each check\\.$"
   )) {
@@ -248,7 +248,7 @@ test_that("a value that is not finite is flagged; a check that did not run is no
   expect_match(warning_text(d), "(NMAD > 0.1) for `b` (NaN)", fixed = TRUE)
   d <- healthy
   d$mode_shift_sigma[1] <- NA
-  expect_match(warning_text(d), "would move `a` by NA posterior SDs")
+  expect_match(warning_text(d), "would move `a` by NA SD")
 
   # Gaussian marginals: no scans, so only the mode, Hessian and VB checks
   d <- healthy

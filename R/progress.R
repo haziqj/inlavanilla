@@ -302,7 +302,7 @@ report_mode <- function(p, lap, calls) {
         grey("Hessian condition number ", fmt_num(lap$hess_cond)),
         if (off_level(lap$hess_cond, warn_levels$hess_cond)) flag() else "",
         grey(
-          ", in posterior-SD units (warning above ",
+          ", in SD units (warning above ",
           fmt_num(warn_levels$hess_cond),
           ")"
         )
