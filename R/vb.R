@@ -279,13 +279,19 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     shift <- as.numeric(L %*% nl$par)
     iter <- nl$iterations
     # Where the fallback landed: the fixed-point step there, the Newton step
-    # for the stationarity condition. One more sweep, on this path only.
+    # for the stationarity condition. One more sweep.
+    step <- step_at(shift)
+  } else if (max(abs(step) / sds) >= warn_levels$vb_step) {
+    # The iteration met a vb_tol above the settling level, so the step just
+    # taken says little about the one still to go: take it. One more sweep,
+    # which the default vb_tol never needs.
     step <- step_at(shift)
   }
   # The step still to go at the VB mean, per parameter in posterior SDs, as
-  # the Newton step at the mode is for the mode: the last fixed-point step,
-  # which was below vb_tol (and the next is smaller still), or the step where
-  # the fallback landed. A step that is not finite is Inf.
+  # the Newton step at the mode is for the mode: the step where the fallback
+  # landed, or on the fixed-point path the last step taken, which was below
+  # vb_tol and bounds the next (taken afresh when it was above the settling
+  # level). A step that is not finite is Inf.
   step_sigma <- abs(step) / sds
   step_sigma[!is.finite(step_sigma)] <- Inf
 

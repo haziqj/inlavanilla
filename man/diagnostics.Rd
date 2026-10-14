@@ -125,8 +125,11 @@ and then inlavanilla's own:
 \itemize{
 \item \code{vb_step_sigma}: the step still to go at the VB mean, in posterior SDs:
 the fixed-point step there, the Newton step of the VB stationarity
-condition, as \code{mode_shift_sigma} is for the mode. It should be close to
-0 (\code{Inf} where the step is not finite).
+condition, as \code{mode_shift_sigma} is for the mode. After the fallback
+optimiser it is taken where the optimiser landed. On the fixed-point
+path it is the last step taken, which bounds the next, unless that step
+was 0.1 or more (a \code{vb_tol} above 0.1), when it is taken afresh. It
+should be close to 0 (\code{Inf} where the step is not finite).
 \item \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, which
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} describes.
 }
