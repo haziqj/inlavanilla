@@ -54,15 +54,20 @@
   `inlavanilla_diagnostics_warning`, headed "Fit diagnostics flagged N
   potential issues", in INLAvaan's words and at its levels: a Newton step at
   the mode above 0.1 posterior SDs (whatever `nlminb()`'s return code, with
-  its message and a hint), an NMAD above 0.1, a unscanned mass above 0.05, a
+  its message and a hint), an NMAD above 0.1, an unscanned mass above 0.05, a
   VB shift above 1 SD, and a Hessian condition number above 1e8; heavy tails
   are inlavanilla's own check. Like INLAvaan, the fit only records the VB
   fallback. `summary()` flags the same checks at the same levels, and also
   a ridge bend above 0.25 nats, where the marginal SD may be about 10% too
-  small, and the gap between the skew-normal and VB means; its
-  lines list every flagged parameter, worst first, with its value. Healthy
-  fits stay silent. A new vignette, "Diagnostics", explains every check,
-  with citations of Jamil and Rue (2026a).
+  small, and a mean gap (between the skew-normal and VB means) above 0.1
+  SDs; its lines list every flagged parameter, worst first, with its value.
+  Healthy fits stay silent. A new vignette, "Diagnostics", explains every
+  check, with citations of Jamil and Rue (2026a).
+* `summary()` prints its table of diagnostics (VB shift, NMAD, unscanned
+  mass, ridge bend and mean gap) with numbers formatted as a tibble prints
+  them and the flagged values in red. One line gives the largest value of
+  each skew-normal check that passes, and each flagged check has a line of
+  its own.
 * `diagnostics(fit)` and `diagnostics(fit, type = "param")` return the
   checks as numbers, with the names, order and print formats of INLAvaan's
   `diagnostics()`, followed by inlavanilla's own. `plot(fit, type =
