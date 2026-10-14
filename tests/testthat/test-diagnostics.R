@@ -224,7 +224,7 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   expect_identical(lines[1], "Fit diagnostics flagged 6 potential issues:")
   # each line shows its own value, in INLAvaan's order
   patterns <- c(
-    "^x The gradient at the posterior mode .* by 0.5 posterior SDs",
+    "^x The gradient at the posterior mode .* by 0.5 SD",
     "^i `nlminb\\(\\)` says",
     "^i Try other starting values",
     "^x The fitted marginal deviates .* `a` \\(0.20\\)",
@@ -243,14 +243,14 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   )
 })
 
-test_that("bend and the SN-VB gap are flagged by summary() but never warn", {
+test_that("the ridge bend and the mean gap are flagged by summary() but never warn", {
   d <- healthy
-  d$bend[1] <- 0.5
-  d$sn_vs_vb[2] <- -0.3
+  d$ridge_bend[1] <- 0.5
+  d$mean_gap[2] <- -0.3
   expect_length(problems(d), 0)
   expect_identical(warning_text(d), "")
   flags <- check_flags(dg_of(d), gaussian = FALSE)
-  expect_identical(names(flags)[flags], c("bend", "sn_vs_vb"))
+  expect_identical(names(flags)[flags], c("ridge_bend", "mean_gap"))
 })
 
 test_that("a value that is not finite is flagged; a check that did not run is not", {
@@ -463,14 +463,21 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
   for (nm in c(
     "nmad_max",
     "nmad_mean",
-    "scan_end_mass_max",
-    "bend_max",
+    "unscanned_mass_max",
+    "ridge_bend_max",
     "n_heavy_tails"
   )) {
     expect_identical(g_n[[nm]], NA_real_, label = nm)
   }
   p_n <- diagnostics(fit_n, type = "param")
-  for (col in c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "bend")) {
+  for (col in c(
+    "nmad",
+    "alpha",
+    "unscanned_mass",
+    "gamma1",
+    "tails",
+    "ridge_bend"
+  )) {
     expect_true(all(is.na(p_n[[col]])), label = col)
   }
   expect_false(anyNA(p_n$vb_shift_sigma))
