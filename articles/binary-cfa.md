@@ -43,13 +43,14 @@ Simulated answers of 500 people to six items:
 
 ``` r
 
+n <- 500
 lambda <- c(0.5, 0.6, 0.7, 0.8, 0.85, 0.55)
 tau <- c(-0.9, -0.4, 0, 0.2, 0.45, 1)
 set.seed(1)
-eta <- rnorm(500)
+eta <- rnorm(n)
 y_star <- outer(eta, lambda) +
-  rnorm(500 * 6) * rep(sqrt(1 - lambda^2), each = 500)
-y <- 1 * (y_star > rep(tau, each = 500))
+  rnorm(n * 6) * rep(sqrt(1 - lambda^2), each = n)
+y <- 1 * (y_star > rep(tau, each = n))
 ```
 
 The likelihood depends on the data only through the counts of the
@@ -126,13 +127,13 @@ fit <- inla_vanilla(
   count = count,
   nodes = nodes
 )
-#> ✔ Found the posterior mode in 35 iterations [182ms]
-#> ✔ VB mean correction, max shift 0.17σ [105ms]
-#> ✔ Fitted 12 skew-normal marginals [182ms]
+#> ✔ Found the posterior mode in 35 iterations [105ms]
+#> ✔ VB mean correction, max shift 0.17σ [85ms]
+#> ✔ Fitted 12 skew-normal marginals [110ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (490ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (312ms)
 #> 
 #>                      Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 atanh_lambda1   0.4016  0.0832   0.2402   0.4009   0.5665   0.3996
