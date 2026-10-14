@@ -16,8 +16,14 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-# Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
 `inla_vanilla()` calls `logpost` many times, and without a gradient the
