@@ -37,6 +37,11 @@
 * A website article, "Diagnostic classification models", fits the DINA model
   to the ECPE data with the latent classes summed out, checks its marginals
   against Stan, and classifies examinees from draws.
+* A website article, "Correlation matrices", puts an LKJ prior on the
+  correlation matrix of a multivariate normal, through its canonical partial
+  correlations on the atanh scale, fits it to the Holzinger and Swineford
+  tests, checks the marginals against Stan, and gives the reliability of each
+  scale from draws.
 * Three output levels: by default each stage prints one line; `verbose =
   TRUE` adds a full diagnostic of each stage (the optimiser's report, how the
   Hessian was taken, the posterior correlations, the VB iterations, a line per
