@@ -13,7 +13,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,15 +23,18 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/inlavanilla.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="active nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
-    <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
-    <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-examples"><li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
     <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
+  </ul></li>
+<li class="active nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+    <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -59,15 +62,6 @@
         <dd>
       </dd></dl></div>
     <div class="section ">
-      <h3>Checking a fit</h3>
-      <div class="section-desc"></div>
-
-      <dl><dt><a href="diagnostics.html">Diagnostics</a></dt>
-        <dd>
-        </dd><dt><a href="model-comparison.html">Model comparison with LOO and WAIC</a></dt>
-        <dd>
-      </dd></dl></div>
-    <div class="section ">
       <h3>Examples</h3>
       <div class="section-desc"></div>
 
@@ -83,10 +77,14 @@
         <dd><p>Three latent class models for five schistosomiasis tests in Ghana, with the infection status summed out and a random effect integrated by quadrature.</p>
       </dd></dl></div>
     <div class="section ">
-      <h3>Speed and gradients</h3>
-      <div class="section-desc"><p>Faster log-posteriors and exact gradients for larger models. Both articles fit the same structural equation model, with 39 parameters.</p></div>
+      <h3>Articles</h3>
+      <div class="section-desc"></div>
 
-      <dl><dt><a href="rcpp.html">Speeding up with Rcpp</a></dt>
+      <dl><dt><a href="diagnostics.html">Diagnostics</a></dt>
+        <dd>
+        </dd><dt><a href="model-comparison.html">Model comparison with LOO and WAIC</a></dt>
+        <dd>
+        </dd><dt><a href="rcpp.html">Speeding up with Rcpp</a></dt>
         <dd><p>A structural equation model with 39 parameters, its log-posterior written first in R and then in C++ with Rcpp and RcppEigen, with an analytic gradient.</p>
         </dd><dt><a href="rtmb.html">Gradients and Hessians with RTMB</a></dt>
         <dd><p>The structural equation model of the Rcpp article written for RTMB, which differentiates R code automatically to give the gradient and the Hessian, and compared with R and C++ for speed and accuracy.</p>

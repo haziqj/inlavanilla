@@ -372,17 +372,17 @@ us <- rbind(
   hessian = c(R = NA, RTMB = time_per_call(hess_tape, reps = 1), `C++` = NA)
 )
 round(us, 1)
-#>              R    RTMB  C++
-#> logpost  108.5   147.4  9.2
-#> gradient    NA   323.0 11.9
-#> hessian     NA 16575.0   NA
+#>             R   RTMB C++
+#> logpost  52.9   44.8 5.0
+#> gradient   NA  101.0 6.7
+#> hessian    NA 2905.0  NA
 ```
 
-Replaying the tape takes 1.4 times as long as a call of `logpost_r()`,
-and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++
-is 12 times faster than R, and the hand-written gradient costs as much
+Replaying the tape takes 0.8 times as long as a call of `logpost_r()`,
+and RTMB’s gradient costs as much as 2.3 calls of its log-posterior. C++
+is 11 times faster than R, and the hand-written gradient costs as much
 as 1.3 calls of its log-posterior. RTMB’s Hessian tape costs as much as
-51 gradients, about one for each of the 39 parameters, and `obj$he` 55.
+29 gradients, about one for each of the 39 parameters, and `obj$he` 51.
 The five fits, with the Hessian tape in the third:
 
 ``` r
@@ -409,18 +409,18 @@ fits <- list(
 seconds <- vapply(fits, function(f) f$timing[["total"]], 0)
 cbind(t(sapply(fits, function(f) f$counts)), seconds = round(seconds, 2))
 #>                  logpost grad hess seconds
-#> R                  22495    0    0    2.94
-#> RTMB                1537 9931    0    3.68
-#> RTMB and Hessian    1199 6658   51    3.35
-#> C++                22192    0    0    0.57
-#> C++ and gradient    1537 9933    0    0.35
+#> R                  22255    0    0    1.49
+#> RTMB                1530 9928    0    1.16
+#> RTMB and Hessian    1199 6658   51    0.96
+#> C++                22437    0    0    0.31
+#> C++ and gradient    1535 9931    0    0.20
 ```
 
-Without a gradient the fit calls `logpost` 22,495 times. With one it
-calls `logpost` 1,537 times and the gradient 9,931 times. Both counts
+Without a gradient the fit calls `logpost` 22,255 times. With one it
+calls `logpost` 1,530 times and the gradient 9,928 times. Both counts
 grow with the square of the number of parameters, so a gradient saves
 time only when it costs less than 2.1 calls of `logpost`. RTMB’s costs
-about that, and its fit takes 1.3 times as long as R’s. The speed comes
+about that, and its fit takes 0.8 times as long as R’s. The speed comes
 from C++, and a hand-written gradient in C++ is the fastest of all.
 
 ## Accuracy
@@ -444,10 +444,10 @@ signif(
   2
 )
 #>                  marginals vb_mean    logml
-#> R                  5.7e-05 4.3e-02 -2.9e-02
-#> RTMB               6.0e-05 7.5e-05 -2.7e-05
-#> RTMB and Hessian   4.2e-05 2.9e-05  1.2e-05
-#> C++                5.0e-05 4.4e-02 -2.9e-02
+#> R                  4.5e-05 4.3e-02 -2.9e-02
+#> RTMB               5.8e-05 5.4e-05  2.1e-05
+#> RTMB and Hessian   5.0e-05 6.1e-05  2.5e-05
+#> C++                3.0e-05 4.3e-02 -2.9e-02
 #> C++ and gradient   0.0e+00 0.0e+00  0.0e+00
 ```
 
@@ -486,17 +486,17 @@ The time each stage took, in seconds:
 
 rtmb_fits <- fits[c("RTMB", "RTMB and Hessian")]
 t(sapply(rtmb_fits, function(f) round(f$timing, 2)))
-#>                  laplace  vb marginals total
-#> RTMB                0.10 2.2      1.32  3.68
-#> RTMB and Hessian    0.17 2.2      0.89  3.35
+#>                  laplace   vb marginals total
+#> RTMB                0.03 0.68      0.44  1.16
+#> RTMB and Hessian    0.03 0.67      0.24  0.96
 ```
 
-The marginals stage is 1.5 times as fast. A Hessian costs about as much
+The marginals stage is 1.8 times as fast. A Hessian costs about as much
 as m gradients, so it saves about half of the volume correction, and the
-VB correction, the slowest stage, uses none. The whole fit takes 9% less
-time. The saving is larger where the Hessian is sparse, as when each of
-many parameters enters only a few terms of the log-posterior: a Hessian
-tape then costs far fewer than m gradients.
+VB correction, the slowest stage, uses none. The whole fit takes 18%
+less time. The saving is larger where the Hessian is sparse, as when
+each of many parameters enters only a few terms of the log-posterior: a
+Hessian tape then costs far fewer than m gradients.
 
 The Hessian also finds the mode more precisely.
 [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) stops when its steps
@@ -507,7 +507,7 @@ about how far it was from the mode, in posterior SDs:
 
 signif(sapply(fits, function(f) f$diagnostics$optim$grad_mode), 1)
 #>                R             RTMB RTMB and Hessian              C++ 
-#>            9e-05            8e-05            4e-07            1e-04 
+#>            9e-05            2e-04            4e-07            1e-04 
 #> C++ and gradient 
 #>            8e-05
 ```
@@ -534,7 +534,7 @@ In order of the work they take, with the first two about equal:
 
 Start with R. If RTMB has the functions your log-posterior needs, it
 gives the gradient’s accuracy for the same work, and with its Hessian
-the fit takes 1.1 times as long as R’s. A Hessian speeds up only part of
+the fit takes 0.6 times as long as R’s. A Hessian speeds up only part of
 the fit, the mode and the marginals but not the VB correction, so it is
 worth passing when it comes free, as from RTMB, but seldom worth
 deriving by hand. C++ buys speed, which matters when each call is

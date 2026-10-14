@@ -5,12 +5,6 @@
 - [Get started with
   inlavanilla](http://haziqj.ml/inlavanilla/articles/inlavanilla.md):
 
-### Checking a fit
-
-- [Diagnostics](http://haziqj.ml/inlavanilla/articles/diagnostics.md):
-- [Model comparison with LOO and
-  WAIC](http://haziqj.ml/inlavanilla/articles/model-comparison.md):
-
 ### Examples
 
 - [Multilevel
@@ -45,10 +39,12 @@
   with the infection status summed out and a random effect integrated by
   quadrature.
 
-### Speed and gradients
+### Articles
 
-Faster log-posteriors and exact gradients for larger models. Both
-articles fit the same structural equation model, with 39 parameters.
+- [Diagnostics](http://haziqj.ml/inlavanilla/articles/diagnostics.md):
+
+- [Model comparison with LOO and
+  WAIC](http://haziqj.ml/inlavanilla/articles/model-comparison.md):
 
 - [Speeding up with
   Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md):
