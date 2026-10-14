@@ -103,6 +103,18 @@ Nothing at present.
 
   A structured `init` such as `list(Sigma = diag(p))` could sit on top. None of this changes the engine.
 - A TMB adaptor: with random effects, TMB's `fn` is already the Laplace-integrated π(y | ϑ).
+- **A `hess` argument (v1.1 idea, parked October 2026).** `inla_vanilla(logpost, init, grad = NULL, hess = NULL, ...)` would use a supplied Hessian, such as RTMB's `obj$he`, and fall back to the current finite differences without one. Measured on the PolDem SEM with RTMB (m = 39, a 1.15 s fit, one Mac; the benchmark scripts were not kept):
+  - One `obj$he()` costs as much as about 43 `obj$gr()` calls (3.9 ms against 90 µs), because a dense AD Hessian takes about m reverse sweeps.
+  - One Hessian per parameter instead of 2m + 2 gradient calls takes the γ₁ volume correction from 0.28 s to 0.15 s. One Hessian instead of `fd_scales()` and 2m gradient calls takes the Hessian at the mode from 22 ms to 4 ms. Together that is 10–13% of the fit. Even a free Hessian would save at most these two parts, about 26%: VB, half the fit, averages gradients, and `loo()` needs the Hessians of `loglik`, not of `logpost`.
+  - There is no accuracy gain. Central differences of the gradient match the AD Hessian to 2e-9 relative, the posterior SDs to 1.4e-9 and γ₁ to 2e-7.
+  - `nlminb(hessian = )` finds the mode in 10 iterations instead of 87, but is 4.5× slower (41 ms against 9 ms). On a badly scaled Gaussian (SDs from 1e-6 to 1e4), the gradient-only first pass missed the mode by more than 1e-3 SD from 14 of 20 starts, and the Hessian pass reached it from all 20. `inla_vanilla()`'s restart already rescues all 20, to within 1.4e-8 SD.
+  - With random effects there is no AD Hessian: TMB's `obj$he()` stops, and `sdreport()` itself takes `optimHess()` of the gradient.
+  - Decision: a third input route through every stage is not worth about 10%. If it is taken up:
+    - require `grad` whenever `hess` is given;
+    - use `hess` after the mode only, for the Laplace Hessian and for γ₁ as a third route beside `gamma1_grad()` and `gamma1_lp()`, and keep `nlminb()` on the gradient, or use Newton steps in the restart only;
+    - check a user Hessian once at the mode against differences of the gradient, as the asymmetry check does for `grad`;
+    - place `hess` after `grad`, as `nlminb()` does, and add a `hess` count to `fit$counts`.
+  - It pays more for a closed-form Hessian that costs about one gradient, such as a GLM's XᵀWX: there γ₁ costs about 1/m of what it does now, but VB still costs the same.
 
 ## API sketch (v0.1)
 
