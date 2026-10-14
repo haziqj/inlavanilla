@@ -18,6 +18,7 @@
       slope      0.595  0.226  0.152  0.595  1.038  0.595
       
       Log marginal likelihood: -16.25
+      Converged in <n> iteration(s) (<time>).
 
 ---
 
