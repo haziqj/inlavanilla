@@ -1647,10 +1647,13 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   expect_false(res$visible)
   expect_identical(res$value, fit_reg)
   # The rule names the approximation, not the time it took, which the
-  # convergence line gives
+  # headline under it gives, with the log marginal likelihood
   expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ VB --\n")
   expect_no_match(strsplit(out, "\n")[[1]][1], "[0-9](ms|s)\\b|parameters")
-  expect_match(out, "\nConverged in [0-9]+ iterations? \\([0-9.]+m?s\\)\\.$")
+  expect_match(
+    out,
+    "--\n\nLog marginal likelihood: [-0-9.]+ \\| Converged in [0-9]+ iterations? \\([0-9.]+m?s\\)\n\n"
+  )
   # The log marginal likelihood shown is fit$logml, to 2 decimals
   expect_match(out, format(round(fit_reg$logml, 2), nsmall = 2), fixed = TRUE)
 
@@ -1665,23 +1668,42 @@ test_that("print() shows the summary table and returns the fit invisibly", {
 test_that("print() points to the fit's warnings and to flagged checks", {
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
   # A Gaussian posterior: no warnings and no flags, so the output ends with
-  # the log marginal likelihood and the convergence line
+  # the table
   fit_ok <- inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), silent = TRUE)
   out <- capture_output(print(fit_ok))
   expect_match(
     out,
-    "Log marginal likelihood: [-0-9.]+\nConverged in [0-9]+ iterations? \\([0-9.]+m?s\\)\\.$"
+    "Log marginal likelihood: [-0-9.]+ \\| Converged in [0-9]+ iterations? \\([0-9.]+m?s\\)\n"
   )
+  expect_match(out, "\nb +[-0-9. ]+$")
 
-  # A fit that fails the mode check has not converged
+  # Converged means both checks pass: the mode check, and the VB
+  # correction's settling
   fit <- fit_ok
   fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
   out <- capture_output(print(fit))
   expect_match(
     out,
-    "\n! Not converged after [0-9]+ iterations? \\([0-9.]+m?s\\)\\."
+    "\\| Not converged after [0-9]+ iterations? \\([0-9.]+m?s\\)\n"
   )
-  expect_no_match(out, "\nConverged")
+  expect_no_match(out, "Converged")
+  fit <- fit_ok
+  fit$diagnostics$marginals$vb_step_sigma[2] <- 0.5
+  out <- capture_output(print(fit))
+  expect_match(
+    out,
+    "\\| Not converged: VB did not settle \\([0-9.]+m?s\\)\n"
+  )
+  # With vb = FALSE only the mode check counts
+  fit$diagnostics$marginals$vb_step_sigma[2] <- NA
+  fit$diagnostics$vb <- NULL
+  expect_match(capture_output(print(fit)), "\\| Converged in")
+  # Too narrow for one line, the headline takes two
+  out <- capture_output(print(fit_ok), width = 50)
+  expect_match(
+    out,
+    "\nLog marginal likelihood: [-0-9.]+\nConverged in [0-9]+ iterations?"
+  )
 
   fit <- fit_ok
   fit$warnings <- c("first", "second")

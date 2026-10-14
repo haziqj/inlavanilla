@@ -135,12 +135,11 @@
     Output
       -- INLAvanilla --------------------------------------------- Skew-normal + VB --
       
+      Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
+      
                   Mean     SD    2.5%    50%  97.5%   Mode
       intercept  0.582  0.286  -0.025  0.598  1.098  0.632
       slope      0.594  0.222   0.174  0.588  1.047  0.576
-      
-      Log marginal likelihood: -16.25
-      Converged in <n> iteration(s) (<time>).
 
 # print(summary()) shows marginals, diagnostics and the evidence
 
@@ -149,8 +148,9 @@
     Output
       -- INLAvanilla summary ------------------------------------- Skew-normal + VB --
       
-      Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
-      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
+      Log marginal likelihood: -16.249 | Converged in <n> iteration(s) (<time>)
+      Laplace -16.277 + VB term 0.029
+      <n> logpost calls: mode <time>, VB <time>, marginals <time>
       
       -- Posterior marginals --
       
@@ -177,8 +177,8 @@
     Output
       -- INLAvanilla summary ------------------------------------------ Skew-normal --
       
-      Log marginal likelihood: -16.277
-      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
+      Log marginal likelihood: -16.277 | Converged in <n> iteration(s) (<time>)
+      <n> logpost calls: mode <time>, VB <time>, marginals <time>
       
       -- Posterior marginals --
       

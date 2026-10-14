@@ -13,12 +13,11 @@
     Output
       -- INLAvanilla ------------------------------------------------- Laplace + VB --
       
+      Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
+      
                   Mean     SD   2.5%    50%  97.5%   Mode
       intercept  0.584  0.276  0.042  0.584  1.125  0.584
       slope      0.595  0.226  0.152  0.595  1.038  0.595
-      
-      Log marginal likelihood: -16.25
-      Converged in <n> iteration(s) (<time>).
 
 ---
 
@@ -27,8 +26,9 @@
     Output
       -- INLAvanilla summary ----------------------------------------- Laplace + VB --
       
-      Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
-      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
+      Log marginal likelihood: -16.249 | Converged in <n> iteration(s) (<time>)
+      Laplace -16.277 + VB term 0.029
+      <n> logpost calls: mode <time>, VB <time>, marginals <time>
       
       -- Posterior marginals --
       
@@ -54,8 +54,8 @@
     Output
       -- INLAvanilla summary ---------------------------------------------- Laplace --
       
-      Log marginal likelihood: -16.277
-      <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
+      Log marginal likelihood: -16.277 | Converged in <n> iteration(s) (<time>)
+      <n> logpost calls: mode <time>, VB <time>, marginals <time>
       
       -- Posterior marginals --
       
