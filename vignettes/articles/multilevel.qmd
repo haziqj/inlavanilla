@@ -50,11 +50,11 @@ subject $j$ has their own intercept and slope:
 
 $$
 y_{ij} = \beta_0 + u_{0j} + (\beta_1 + u_{1j})\,\text{day}_{ij} +
-\varepsilon_{ij},
+\epsilon_{ij},
 \qquad
 \begin{pmatrix} u_{0j} \\ u_{1j} \end{pmatrix} \sim N(0, G),
 \qquad
-\varepsilon_{ij} \sim N(0, \sigma^2),
+\epsilon_{ij} \sim N(0, \sigma^2),
 $$
 
 where $G$ has standard deviations $\tau_0$ and $\tau_1$ and correlation

@@ -38,7 +38,7 @@ library(inlavanilla)
 ## The model
 
 Person $i$ answers item $j$ with $y_{ij} = 1$ when a latent response
-$y^*_{ij} = \lambda_j \eta_i + \varepsilon_{ij}$ exceeds the threshold
+$y^*_{ij} = \lambda_j \eta_i + \epsilon_{ij}$ exceeds the threshold
 $\tau_j$, with factor $\eta_i \sim N(0, 1)$. We use the *delta*
 parameterisation, as lavaan (Rosseel, 2012) calls it, which fixes
 $\operatorname{Var}(y^*_{ij}) = 1$. Then $\lambda_j$ is the correlation of

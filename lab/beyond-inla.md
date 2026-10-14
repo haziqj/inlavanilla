@@ -50,10 +50,10 @@ How the latent variables are handled decides the route:
   in the post: $\beta \sim N(0, 100^2)$, $\sigma \sim
   \text{InvGamma}(0.001, 0.001)$, $\lambda \sim \text{Exp}(-\log 0.875)$ (van
   den Broeck et al., 1994).
-- **Route:** closed form. $p(\varepsilon_i) = \lambda \exp(\lambda
-  \varepsilon_i + \lambda^2\sigma^2/2)\, \Phi(-\varepsilon_i/\sigma -
+- **Route:** closed form. $p(\epsilon_i) = \lambda \exp(\lambda
+  \epsilon_i + \lambda^2\sigma^2/2)\, \Phi(-\epsilon_i/\sigma -
   \lambda\sigma)$ (Aigner, Lovell & Schmidt, 1977), 6 parameters. Given
-  $\varepsilon_i$, $u_i$ is $N(-\varepsilon_i - \lambda\sigma^2, \sigma^2)$
+  $\epsilon_i$, $u_i$ is $N(-\epsilon_i - \lambda\sigma^2, \sigma^2)$
   truncated at 0, so the efficiencies come from `sampling(fun = ...)`.
 - **Data:** `frontier::riceProdPhil`, 344 rice harvests (43 Philippine farms,
   8 years), Cobb-Douglas in area, labour and fertiliser. The thread had none.
