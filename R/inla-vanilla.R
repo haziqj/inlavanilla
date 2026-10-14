@@ -654,7 +654,8 @@ vanilla_fit <- function(
       diagnostics$marginals,
       pars = mean_vb
     ),
-    gaussian = !skew
+    gaussian = !skew,
+    has_grad = has_grad
   )
 
   t_total <- elapsed() - t_start

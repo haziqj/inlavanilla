@@ -1432,6 +1432,8 @@ test_that("a VB correction that does not settle is flagged from end to end", {
     "x The VB correction did not settle: one more step would move `t` by"
   )
   expect_match(fit$warnings, "The VB correction did not settle")
+  # The fit has no gradient, so the hint names one as the remedy
+  expect_match(fit$warnings, "Without a gradient the VB mean is approximate")
   # The stage line is marked, and says so
   expect_match(
     msgs,

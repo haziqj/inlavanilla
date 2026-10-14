@@ -57,9 +57,9 @@ problems <- function(..., gaussian = FALSE) {
 }
 # The warning's message as plain text (no colours, no wrapping), or "" when
 # there is none
-warning_text <- function(..., gaussian = FALSE) {
+warning_text <- function(..., gaussian = FALSE, has_grad = TRUE) {
   w <- tryCatch(
-    warn_diagnostics(dg_of(...), gaussian),
+    warn_diagnostics(dg_of(...), gaussian, has_grad),
     inlavanilla_diagnostics_warning = identity
   )
   if (inherits(w, "condition")) w[["text"]] else ""
@@ -169,6 +169,18 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     fixed = TRUE
   )
   expect_no_match(text, "`a`")
+  # Without a gradient the hint names the remedy first, and says nothing of
+  # it with one
+  expect_match(
+    warning_text(d, has_grad = FALSE),
+    paste0(
+      "i Without a gradient the VB mean is approximate on a posterior this ",
+      "far from Gaussian; supply `grad` if you can.\n",
+      "i The skew-normal marginals do not depend on it"
+    ),
+    fixed = TRUE
+  )
+  expect_no_match(warning_text(d), "Without a gradient")
   # Gaussian marginals are centred on the VB mean, so the hint says so
   expect_match(
     warning_text(d, gaussian = TRUE),

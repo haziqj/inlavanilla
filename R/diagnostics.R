@@ -270,7 +270,7 @@ problem_text <- function(check, dg, env, n = 3L) {
 # The bullets of the fit-time warning, in INLAvaan's order with tails after
 # the unscanned mass, as cli templates with the environment that fills them
 # in attribute "envir". A flagged mode adds nlminb()'s message and a hint.
-diagnostic_problems <- function(dg, gaussian) {
+diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = baseenv())
   out <- character()
@@ -286,9 +286,20 @@ diagnostic_problems <- function(dg, gaussian) {
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
     if (check == "vb_step") {
-      # What the unsettled VB mean moves: not skew-normal marginals, which
-      # are scanned around the mode, but Gaussian ones, which are centred on
-      # it
+      # Without a gradient the likely cause is the rule's error on a
+      # posterior far from Gaussian, which a gradient removes, not the
+      # solver. Then what the unsettled VB mean moves: not skew-normal
+      # marginals, which are scanned around the mode, but Gaussian ones,
+      # which are centred on it.
+      if (!has_grad) {
+        out <- c(
+          out,
+          i = paste0(
+            "Without a gradient the VB mean is approximate on a posterior ",
+            "this far from Gaussian; supply {.arg grad} if you can."
+          )
+        )
+      }
       out <- c(
         out,
         i = if (gaussian) {
@@ -323,8 +334,8 @@ diagnostic_problems <- function(dg, gaussian) {
 
 # One warning, of class inlavanilla_diagnostics_warning, when any check is
 # off; FALSE (invisibly) when none is.
-warn_diagnostics <- function(dg, gaussian) {
-  problems <- diagnostic_problems(dg, gaussian)
+warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
+  problems <- diagnostic_problems(dg, gaussian, has_grad)
   if (length(problems) == 0L) {
     return(invisible(FALSE))
   }
