@@ -225,9 +225,9 @@ init <- c(
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
 fit <- inla_vanilla(logpost, init, x = x, eta = 2)
-#> ✔ Found the posterior mode in 34 iterations [2.1s]
-#> ✔ VB mean correction, max shift 0.38σ [3.0s]
-#> ✔ Fitted 54 skew-normal marginals [4.7s]
+#> ✔ Found the posterior mode in 34 iterations [2.2s]
+#> ✔ VB mean correction, max shift 0.38σ [3.1s]
+#> ✔ Fitted 54 skew-normal marginals [4.8s]
 ```
 
 The fit takes about 10 seconds, and `summary(fit)` flags nothing. The

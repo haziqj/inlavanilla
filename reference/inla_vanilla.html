@@ -478,7 +478,7 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-in"><span><span class="va">fit</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> <span style="color: #D7875F;">─────────────────────────────────────────</span> <span style="color: #555555;">Skew-normal + VB</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (16ms)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (18ms)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>              <span style="font-weight: bold;"> Mean</span>  <span style="font-weight: bold;">   SD</span>  <span style="font-weight: bold;"> 2.5%</span>  <span style="font-weight: bold;">  50%</span>  <span style="font-weight: bold;">97.5%</span>  <span style="font-weight: bold;"> Mode</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">1</span> mu         5.159  <span style="color: #555555;">0.</span>327  4.517  5.159  5.800  5.159</span>
@@ -500,11 +500,11 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> 2 parameters: mu and log_sigma</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Derivatives by finite differences of logpost</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at init -481.47</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">nlminb: relative convergence (4), after 10 iterations (14 function and 26</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">gradient evaluations)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">8.8e-08σ (warning &gt; 0.1σ)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">(warning &gt; 0.1σ)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian by second differences of logpost: 6 calls, and 12 more to set the</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">steps</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Posterior correlation matrix: largest correlation -0.0042 (mu,</span></span>
@@ -512,7 +512,7 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian condition number 1, in SD units (warning &gt; 1e+08)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Laplace log marginal likelihood -66.41</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">63 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[1ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Largest shift 0.24σ, for log_sigma (warning &gt; 1σ)</span></span>
@@ -525,7 +525,7 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #BBBB00;">!</span><span style="color: #555555;"> marks what summary() flags: NMAD &gt; 0.1, ridge bend &gt; 0.25, heavy tails,</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">unscanned mass &gt; 0.05</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">66 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 147 logpost calls in 26ms</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 147 logpost calls in 27ms</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Nothing printed, as in a simulation; any warnings are kept in the fit</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span></span></span>

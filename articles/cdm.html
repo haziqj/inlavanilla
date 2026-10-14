@@ -171,9 +171,9 @@ P(y_{ij} = 1 \mid c)^{y_{ij}} \{1 - P(y_{ij} = 1 \mid c)\}^{1 - y_{ij}}.
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">7</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"pi"</span>, <span class="va">classes</span><span class="op">[</span><span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, y <span class="op">=</span> <span class="va">y</span>, eta <span class="op">=</span> <span class="va">eta</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 186 iterations [35.9s]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [41.5s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [27.4s]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 190 iterations [26.4s]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [39.0s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [20.0s]</span></span></code></pre></div>
 </div>
 <p>Draws give the parameters on the probability scale, and the share of examinees who have mastered each attribute, <span class="math inline">\(\sum_c \pi_c \alpha_{ck}\)</span>:</p>
 <div class="cell" data-layout-align="center">

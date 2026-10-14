@@ -9,8 +9,7 @@ tests of schistosomiasis, fitted in JAGS. This article fits all three to
 one of their data sets with
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
 The infection status sums out of the likelihood, so each model has a
-dozen or so parameters, and the fits take between a twentieth of a
-second and two seconds.
+dozen or so parameters, and each fit takes under a second.
 
 ``` r
 
@@ -182,13 +181,12 @@ lp_lcre <- function(theta, y, count, gh) {
   b1 <- qnorm(plogis(se, log.p = TRUE), log.p = TRUE) * sqrt(1 + sigma[1]^2)
   b0 <- qnorm(plogis(-sp, log.p = TRUE), log.p = TRUE) * sqrt(1 + sigma[2]^2)
 
-  # log P(y | class) for each pattern, with u integrated out
+  # log P(y | class) for each pattern, with u integrated out: one column of
+  # eta per node, so one matrix product covers every pattern and node
   log_class <- function(b, s) {
-    l <- sapply(seq_along(gh$z), function(q) {
-      eta <- b + s * gh$z[q]
-      log_bern(y, pnorm(eta, log.p = TRUE), pnorm(-eta, log.p = TRUE)) +
-        log(gh$w[q])
-    })
+    eta <- b + s * matrix(gh$z, J, length(gh$z), byrow = TRUE)
+    l <- log_bern(y, pnorm(eta, log.p = TRUE), pnorm(-eta, log.p = TRUE)) +
+      rep(log(gh$w), each = nrow(y))
     l_max <- apply(l, 1, max)
     l_max + log(rowSums(exp(l - l_max)))
   }
@@ -243,9 +241,9 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
 fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count)
-#> ✔ Found the posterior mode in 30 iterations [37ms]
-#> ✔ VB mean correction, max shift 0.37σ [42ms]
-#> ✔ Fitted 11 skew-normal marginals [59ms]
+#> ✔ Found the posterior mode in 30 iterations [39ms]
+#> ✔ VB mean correction, max shift 0.37σ [68ms]
+#> ✔ Fitted 11 skew-normal marginals [66ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
@@ -253,9 +251,9 @@ fit_lcre <- inla_vanilla(
   count = count,
   gh = gh
 )
-#> ✔ Found the posterior mode in 29 iterations [690ms]
-#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [3.7s]
-#> ✔ Fitted 13 skew-normal marginals [846ms]
+#> ✔ Found the posterior mode in 29 iterations [268ms]
+#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.5s]
+#> ✔ Fitted 13 skew-normal marginals [331ms]
 start_fm <- c(
   start[1],
   logit_eta1 = qlogis(0.2),
@@ -264,9 +262,9 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
 fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count)
-#> ✔ Found the posterior mode in 25 iterations [59ms]
-#> ✔ VB mean correction, max shift 0.44σ [94ms]
-#> ✔ Fitted 13 skew-normal marginals [100ms]
+#> ✔ Found the posterior mode in 25 iterations [57ms]
+#> ✔ VB mean correction, max shift 0.44σ [125ms]
+#> ✔ Fitted 13 skew-normal marginals [102ms]
 ```
 
 The seconds each fit took:
@@ -276,7 +274,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.16 5.28 0.27
+#> 0.19 2.12 0.30
 ```
 
 ## Results

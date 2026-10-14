@@ -78,7 +78,7 @@ fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (16ms)
 #> Laplace -12.362 + VB term 0.0082
 #> 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms
 #> 
