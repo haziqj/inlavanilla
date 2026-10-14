@@ -76,10 +76,12 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   approximation.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and
 #'   the scanned density, relative to its peak (Jamil & Rue, 2026, Section
-#'   4.4), flagged above 0.1. `alpha` (the Shape column) is the shape of the
-#'   fitted skew-normal marginal, on the unconstrained scale: zero is a
-#'   Gaussian marginal, and the sign gives the direction of the skew. It is
-#'   not flagged.
+#'   4.4), flagged above 0.1. `alpha` is the shape of the fitted skew-normal
+#'   marginal, on the unconstrained scale: zero is a Gaussian marginal, and
+#'   the sign gives the direction of the skew. It describes the marginal
+#'   rather than checking it, so it is not in the printed table: it is in
+#'   `summary(fit)$diagnostics` and [diagnostics()], and `fit$sn` holds it
+#'   with the other skew-normal parameters.
 #' * **Volume correction.** `gamma1`, the slope added to the scanned
 #'   log-heights, per posterior SD along the scan, for the changing volume of
 #'   the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
@@ -212,14 +214,13 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cols <- c(
     "vb_shift_sigma",
     "mean_gap",
-    "alpha",
     "nmad",
     "ridge_bend",
     "unscanned_mass"
   )
-  heads <- c("VB shift", "Mean gap", "Shape", "NMAD", "Ridge bend", "Unscanned")
-  keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)) &
-    (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
+  heads <- c("VB shift", "Mean gap", "NMAD", "Ridge bend", "Unscanned")
+  keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE)) &
+    (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE))
   if (any(keep)) {
     dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
     colnames(dtab) <- heads[keep]
