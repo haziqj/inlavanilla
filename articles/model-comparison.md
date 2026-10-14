@@ -65,9 +65,9 @@ logpost_pois <- function(theta, X, y) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
-#> ✔ Found the posterior mode in 29 iterations [16ms]
-#> ✔ VB mean correction, max shift 0.025σ [35ms]
-#> ✔ Fitted 6 skew-normal marginals [26ms]
+#> ✔ Found the posterior mode in 29 iterations [15ms]
+#> ✔ VB mean correction, max shift 0.025σ [18ms]
+#> ✔ Fitted 6 skew-normal marginals [25ms]
 ```
 
 [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) takes the fit,
@@ -77,15 +77,15 @@ fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
 
 loo_pois <- loo(fit_pois, loglik_pois, X = X, y = y)
 loo_pois
-#> ── Leave-one-out cross-validation ────────────────────────────────── 54 units ──
+#> ── Leave-one-out cross-validation ────────────────────────────── 54 units ──
 #> 
 #>           Estimate    SE
 #> elpd_loo    -242.9  15.0
 #> p_loo         20.6   3.0
 #> looic        485.9  30.0
 #> 
-#> ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for unit
-#>   37.
+#> ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for
+#>   unit 37.
 ```
 
 `p_loo` is the effective number of parameters. Here it is about 21, for
@@ -125,15 +125,15 @@ init_nb <- c(init_pois, log_phi = 2)
 fit_nb <- inla_vanilla(logpost_nb, init_nb, X = X, y = y, silent = TRUE)
 loo_nb <- loo(fit_nb, loglik_nb, X = X, y = y)
 loo_nb
-#> ── Leave-one-out cross-validation ────────────────────────────────── 54 units ──
+#> ── Leave-one-out cross-validation ────────────────────────────── 54 units ──
 #> 
 #>           Estimate   SE
 #> elpd_loo    -202.2  4.8
 #> p_loo          6.0  0.8
 #> looic        404.3  9.6
 #> 
-#> ✔ Second-order expansion for every unit. Largest leverage k = 0.23, for unit
-#>   24.
+#> ✔ Second-order expansion for every unit. Largest leverage k = 0.23, for
+#>   unit 24.
 ```
 
 Now `p_loo` is close to the 7 parameters.
@@ -152,7 +152,7 @@ elpd_diff <- function(a, b) {
 }
 elpd_diff(loo_nb, loo_pois)
 #> elpd_diff        se 
-#>  40.75429  10.62524
+#>  40.75547  10.62584
 ```
 
 The negative binomial predicts better, by about four standard errors.
@@ -169,7 +169,7 @@ fit_add <- inla_vanilla(logpost_nb, init_add, X = X_add, y = y, silent = TRUE)
 loo_add <- loo(fit_add, loglik_nb, X = X_add, y = y)
 elpd_diff(loo_nb, loo_add)
 #> elpd_diff        se 
-#>  2.046776  2.718542
+#>  2.047182  2.718401
 ```
 
 The interaction model is ahead, but by less than one standard error: the
@@ -199,7 +199,7 @@ LOO:
 ``` r
 
 waic(fit_nb, loglik_nb, X = X, y = y)
-#> ── WAIC ──────────────────────────────────────────────────────────── 54 units ──
+#> ── WAIC ──────────────────────────────────────────────────────── 54 units ──
 #> 
 #>            Estimate   SE
 #> elpd_waic    -202.0  4.8
@@ -230,7 +230,13 @@ refit_elpd <- function(i) {
     vb = FALSE,
     silent = TRUE
   )
-  ll <- sampling(fit_i, 4000, fun = loglik_nb, X = X[i, , drop = FALSE], y = y[i])
+  ll <- sampling(
+    fit_i,
+    4000,
+    fun = loglik_nb,
+    X = X[i, , drop = FALSE],
+    y = y[i]
+  )
   max(ll) + log(mean(exp(ll - max(ll))))
 }
 time_refit <- system.time(
@@ -240,10 +246,10 @@ time_loo <- system.time(loo(fit_nb, loglik_nb, X = X, y = y))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  4.771  0.004
+#>  4.746  0.005
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
-#> -202.6061 -202.1733
+#> -202.6061 -202.1721
 ```
 
 ``` r
@@ -299,7 +305,7 @@ Here no loom comes close:
 
 summary(loo_nb$pointwise[, "k"])
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#>  0.0974  0.1030  0.1153  0.1280  0.1401  0.2293
+#> 0.09739 0.10298 0.11533 0.12795 0.14013 0.22925
 ```
 
 ## References

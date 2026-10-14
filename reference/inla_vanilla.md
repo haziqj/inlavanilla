@@ -152,8 +152,9 @@ It is a list holding, among other things:
   and the Kullback-Leibler divergence of the shift (`kld_global`); it is
   `NULL` when `vb = FALSE`. `marginals` is a data frame with a row per
   parameter: `mode_shift_sigma`, `kld`, `vb_shift`, `vb_shift_sigma`,
-  `nmad`, `alpha`, `scan_end_mass`, `sn_vs_vb`, `gamma1`, `tails` and
-  `bend`, with `NA` for the checks the fit did not run.
+  `nmad`, `alpha`, `unscanned_mass`, `vb_step_sigma`, `mean_gap`,
+  `gamma1`, `tails` and `ridge_bend`, with `NA` for the checks the fit
+  did not run.
 
 - `scan`: the scans the skew-normals were fitted to, for
   `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
@@ -210,7 +211,9 @@ poorly determined parameter, its marginal comes out too narrow, by a
 factor that vanishes as O(1/n). Examples are a regression coefficient or
 a mean when the noise SD is uncertain. For a normal mean with unknown
 variance the SD is about 11% too small at n = 12, 3% at n = 50, and
-under 1% at n = 200.
+under 1% at n = 200. The `ridge_bend` diagnostic of
+[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+flags this narrowing where it predicts about 10% or more.
 
 A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could
@@ -224,26 +227,38 @@ where the tail near zero is compressed, the two were much closer: means
 marginals of this model are the same as inlavanilla's: Jamil and Rue
 (2026a, Section 4.4) find the same miss in the lower tail of a variance
 near zero, the boundary pile-up that a unimodal skew-normal cannot
-capture. The `bend` diagnostic of
+capture. No check is aimed at this. The `ridge_bend` diagnostic of
 [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
-flagged both, but its size does not say how far off a marginal is, and
-the `tails` check, which looks only 4 posterior SDs either side of the
-mode (the Laplace SDs), missed them.
+flagged one of the two (0.44), but the other's ridge bend (0.11) was no
+larger than that of marginals within 7% in SD, and the `tails` check,
+which looks only 4 posterior SDs either side of the mode (the Laplace
+SDs), missed both.
 
 ## Gradients
 
 `grad` is optional. Without it, derivatives come from finite differences
-of `logpost`, and the number of calls grows quickly with the number of
-parameters m. The mode and Hessian take about m^2 + 6m calls. The
-marginals take about m(`n_grid` + 2m + 5). The VB correction takes about
-(m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
-beyond a handful of parameters: at m = 20 a fit makes on the order of
-50,000 calls. With `grad`, the VB correction takes 2m^2 + 1 gradient
-calls per sweep instead, and the fit is faster and more accurate. For
-more than about 10 parameters, supply `grad`, or set `vb = FALSE` to
-skip the VB correction (and its term in the log marginal likelihood):
-the skew-normal marginals do not depend on it. `marginals = "gaussian"`
-saves the calls of the scans.
+of `logpost`, and the number of calls grows with the square of the
+number of parameters m. The mode and Hessian take about m^2 + 6m calls,
+and the marginals about m(`n_grid` + 2m + 5). The VB correction takes at
+most (m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no
+derivatives, because Stein's identity gives the expected gradient from
+values of `logpost` alone. Its VB mean is then exact when the
+log-posterior is a polynomial of degree four in whitened coordinates,
+and up to degree six with `grad`. On test models it was about 0.01
+posterior SDs from exact VB (0.003 with `grad`), and up to 0.1 on a
+strongly skewed posterior (0.03 with `grad`), against a VB error of 0.01
+to 0.2 SDs from the posterior mean itself. On the most skewed posteriors
+the VB correction may then not settle, and the fit says it has not
+converged (see
+[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md));
+`grad` is the remedy.
+
+With `grad`, every stage is faster and more accurate. The VB correction
+then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the
+same nodes. Beyond a handful of parameters it and the marginals are the
+slowest stages. `vb = FALSE` skips the VB correction (and its term in
+the log marginal likelihood), and the skew-normal marginals do not
+depend on it; `marginals = "gaussian"` saves the calls of the scans.
 
 A supplied `grad` is checked against finite differences at `init`, and
 its Jacobian at the mode is checked for symmetry, with a warning if
@@ -265,7 +280,9 @@ names (one per element of a parameter vector) are numbered, as
   below the maximum are ignored in the skew-normal fit (default `-6`).
 
 - `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
-  tolerance in posterior SDs (default `1e-3`) for the VB correction.
+  tolerance in posterior SDs (default `1e-3`) for the VB correction's
+  fixed-point iteration. If it has not converged after `vb_maxit` steps,
+  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes over.
 
 - `nlminb`: a list of
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) controls for
@@ -309,11 +326,12 @@ calls of `logpost` or `grad`:
 
 - The VB correction: the largest step, in posterior SDs, at each
   fixed-point iteration, whether Anderson acceleration or the fallback
-  optimiser was used, the largest shift, and the term it adds to the log
+  optimiser was used (and, after the fallback, the step still to go
+  where it landed), the largest shift, and the term it adds to the log
   marginal likelihood.
 
-- The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
-  correction `gamma1` of each parameter, with the values that
+- The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
+  volume correction `gamma1` of each parameter, with the values that
   [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   flags marked.
 
@@ -375,18 +393,17 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [3ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.24σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
+#> 
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (13ms)
 #> 
 #>             Mean     SD   2.5%    50%  97.5%   Mode
 #> mu         5.159  0.327  4.517  5.159  5.800  5.159
 #> log_sigma  0.616  0.129  0.377  0.610  0.885  0.599
-#> 
-#> Log marginal likelihood: -66.38
-#> ! 1 check flagged by `summary()`.
 
 # The posterior of sigma itself, through the draws
 sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
@@ -404,27 +421,32 @@ fit <- inla_vanilla(
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [1ms]
-#>   nlminb: relative convergence (4), after 10 iterations (14 function and 26 gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step 8.8e-08σ (warning above 0.1σ)
-#>   Hessian by second differences of logpost: 6 calls, and 12 more to set the steps
-#>   Posterior correlation matrix: largest correlation -0.0042 (mu, log_sigma), smallest eigenvalue 1
-#>   Hessian condition number 1, in posterior-SD units (warning above 1e+08)
+#> ✔ Found the posterior mode in 10 iterations [2ms]
+#>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
+#>     gradient evaluations)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
+#>     8.8e-08σ (warning > 0.1σ)
+#>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
+#>     steps
+#>   Posterior correlation matrix: largest correlation -0.0042 (mu,
+#>     log_sigma), smallest eigenvalue 1
+#>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
-#>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0081, 2.4e-04
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
+#>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
-#>   Largest shift 0.24σ, for log_sigma (warning above 1σ)
-#>   KL term 0.03, giving a log marginal likelihood of -66.38
-#>   81 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [6ms]
-#>              Shape     NMAD     Bend  Tails  End mass    gamma1
-#>   mu         -0.25  4.2e-05     0.13!    ok   6.4e-05  -0.00014
-#>   log_sigma   1.32   0.0076  5.5e-06     ok   0.00057      0.13
-#>   ! marks what summary() flags: NMAD above 0.1, bend above 0.1, heavy tails, scan-end mass above 0.05
+#>   Largest shift 0.24σ, for log_sigma (warning > 1σ)
+#>   KL term 0.029, giving a log marginal likelihood of -66.38
+#>   18 logpost calls
+#> ✔ Fitted 2 skew-normal marginals [7ms]
+#>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
+#>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
+#>   log_sigma   1.32   0.0076     5.5e-06     ok    0.00057      0.13
+#>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
+#>     unscanned mass > 0.05
 #>   66 logpost calls
-#> ℹ Done: 210 logpost calls in 21ms
+#> ℹ Done: 147 logpost calls in 26ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

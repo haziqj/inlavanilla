@@ -86,28 +86,30 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
 #> ✔ Found the posterior mode in 10 iterations [8ms]
-#> ✔ VB mean correction, max shift 0.43σ [18ms]
-#> ✔ Fitted 3 skew-normal marginals [10ms]
+#> ✔ VB mean correction, max shift 0.44σ [18ms]
+#> ✔ Fitted 3 skew-normal marginals [11ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
+#> 
+#> Log marginal likelihood: -11.61 · Converged in 10 iterations (43ms)
 #> 
 #>         Mean     SD    2.5%     50%  97.5%    Mode
 #> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
 #> b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85
 #> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
-#> 
-#> Log marginal likelihood: -11.62
-#> ! 1 check flagged by `summary()`.
 ```
 
 The header names the approximation: skew-normal marginals, with the VB
-mean correction. The table summarises each parameter’s skew-normal
-marginal: the mean, standard deviation, quantiles and mode. The last
-line says that [`summary()`](https://rdrr.io/r/base/summary.html) flags
-one of its checks; we come to it below. Each step of the fit reports as
-it finishes, with the time it took. `verbose = TRUE` adds a full
-diagnostic of each step, and `silent = TRUE` prints nothing at all, as
-in a simulation; the warnings it would have shown are kept in
+mean correction. The line under it gives the log marginal likelihood and
+whether the fit converged: whether the mode search and the VB correction
+both reached their solutions. The table summarises each parameter’s
+skew-normal marginal: the mean, standard deviation, quantiles and mode.
+Had the fit raised a warning, or
+[`summary()`](https://rdrr.io/r/base/summary.html) flagged one of its
+checks, a line below the table would say so. Each step of the fit
+reports as it finishes, with the time it took. `verbose = TRUE` adds a
+full diagnostic of each step, and `silent = TRUE` prints nothing at all,
+as in a simulation; the warnings it would have shown are kept in
 `fit$warnings`. The fits below use `silent = TRUE`.
 
 [`summary()`](https://rdrr.io/r/base/summary.html) adds diagnostics for
@@ -116,50 +118,54 @@ each stage:
 ``` r
 
 summary(fit)
-#> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Posterior marginals
+#> Log marginal likelihood: -11.612 · Converged in 10 iterations (43ms)
+#> Laplace -11.709 + VB term 0.097
+#> 263 logpost calls: mode 8ms, VB 18ms, marginals 12ms
+#> 
+#> ── Posterior marginals ──
+#> 
 #>         Mean     SD    2.5%     50%  97.5%    Mode
 #> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
 #> b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85
 #> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
 #> 
-#> Diagnostics
-#>       VB shift  SN - VB  Shape    NMAD   Bend  End mass
-#> b0       -0.13   0.0084   -1.5  0.0091   0.14   0.00041
-#> b_wt     -0.43   -0.057   -1.7   0.017   0.05    0.0022
-#> b_hp      0.26    0.076    1.7  0.0049  0.024    0.0018
+#> ── Diagnostics ──
 #> 
-#> ✔ Mode found in 10 iterations (Newton step 1.4e-07 posterior SDs).
-#> ✔ Hessian condition number 4.4, in posterior-SD units.
-#> ✔ VB correction in 4 iterations: max shift 0.43 posterior SDs.
-#> ✔ Skew-normal fits: max NMAD 0.017.
-#> ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `b0`
-#>   (0.14): the marginal may be too narrow.
-#> ✔ Skew-normal and VB means agree to within 0.076 posterior SDs.
+#>       VB shift    NMAD  Unscanned  Ridge bend  Mean gap
+#> b0       -0.13  0.0091    0.00041       0.14     0.0048
+#> b_wt     -0.44  0.017     0.0022        0.050   -0.052 
+#> b_hp      0.28  0.0049    0.0018        0.024    0.057 
 #> 
-#> Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)
-#> 511 logpost calls in 42ms (mode 8ms, VB 19ms, marginals 11ms)
+#> ✔ Mode found in 10 iterations (Newton step 1.4e-07σ).
+#> ✔ Hessian condition number 4.4, in SD units.
+#> ✔ VB correction settled in 4 iterations: max shift 0.44σ.
+#> ✔ Skew-normal fits: max NMAD 0.017, unscanned mass 0.0022, ridge bend 0.14,
+#>   mean gap 0.057σ.
 ```
 
 - **VB shift** is how far the VB mean correction moved each mean from
   the mode, in posterior SDs. The weight coefficient moves by nearly
   half an SD: the posterior is far from symmetric.
-- **Shape** is the skew-normal’s shape parameter \\\alpha\\; zero means
-  symmetric.
 - **NMAD** measures how well the skew-normal fits the scanned
   log-posterior (the largest gap relative to the peak); small is good.
-- **SN - VB** compares the skew-normal mean with the VB-corrected mean,
+- **Unscanned** is the mass each skew-normal puts beyond the scanned
+  window, 4 posterior SDs either side of the mode, where it is
+  extrapolated. It is flagged above 0.05.
+- **Ridge bend** is the log-density, in nats, that each scan misses 2
+  SDs out, because it runs along a straight line, the conditional mode
+  path, while the ridge of high density bends away from it. Above 0.25
+  it is flagged: the marginal SD may then be about 10% too small. The
+  intercept’s ridge bend is below that, and its marginal is only a
+  little narrow, as the check against the exact posterior below shows.
+- **Mean gap** compares the skew-normal mean with the VB-corrected mean,
   in posterior SDs. Both estimate the posterior mean, so they should
   agree; a large gap means the posterior is far from Gaussian and either
   may be off.
-- **Bend** is the log-density, in nats, that each scan misses 2 SDs out,
-  because it runs along a straight line while the other parameters’
-  conditional mode bends away from it. Above 0.1 it is flagged, as here
-  for the intercept: its marginal may be a little too narrow.
-- **End mass** is the mass each skew-normal puts beyond the scanned
-  window, 4 posterior SDs either side of the mode, where it is
-  extrapolated. It is flagged above 0.05.
+
+A flagged value is red in the table, and its check gets a line of its
+own, marked “!”, below the table.
 
 `diagnostics(fit)` returns the same checks as numbers, under the names
 that INLAvaan’s
@@ -196,7 +202,8 @@ reference the approximations are trying to match.
 
 s <- fit$summary
 axes <- lapply(seq_len(3), function(j) {
-  seq(s[j, "Mean"] - 7 * s[j, "SD"], s[j, "Mean"] + 7 * s[j, "SD"], length.out = 61)
+  half <- 7 * s[j, "SD"]
+  seq(s[j, "Mean"] - half, s[j, "Mean"] + half, length.out = 61)
 })
 grid <- as.matrix(expand.grid(axes))
 eta <- X %*% t(grid)
@@ -223,7 +230,12 @@ probs <- c(0.025, 0.25, 0.5, 0.75, 0.975)
 sn_q <- summary(fit, probs = probs)$table[, paste0(100 * probs, "%")]
 cols <- c(Exact = "grey20", `Skew-normal` = "#C2410C", Laplace = "#0F766E")
 
-op <- par(mfrow = c(3, 1), mar = c(2.5, 7.5, 1.8, 1), mgp = c(2, 0.6, 0), las = 1)
+op <- par(
+  mfrow = c(3, 1),
+  mar = c(2.5, 7.5, 1.8, 1),
+  mgp = c(2, 0.6, 0),
+  las = 1
+)
 for (j in seq_len(3)) {
   q <- rbind(
     Exact = exact_quantiles(j, probs),
@@ -237,7 +249,10 @@ for (j in seq_len(3)) {
   segments(q[, 1], at, q[, 5], at, col = cols, lwd = 1.5)
   segments(q[, 2], at, q[, 4], at, col = cols, lwd = 6, lend = 1)
   points(q[, 3], at, pch = 21, bg = "white", col = cols, cex = 1.3, lwd = 1.5)
-  mtext(rownames(q), side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8)
+  mtext(
+    rownames(q),
+    side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8
+  )
 }
 ```
 
@@ -252,9 +267,9 @@ par(op)
 ```
 
 The skew-normal intervals track the exact ones closely. The intercept’s
-is a little narrow, as its bend flag warned. The Laplace intervals are
-symmetric about the mode, so they cut the long tails short and miss
-values on the far side.
+is a little narrow, by about 5%, as its ridge bend suggested. The
+Laplace intervals are symmetric about the mode, so they cut the long
+tails short and miss values on the far side.
 
 The grid also gives the exact log marginal likelihood:
 
@@ -267,7 +282,7 @@ c(
   Laplace = fit$logml_laplace
 )
 #>        exact VB-corrected      Laplace 
-#>    -11.61846    -11.61530    -11.70894
+#>    -11.61846    -11.61242    -11.70894
 ```
 
 The VB correction moves the Laplace estimate most of the way to the
@@ -292,12 +307,12 @@ max(abs(fit_g$summary - fit$summary))
 #> [1] 1.813216e-06
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 #>                    logpost grad
-#> finite_differences     511    0
-#> gradient               134  124
+#> finite_differences     263    0
+#> gradient               134  108
 ```
 
 The two fits agree to several decimal places, and the gradient version
-calls `logpost` far less often.
+calls `logpost` about half as often.
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 checks a supplied gradient against finite differences at `init` and
 warns if they disagree, which catches most slips in hand-derived
@@ -330,9 +345,9 @@ round(t(sapply(fits, function(f) {
   )
 })), 2)
 #>                  calls  logml  Mean  2.5% 97.5%
-#> Skew-normal + VB   511 -11.62 -5.12 -8.00 -2.72
+#> Skew-normal + VB   263 -11.61 -5.12 -8.00 -2.72
 #> Skew-normal        207 -11.71 -5.12 -8.00 -2.72
-#> Laplace + VB       400 -11.62 -5.05 -7.51 -2.59
+#> Laplace + VB       152 -11.61 -5.06 -7.52 -2.60
 #> Laplace             96 -11.71 -4.51 -6.97 -2.05
 ```
 
@@ -340,9 +355,10 @@ Without the VB correction the skew-normal marginals are the same,
 because they are scanned around the mode, but the log marginal
 likelihood is the Laplace one. The VB correction moves the Gaussian’s
 centre most of the way to the posterior mean, but a Gaussian cannot
-follow the long tail. Without a gradient the VB correction is the most
-expensive stage, and its cost grows fastest with the number of
-parameters.
+follow the long tail. Without a gradient it takes the expected gradient
+from values of `logpost` alone, and costs about as much as finding the
+mode. With a gradient it is more accurate, and as the number of
+parameters grows, it and the marginals become the slowest stages.
 
 ## Derived quantities
 
@@ -424,7 +440,7 @@ fit_wt <- inla_vanilla(
 )
 log_bf <- fit$logml - fit_wt$logml
 log_bf
-#> [1] 1.410956
+#> [1] 1.418548
 ```
 
 A log Bayes factor of 1.4 favours the model with horsepower, by a factor
@@ -443,13 +459,13 @@ log-likelihood as one term per observation and use
 
 ## Constrained parameters
 
-The approximation works on an unconstrained scale: each parameter must
-be free to take any real value. Reparameterise anything constrained,
-such as a standard deviation as its log, a probability as its logit, or
-a correlation as its Fisher \\z\\. The parameterisation also matters for
-accuracy, since each parameter’s skew-normal lives on the scale you
-choose, and scales on which the posterior is closer to Gaussian work
-better.
+The approximation works on an unconstrained scale[^1], where each
+parameter is free to take any real value. Reparameterise anything
+constrained, such as a standard deviation as its log, a probability as
+its logit, or a correlation as its Fisher \\z\\. The parameterisation
+also matters for accuracy, since each parameter’s skew-normal lives on
+the scale you choose, and scales on which the posterior is closer to
+Gaussian work better.
 
 `logpost` is then the log density of the parameters you pass. A prior
 stated on the natural scale needs the log-Jacobian of the
@@ -504,6 +520,13 @@ fit <- inla_vanilla(
 )
 ```
 
+The articles [Speeding up with
+Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md) and [Using
+TMB](http://haziqj.ml/inlavanilla/articles/tmb.md) work through both
+routes for a structural equation model with 39 parameters: in C++ with
+an analytic gradient, and as a TMB template with automatic
+differentiation.
+
 ## References
 
 Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
@@ -515,3 +538,12 @@ Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
 INLA-based approximate Bayesian structural equation modelling*
 (arXiv:2604.00671 \[stat.CO\]). arXiv.
 <https://doi.org/10.48550/arXiv.2604.00671>
+
+[^1]: In practice, it is enough for the posterior to sit well away from
+    any boundary. Apart from the search for the mode, the fit evaluates
+    `logpost` only within about 4 posterior SDs of the mode (the width
+    of the skew-normal scans), so a variance can stay on its natural
+    scale if its posterior is far from zero. The optimiser may still
+    stray onto illegal values on its way to the mode, so have `logpost`
+    return `-Inf` there: it then steps back instead of raising warnings
+    or errors.

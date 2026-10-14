@@ -88,7 +88,8 @@
     <section class="level2"><h2 id="what-can-go-wrong">What can go wrong<a class="anchor" aria-label="anchor" href="#what-can-go-wrong"></a>
 </h2>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> approximates a posterior in stages, and each stage can fail in its own way. The mode search can stop short. The Gaussian can be a poor centre, so the VB correction moves far. A skew-normal can fail to match the shape of a marginal. And each marginal is fitted to a scan of only <span class="math inline">\(\pm 4\)</span> posterior SDs around the mode, so whatever lies beyond is extrapolated. A posterior SD in these checks is the Laplace SD at the mode, <span class="math inline">\(\sqrt{\Sigma_{jj}}\)</span>, as in INLAvaan; it is not the SD column of the summary table, which is the skew-normal’s.</p>
-<p>Each stage is checked as it runs, at almost no cost: the checks reuse what the fit has already computed. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports every check and flags the values that look off, and <code><a href="../reference/diagnostics.html">diagnostics()</a></code> returns them as numbers. Most problems also raise one warning at the end of the fit. Printing the fit ends with a line counting its warnings and one counting the flagged checks, each shown only when there are any, so even a fit run with <code>silent = TRUE</code> shows that something needs a look.</p>
+<p>Each stage is checked as it runs, at almost no cost: the checks reuse what the fit has already computed. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports every check and flags the values that look off, and <code><a href="../reference/diagnostics.html">diagnostics()</a></code> returns them as numbers. Most problems also raise one warning at the end of the fit. Printing the fit opens with the log marginal likelihood and whether the fit converged, and ends with a line counting its warnings and one counting the flagged checks, each shown only when there are any, so even a fit run with <code>silent = TRUE</code> shows that something needs a look.</p>
+<p>Two of the checks say whether the computation reached its solution: the mode check and the VB check. When both pass, the fit has converged. The others judge how well the approximation fits the posterior, which a converged fit can still do badly.</p>
 <table class="table caption-top">
 <colgroup>
 <col style="width: 20%">
@@ -115,6 +116,13 @@
 <td>INLAvaan</td>
 </tr>
 <tr class="even">
+<td>VB settled</td>
+<td><code>vb_step_sigma</code></td>
+<td>above 0.1 SDs</td>
+<td>the same</td>
+<td>inlavanilla</td>
+</tr>
+<tr class="odd">
 <td>Hessian</td>
 <td>
 <code>hess_cond</code> (in <code>diagnostics(fit)</code>)</td>
@@ -123,51 +131,51 @@
 <td>the same</td>
 <td>INLAvaan</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>VB correction</td>
 <td><code>vb_shift_sigma</code></td>
 <td>above 1 SD</td>
 <td>the same</td>
 <td>INLAvaan</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Skew-normal fit</td>
 <td><code>nmad</code></td>
 <td>above 0.1</td>
 <td>the same</td>
 <td>INLAvaan</td>
 </tr>
-<tr class="odd">
-<td>Scan-end mass</td>
-<td><code>scan_end_mass</code></td>
+<tr class="even">
+<td>Unscanned mass</td>
+<td><code>unscanned_mass</code></td>
 <td>above 0.05</td>
 <td>the same</td>
 <td>INLAvaan</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Tails</td>
 <td><code>tails</code></td>
 <td>heavy</td>
 <td>the same</td>
 <td>inlavanilla</td>
 </tr>
-<tr class="odd">
-<td>Scan path</td>
-<td><code>bend</code></td>
-<td>above 0.1 nats</td>
+<tr class="even">
+<td>Ridge bend</td>
+<td><code>ridge_bend</code></td>
+<td>above 0.25 nats</td>
 <td>no</td>
 <td>inlavanilla</td>
 </tr>
-<tr class="even">
-<td>Skew-normal and VB means</td>
-<td><code>sn_vs_vb</code></td>
+<tr class="odd">
+<td>Mean gap</td>
+<td><code>mean_gap</code></td>
 <td>above 0.1 SDs</td>
 <td>no</td>
 <td>inlavanilla</td>
 </tr>
 </tbody>
 </table>
-<p>Most of these are the checks of INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, under the same names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics, and the gap between the skew-normal and VB means as an internal check; the mode shift, the Hessian condition number and the scan-end mass come from INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, not from the paper. The levels of those five checks are INLAvaan’s, and the fit-time warning uses its words. The tails check is inlavanilla’s own, and so are the scan-path and SN-VB checks, which only <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags. Every level is a package default, chosen so that a healthy fit stays silent, and not a calibrated cut-off: a tripped check is a prompt to look again, and silence is not a certificate of accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD track the loss of accuracy, and the paper reports a calibration of the expected error against them in its Supplementary Material.</p>
+<p>Most of these are the checks of INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, under the same names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics, and the gap between the skew-normal and VB means as an internal check; the mode shift, the Hessian condition number and the unscanned mass come from INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, not from the paper. The levels of those five checks are INLAvaan’s, and the fit-time warning uses its words. The VB settling and tails checks are inlavanilla’s own, and so are the ridge bend and mean gap checks, which only <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags. Every level is a package default, chosen so that a healthy fit stays silent, and not a calibrated cut-off: a tripped check is a prompt to look again, and silence is not a certificate of accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD track the loss of accuracy, and the paper reports a calibration of the expected error against them in its Supplementary Material.</p>
 </section><section class="level2"><h2 id="a-healthy-fit">A healthy fit<a class="anchor" aria-label="anchor" href="#a-healthy-fit"></a>
 </h2>
 <p>Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:</p>
@@ -184,31 +192,35 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>log_rate <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Posterior marginals</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)</span></span>
+<span><span class="co">#&gt; Laplace -12.362 + VB term 0.0082</span></span>
+<span><span class="co">#&gt; 66 logpost calls: mode 6ms, VB 2ms, marginals 6ms</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ── Posterior marginals ──</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            Mean     SD   2.5%    50%  97.5%   Mode</span></span>
 <span><span class="co">#&gt; log_rate  0.595  0.263  0.047  0.607  1.078  0.631</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Diagnostics</span></span>
-<span><span class="co">#&gt;           VB shift   SN - VB  Shape    NMAD  Bend  End mass</span></span>
-<span><span class="co">#&gt; log_rate     -0.13  -0.00077   -1.4  0.0066     0   0.00038</span></span>
+<span><span class="co">#&gt; ── Diagnostics ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ✔ Mode found in 7 iterations (Newton step 9.8e-08 posterior SDs).</span></span>
-<span><span class="co">#&gt; ✔ VB correction in 3 iterations: max shift 0.13 posterior SDs.</span></span>
-<span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.0066.</span></span>
-<span><span class="co">#&gt; ✔ Skew-normal and VB means agree to within 7.7e-04 posterior SDs.</span></span>
+<span><span class="co">#&gt;           VB shift    NMAD  Unscanned  Ridge bend  Mean gap</span></span>
+<span><span class="co">#&gt; log_rate     -0.13  0.0066    0.00038           0   -0.0016</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -12.354 (Laplace -12.362, VB term 0.0083)</span></span>
-<span><span class="co">#&gt; 78 logpost calls in 17ms (mode 6ms, VB 1ms, marginals 5ms)</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Mode found in 7 iterations (Newton step 9.8e-08σ).</span></span>
+<span><span class="co">#&gt; ✔ VB correction settled in 3 iterations: max shift 0.13σ.</span></span>
+<span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.0066, unscanned mass 0.00038, ridge bend 0,</span></span>
+<span><span class="co">#&gt;   mean gap 0.0016σ.</span></span></code></pre></div>
 </div>
-<p>Every check passes. The marginal is mildly skewed (shape about -1.4), the skew-normal matches the scan to within 1% of its peak (NMAD), and its mean agrees with the VB-corrected mean.</p>
+<p>Every check passes. The marginal is mildly skewed (its skew-normal shape <code>alpha</code>, in <code>diagnostics(fit_pois, type = "param")</code>, is about -1.4), the skew-normal matches the scan to within 1% of its peak (NMAD), and its mean agrees with the VB-corrected mean.</p>
 </section><section class="level2"><h2 id="the-mode-the-hessian-and-the-vb-correction">The mode, the Hessian and the VB correction<a class="anchor" aria-label="anchor" href="#the-mode-the-hessian-and-the-vb-correction"></a>
 </h2>
 <p>The mode is checked by the Newton step there, in posterior SDs (<code>mode_shift_sigma</code>): how far one step of Newton’s method would still move each parameter. It is flagged above 0.1, INLAvaan’s level, whatever the optimiser’s return code, because without a gradient the optimiser can report failure at an accurate mode, and success short of one. When the mode is off, the warning says so first, and suggests what to change.</p>
 <p><code>hess_cond</code> is the condition number of the Hessian at the mode, with each parameter in posterior-SD units: the ratio of the largest to the smallest eigenvalue of the posterior correlation matrix. Above <span class="math inline">\(10^8\)</span> some combination of the parameters is weakly identified. INLAvaan takes the condition number on the raw scale of the parameters, where a mere change of units can make it large; inlavanilla allows posterior SDs from <span class="math inline">\(10^{-6}\)</span> to <span class="math inline">\(10^4\)</span>, so it measures it in posterior SDs instead.</p>
 <p>The VB correction recentres the Gaussian at the shift that minimises its Kullback-Leibler divergence from the posterior (Jamil &amp; Rue, 2026, Section 3.1). <code>vb_shift_sigma</code> is how far it moved each mean from the mode, in posterior SDs. <code>vb_shift</code> is the same shift on the scale of <code>logpost</code>, and <code>kld</code>, half the square of <code>vb_shift_sigma</code>, is the Kullback-Leibler divergence of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift above 1 SD means that the posterior is far from the Laplace Gaussian. When the fixed-point iteration hands over to the optimiser, <code>fit$diagnostics$vb</code> records it, and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and the verbose output report it, but, as in INLAvaan, it is not flagged: it is a route of the solver, not a sign of a poor approximation.</p>
-<p>The skew-normal mean and the VB mean both estimate the posterior mean, by different routes, so they should agree closely (Jamil &amp; Rue, 2026, Proposition 3.4); a gap signals higher-order effects or numerical error (Section 5.1). <code>sn_vs_vb</code> is their gap in posterior SDs, and a gap above 0.1 is flagged.</p>
+<p>Where the solver lands is checked as the mode is. <code>vb_step_sigma</code> is the step still to go at the VB mean, in posterior SDs: the fixed-point step there, which is the Newton step of the condition the VB mean solves. Above 0.1, the level of the mode check, the correction has not settled and the fit has not converged. The VB mean is then off, and with it the VB term of the log marginal likelihood and the expansions of <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code>. The skew-normal marginals do not depend on it, since they are scanned around the mode, and <code>vb = FALSE</code> leaves it out. Gaussian marginals (<code>marginals = "gaussian"</code>) are centred on it, and <code>vb = FALSE</code> centres them at the mode instead. Without a gradient, the usual cause is not the solver but the VB mean itself: from <code>logpost</code> values alone it is exact only for a log-posterior of degree four, and on a strongly skewed posterior it can be about 0.1 SDs out. Supplying <code>grad</code> is the fix.</p>
+<p>The skew-normal mean and the VB mean both estimate the posterior mean, by different routes. Both recover the leading, <span class="math inline">\(O(n^{-1})\)</span> shift from the mode to the mean, so they agree to <span class="math inline">\(O(n^{-2})\)</span> (Jamil &amp; Rue, 2026, Proposition 3.4). <code>mean_gap</code> is their gap in posterior SDs. A gap signals that the higher-order terms of that expansion about the mode matter, or numerical error (Section 5.1), and a gap above 0.1 is flagged.</p>
 </section><section class="level2"><h2 id="the-skew-normal-fit">The skew-normal fit<a class="anchor" aria-label="anchor" href="#the-skew-normal-fit"></a>
 </h2>
 <p><code>nmad</code> is the largest gap between the fitted skew-normal and the scanned log-posterior, on the density scale and relative to the peak (Jamil &amp; Rue, 2026, Section 4.4). A skew-normal has one mode and one direction of skew, so it cannot follow a marginal with two bumps:</p>
@@ -219,16 +231,16 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [5ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.4σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [14ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
 <span><span class="co">#&gt;   `theta` (0.20).</span></span>
-<span><span class="co">#&gt; ✖ The fitted marginal puts more than 0.05 of its mass beyond the scanned window</span></span>
-<span><span class="co">#&gt;   (4 posterior SDs either side of the mode) for `theta` (0.09); its credible</span></span>
+<span><span class="co">#&gt; ✖ The fitted marginal puts more than 0.05 of its mass beyond the scanned</span></span>
+<span><span class="co">#&gt;   window (4σ either side of the mode) for `theta` (0.09); its credible</span></span>
 <span><span class="co">#&gt;   limits rely on extrapolation.</span></span>
-<span><span class="co">#&gt; ✖ Heavy tails for `theta`: the density is still over 5% of its peak at the ends</span></span>
-<span><span class="co">#&gt;   of the scanned window (4 posterior SDs either side of the mode), and the</span></span>
+<span><span class="co">#&gt; ✖ Heavy tails for `theta`: the density is still over 5% of its peak at the</span></span>
+<span><span class="co">#&gt;   ends of the scanned window (4σ either side of the mode), and the</span></span>
 <span><span class="co">#&gt;   skew-normal extrapolates beyond it.</span></span>
 <span><span class="co">#&gt; ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;</span></span>
 <span><span class="co">#&gt;   `vignette("diagnostics", package = "inlavanilla")` explains each check.</span></span></code></pre></div>
@@ -237,21 +249,25 @@
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/diagnostics.html">diagnostics</a></span><span class="op">(</span><span class="va">fit_mix</span><span class="op">)</span></span>
-<span><span class="co">#&gt;              npar         converged        iterations          grad_inf </span></span>
-<span><span class="co">#&gt;                 1                 1                 4          1.99e-08 </span></span>
-<span><span class="co">#&gt;      grad_inf_rel           grad_l2    mode_shift_max         hess_cond </span></span>
-<span><span class="co">#&gt;          4.74e-08          1.99e-08          2.04e-08          1.00e+00 </span></span>
-<span><span class="co">#&gt;        vb_applied      vb_shift_max     vb_kld_global           kld_max </span></span>
-<span><span class="co">#&gt;                 1            0.3959            0.0784            0.0784 </span></span>
-<span><span class="co">#&gt;          kld_mean          nmad_max         nmad_mean scan_end_mass_max </span></span>
-<span><span class="co">#&gt;            0.0784            0.1963            0.1963          9.13e-02 </span></span>
-<span><span class="co">#&gt;       vb_fallback      sn_vs_vb_max          bend_max     n_heavy_tails </span></span>
-<span><span class="co">#&gt;                 0            0.7589            0.0000                 1</span></span>
+<span><span class="co">#&gt;               npar          converged         iterations           grad_inf </span></span>
+<span><span class="co">#&gt;                  1                  1                  4           1.99e-08 </span></span>
+<span><span class="co">#&gt;       grad_inf_rel            grad_l2     mode_shift_max          hess_cond </span></span>
+<span><span class="co">#&gt;           4.78e-08           1.99e-08           2.04e-08           1.00e+00 </span></span>
+<span><span class="co">#&gt;         vb_applied       vb_shift_max      vb_kld_global            kld_max </span></span>
+<span><span class="co">#&gt;                  1             0.3921             0.0769             0.0769 </span></span>
+<span><span class="co">#&gt;           kld_mean           nmad_max          nmad_mean unscanned_mass_max </span></span>
+<span><span class="co">#&gt;             0.0769             0.1963             0.1963           9.13e-02 </span></span>
+<span><span class="co">#&gt;        vb_fallback        vb_step_max       mean_gap_max     ridge_bend_max </span></span>
+<span><span class="co">#&gt;                  0           6.87e-04             0.7627             0.0000 </span></span>
+<span><span class="co">#&gt;      n_heavy_tails </span></span>
+<span><span class="co">#&gt;                  1</span></span>
 <span><span class="fu"><a href="../reference/diagnostics.html">diagnostics</a></span><span class="op">(</span><span class="va">fit_mix</span>, type <span class="op">=</span> <span class="st">"param"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift vb_shift_sigma</span></span>
-<span><span class="co">#&gt; 1 theta    0        0        0                0 0.0784    0.405         0.3959</span></span>
-<span><span class="co">#&gt;     nmad alpha scan_end_mass sn_vs_vb gamma1 tails bend</span></span>
-<span><span class="co">#&gt; 1 0.1963 4.546        0.0913   0.7589      0 FALSE    0</span></span></code></pre></div>
+<span><span class="co">#&gt;   names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift</span></span>
+<span><span class="co">#&gt; 1 theta    0        0        0                0 0.0769   0.4011</span></span>
+<span><span class="co">#&gt;   vb_shift_sigma   nmad alpha unscanned_mass vb_step_sigma mean_gap gamma1</span></span>
+<span><span class="co">#&gt; 1         0.3921 0.1963 4.546         0.0913         7e-04   0.7627      0</span></span>
+<span><span class="co">#&gt;   tails ridge_bend</span></span>
+<span><span class="co">#&gt; 1 FALSE          0</span></span></code></pre></div>
 </div>
 <p><code>plot(type = "sn_fit")</code> shows the fit against the scan it was fitted to, as INLAvaan’s plot of the same name does: on the scan coordinate, in posterior SDs from the mode, the log-posterior along the scan (“Raw”), the same with the volume correction added (“Corrected”), and the fitted skew-normal. NMAD is the largest gap between the last two. <code>type = "sn_fit_log"</code> draws the same on a log scale.</p>
 <div class="cell" data-layout-align="center">
@@ -293,9 +309,9 @@
 </div>
 </div>
 </div>
-</section><section class="level2"><h2 id="the-scan-path">The scan path<a class="anchor" aria-label="anchor" href="#the-scan-path"></a>
+</section><section class="level2"><h2 id="ridge-bend">Ridge bend<a class="anchor" aria-label="anchor" href="#ridge-bend"></a>
 </h2>
-<p>Each marginal is scanned along a straight line through the mode, the path on which the Laplace Gaussian puts the other parameters at their conditional mode given this one (Jamil &amp; Rue, 2026, Lemma 3.1). The straight line is a first-order approximation to a possibly curved ridge (Section 3.2.1). When the true conditional mode bends away from the line, the scan misses log-density, and the marginal comes out too narrow. <code>bend</code>, inlavanilla’s own check, is the log-density, in nats, that one Newton step in the other parameters would recover at <span class="math inline">\(\pm 2\)</span> posterior SDs.</p>
+<p>Each marginal is scanned along a straight line through the mode, the conditional mode path (CMP) on which the Laplace Gaussian puts the other parameters at their conditional mode given this one (Jamil &amp; Rue, 2026, Lemma 3.1). The straight line is a first-order approximation to a possibly curved ridge of high posterior density (Section 3.2.1). When the ridge bends away from the CMP, the scan misses log-density, and the marginal comes out too narrow. The ridge bend, <code>ridge_bend</code>, inlavanilla’s own check, is the log-density, in nats, that one Newton step in the other parameters would recover at <span class="math inline">\(\pm 2\)</span> posterior SDs.</p>
 <p>This happens when a parameter’s spread depends on another parameter that the data pin down poorly. A normal mean with an unknown SD, from 12 observations, is the textbook case:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
@@ -309,12 +325,12 @@
 <span><span class="va">fit_norm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">logpost_norm</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">9</span>, log_sigma <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y12</span>, silent <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">fit_norm</span><span class="op">$</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">marginals</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"nmad"</span>, <span class="st">"bend"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt;              nmad    bend</span></span>
-<span><span class="co">#&gt; mu        1.9e-06 3.3e-01</span></span>
-<span><span class="co">#&gt; log_sigma 1.1e-02 4.9e-07</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">signif</a></span><span class="op">(</span><span class="va">fit_norm</span><span class="op">$</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">marginals</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"nmad"</span>, <span class="st">"ridge_bend"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt;              nmad ridge_bend</span></span>
+<span><span class="co">#&gt; mu        1.9e-06    3.3e-01</span></span>
+<span><span class="co">#&gt; log_sigma 1.1e-02    4.9e-07</span></span></code></pre></div>
 </div>
-<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags the bend for <code>mu</code>. The exact marginal SD of <code>mu</code>, from a grid, shows how much narrower the skew-normal is:</p>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags the ridge bend of <code>mu</code>. The exact marginal SD of <code>mu</code>, from a grid, shows how much narrower the skew-normal is:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/expand.grid.html" class="external-link">expand.grid</a></span><span class="op">(</span></span>
@@ -325,20 +341,23 @@
 <span><span class="va">w</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lp</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">lp</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">w</span> <span class="op">&lt;-</span> <span class="va">w</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">w</span><span class="op">)</span></span>
 <span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">w</span> <span class="op">*</span> <span class="va">grid</span><span class="op">$</span><span class="va">mu</span><span class="op">)</span></span>
-<span><span class="va">sds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">w</span> <span class="op">*</span> <span class="op">(</span><span class="va">grid</span><span class="op">$</span><span class="va">mu</span> <span class="op">-</span> <span class="va">m</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span>, skew_normal <span class="op">=</span> <span class="va">fit_norm</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="st">"mu"</span>, <span class="st">"SD"</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">sds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">w</span> <span class="op">*</span> <span class="op">(</span><span class="va">grid</span><span class="op">$</span><span class="va">mu</span> <span class="op">-</span> <span class="va">m</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  skew_normal <span class="op">=</span> <span class="va">fit_norm</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="st">"mu"</span>, <span class="st">"SD"</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">sds</span></span>
 <span><span class="co">#&gt;       exact skew_normal </span></span>
 <span><span class="co">#&gt;   0.6125832   0.5308595</span></span></code></pre></div>
 </div>
-<p>The skew-normal SD of <code>mu</code> is 13% too small here. The gap shrinks as <span class="math inline">\(1/n\)</span>: for a normal mean with an unknown SD it is about 3% at 50 observations and under 1% at 200. The <code>bend</code> value says which parameters are at risk, not exactly how much.</p>
-</section><section class="level2"><h2 id="tails-and-scan-end-mass">Tails and scan-end mass<a class="anchor" aria-label="anchor" href="#tails-and-scan-end-mass"></a>
+<p>The skew-normal SD of <code>mu</code> is 13% too small here. The gap shrinks as <span class="math inline">\(1/n\)</span>: for a normal mean with an unknown SD it is about 3% at 50 observations and under 1% at 200. For this model the ridge bend <span class="math inline">\(b\)</span> gives the gap: the SD is too small by <span class="math inline">\(1 - \sqrt{1 - 3b/4}\)</span>, roughly <span class="math inline">\(3b/8\)</span>, and <span class="math inline">\(b\)</span> is close to <span class="math inline">\(4/n\)</span>. From its ridge bend of 0.33, the formula gives 13%. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags a ridge bend above 0.25, where the formula gives 10%. In other models it is a rough guide to how much: on test models it was mostly within a factor of 1.5 of the true gap, and it overstated the narrowing in logistic and Poisson regressions.</p>
+</section><section class="level2"><h2 id="tails-and-unscanned-mass">Tails and unscanned mass<a class="anchor" aria-label="anchor" href="#tails-and-unscanned-mass"></a>
 </h2>
 <p>Both checks are about the edge of the scanned window, but they look at different things:</p>
 <ul>
 <li>
 <code>tails</code> reads the <strong>log-posterior itself</strong> at the two ends of the scan. It is flagged when either end is still within 3 nats of the peak, that is, when the density there is over 5% of its peak. A Gaussian is 8 nats down at <span class="math inline">\(\pm 4\)</span> SDs.</li>
 <li>
-<code>scan_end_mass</code> is the mass the <strong>fitted skew-normal</strong> puts beyond the window, where it is extrapolated (as INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code> reports it). A Gaussian marginal gives <span class="math inline">\(2\Phi(-4) = 6.3 \times 10^{-5}\)</span>; the larger it is, the more of the marginal is extrapolated.</li>
+<code>unscanned_mass</code> is the mass the <strong>fitted skew-normal</strong> puts beyond the window, where it is extrapolated (as INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code> reports it). A Gaussian marginal gives <span class="math inline">\(2\Phi(-4) = 6.3 \times 10^{-5}\)</span>; the larger it is, the more of the marginal is extrapolated.</li>
 </ul>
 <p>Neither one can see the mass the true posterior has beyond the window. The figure shows three one-parameter posteriors whose exact densities are known. The x axis is in posterior SDs from the mode, so the scanned window is always <span class="math inline">\(-4\)</span> to <span class="math inline">\(4\)</span> (the grey band).</p>
 <div class="cell" data-layout-align="center">
@@ -349,30 +368,37 @@
 </div>
 </div>
 </div>
-<p>In the top row, <code>tails</code> reads the open circles against the dashed line 3 nats below the peak. In the bottom row, the orange shading is <code>scan_end_mass</code> and the grey shading is the exact posterior’s mass beyond the window.</p>
+<p>In the top row, <code>tails</code> reads the open circles against the dashed line 3 nats below the peak. In the bottom row, the orange shading is <code>unscanned_mass</code> and the grey shading is the exact posterior’s mass beyond the window.</p>
 <ol type="1">
 <li>
 <strong>Well behaved.</strong> The scan ends are 5.8 and 11.6 nats down, either side of a Gaussian’s 8, as the Poisson log rate is a little skewed, and neither the fit nor the posterior has much mass outside. Both checks are rightly quiet.</li>
 <li>
-<strong>Heavy inside the window.</strong> A Cauchy posterior is still high at the ends of the scan, so <code>tails</code> fires, and the fit warns. <code>scan_end_mass</code> stays under 0.05: the skew-normal has Gaussian tails, so whatever it fits, it puts little mass outside the window. It exceeds 0.05 only when the fit itself is very wide or very skewed, as for the mixture above.</li>
+<strong>Heavy inside the window.</strong> A Cauchy posterior is still high at the ends of the scan, so <code>tails</code> fires, and the fit warns. <code>unscanned_mass</code> stays under 0.05: the skew-normal has Gaussian tails, so whatever it fits, it puts little mass outside the window. It exceeds 0.05 only when the fit itself is very wide or very skewed, as for the mixture above.</li>
 <li>
 <strong>Heavy beyond the window.</strong> Here the data can only bound a variance from above, so its log has a long left tail that only the prior holds back. The tail flattens out beyond the window: the scan end is already more than 3 nats down, and the skew-normal puts little mass outside. Both checks are quiet, but the exact posterior has 0.025 of its mass outside, against 0.006 for the fit.</li>
 </ol>
 <p>The third case is the known limit of a skew-normal at a boundary: no check that reads only the scanned window can see a tail that starts beyond it. Jamil and Rue (2026, Section 4.4) find the same miss in the lower tail of a variance near zero, the boundary pile-up that a unimodal skew-normal cannot capture. In the structural equation model of the <a href="rcpp.html">Rcpp article</a>, two log residual variances behave like this, more strongly. Their skew-normal marginals are too narrow on the log scale, although on the variance scale the error is much smaller. INLAvaan gives the same marginals there.</p>
 </section><section class="level2"><h2 id="the-warning">The warning<a class="anchor" aria-label="anchor" href="#the-warning"></a>
 </h2>
-<p>The fit-time warning is a condition of class <code>inlavanilla_diagnostics_warning</code>, which is also an <code>inlavanilla_warning</code>. Its headline counts the problems, as INLAvaan’s does, and it names at most three parameters for each; <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> lists them all. With <code>silent = TRUE</code> nothing is printed, and every warning raised during the fit is kept in <code>fit$warnings</code> as plain text, which suits simulations:</p>
+<p>The fit-time warning is a condition of class <code>inlavanilla_diagnostics_warning</code>, which is also an <code>inlavanilla_warning</code>. Its headline counts the problems, as INLAvaan’s does, and it names at most three parameters for each; <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> lists them all. With <code>silent = TRUE</code> nothing is printed, and every warning raised during the fit is kept in <code>fit$warnings</code> as plain text, a line per bullet with no wrapping, which suits simulations. Here it is wrapped to fit the page:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_mix_quiet</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">fit_mix_quiet</span><span class="op">$</span><span class="va">warnings</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">fit_mix_quiet</span><span class="op">$</span><span class="va">warnings</span><span class="op">)</span></span>
+<span><span class="va">bullets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/strsplit.html" class="external-link">strsplit</a></span><span class="op">(</span><span class="va">fit_mix_quiet</span><span class="op">$</span><span class="va">warnings</span>, <span class="st">"\n"</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/strwrap.html" class="external-link">strwrap</a></span><span class="op">(</span><span class="va">bullets</span>, width <span class="op">=</span> <span class="fl">76</span>, exdent <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Fit diagnostics flagged 3 potential issues:</span></span>
-<span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for `theta` (0.20).</span></span>
-<span><span class="co">#&gt; ✖ The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 posterior SDs either side of the mode) for `theta` (0.09); its credible limits rely on extrapolation.</span></span>
-<span><span class="co">#&gt; ✖ Heavy tails for `theta`: the density is still over 5% of its peak at the ends of the scanned window (4 posterior SDs either side of the mode), and the skew-normal extrapolates beyond it.</span></span>
-<span><span class="co">#&gt; ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`; `vignette("diagnostics", package = "inlavanilla")` explains each check.</span></span></code></pre></div>
+<span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
+<span><span class="co">#&gt;   `theta` (0.20).</span></span>
+<span><span class="co">#&gt; ✖ The fitted marginal puts more than 0.05 of its mass beyond the scanned</span></span>
+<span><span class="co">#&gt;   window (4σ either side of the mode) for `theta` (0.09); its credible</span></span>
+<span><span class="co">#&gt;   limits rely on extrapolation.</span></span>
+<span><span class="co">#&gt; ✖ Heavy tails for `theta`: the density is still over 5% of its peak at the</span></span>
+<span><span class="co">#&gt;   ends of the scanned window (4σ either side of the mode), and the</span></span>
+<span><span class="co">#&gt;   skew-normal extrapolates beyond it.</span></span>
+<span><span class="co">#&gt; ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;</span></span>
+<span><span class="co">#&gt;   `vignette("diagnostics", package = "inlavanilla")` explains each check.</span></span></code></pre></div>
 </div>
 <p>To handle the warning in code, catch its class:</p>
 <div class="cell" data-layout-align="center">
@@ -385,7 +411,7 @@
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [1ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.4σ [1ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [1ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>
 </div>

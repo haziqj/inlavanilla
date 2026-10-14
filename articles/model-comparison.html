@@ -128,24 +128,24 @@
 <span></span>
 <span><span class="va">init_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="va">init_pois</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [16ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.025σ [35ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [26ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [15ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.025σ [18ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [25ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/loo.html">loo()</a></code> takes the fit, <code>loglik</code>, and the same data:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">loo_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/loo.html">loo</a></span><span class="op">(</span><span class="va">fit_pois</span>, <span class="va">loglik_pois</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="va">loo_pois</span></span>
-<span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────────── 54 units ──</span></span>
+<span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────── 54 units ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Estimate    SE</span></span>
 <span><span class="co">#&gt; elpd_loo    -242.9  15.0</span></span>
 <span><span class="co">#&gt; p_loo         20.6   3.0</span></span>
 <span><span class="co">#&gt; looic        485.9  30.0</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for unit</span></span>
-<span><span class="co">#&gt;   37.</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for</span></span>
+<span><span class="co">#&gt;   unit 37.</span></span></code></pre></div>
 </div>
 <p><code>p_loo</code> is the effective number of parameters. Here it is about 21, for a model with 6 parameters: a sign that the model is misspecified. The counts vary much more than a Poisson distribution allows.</p>
 </section><section class="level3"><h3 id="a-negative-binomial-model">A negative binomial model<a class="anchor" aria-label="anchor" href="#a-negative-binomial-model"></a>
@@ -176,15 +176,15 @@
 <span><span class="va">fit_nb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_nb</span>, <span class="va">init_nb</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">loo_nb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/loo.html">loo</a></span><span class="op">(</span><span class="va">fit_nb</span>, <span class="va">loglik_nb</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="va">loo_nb</span></span>
-<span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────────── 54 units ──</span></span>
+<span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────── 54 units ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Estimate   SE</span></span>
 <span><span class="co">#&gt; elpd_loo    -202.2  4.8</span></span>
 <span><span class="co">#&gt; p_loo          6.0  0.8</span></span>
 <span><span class="co">#&gt; looic        404.3  9.6</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.23, for unit</span></span>
-<span><span class="co">#&gt;   24.</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.23, for</span></span>
+<span><span class="co">#&gt;   unit 24.</span></span></code></pre></div>
 </div>
 <p>Now <code>p_loo</code> is close to the 7 parameters.</p>
 </section></section><section class="level2"><h2 id="comparing-the-models">Comparing the models<a class="anchor" aria-label="anchor" href="#comparing-the-models"></a>
@@ -198,7 +198,7 @@
 <span><span class="op">}</span></span>
 <span><span class="fu">elpd_diff</span><span class="op">(</span><span class="va">loo_nb</span>, <span class="va">loo_pois</span><span class="op">)</span></span>
 <span><span class="co">#&gt; elpd_diff        se </span></span>
-<span><span class="co">#&gt;  40.75429  10.62524</span></span></code></pre></div>
+<span><span class="co">#&gt;  40.75547  10.62584</span></span></code></pre></div>
 </div>
 <p>The negative binomial predicts better, by about four standard errors. Does it need the interaction? Fit the additive model with the same log-likelihood and prior, on a smaller design matrix:</p>
 <div class="cell" data-layout-align="center">
@@ -211,7 +211,7 @@
 <span><span class="va">loo_add</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/loo.html">loo</a></span><span class="op">(</span><span class="va">fit_add</span>, <span class="va">loglik_nb</span>, X <span class="op">=</span> <span class="va">X_add</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="fu">elpd_diff</span><span class="op">(</span><span class="va">loo_nb</span>, <span class="va">loo_add</span><span class="op">)</span></span>
 <span><span class="co">#&gt; elpd_diff        se </span></span>
-<span><span class="co">#&gt;  2.046776  2.718542</span></span></code></pre></div>
+<span><span class="co">#&gt;  2.047182  2.718401</span></span></code></pre></div>
 </div>
 <p>The interaction model is ahead, but by less than one standard error: the data cannot tell the two apart.</p>
 <p>The results have the layout of the loo package’s objects, so <code><a href="https://mc-stan.org/loo/reference/loo_compare.html" class="external-link">loo::loo_compare()</a></code> gives the same comparison as a table:</p>
@@ -231,7 +231,7 @@
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/loo.html">waic</a></span><span class="op">(</span><span class="va">fit_nb</span>, <span class="va">loglik_nb</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── WAIC ──────────────────────────────────────────────────────────── 54 units ──</span></span>
+<span><span class="co">#&gt; ── WAIC ──────────────────────────────────────────────────────── 54 units ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            Estimate   SE</span></span>
 <span><span class="co">#&gt; elpd_waic    -202.0  4.8</span></span>
@@ -258,7 +258,13 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
 <span>    vb <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>    silent <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span>
-<span>  <span class="va">ll</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_i</span>, <span class="fl">4000</span>, fun <span class="op">=</span> <span class="va">loglik_nb</span>, X <span class="op">=</span> <span class="va">X</span><span class="op">[</span><span class="va">i</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="va">ll</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span></span>
+<span>    <span class="va">fit_i</span>,</span>
+<span>    <span class="fl">4000</span>,</span>
+<span>    fun <span class="op">=</span> <span class="va">loglik_nb</span>,</span>
+<span>    X <span class="op">=</span> <span class="va">X</span><span class="op">[</span><span class="va">i</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>,</span>
+<span>    y <span class="op">=</span> <span class="va">y</span><span class="op">[</span><span class="va">i</span><span class="op">]</span></span>
+<span>  <span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">ll</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">ll</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">ll</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">time_refit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time</a></span><span class="op">(</span></span>
@@ -268,10 +274,10 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>refits <span class="op">=</span> <span class="va">time_refit</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span>, loo <span class="op">=</span> <span class="va">time_loo</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt; refits    loo </span></span>
-<span><span class="co">#&gt;  4.771  0.004</span></span>
+<span><span class="co">#&gt;  4.746  0.005</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>refits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">elpd_refit</span><span class="op">)</span>, loo <span class="op">=</span> <span class="va">loo_nb</span><span class="op">$</span><span class="va">estimates</span><span class="op">[</span><span class="st">"elpd_loo"</span>, <span class="st">"Estimate"</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    refits       loo </span></span>
-<span><span class="co">#&gt; -202.6061 -202.1733</span></span></code></pre></div>
+<span><span class="co">#&gt; -202.6061 -202.1721</span></span></code></pre></div>
 </div>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
@@ -307,7 +313,7 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">loo_nb</span><span class="op">$</span><span class="va">pointwise</span><span class="op">[</span>, <span class="st">"k"</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. </span></span>
-<span><span class="co">#&gt;  0.0974  0.1030  0.1153  0.1280  0.1401  0.2293</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.09739 0.10298 0.11533 0.12795 0.14013 0.22925</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>

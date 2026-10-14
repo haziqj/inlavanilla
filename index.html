@@ -116,20 +116,24 @@
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [25ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [27ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [60ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [3ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [28ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (53ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            Mean     SD    2.5%     50%   97.5%    Mode</span></span>
-<span><span class="co">#&gt; logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -3.05</span></span></code></pre></div>
+<span><span class="co">#&gt; logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494</span></span></code></pre></div>
 <p>The summary is on the logit scale. <code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw back to <span class="math inline">\(p\)</span>, or to any other quantity of interest:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">1e5</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  nsamp <span class="op">=</span> <span class="fl">1e5</span>,</span>
+<span>  fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  inlavanilla <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">qbeta</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, <span class="fl">4</span>, <span class="fl">18</span><span class="op">)</span></span>

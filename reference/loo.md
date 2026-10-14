@@ -187,20 +187,21 @@ logpost <- function(theta, time, y) {
 }
 
 fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
-#> ✔ Found the posterior mode in 9 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.12σ [2ms]
+#> ✔ Found the posterior mode in 9 iterations [2ms]
+#> ✔ VB mean correction, max shift 0.12σ [1ms]
 #> ✔ Fitted 2 skew-normal marginals [6ms]
 loo(fit, loglik, time = time, y = y)
-#> ── Leave-one-out cross-validation ─────────────────────────────────── 9 units ──
+#> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 
 #>           Estimate   SE
 #> elpd_loo     -19.2  0.8
 #> p_loo          0.6  0.2
 #> looic         38.3  1.6
 #> 
-#> ✔ Second-order expansion for every unit. Largest leverage k = 0.49, for unit 9.
+#> ✔ Second-order expansion for every unit. Largest leverage k = 0.49, for
+#>   unit 9.
 waic(fit, loglik, time = time, y = y)
-#> ── WAIC ───────────────────────────────────────────────────────────── 9 units ──
+#> ── WAIC ───────────────────────────────────────────────────────── 9 units ──
 #> 
 #>            Estimate   SE
 #> elpd_waic     -19.1  0.8

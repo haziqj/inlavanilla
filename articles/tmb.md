@@ -279,8 +279,8 @@ fit <- inla_vanilla(
   grad = function(theta) -as.vector(obj$gr(theta))
 )
 #> ✔ Found the posterior mode in 91 iterations [54ms]
-#> ✔ VB mean correction, max shift 0.43σ [2.1s]
-#> ✔ Fitted 39 skew-normal marginals [683ms]
+#> ✔ VB mean correction, max shift 0.43σ [1.2s]
+#> ✔ Fitted 39 skew-normal marginals [706ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -299,7 +299,7 @@ time_per_call <- function(f, n) {
 }
 fit$counts
 #> logpost    grad 
-#>    1537   15541
+#>    1537    9933
 c(
   fn = time_per_call(function() obj$fn(init), n = 2000),
   gr = time_per_call(function() obj$gr(init), n = 1000)
@@ -309,8 +309,8 @@ c(
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for
-finite differences. Without it, the VB correction alone would take over
-120,000 evaluations per sweep. A hand-written gradient, as in the Rcpp
+finite differences. Without it, the fit would take over 20,000
+evaluations of the objective. A hand-written gradient, as in the Rcpp
 article, can be faster still, but it has to be derived and checked;
 TMB’s needs neither.
 
@@ -319,7 +319,9 @@ TMB’s needs neither.
 ``` r
 
 fit
-#> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
+#> 
+#> Log marginal likelihood: -1686.85 · Converged in 91 iterations (2.0s)
 #> 
 #>                     Mean      SD    2.5%     50%   97.5%    Mode
 #> nu_x1             5.0538  0.0846  4.8880  5.0538  5.2195  5.0538
@@ -362,16 +364,15 @@ fit
 #> z_y4_y8            0.108   0.133  -0.158   0.109   0.365   0.112
 #> z_y6_y8            0.328   0.123   0.086   0.328   0.569   0.329
 #> 
-#> Log marginal likelihood: -1686.85
 #> ! 2 checks flagged by `summary()`.
 ```
 
 This agrees with the Rcpp article’s fit, which uses the same
 log-posterior, to within about \\10^{-4}\\ posterior SDs. The two checks
 flagged by [`summary()`](https://rdrr.io/r/base/summary.html) are the
-scan-path bend, for several parameters, and the gap between the
-skew-normal and VB means of `logv_dem65`; the [Rcpp
-article](http://haziqj.ml/inlavanilla/articles/rcpp.md) discusses both.
+ridge bend and the gap between the skew-normal and VB means, both for
+`logv_dem65`; the [Rcpp
+article](http://haziqj.ml/inlavanilla/articles/rcpp.md) discusses them.
 
 ``` r
 
@@ -435,15 +436,15 @@ needs. It leaves out one country at a time, from this one fit:
 
 loo_sem <- loo(fit, function(theta) obj$report(theta)$loglik)
 loo_sem
-#> ── Leave-one-out cross-validation ────────────────────────────────── 75 units ──
+#> ── Leave-one-out cross-validation ────────────────────────────── 75 units ──
 #> 
 #>           Estimate    SE
 #> elpd_loo   -1588.8  20.5
 #> p_loo         38.6   3.0
 #> looic       3177.7  40.9
 #> 
-#> ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit
-#>   35.
+#> ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for
+#>   unit 35.
 ```
 
 INLAvaan’s [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) uses
@@ -461,7 +462,7 @@ round(
   2
 )
 #>          elpd_loo p_loo   looic
-#> ours     -1588.83 38.60 3177.66
+#> ours     -1588.83 38.61 3177.67
 #> INLAvaan -1588.96 38.77 3177.92
 ```
 

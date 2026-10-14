@@ -229,9 +229,9 @@ the iterations of the VB correction, whether it fell back to
 <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> (<code>fallback</code>), and the Kullback-Leibler divergence of
 the shift (<code>kld_global</code>); it is <code>NULL</code> when <code>vb = FALSE</code>. <code>marginals</code>
 is a data frame with a row per parameter: <code>mode_shift_sigma</code>, <code>kld</code>,
-<code>vb_shift</code>, <code>vb_shift_sigma</code>, <code>nmad</code>, <code>alpha</code>, <code>scan_end_mass</code>,
-<code>sn_vs_vb</code>, <code>gamma1</code>, <code>tails</code> and <code>bend</code>, with <code>NA</code> for the checks the
-fit did not run.</p></li>
+<code>vb_shift</code>, <code>vb_shift_sigma</code>, <code>nmad</code>, <code>alpha</code>, <code>unscanned_mass</code>,
+<code>vb_step_sigma</code>, <code>mean_gap</code>, <code>gamma1</code>, <code>tails</code> and <code>ridge_bend</code>, with
+<code>NA</code> for the checks the fit did not run.</p></li>
 <li><p><code>scan</code>: the scans the skew-normals were fitted to, for
 <code>plot(fit, type = "sn_fit")</code>: the grid <code>z</code> in posterior SDs from the
 mode, the log-posterior at each point (<code>logpost</code>, a column per
@@ -283,7 +283,9 @@ parameter's spread depends strongly on another, poorly determined
 parameter, its marginal comes out too narrow, by a factor that vanishes as
 O(1/n). Examples are a regression coefficient or a mean when the noise SD
 is uncertain. For a normal mean with unknown variance the SD is about 11%
-too small at n = 12, 3% at n = 50, and under 1% at n = 200.</p>
+too small at n = 12, 3% at n = 50, and under 1% at n = 200. The
+<code>ridge_bend</code> diagnostic of <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> flags this narrowing
+where it predicts about 10% or more.</p>
 <p>A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could not
 keep two residual variances away from zero, so on the log scale their
@@ -295,27 +297,36 @@ near zero is compressed, the two were much closer: means 0.2 posterior SDs
 too high and SDs 10 to 15% too small. INLAvaan's marginals of this model
 are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
 the same miss in the lower tail of a variance near zero, the boundary
-pile-up that a unimodal skew-normal cannot capture. The <code>bend</code> diagnostic
-of <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> flagged both, but its size does not say how
-far off a marginal is, and the <code>tails</code> check, which looks only 4 posterior
-SDs either side of the mode (the Laplace SDs), missed them.</p>
+pile-up that a unimodal skew-normal cannot capture. No check is aimed at
+this. The <code>ridge_bend</code> diagnostic of <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> flagged one
+of the two (0.44), but the other's ridge bend (0.11) was no larger than
+that of marginals within 7% in SD, and the <code>tails</code> check, which looks only
+4 posterior SDs either side of the mode (the Laplace SDs), missed both.</p>
     </div>
     <div class="section level2">
     <h2 id="gradients">Gradients<a class="anchor" aria-label="anchor" href="#gradients"></a></h2>
 
 
 <p><code>grad</code> is optional. Without it, derivatives come from finite differences
-of <code>logpost</code>, and the number of calls grows quickly with the number of
-parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
-take about m(<code>n_grid</code> + 2m + 5). The VB correction takes about
-(m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
-beyond a handful of parameters: at m = 20 a fit makes on the order of
-50,000 calls. With <code>grad</code>, the VB correction takes 2m^2 + 1 gradient calls
-per sweep instead, and the fit is faster and more accurate. For more than
-about 10 parameters, supply <code>grad</code>, or set <code>vb = FALSE</code> to skip the VB
-correction (and its term in the log marginal likelihood): the skew-normal
-marginals do not depend on it. <code>marginals = "gaussian"</code> saves the calls of
-the scans.</p>
+of <code>logpost</code>, and the number of calls grows with the square of the number
+of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
+marginals about m(<code>n_grid</code> + 2m + 5). The VB correction takes at most
+(m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no derivatives,
+because Stein's identity gives the expected gradient from values of
+<code>logpost</code> alone. Its VB mean is then exact when the log-posterior is a
+polynomial of degree four in whitened coordinates, and up to degree six
+with <code>grad</code>. On test models it was about 0.01 posterior SDs from exact VB
+(0.003 with <code>grad</code>), and up to 0.1 on a strongly skewed posterior (0.03
+with <code>grad</code>), against a VB error of 0.01 to 0.2 SDs from the posterior mean
+itself. On the most skewed posteriors the VB correction may then not
+settle, and the fit says it has not converged (see
+<code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>); <code>grad</code> is the remedy.</p>
+<p>With <code>grad</code>, every stage is faster and more accurate. The VB correction
+then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
+nodes. Beyond a handful of parameters it and the marginals are the slowest
+stages. <code>vb = FALSE</code> skips the VB correction (and its term in the log
+marginal likelihood), and the skew-normal marginals do not depend on it;
+<code>marginals = "gaussian"</code> saves the calls of the scans.</p>
 <p>A supplied <code>grad</code> is checked against finite differences at <code>init</code>, and
 its Jacobian at the mode is checked for symmetry, with a warning if either
 check fails. Any R function works for <code>logpost</code> and <code>grad</code>, including
@@ -333,7 +344,9 @@ vector) are numbered, as <code>beta[1]</code>, <code>beta[2]</code>, and so on.<
 <li><p><code>log_threshold</code>: grid points whose log-posterior falls more than this
 below the maximum are ignored in the skew-normal fit (default <code>-6</code>).</p></li>
 <li><p><code>vb_maxit</code>, <code>vb_tol</code>: iteration limit (default <code>25</code>) and convergence
-tolerance in posterior SDs (default <code>1e-3</code>) for the VB correction.</p></li>
+tolerance in posterior SDs (default <code>1e-3</code>) for the VB correction's
+fixed-point iteration. If it has not converged after <code>vb_maxit</code> steps,
+<code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> takes over.</p></li>
 <li><p><code>nlminb</code>: a list of <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> controls for the mode search.
 <code>iter.max</code> and <code>eval.max</code> default to <code>1000</code> and <code>2000</code>, and <code>trace = 1</code>
 prints its iterations.</p></li>
@@ -368,10 +381,11 @@ identified, and the condition number of the Hessian in posterior-SD
 units; and the Laplace log marginal likelihood.</p></li>
 <li><p>The VB correction: the largest step, in posterior SDs, at each
 fixed-point iteration, whether Anderson acceleration or the fallback
-optimiser was used, the largest shift, and the term it adds to the log
-marginal likelihood.</p></li>
-<li><p>The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
-correction <code>gamma1</code> of each parameter, with the values that
+optimiser was used (and, after the fallback, the step still to go where
+it landed), the largest shift, and the term it adds to the log marginal
+likelihood.</p></li>
+<li><p>The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
+volume correction <code>gamma1</code> of each parameter, with the values that
 <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> flags marked.</p></li>
 <li><p>The calls of <code>logpost</code> and <code>grad</code> in each stage, and in all, with the
 total time.</p></li>
@@ -418,18 +432,17 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #00BBBB;">10</span> iterations <span style="color: #555555;">[3ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #00BBBB;">0.24σ</span> <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #00BBBB;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
 <span class="r-in"><span><span class="va">fit</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">INLAvanilla</span> <span style="color: #00BBBB;">─────────────────────────────────────────────</span> <span style="color: #555555;">Skew-normal + VB</span> <span style="color: #00BBBB;">──</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> <span style="color: #D7875F;">─────────────────────────────────────────</span> <span style="color: #555555;">Skew-normal + VB</span> <span style="color: #D7875F;">──</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (13ms)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>            <span style="font-weight: bold;"> Mean</span>  <span style="font-weight: bold;">   SD</span>  <span style="font-weight: bold;"> 2.5%</span>  <span style="font-weight: bold;">  50%</span>  <span style="font-weight: bold;">97.5%</span>  <span style="font-weight: bold;"> Mode</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">mu       </span>  5.159  0.327  4.517  5.159  5.800  5.159</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">log_sigma</span>  0.616  0.129  0.377  0.610  0.885  0.599</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #00BBBB;">-66.38</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> 1 check flagged by `summary()`.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mu         5.159  0.327  4.517  5.159  5.800  5.159</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> log_sigma  0.616  0.129  0.377  0.610  0.885  0.599</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The posterior of sigma itself, through the draws</span></span></span>
 <span class="r-in"><span><span class="va">sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"log_sigma"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -444,30 +457,35 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-in"><span>  y <span class="op">=</span> <span class="va">y</span>,</span></span>
 <span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> 2 parameters: mu and log_sigma</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> 2 parameters: mu and log_sigma</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Derivatives by finite differences of logpost</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at init -481.47</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #00BBBB;">10</span> iterations <span style="color: #555555;">[1ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">nlminb: relative convergence (4), after 10 iterations (14 function and 26 gradient evaluations)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step 8.8e-08σ (warning above 0.1σ)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian by second differences of logpost: 6 calls, and 12 more to set the steps</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Posterior correlation matrix: largest correlation -0.0042 (mu, log_sigma), smallest eigenvalue 1</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian condition number 1, in posterior-SD units (warning above 1e+08)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">nlminb: relative convergence (4), after 10 iterations (14 function and 26</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">gradient evaluations)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">8.8e-08σ (warning &gt; 0.1σ)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian by second differences of logpost: 6 calls, and 12 more to set the</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">steps</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Posterior correlation matrix: largest correlation -0.0042 (mu,</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">log_sigma), smallest eigenvalue 1</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian condition number 1, in SD units (warning &gt; 1e+08)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Laplace log marginal likelihood -66.41</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">63 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #00BBBB;">0.24σ</span> <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Fixed-point steps, largest over the parameters (σ): 0.25, 0.0081, 2.4e-04</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[1ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Largest shift 0.24σ, for log_sigma (warning above 1σ)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">KL term 0.03, giving a log marginal likelihood of -66.38</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">81 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #00BBBB;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">           Shape     NMAD     Bend  Tails  End mass    gamma1</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">mu       </span>  <span style="color: #555555;">-0.25</span>  <span style="color: #555555;">4.2e-05</span>  <span style="color: #555555;">   0.13</span><span style="color: #BBBB00;">!</span> <span style="color: #555555;">   ok</span>  <span style="color: #555555;"> 6.4e-05</span>  <span style="color: #555555;">-0.00014</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">log_sigma</span>  <span style="color: #555555;"> 1.32</span>  <span style="color: #555555;"> 0.0076</span>  <span style="color: #555555;">5.5e-06</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;"> 0.00057</span>  <span style="color: #555555;">    0.13</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #BBBB00;">!</span><span style="color: #555555;"> marks what summary() flags: NMAD above 0.1, bend above 0.1, heavy tails, scan-end mass above 0.05</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Largest shift 0.24σ, for log_sigma (warning &gt; 1σ)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">KL term 0.029, giving a log marginal likelihood of -66.38</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">18 logpost calls</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">           Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">mu       </span>  <span style="color: #555555;">-0.25</span>  <span style="color: #555555;">4.2e-05</span>  <span style="color: #555555;">      0.13</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;">  6.4e-05</span>  <span style="color: #555555;">-0.00014</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">log_sigma</span>  <span style="color: #555555;"> 1.32</span>  <span style="color: #555555;"> 0.0076</span>  <span style="color: #555555;">   5.5e-06</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;">  0.00057</span>  <span style="color: #555555;">    0.13</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #BBBB00;">!</span><span style="color: #555555;"> marks what summary() flags: NMAD &gt; 0.1, ridge bend &gt; 0.25, heavy tails,</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">unscanned mass &gt; 0.05</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">66 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Done: 210 logpost calls in 21ms</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 147 logpost calls in 26ms</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Nothing printed, as in a simulation; any warnings are kept in the fit</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span></span></span>

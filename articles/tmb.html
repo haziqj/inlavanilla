@@ -365,8 +365,8 @@
 <span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 91 iterations [54ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [2.1s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [683ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [1.2s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [706ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> checks the gradient against finite differences at <code>init</code>, and would warn if it disagreed. The calls, and the time per call in microseconds:</p>
 <div class="cell" data-layout-align="center">
@@ -381,7 +381,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit</span><span class="op">$</span><span class="va">counts</span></span>
 <span><span class="co">#&gt; logpost    grad </span></span>
-<span><span class="co">#&gt;    1537   15541</span></span>
+<span><span class="co">#&gt;    1537    9933</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  fn <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span>,</span>
 <span>  gr <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
@@ -389,13 +389,15 @@
 <span><span class="co">#&gt;    fn    gr </span></span>
 <span><span class="co">#&gt;  59.5 146.0</span></span></code></pre></div>
 </div>
-<p>A gradient costs a few evaluations of the objective, against 40 for finite differences. Without it, the VB correction alone would take over 120,000 evaluations per sweep. A hand-written gradient, as in the Rcpp article, can be faster still, but it has to be derived and checked; TMB’s needs neither.</p>
+<p>A gradient costs a few evaluations of the objective, against 40 for finite differences. Without it, the fit would take over 20,000 evaluations of the objective. A hand-written gradient, as in the Rcpp article, can be faster still, but it has to be derived and checked; TMB’s needs neither.</p>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
 </h2>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1686.85 · Converged in 91 iterations (2.0s)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                     Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; nu_x1             5.0538  0.0846  4.8880  5.0538  5.2195  5.0538</span></span>
@@ -438,10 +440,9 @@
 <span><span class="co">#&gt; z_y4_y8            0.108   0.133  -0.158   0.109   0.365   0.112</span></span>
 <span><span class="co">#&gt; z_y6_y8            0.328   0.123   0.086   0.328   0.569   0.329</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1686.85</span></span>
 <span><span class="co">#&gt; ! 2 checks flagged by `summary()`.</span></span></code></pre></div>
 </div>
-<p>This agrees with the Rcpp article’s fit, which uses the same log-posterior, to within about <span class="math inline">\(10^{-4}\)</span> posterior SDs. The two checks flagged by <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> are the scan-path bend, for several parameters, and the gap between the skew-normal and VB means of <code>logv_dem65</code>; the <a href="rcpp.html">Rcpp article</a> discusses both.</p>
+<p>This agrees with the Rcpp article’s fit, which uses the same log-posterior, to within about <span class="math inline">\(10^{-4}\)</span> posterior SDs. The two checks flagged by <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> are the ridge bend and the gap between the skew-normal and VB means, both for <code>logv_dem65</code>; the <a href="rcpp.html">Rcpp article</a> discusses them.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"z_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="st">"_"</span>, <span class="va">cov_pairs</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -491,15 +492,15 @@
 <div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">loo_sem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/loo.html">loo</a></span><span class="op">(</span><span class="va">fit</span>, <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">report</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">$</span><span class="va">loglik</span><span class="op">)</span></span>
 <span><span class="va">loo_sem</span></span>
-<span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────────── 75 units ──</span></span>
+<span><span class="co">#&gt; ── Leave-one-out cross-validation ────────────────────────────── 75 units ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Estimate    SE</span></span>
 <span><span class="co">#&gt; elpd_loo   -1588.8  20.5</span></span>
 <span><span class="co">#&gt; p_loo         38.6   3.0</span></span>
 <span><span class="co">#&gt; looic       3177.7  40.9</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit</span></span>
-<span><span class="co">#&gt;   35.</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for</span></span>
+<span><span class="co">#&gt;   unit 35.</span></span></code></pre></div>
 </div>
 <p>INLAvaan’s <code><a href="../reference/loo.html">loo()</a></code> uses the same deterministic expansion (Alhyari et al., 2026), with its own per-case log-likelihoods:</p>
 <div class="cell" data-layout-align="center">
@@ -513,7 +514,7 @@
 <span>  <span class="fl">2</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;          elpd_loo p_loo   looic</span></span>
-<span><span class="co">#&gt; ours     -1588.83 38.60 3177.66</span></span>
+<span><span class="co">#&gt; ours     -1588.83 38.61 3177.67</span></span>
 <span><span class="co">#&gt; INLAvaan -1588.96 38.77 3177.92</span></span></code></pre></div>
 </div>
 <p>The two agree to well within the standard error. They differ a little because each expands about its own VB-corrected mean, and the two VB corrections take their expectations with different rules.</p>

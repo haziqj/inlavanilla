@@ -14,10 +14,10 @@ summary.inla_vanilla() explains each check and the level at which it is
 flagged.
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-(sn_vs_vb) as an internal check (Section 5.1). The mode shift, the
-Hessian condition number and the scan-end mass come from INLAvaan's
-diagnostics(), not from the paper. tails and bend are inlavanilla's
-own."><meta property="og:description" content="The checks of each stage of the approximation, as numbers: a summary of
+(mean_gap) as an internal check (Section 5.1). The mode shift, the
+Hessian condition number and the unscanned mass come from INLAvaan's
+diagnostics(), not from the paper. vb_step_sigma, tails and
+ridge_bend are inlavanilla's own."><meta property="og:description" content="The checks of each stage of the approximation, as numbers: a summary of
 the whole fit, or a table with one row per parameter. They are the checks
 of INLAvaan's diagnostics(), under the same names and in the same order,
 followed by inlavanilla's own. The fit-time warning and the flags of
@@ -26,10 +26,10 @@ summary.inla_vanilla() explains each check and the level at which it is
 flagged.
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-(sn_vs_vb) as an internal check (Section 5.1). The mode shift, the
-Hessian condition number and the scan-end mass come from INLAvaan's
-diagnostics(), not from the paper. tails and bend are inlavanilla's
-own."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
+(mean_gap) as an internal check (Section 5.1). The mode shift, the
+Hessian condition number and the unscanned mass come from INLAvaan's
+diagnostics(), not from the paper. vb_step_sigma, tails and
+ridge_bend are inlavanilla's own."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -82,10 +82,10 @@ followed by inlavanilla's own. The fit-time warning and the flags of
 flagged.</p>
 <p>Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-(<code>sn_vs_vb</code>) as an internal check (Section 5.1). The mode shift, the
-Hessian condition number and the scan-end mass come from INLAvaan's
-<code>diagnostics()</code>, not from the paper. <code>tails</code> and <code>bend</code> are inlavanilla's
-own.</p>
+(<code>mean_gap</code>) as an internal check (Section 5.1). The mode shift, the
+Hessian condition number and the unscanned mass come from INLAvaan's
+<code>diagnostics()</code>, not from the paper. <code>vb_step_sigma</code>, <code>tails</code> and
+<code>ridge_bend</code> are inlavanilla's own.</p>
     </div>
 
     <div class="section level2">
@@ -157,13 +157,15 @@ Gaussian and its VB-shifted copy,
 the VB term of the log marginal likelihood.</p></li>
 <li><p><code>kld_max</code>, <code>kld_mean</code>: the largest and the mean <code>kld</code>.</p></li>
 <li><p><code>nmad_max</code>, <code>nmad_mean</code>: the largest and the mean <code>nmad</code>.</p></li>
-<li><p><code>scan_end_mass_max</code>: the largest <code>scan_end_mass</code>.</p></li>
+<li><p><code>unscanned_mass_max</code>: the largest <code>unscanned_mass</code>.</p></li>
 </ul><p>and then inlavanilla's own:</p><ul><li><p><code>vb_fallback</code>: 1 if the VB fixed-point iteration handed over to the
 fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 but flags nothing: the fallback is a route of the solver, not a measure
 of the approximation.</p></li>
-<li><p><code>sn_vs_vb_max</code>: the largest absolute <code>sn_vs_vb</code>.</p></li>
-<li><p><code>bend_max</code>: the largest <code>bend</code>.</p></li>
+<li><p><code>vb_step_max</code>: the largest <code>vb_step_sigma</code>. Like <code>mode_shift_max</code> it
+should be close to 0.</p></li>
+<li><p><code>mean_gap_max</code>: the largest absolute <code>mean_gap</code>.</p></li>
+<li><p><code>ridge_bend_max</code>: the largest <code>ridge_bend</code>.</p></li>
 <li><p><code>n_heavy_tails</code>: the number of parameters whose <code>tails</code> is <code>FALSE</code>.</p></li>
 </ul><p><strong>Per-parameter diagnostics</strong> (<code>type = "param"</code>), a data frame:</p><ul><li><p><code>names</code>: the parameter.</p></li>
 <li><p><code>grad</code>: the gradient of minus the log-posterior at the mode, as INLAvaan
@@ -186,10 +188,18 @@ the mode, on the scale of <code>logpost</code>.</p></li>
 <li><p><code>vb_shift_sigma</code>: the same in posterior SDs.</p></li>
 <li><p><code>nmad</code>: the NMAD of the skew-normal fit.</p></li>
 <li><p><code>alpha</code>: the shape of the fitted skew-normal marginal.</p></li>
-<li><p><code>scan_end_mass</code>: the mass the fitted skew-normal puts beyond the
+<li><p><code>unscanned_mass</code>: the mass the fitted skew-normal puts beyond the
 scanned window.</p></li>
-</ul><p>and then inlavanilla's own: <code>sn_vs_vb</code>, <code>gamma1</code>, <code>tails</code> and <code>bend</code>.</p>
-<p>Some of INLAvaan's diagnostics are left out. <code>nsamp</code> counts posterior
+</ul><p>and then inlavanilla's own:</p><ul><li><p><code>vb_step_sigma</code>: the step still to go at the VB mean, in posterior SDs:
+the fixed-point step there, the Newton step of the VB stationarity
+condition, as <code>mode_shift_sigma</code> is for the mode. After the fallback
+optimiser it is taken where the optimiser landed. On the fixed-point
+path it is the last step taken, which bounds the next, unless that step
+was 0.1 or more (a <code>vb_tol</code> above 0.1), when it is taken afresh. It
+should be close to 0 (<code>Inf</code> where the step is not finite).</p></li>
+<li><p><code>mean_gap</code>, <code>gamma1</code>, <code>tails</code> and <code>ridge_bend</code>, which
+<code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> describes.</p></li>
+</ul><p>Some of INLAvaan's diagnostics are left out. <code>nsamp</code> counts posterior
 draws, which <code><a href="sampling.html">sampling()</a></code> makes on demand rather than during the fit.
 <code>grad_num</code> and <code>grad_diff</code> compare an analytic gradient with finite
 differences at the mode, which would take further calls; a supplied
@@ -231,25 +241,30 @@ skew-normal fits themselves.</p></div>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The whole fit</span></span></span>
 <span class="r-in"><span><span class="fu">diagnostics</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              npar         converged        iterations          grad_inf </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                 2                 1                10          1.96e-05 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      grad_inf_rel           grad_l2    mode_shift_max         hess_cond </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          3.12e-05          2.05e-05          2.53e-06          1.01e+00 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        vb_applied      vb_shift_max     vb_kld_global           kld_max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                 1            0.2543            0.0323            0.0323 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          kld_mean          nmad_max         nmad_mean scan_end_mass_max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            0.0162            0.0077            0.0039          6.58e-04 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       vb_fallback      sn_vs_vb_max          bend_max     n_heavy_tails </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                 0            0.0091            0.1324                 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               npar          converged         iterations           grad_inf </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                  2                  1                 10           1.96e-05 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           3.13e-05           2.05e-05           2.53e-06           1.01e+00 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         vb_applied       vb_shift_max      vb_kld_global            kld_max </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                  1             0.2510             0.0315             0.0315 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           kld_mean           nmad_max          nmad_mean unscanned_mass_max </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0158             0.0077             0.0039           6.58e-04 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        vb_fallback        vb_step_max       mean_gap_max     ridge_bend_max </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                  0           2.64e-04             0.0124             0.1324 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      n_heavy_tails </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                  0 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># One row per parameter</span></span></span>
 <span class="r-in"><span><span class="fu">diagnostics</span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"param"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1        mu    0        0        0                0 0.0000  -0.0006</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 log_sigma    0        0        0                0 0.0323   0.0327</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   vb_shift_sigma   nmad   alpha scan_end_mass sn_vs_vb  gamma1 tails   bend</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1        -0.0017 0.0000 -0.2519      6.36e-05  -0.0002 -0.0002  TRUE 0.1324</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2         0.2543 0.0077  1.3709      6.58e-04   0.0091  0.1282  TRUE 0.0000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 log_sigma    0        0        0                0 0.0315   0.0323</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   vb_shift_sigma   nmad   alpha unscanned_mass vb_step_sigma mean_gap</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        -0.0017 0.0000 -0.2519       6.36e-05         0e+00  -0.0002</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2         0.2510 0.0077  1.3709       6.58e-04         3e-04   0.0124</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    gamma1 tails ridge_bend</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.0002  TRUE     0.1324</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  0.1282  TRUE     0.0000</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

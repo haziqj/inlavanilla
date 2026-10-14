@@ -12,10 +12,10 @@ explains each check and the level at which it is flagged.
 
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-(`sn_vs_vb`) as an internal check (Section 5.1). The mode shift, the
-Hessian condition number and the scan-end mass come from INLAvaan's
-`diagnostics()`, not from the paper. `tails` and `bend` are
-inlavanilla's own.
+(`mean_gap`) as an internal check (Section 5.1). The mode shift, the
+Hessian condition number and the unscanned mass come from INLAvaan's
+`diagnostics()`, not from the paper. `vb_step_sigma`, `tails` and
+`ridge_bend` are inlavanilla's own.
 
 ## Usage
 
@@ -103,7 +103,7 @@ quantities with `marginals = "gaussian"`.
 
 - `nmad_max`, `nmad_mean`: the largest and the mean `nmad`.
 
-- `scan_end_mass_max`: the largest `scan_end_mass`.
+- `unscanned_mass_max`: the largest `unscanned_mass`.
 
 and then inlavanilla's own:
 
@@ -112,9 +112,12 @@ and then inlavanilla's own:
   but flags nothing: the fallback is a route of the solver, not a
   measure of the approximation.
 
-- `sn_vs_vb_max`: the largest absolute `sn_vs_vb`.
+- `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
+  should be close to 0.
 
-- `bend_max`: the largest `bend`.
+- `mean_gap_max`: the largest absolute `mean_gap`.
+
+- `ridge_bend_max`: the largest `ridge_bend`.
 
 - `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
 
@@ -150,10 +153,23 @@ and then inlavanilla's own:
 
 - `alpha`: the shape of the fitted skew-normal marginal.
 
-- `scan_end_mass`: the mass the fitted skew-normal puts beyond the
+- `unscanned_mass`: the mass the fitted skew-normal puts beyond the
   scanned window.
 
-and then inlavanilla's own: `sn_vs_vb`, `gamma1`, `tails` and `bend`.
+and then inlavanilla's own:
+
+- `vb_step_sigma`: the step still to go at the VB mean, in posterior
+  SDs: the fixed-point step there, the Newton step of the VB
+  stationarity condition, as `mode_shift_sigma` is for the mode. After
+  the fallback optimiser it is taken where the optimiser landed. On the
+  fixed-point path it is the last step taken, which bounds the next,
+  unless that step was 0.1 or more (a `vb_tol` above 0.1), when it is
+  taken afresh. It should be close to 0 (`Inf` where the step is not
+  finite).
+
+- `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
+  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  describes.
 
 Some of INLAvaan's diagnostics are left out. `nsamp` counts posterior
 draws, which
@@ -201,23 +217,28 @@ fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 
 # The whole fit
 diagnostics(fit)
-#>              npar         converged        iterations          grad_inf 
-#>                 2                 1                10          1.96e-05 
-#>      grad_inf_rel           grad_l2    mode_shift_max         hess_cond 
-#>          3.12e-05          2.05e-05          2.53e-06          1.01e+00 
-#>        vb_applied      vb_shift_max     vb_kld_global           kld_max 
-#>                 1            0.2543            0.0323            0.0323 
-#>          kld_mean          nmad_max         nmad_mean scan_end_mass_max 
-#>            0.0162            0.0077            0.0039          6.58e-04 
-#>       vb_fallback      sn_vs_vb_max          bend_max     n_heavy_tails 
-#>                 0            0.0091            0.1324                 0 
+#>               npar          converged         iterations           grad_inf 
+#>                  2                  1                 10           1.96e-05 
+#>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond 
+#>           3.13e-05           2.05e-05           2.53e-06           1.01e+00 
+#>         vb_applied       vb_shift_max      vb_kld_global            kld_max 
+#>                  1             0.2510             0.0315             0.0315 
+#>           kld_mean           nmad_max          nmad_mean unscanned_mass_max 
+#>             0.0158             0.0077             0.0039           6.58e-04 
+#>        vb_fallback        vb_step_max       mean_gap_max     ridge_bend_max 
+#>                  0           2.64e-04             0.0124             0.1324 
+#>      n_heavy_tails 
+#>                  0 
 
 # One row per parameter
 diagnostics(fit, type = "param")
 #>       names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift
 #> 1        mu    0        0        0                0 0.0000  -0.0006
-#> 2 log_sigma    0        0        0                0 0.0323   0.0327
-#>   vb_shift_sigma   nmad   alpha scan_end_mass sn_vs_vb  gamma1 tails   bend
-#> 1        -0.0017 0.0000 -0.2519      6.36e-05  -0.0002 -0.0002  TRUE 0.1324
-#> 2         0.2543 0.0077  1.3709      6.58e-04   0.0091  0.1282  TRUE 0.0000
+#> 2 log_sigma    0        0        0                0 0.0315   0.0323
+#>   vb_shift_sigma   nmad   alpha unscanned_mass vb_step_sigma mean_gap
+#> 1        -0.0017 0.0000 -0.2519       6.36e-05         0e+00  -0.0002
+#> 2         0.2510 0.0077  1.3709       6.58e-04         3e-04   0.0124
+#>    gamma1 tails ridge_bend
+#> 1 -0.0002  TRUE     0.1324
+#> 2  0.1282  TRUE     0.0000
 ```
