@@ -11,7 +11,12 @@ knitr::opts_chunk$set(
   fig.path = "man/figures/README-",
   out.width = "100%"
 )
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
 # inlavanilla <img src="man/figures/logo.png" align="right" height="139" alt="inlavanilla hex logo" />
@@ -94,7 +99,11 @@ quantity of interest:
 
 ```{r draws}
 set.seed(1)
-p <- sampling(fit, nsamp = 1e5, fun = function(theta) plogis(theta[["logit_p"]]))
+p <- sampling(
+  fit,
+  nsamp = 1e5,
+  fun = function(theta) plogis(theta[["logit_p"]])
+)
 rbind(
   inlavanilla = quantile(p, c(0.025, 0.5, 0.975)),
   exact = qbeta(c(0.025, 0.5, 0.975), 4, 18)

@@ -1,6 +1,7 @@
 # Tests of the derivatives and of the VB mean correction:
 #
-# (a) fits with an analytic gradient and with finite differences agree;
+# (a) fits with an analytic gradient and with finite differences agree, up to
+#     the error of the VB rule used without a gradient;
 # (b) the two routes to the volume correction, gamma1_grad() and gamma1_lp(),
 #     agree with each other and with the derivative of the conditional
 #     log-determinant, and vanish for a Gaussian;
@@ -277,13 +278,13 @@ test_that("fits with and without a gradient agree on a two-parameter normal mode
     1e-6 # observed 3.4e-7
   )
 
-  # VB stage. Without a gradient it uses one-sided differences whose O(h)
-  # bias is removed with the curvature at the mode; the curvature at the
-  # nodes differs, which moves the VB mean by 2.1e-5 SDs here whatever the
-  # VB tolerance (also 2.1e-5 with vb_tol = 1e-9). Central differences agreed
-  # to 7e-7 SDs.
-  expect_lt(d[["mean_vb"]], 6e-5) # observed 2.1e-5 SDs
-  expect_lt(d[["logml"]], 4e-6) # observed 1.4e-6
+  # VB stage. Without a gradient the expected gradient comes from
+  # log-posterior values alone, by Stein's identity on the simplex rule,
+  # which is exact for log-densities of degree four rather than six. The two
+  # VB means differ by the error of that rule, for a shift of 0.29 SDs, and
+  # the log marginal likelihood through its VB term.
+  expect_lt(d[["mean_vb"]], 0.015) # observed 5.1e-3 SDs
+  expect_lt(d[["logml"]], 4.5e-3) # observed 1.5e-3
 })
 
 test_that("fits with and without a gradient agree on a five-parameter logistic regression", {
@@ -319,10 +320,10 @@ test_that("fits with and without a gradient agree on a five-parameter logistic r
     )),
     4e-6 # observed 1.3e-6
   )
-  # VB stage, with one-sided differences as above (central differences
-  # agreed to 7.5e-7 SDs); also 6.1e-5 with vb_tol = 1e-9
-  expect_lt(d[["mean_vb"]], 1.8e-4) # observed 6.1e-5 SDs
-  expect_lt(d[["logml"]], 4.5e-5) # observed 1.5e-5
+  # VB stage, from log-posterior values without a gradient, as above, for a
+  # shift of 0.40 SDs
+  expect_lt(d[["mean_vb"]], 7.5e-3) # observed 2.1e-3 SDs
+  expect_lt(d[["logml"]], 2e-3) # observed 4.4e-4
 })
 
 # (b) The volume correction ----------------------------------------------------
@@ -546,50 +547,6 @@ test_that("finite-difference errors take their exact form on polynomials, step b
   )
 })
 
-test_that("fd_grad_forward() has the exact one-sided error that the curvature removes", {
-  # The VB stage without a gradient uses one-sided differences plus half a
-  # step times the Laplace curvature. On polynomials the error is exact: the
-  # forward difference of c x^3 is 3 c x^2 + 3 c x h + c h^2, whose O(h) term
-  # is half a step times the second derivative 6 c x. Steps differ per
-  # coordinate, so a step applied to the wrong coordinate shows.
-  x <- c(0.6, -1.2, 0.9)
-  h <- c(0.1, 0.02, 0.3)
-  cc <- c(1, -2, 0.5)
-  cubic <- function(x) sum(cc * x^3)
-  expect_equal(
-    fd_grad_forward(cubic, x, h),
-    3 * cc * x^2 + 3 * cc * x * h + cc * h^2,
-    tolerance = 1e-12
-  )
-
-  # On a quadratic -x'Px / 2 + 1'x, removing half a step times the
-  # curvature P_jj, as inla_vanilla() does with diag(H), is exact.
-  P <- matrix(c(2, 0.5, -0.3, 0.5, 1, 0.2, -0.3, 0.2, 3), 3)
-  quad <- function(x) -0.5 * sum(x * (P %*% x)) + sum(x)
-  expect_equal(
-    fd_grad_forward(quad, x, h) + 0.5 * h * diag(P),
-    drop(1 - P %*% x),
-    tolerance = 1e-12
-  )
-
-  # m + 1 calls, or m when f(x) is supplied, with the same result; a scalar
-  # step is recycled
-  calls <- 0L
-  counted <- function(x) {
-    calls <<- calls + 1L
-    cubic(x)
-  }
-  g <- fd_grad_forward(counted, x, h)
-  expect_identical(calls, 4L)
-  calls <- 0L
-  expect_identical(fd_grad_forward(counted, x, h, f0 = cubic(x)), g)
-  expect_identical(calls, 3L)
-  expect_identical(
-    fd_grad_forward(cubic, x, 0.1),
-    fd_grad_forward(cubic, x, rep(0.1, 3))
-  )
-})
-
 test_that("fd_jacobian() puts the derivatives with respect to x_j in column j", {
   # A map whose Jacobian is far from symmetric
   fn <- function(x) c(x[1] * x[2], x[2]^3, exp(x[1]) + 5 * x[3])
@@ -647,12 +604,6 @@ test_that("finite differences recycle a scalar step and make the documented numb
 
 # (d) The degree-5 cubature rule -----------------------------------------------
 
-# Every exponent vector of m variables with total degree <= max_degree
-monomial_exponents <- function(m, max_degree) {
-  grid <- as.matrix(expand.grid(rep(list(0:max_degree), m)))
-  grid[rowSums(grid) <= max_degree, , drop = FALSE]
-}
-
 # E[prod z_i^k_i] under N(0, I): the product of (k_i - 1)!! over the k_i,
 # or zero when any k_i is odd.
 gaussian_moment <- function(k) {
@@ -678,24 +629,53 @@ random_covariance <- function(m) {
   D %*% S %*% D
 }
 
-test_that("vb_nodes() has 2 m^2 + 1 nodes whose weights sum to one", {
-  set.seed(5)
-  for (m in 1:6) {
-    rule <- vb_nodes(random_covariance(m))
-    expect_identical(dim(rule$nodes), c(as.integer(2 * m^2 + 1), m))
-    expect_length(rule$weights, 2 * m^2 + 1)
+# Every exponent vector of m variables with total degree <= max_degree, built
+# up one variable at a time
+exponents_up_to <- function(m, max_degree) {
+  if (m == 1) {
+    return(matrix(0:max_degree, ncol = 1))
+  }
+  do.call(
+    rbind,
+    lapply(0:max_degree, function(k) {
+      cbind(k, exponents_up_to(m - 1, max_degree - k))
+    })
+  )
+}
+
+test_that("vb_nodes() has (m + 1)(m + 2) + 1 nodes in antipodal pairs, within 3 SDs", {
+  # Fewer for m <= 3, where some directions coincide, and at m = 7, where the
+  # vertex nodes have zero weight
+  n_nodes <- c(3, 7, 15, 31, 43, 57, 57, 91, 111)
+  expect_identical(n_nodes[4:9][-4], ((4:9 + 1) * (4:9 + 2) + 1)[-4])
+  set.seed(7)
+  for (m in 1:9) {
+    Sigma <- random_covariance(m)
+    rule <- vb_nodes(Sigma)
+    expect_identical(dim(rule$nodes), as.integer(c(n_nodes[m], m)))
     expect_equal(sum(rule$weights), 1, tolerance = 1e-14)
+    # The centre, then one node of each antipodal pair, then the negatives
+    n_pairs <- (n_nodes[m] - 1) / 2
+    plus <- 1 + seq_len(n_pairs)
+    expect_identical(rule$nodes[1, ], rep(0, m))
+    expect_identical(rule$nodes[plus + n_pairs, ], -rule$nodes[plus, ])
+    expect_identical(rule$weights[plus + n_pairs], rule$weights[plus])
+    # In whitened coordinates no node is more than 3 SDs out
+    z <- rule$nodes %*% solve(chol(Sigma))
+    expect_lte(max(sqrt(rowSums(z^2))), 3 + 1e-12)
   }
 })
 
 test_that("vb_nodes() integrates every Gaussian moment up to degree five exactly", {
-  set.seed(6)
-  for (m in 1:6) {
+  # Every weight is positive up to m = 7, and the vertex weights are negative
+  # from m = 8, so both regimes are covered
+  set.seed(8)
+  for (m in c(1:9, 12)) {
     Sigma <- random_covariance(m)
     rule <- vb_nodes(Sigma)
-    # Whiten: x = z U with U'U = Sigma
+    expect_identical(min(rule$weights) > 0, m <= 7)
     z <- rule$nodes %*% solve(chol(Sigma))
-    exps <- monomial_exponents(m, 5)
+    exps <- exponents_up_to(m, 5)
     err <- vapply(
       seq_len(nrow(exps)),
       function(r) {
@@ -704,44 +684,58 @@ test_that("vb_nodes() integrates every Gaussian moment up to degree five exactly
       },
       1
     )
-    # Rounding, which grows with the condition number of Sigma: observed
-    # up to 8.1e-12, at m = 6 with condition number 2e5
-    expect_lt(max(abs(err)), 3e-11)
-
-    # The covariance itself, in the original coordinates
+    # Rounding, which grows with the condition number of Sigma: observed up
+    # to 3.4e-11, at m = 4 with condition number 5e4
+    expect_lt(max(abs(err)), 1e-10)
     expect_equal(
       crossprod(rule$nodes, rule$weights * rule$nodes),
       Sigma,
       tolerance = 1e-12
     )
-
-    # Degree six is beyond the rule: E[z_1^6] = 15 is not reproduced, so the
-    # degree-five check above has teeth.
-    exps6 <- monomial_exponents(m, 6)
-    exps6 <- exps6[rowSums(exps6) == 6, , drop = FALSE]
-    err6 <- vapply(
-      seq_len(nrow(exps6)),
-      function(r) {
-        k <- exps6[r, ]
-        rule_moment(z, rule$weights, k) - gaussian_moment(k)
-      },
-      1
-    )
-    expect_gt(max(abs(err6)), 1)
+    # Degree six is beyond the rule
+    expect_gt(abs(rule_moment(z, rule$weights, c(6, rep(0, m - 1))) - 15), 1)
   }
 })
 
-test_that("in one dimension vb_nodes() is the three-point Gauss-Hermite rule", {
-  gh <- gauss_hermite(3)
+test_that("vb_nodes() gives the classical rules in one, two and three dimensions", {
+  # m = 1: the three-point Gauss-Hermite rule, as vb_nodes() is
   rule <- vb_nodes(matrix(2.5^2))
   ord <- order(rule$nodes[, 1])
-  expect_equal(rule$nodes[ord, 1], 2.5 * sort(gh$nodes), tolerance = 1e-14)
   expect_equal(
-    rule$weights[ord],
-    gh$weights[order(gh$nodes)],
+    rule$nodes[ord, 1],
+    2.5 * c(-sqrt(3), 0, sqrt(3)),
     tolerance = 1e-14
   )
-  expect_equal(sort(rule$weights), c(1, 1, 4) / 6, tolerance = 1e-14)
+  expect_equal(rule$weights[ord], c(1, 4, 1) / 6, tolerance = 1e-14)
+
+  # m = 2: Radon's seven-point rule, the centre with weight 1/2 and a regular
+  # hexagon of radius 2 with weights 1/12
+  rule <- vb_nodes(diag(2))
+  expect_equal(sqrt(rowSums(rule$nodes^2)), c(0, rep(2, 6)), tolerance = 1e-14)
+  expect_equal(rule$weights, c(1 / 2, rep(1 / 12, 6)), tolerance = 1e-14)
+  angles <- sort(atan2(rule$nodes[-1, 2], rule$nodes[-1, 1]) %% (2 * pi))
+  expect_equal(diff(angles), rep(pi / 3, 5), tolerance = 1e-12)
+
+  # m = 3: the corners of a cube and the vertices of an octahedron, all at
+  # radius sqrt(5), with weights 0.045 and 0.04, and 0.4 at the centre
+  rule <- vb_nodes(diag(3))
+  expect_equal(
+    sqrt(rowSums(rule$nodes^2)),
+    c(0, rep(sqrt(5), 14)),
+    tolerance = 1e-14
+  )
+  expect_equal(rule$weights[1], 0.4, tolerance = 1e-14)
+  expect_equal(sort(rule$weights[-1]), rep(c(0.04, 0.045), c(6, 8)))
+  # Octahedron vertices are orthogonal or opposite to each other, cube
+  # corners are at angles with cosine +-1/3 or opposite
+  oct <- rule$nodes[-1, ][abs(rule$weights[-1] - 0.04) < 1e-12, ] / sqrt(5)
+  cube <- rule$nodes[-1, ][abs(rule$weights[-1] - 0.045) < 1e-12, ] / sqrt(5)
+  cos_oct <- tcrossprod(oct)[upper.tri(diag(6))]
+  cos_cube <- tcrossprod(cube)[upper.tri(diag(8))]
+  expect_true(all(abs(cos_oct) < 1e-12 | abs(abs(cos_oct) - 1) < 1e-12))
+  expect_true(all(
+    abs(abs(cos_cube) - 1 / 3) < 1e-12 | abs(abs(cos_cube) - 1) < 1e-12
+  ))
 })
 
 # (e) The VB shift ------------------------------------------------------------
@@ -816,9 +810,12 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 1D poster
   expect_lt(vb_err, 1.5e-3) # observed 5.3e-4 SDs, for a shift of 0.17 SDs
   expect_lt(vb_err, laplace_err / 100)
 
-  # Without a gradient: the one-sided differences add little to the error
+  # Without a gradient: Stein's identity on the three-point rule, exact for
+  # log-densities of degree four rather than six
   fit_fd <- inla_vanilla(logpost, c(t = 0), silent = TRUE)
-  expect_lt(max_sd_diff(fit_fd$mean_vb, ref, sds), 1.5e-3) # observed 5.7e-4
+  vb_err_fd <- max_sd_diff(fit_fd$mean_vb, ref, sds)
+  expect_lt(vb_err_fd, 0.02) # observed 6.6e-3 SDs
+  expect_lt(vb_err_fd, laplace_err / 10)
 })
 
 test_that("the VB shift solves the three-point rule exactly for a Poisson-gamma posterior", {
@@ -854,11 +851,14 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D poster
 
   vb_err <- max_sd_diff(fit$mean_vb, ref, sds)
   laplace_err <- max_sd_diff(fit$mode, ref, sds)
-  expect_lt(vb_err, 7.5e-4) # observed 2.5e-4 SDs, for a shift of 0.25 SDs
+  expect_lt(vb_err, 7.5e-4) # observed 2.6e-4 SDs, for a shift of 0.25 SDs
   expect_lt(vb_err, laplace_err / 100)
 
+  # Without a gradient, by Stein's identity on the simplex rule
   fit_fd <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
-  expect_lt(max_sd_diff(fit_fd$mean_vb, ref, sds), 7.5e-4) # observed 2.7e-4
+  vb_err_fd <- max_sd_diff(fit_fd$mean_vb, ref, sds)
+  expect_lt(vb_err_fd, 0.015) # observed 4.6e-3 SDs
+  expect_lt(vb_err_fd, laplace_err / 10)
 })
 
 # inla_vanilla() with only the gradient check at init silenced. That check
@@ -897,9 +897,11 @@ test_that("the VB shift in posterior SDs does not depend on the scale of the par
     for (gr in list(gr_scaled, NULL)) {
       fit_scaled <- fit_past_init_check(lp_scaled, mod$init, grad = gr)
       expect_false(fit_scaled$diagnostics$vb$fallback)
-      # Against the exact VB shift, as for the unscaled model (observed
-      # 1.6e-4 to 2.7e-4 SDs)
-      expect_lt(max(abs(shift_sd(fit_scaled) - ref_sd)), 7.5e-4)
+      # Against the exact VB shift, as for the unscaled model: observed 2.0e-4
+      # to 2.6e-4 SDs with the gradient, and 4.2e-3 to 4.6e-3 without, from
+      # Stein's identity
+      tol <- if (is.null(gr)) 0.015 else 7.5e-4
+      expect_lt(max(abs(shift_sd(fit_scaled) - ref_sd)), tol)
       if (scale[[1]] == scale[[2]]) {
         # A common scale changes nothing but rounding: observed 7.3e-7 SDs
         # with the gradient, 1.6e-7 without
@@ -997,6 +999,85 @@ test_that("the degree-5 rule gives the exact VB shift for a degree-6 polynomial 
   expect_lt(max_sd_diff(fit_default$mean_vb, ref, sds), 1e-4) # observed 2e-5
 })
 
+test_that("without a gradient the VB shift is exact for a degree-4 polynomial log-posterior", {
+  # The example above without its sextic term. Without a gradient the
+  # expected gradient comes from Stein's identity on the simplex rule, which
+  # integrates z f(mu + z) exactly when f is a polynomial of degree four.
+  P <- matrix(c(1.5, 0.4, 0.2, 0.4, 1, -0.3, 0.2, -0.3, 0.8), 3)
+  logpost <- function(t) {
+    -0.5 *
+      sum(t * (P %*% t)) +
+      0.15 * t[[1]]^3 -
+      0.05 * t[[1]]^4 -
+      0.03 * t[[1]]^2 * t[[2]]^2 +
+      0.02 * t[[1]] * t[[2]]^2 +
+      0.04 * t[[2]] * t[[3]]^2 -
+      0.01 * t[[3]]^4
+  }
+  grad <- function(t) {
+    t1 <- t[[1]]
+    t2 <- t[[2]]
+    t3 <- t[[3]]
+    -drop(P %*% t) +
+      c(
+        0.45 * t1^2 - 0.2 * t1^3 - 0.06 * t1 * t2^2 + 0.02 * t2^2,
+        -0.06 * t1^2 * t2 + 0.04 * t1 * t2 + 0.04 * t3^2,
+        0.08 * t2 * t3 - 0.04 * t3^3
+      )
+  }
+  init <- c(a = 0, b = 0, c = 0)
+  expect_equal(
+    grad(c(0.3, -0.7, 1.1)),
+    fd_grad(logpost, c(0.3, -0.7, 1.1), 1e-6)
+  )
+
+  # The gradient serves only the reference
+  ctrl <- list(vb_tol = 1e-12, vb_maxit = 200)
+  fit <- inla_vanilla(logpost, init, silent = TRUE, control = ctrl)
+  expect_false(fit$has_grad)
+  expect_false(fit$diagnostics$vb$fallback)
+  sds <- sqrt(diag(fit$cov))
+  ref <- vb_reference(grad, fit$mode, fit$cov, n_gh = 8)
+  expect_gt(max_sd_diff(ref, fit$mode, sds), 0.2) # a real shift
+  expect_lt(max_sd_diff(fit$mean_vb, ref, sds), 1e-11) # observed 2.1e-13 SDs
+
+  # A sextic term is beyond it, though the gradient rule takes it exactly
+  # (see the test above)
+  logpost6 <- function(t) logpost(t) - 0.002 * t[[1]]^6
+  grad6 <- function(t) grad(t) - c(0.012 * t[[1]]^5, 0, 0)
+  fit6 <- inla_vanilla(logpost6, init, silent = TRUE, control = ctrl)
+  sds6 <- sqrt(diag(fit6$cov))
+  ref6 <- vb_reference(grad6, fit6$mode, fit6$cov, n_gh = 8)
+  expect_gt(max_sd_diff(fit6$mean_vb, ref6, sds6), 1e-3) # observed 5.4e-3
+})
+
+test_that("without a gradient each VB sweep costs one log-posterior call per node", {
+  mod <- logistic_model()
+  fit <- inla_vanilla(mod$logpost, mod$init, silent = TRUE)
+  m <- length(fit$mode)
+  R <- chol(solve(fit$cov))
+  calls <- 0L
+  counted <- function(x) {
+    calls <<- calls + 1L
+    mod$logpost(x)
+  }
+  vb <- vb_correct(
+    counted,
+    NULL,
+    fit$mode,
+    fit$cov,
+    R,
+    backsolve(R, diag(m)),
+    vanilla_control(list())
+  )
+  expect_false(vb$fallback)
+  # (m + 1)(m + 2) = 42 calls per sweep, no centre: observed 4 sweeps
+  n_nodes <- nrow(vb_nodes(fit$cov)$nodes) - 1L
+  expect_identical(n_nodes, as.integer((m + 1) * (m + 2)))
+  expect_identical(calls, vb$iterations * n_nodes)
+  expect_equal(vb$shift, fit$mean_vb - fit$mode, tolerance = 1e-12)
+})
+
 # (f) vb = FALSE against vb = TRUE ---------------------------------------------
 
 test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likelihood", {
@@ -1014,14 +1095,26 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
   expect_null(fit$diagnostics$vb)
   expect_null(summary(fit)$vb)
   # The VB diagnostics did not run, so they are NA, as in INLAvaan's
-  # diagnostics(); the SN-VB gap needs a VB mean too
+  # diagnostics(); the mean gap needs a VB mean too
   d <- fit$diagnostics$marginals
-  for (col in c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")) {
+  for (col in c(
+    "kld",
+    "vb_shift",
+    "vb_shift_sigma",
+    "vb_step_sigma",
+    "mean_gap"
+  )) {
     expect_identical(d[[col]], c(NA_real_, NA_real_))
   }
   g <- diagnostics(fit)
   expect_identical(g[["vb_applied"]], 0)
-  for (nm in c("vb_shift_max", "vb_kld_global", "kld_max", "vb_fallback")) {
+  for (nm in c(
+    "vb_shift_max",
+    "vb_kld_global",
+    "kld_max",
+    "vb_fallback",
+    "vb_step_max"
+  )) {
     expect_identical(g[[nm]], NA_real_)
   }
 })
@@ -1061,7 +1154,7 @@ test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
   expect_equal(g[["kld_max"]], max(d$kld))
   expect_equal(g[["vb_shift_max"]], max(abs(d$vb_shift_sigma)))
   expect_equal(
-    fit_vb$diagnostics$marginals$sn_vs_vb,
+    fit_vb$diagnostics$marginals$mean_gap,
     unname((fit_vb$summary[, "Mean"] - fit_vb$mean_vb) / sds),
     tolerance = 1e-12
   )
@@ -1148,17 +1241,32 @@ test_that("a strongly skewed 2D posterior falls back to nlminb() at a stationary
     c(pg$grad(t[1]) + 0.8 * r, -r)
   }
   init <- c(a = 0, b = 0)
-  for (gr in list(grad, NULL)) {
-    fit <- inla_vanilla(logpost, init, grad = gr, silent = TRUE)
-    expect_true(fit$diagnostics$vb$fallback)
-    sds <- sqrt(diag(fit$cov))
-    # observed 1.9e-7 with the gradient, 3.6e-8 with finite differences
-    expect_lt(max(abs(rule_stationarity(grad, fit$mean_vb, fit$cov))), 6e-7)
-    # theta_2 enters linearly, so mu_2 = 0.8 mu_1 holds under any rule
-    expect_equal(fit$mean_vb[[2]], 0.8 * fit$mean_vb[[1]], tolerance = 1e-10)
-    mu1_exact <- log(pg$A / pg$B) - fit$cov[1, 1] / 2
-    expect_lt(abs(fit$mean_vb[[1]] - mu1_exact) / sds[[1]], 0.06) # obs. 0.026
-  }
+  fit <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
+  expect_true(fit$diagnostics$vb$fallback)
+  sds <- sqrt(diag(fit$cov))
+  expect_lt(max(abs(rule_stationarity(grad, fit$mean_vb, fit$cov))), 6e-7) # obs. 1.9e-7
+  # theta_2 enters linearly, so mu_2 = 0.8 mu_1 holds under any rule
+  expect_equal(fit$mean_vb[[2]], 0.8 * fit$mean_vb[[1]], tolerance = 1e-10)
+  mu1_exact <- log(pg$A / pg$B) - fit$cov[1, 1] / 2
+  mode_err <- abs(fit$mode[[1]] - mu1_exact) / sds[[1]]
+  expect_lt(abs(fit$mean_vb[[1]] - mu1_exact) / sds[[1]], 0.06) # obs. 0.026
+
+  # Without a gradient the expected gradient comes from Stein's identity on
+  # the simplex rule, whose first step here is under one SD, so there is no
+  # fallback. The rule is exact for log-densities of degree four only, and
+  # this posterior is far from that: observed 0.096 SDs from exact VB, against
+  # 0.026 with the gradient and 0.71 for the mode.
+  fit_fd <- inla_vanilla(logpost, init, silent = TRUE)
+  sds <- sqrt(diag(fit_fd$cov))
+  vb_err_fd <- abs(fit_fd$mean_vb[[1]] - mu1_exact) / sds[[1]]
+  expect_lt(vb_err_fd, 0.2)
+  expect_lt(vb_err_fd, mode_err / 5)
+  # mu_2 = 0.8 mu_1 to the tolerance of the fixed-point iteration, which
+  # stops when a step is under 1e-3 SDs: observed 4.7e-3 SDs
+  expect_lt(
+    abs(fit_fd$mean_vb[[2]] - 0.8 * fit_fd$mean_vb[[1]]) / sds[[2]],
+    0.015
+  )
 })
 
 test_that("a forced fallback agrees with the fixed-point solution", {
@@ -1185,10 +1293,221 @@ test_that("a forced fallback agrees with the fixed-point solution", {
     max_sd_diff(fit_forced$mean_vb, fit_fixed$mean_vb, sds),
     2e-7 # observed 6.1e-8
   )
+  # Both settled: the fixed point's last step was below vb_tol, and the step
+  # where the fallback landed is as small as its distance from the fixed
+  # point
+  expect_lt(max(fit_fixed$diagnostics$marginals$vb_step_sigma), 1e-10)
+  expect_lt(max(fit_forced$diagnostics$marginals$vb_step_sigma), 2e-7)
+  dg <- diagnostics_internal(
+    fit_forced$diagnostics$optim,
+    fit_forced$diagnostics$vb,
+    fit_forced$diagnostics$marginals
+  )
+  expect_false(check_flags(dg, gaussian = FALSE)[["vb_step"]])
   expect_lt(
     max(abs(rule_stationarity(mod$grad, fit_forced$mean_vb, fit_forced$cov))),
     2e-7 # observed 6.4e-8
   )
   # observed 4.5e-11 relative
   expect_equal(fit_forced$logml, fit_fixed$logml, tolerance = 1e-10)
+})
+
+test_that("the VB step is the step still to go at the VB mean, in posterior SDs", {
+  # The Poisson regression with each coefficient scaled by 100, so that the
+  # posterior SDs are far from 1 and a step left in the parameters' own units
+  # would be off by that factor. The step is checked against the rule's own
+  # fixed-point step, Sigma E[grad], taken here at the VB mean.
+  mod <- poisson_regression_model(2)
+  s <- 100
+  lp_s <- function(theta) mod$logpost(theta / s)
+  gr_s <- function(theta) mod$grad(theta / s) / s
+  step_at_mean <- function(fit) {
+    rule <- vb_nodes(fit$cov)
+    g <- expected_grad(gr_s, fit$mean_vb, rule$nodes, rule$weights)
+    unname(abs(drop(fit$cov %*% g)) / sqrt(diag(fit$cov)))
+  }
+  fit_s <- function(...) {
+    inla_vanilla(lp_s, s * mod$init, grad = gr_s, silent = TRUE, ...)
+  }
+
+  # A vb_tol above the settling level is met by the first step, of more
+  # than 0.1 SDs, which says little about the step still to go: that is
+  # taken afresh, and the correction settles
+  loose <- fit_s(control = list(vb_tol = 0.5))
+  d <- loose$diagnostics$marginals
+  expect_false(loose$diagnostics$vb$fallback)
+  expect_identical(loose$diagnostics$vb$iterations, 1L)
+  expect_gt(max(abs(d$vb_shift_sigma)), 0.1)
+  expect_equal(d$vb_step_sigma, step_at_mean(loose), tolerance = 1e-6)
+  expect_lt(max(d$vb_step_sigma), 0.1)
+  expect_length(loose$warnings, 0)
+
+  # After the fallback, the step where it landed
+  forced <- fit_s(control = list(vb_maxit = 1))
+  expect_true(forced$diagnostics$vb$fallback)
+  expect_equal(
+    forced$diagnostics$marginals$vb_step_sigma,
+    step_at_mean(forced),
+    tolerance = 1e-4
+  )
+})
+
+test_that("without a gradient a forced fallback lands close to the fixed point", {
+  # Without a gradient nlminb() minimises the rule's negative expected
+  # log-posterior, with the expected gradient by Stein's identity as its
+  # gradient. The two agree only to the error of the rule, so the fallback
+  # stops near the fixed point of the iteration rather than on it.
+  mod <- poisson_regression_model(2)
+  fit_fixed <- inla_vanilla(
+    mod$logpost,
+    mod$init,
+    silent = TRUE,
+    control = list(vb_tol = 1e-10)
+  )
+  fit_forced <- inla_vanilla(
+    mod$logpost,
+    mod$init,
+    silent = TRUE,
+    control = list(vb_maxit = 1)
+  )
+  expect_false(fit_fixed$diagnostics$vb$fallback)
+  expect_true(fit_forced$diagnostics$vb$fallback)
+  sds <- sqrt(diag(fit_fixed$cov))
+  expect_lt(
+    max_sd_diff(fit_forced$mean_vb, fit_fixed$mean_vb, sds),
+    1.5e-3 # observed 4.5e-4
+  )
+  # The step where the fallback landed measures that distance: one more
+  # fixed-point step would close most of it, far below the 0.1 SD level
+  step <- fit_forced$diagnostics$marginals$vb_step_sigma
+  expect_lt(max(step), 1.5e-3)
+  expect_gt(
+    max(step),
+    0.2 * max_sd_diff(fit_forced$mean_vb, fit_fixed$mean_vb, sds)
+  )
+  # and as close to exact VB as the iteration is (both observed 4e-3 SDs)
+  ref <- vb_reference(mod$grad, fit_fixed$mode, fit_fixed$cov)
+  expect_lt(max_sd_diff(fit_forced$mean_vb, ref, sds), 0.015)
+  expect_lt(abs(fit_forced$logml - fit_fixed$logml), 5e-4) # observed 1.2e-4
+})
+
+test_that("the fallback stops with its own error where logpost is -Inf at the nodes", {
+  # A normal posterior truncated at a = cut. The nodes reach 2 SDs, so
+  # logpost is -Inf at some of them around the mode, and the fallback
+  # starts there. Its gradient used to be NaN at that start, and the fit
+  # stopped with "NA/NaN gradient evaluation" and a hint to return -Inf,
+  # which this logpost already does.
+  truncated <- function(cut) {
+    list(
+      logpost = function(t) {
+        if (t[[1]] < cut) {
+          -Inf
+        } else {
+          stats::dnorm(t[[1]], log = TRUE) +
+            stats::dnorm(t[[2]], t[[1]], log = TRUE)
+        }
+      },
+      grad = function(t) {
+        if (t[[1]] < cut) {
+          c(NaN, NaN)
+        } else {
+          c(t[[2]] - 2 * t[[1]], t[[1]] - t[[2]])
+        }
+      }
+    )
+  }
+  init <- c(a = 0.2, b = 0)
+  vb_error <- function(mod, grad) {
+    err <- expect_error(
+      inla_vanilla(mod$logpost, init, grad = grad, silent = TRUE),
+      class = "inlavanilla_error"
+    )
+    msg <- cli::ansi_strip(conditionMessage(err))
+    expect_match(
+      msg,
+      "The VB mean correction cannot be computed.",
+      fixed = TRUE
+    )
+    expect_match(msg, "or set `vb = FALSE`.", fixed = TRUE)
+    expect_no_match(msg, "instead of failing")
+    expect_no_match(msg, "NA/NaN")
+    msg
+  }
+
+  # Truncated half an SD below the mode: no mean within nlminb()'s reach
+  # has every node finite
+  mod <- truncated(-0.5)
+  for (grad in list(NULL, mod$grad)) {
+    msg <- vb_error(mod, grad)
+    expect_match(msg, "some of its nodes around every mean tried", fixed = TRUE)
+  }
+  # Truncated 1.5 SDs below: such means exist, but the optimum lies beyond
+  # the edge of their region, where the fallback stops
+  mod <- truncated(-1.5)
+  for (grad in list(NULL, mod$grad)) {
+    msg <- vb_error(mod, grad)
+    expect_match(msg, "It stopped at the edge of the region", fixed = TRUE)
+  }
+  # Without the VB correction the fit goes ahead
+  fit <- inla_vanilla(mod$logpost, init, vb = FALSE, silent = TRUE)
+  expect_s3_class(fit, "inla_vanilla")
+})
+
+test_that("the fallback moves to where logpost is finite at every node", {
+  # a + 1 ~ Gamma(3, 1) and b | a ~ N(a, 1). logpost is -Inf for a <= -1,
+  # 1.4 SDs below the mode and within reach of the nodes, but it falls to
+  # -Inf continuously there, so the rule's optimum lies where every node is
+  # finite. The fallback starts at the mode, where one node is not, and its
+  # gradient there moves it away from that node.
+  logpost <- function(t) {
+    if (t[[1]] <= -1) {
+      -Inf
+    } else {
+      2 *
+        log(t[[1]] + 1) -
+        (t[[1]] + 1) +
+        stats::dnorm(t[[2]], t[[1]], log = TRUE)
+    }
+  }
+  grad <- function(t) {
+    if (t[[1]] <= -1) {
+      c(NaN, NaN)
+    } else {
+      c(2 / (t[[1]] + 1) - 1 + t[[2]] - t[[1]], t[[1]] - t[[2]])
+    }
+  }
+  init <- c(a = 1, b = 1)
+  nodes_finite <- function(fit, mu) {
+    nodes <- sweep(vb_nodes(fit$cov)$nodes, 2, mu, "+")
+    all(is.finite(apply(nodes, 1, logpost)))
+  }
+
+  # With a gradient it settles at a stationary point of the rule
+  fit <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_false(nodes_finite(fit, fit$mode))
+  expect_true(nodes_finite(fit, fit$mean_vb))
+  step <- fit$diagnostics$marginals$vb_step_sigma
+  expect_true(all(is.finite(step)))
+  expect_lt(max(step), 1e-5) # observed 1.9e-6
+  expect_lt(
+    max(abs(rule_stationarity(grad, fit$mean_vb, fit$cov))),
+    1e-5 # observed 3.0e-6
+  )
+  expect_no_match(fit$warnings, "did not settle")
+
+  # Without a gradient it also lands where every node is finite, so its
+  # step there is finite. On this skewed posterior it stops short of
+  # Stein's root (observed 0.19 SDs), and the settling check says so.
+  fit_fd <- inla_vanilla(logpost, init, silent = TRUE)
+  expect_true(fit_fd$diagnostics$vb$fallback)
+  expect_true(nodes_finite(fit_fd, fit_fd$mean_vb))
+  step <- fit_fd$diagnostics$marginals$vb_step_sigma
+  expect_true(all(is.finite(step)))
+  expect_identical(
+    any(grepl("did not settle", fit_fd$warnings)),
+    max(step) > warn_levels$vb_step
+  )
+  sds <- sqrt(diag(fit$cov))
+  expect_lt(max_sd_diff(fit_fd$mean_vb, fit$mean_vb, sds), 0.1) # obs. 0.034
 })

@@ -1,4 +1,7 @@
 url: http://haziqj.ml/inlavanilla/
+# Example output 76 columns wide, so that with "#> " it fits the code box
+code:
+  width: 76
 template:
   bootstrap: 5
   # MathJax, as Quarto uses, rather than pkgdown's default MathML

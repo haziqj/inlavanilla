@@ -16,8 +16,14 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-# Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
 ## The idea
@@ -102,9 +108,12 @@ fit
 ```
 
 The header names the approximation: skew-normal marginals, with the VB mean
-correction. The table summarises each parameter's skew-normal marginal: the
-mean, standard deviation, quantiles and mode. The last line says that
-`summary()` flags one of its checks; we come to it below. Each step of the
+correction. The line under it gives the log marginal likelihood and whether
+the fit converged: whether the mode search and the VB correction both
+reached their solutions. The table summarises each parameter's skew-normal
+marginal: the mean, standard deviation, quantiles and mode. Had the fit
+raised a warning, or `summary()` flagged one of its checks, a line below the
+table would say so. Each step of the
 fit reports as it finishes, with the time it took. `verbose = TRUE` adds a
 full diagnostic of each step, and `silent = TRUE` prints nothing at all, as
 in a simulation; the warnings it would have shown are kept in `fit$warnings`.
@@ -120,20 +129,23 @@ summary(fit)
 * **VB shift** is how far the VB mean correction moved each mean from the
   mode, in posterior SDs. The weight coefficient moves by nearly half an SD:
   the posterior is far from symmetric.
-* **Shape** is the skew-normal's shape parameter $\alpha$; zero means
-  symmetric.
 * **NMAD** measures how well the skew-normal fits the scanned log-posterior
   (the largest gap relative to the peak); small is good.
-* **SN - VB** compares the skew-normal mean with the VB-corrected mean, in
-  posterior SDs. Both estimate the posterior mean, so they should agree; a
-  large gap means the posterior is far from Gaussian and either may be off.
-* **Bend** is the log-density, in nats, that each scan misses 2 SDs out,
-  because it runs along a straight line while the other parameters'
-  conditional mode bends away from it. Above 0.1 it is flagged, as here for
-  the intercept: its marginal may be a little too narrow.
-* **End mass** is the mass each skew-normal puts beyond the scanned window,
+* **Unscanned** is the mass each skew-normal puts beyond the scanned window,
   4 posterior SDs either side of the mode, where it is extrapolated. It is
   flagged above 0.05.
+* **Ridge bend** is the log-density, in nats, that each scan misses 2 SDs
+  out, because it runs along a straight line, the conditional mode path,
+  while the ridge of high density bends away from it. Above 0.25 it is
+  flagged: the marginal SD may then be about 10% too small. The
+  intercept's ridge bend is below that, and its marginal is only a little
+  narrow, as the check against the exact posterior below shows.
+* **Mean gap** compares the skew-normal mean with the VB-corrected mean, in
+  posterior SDs. Both estimate the posterior mean, so they should agree; a
+  large gap means the posterior is far from Gaussian and either may be off.
+
+A flagged value is red in the table, and its check gets a line of its own,
+marked "!", below the table.
 
 `diagnostics(fit)` returns the same checks as numbers, under the names that
 INLAvaan's `diagnostics()` uses, and
@@ -163,7 +175,8 @@ the approximations are trying to match.
 #| label: grid
 s <- fit$summary
 axes <- lapply(seq_len(3), function(j) {
-  seq(s[j, "Mean"] - 7 * s[j, "SD"], s[j, "Mean"] + 7 * s[j, "SD"], length.out = 61)
+  half <- 7 * s[j, "SD"]
+  seq(s[j, "Mean"] - half, s[j, "Mean"] + half, length.out = 61)
 })
 grid <- as.matrix(expand.grid(axes))
 eta <- X %*% t(grid)
@@ -192,7 +205,12 @@ probs <- c(0.025, 0.25, 0.5, 0.75, 0.975)
 sn_q <- summary(fit, probs = probs)$table[, paste0(100 * probs, "%")]
 cols <- c(Exact = "grey20", `Skew-normal` = "#C2410C", Laplace = "#0F766E")
 
-op <- par(mfrow = c(3, 1), mar = c(2.5, 7.5, 1.8, 1), mgp = c(2, 0.6, 0), las = 1)
+op <- par(
+  mfrow = c(3, 1),
+  mar = c(2.5, 7.5, 1.8, 1),
+  mgp = c(2, 0.6, 0),
+  las = 1
+)
 for (j in seq_len(3)) {
   q <- rbind(
     Exact = exact_quantiles(j, probs),
@@ -206,15 +224,18 @@ for (j in seq_len(3)) {
   segments(q[, 1], at, q[, 5], at, col = cols, lwd = 1.5)
   segments(q[, 2], at, q[, 4], at, col = cols, lwd = 6, lend = 1)
   points(q[, 3], at, pch = 21, bg = "white", col = cols, cex = 1.3, lwd = 1.5)
-  mtext(rownames(q), side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8)
+  mtext(
+    rownames(q),
+    side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8
+  )
 }
 par(op)
 ```
 
 The skew-normal intervals track the exact ones closely. The intercept's is a
-little narrow, as its bend flag warned. The Laplace intervals are symmetric
-about the mode, so they cut the long tails short and miss values on the far
-side.
+little narrow, by about 5%, as its ridge bend suggested. The Laplace intervals
+are symmetric about the mode, so they cut the long tails short and miss
+values on the far side.
 
 The grid also gives the exact log marginal likelihood:
 
@@ -249,9 +270,9 @@ rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 ```
 
 The two fits agree to several decimal places, and the gradient version calls
-`logpost` far less often. `inla_vanilla()` checks a supplied gradient against
-finite differences at `init` and warns if they disagree, which catches most
-slips in hand-derived gradients.
+`logpost` about half as often. `inla_vanilla()` checks a supplied gradient
+against finite differences at `init` and warns if they disagree, which
+catches most slips in hand-derived gradients.
 
 ## Cheaper approximations
 
@@ -285,8 +306,10 @@ Without the VB correction the skew-normal marginals are the same, because
 they are scanned around the mode, but the log marginal likelihood is the
 Laplace one. The VB correction moves the Gaussian's centre most of the way to
 the posterior mean, but a Gaussian cannot follow the long tail. Without a
-gradient the VB correction is the most expensive stage, and its cost grows
-fastest with the number of parameters.
+gradient it takes the expected gradient from values of `logpost` alone, and
+costs about as much as finding the mode. With a gradient it is more accurate,
+and as the number of parameters grows, it and the marginals become the
+slowest stages.
 
 ## Derived quantities
 
@@ -374,12 +397,20 @@ log-likelihood as one term per observation and use `loo()`: see
 
 ## Constrained parameters
 
-The approximation works on an unconstrained scale: each parameter must be
-free to take any real value. Reparameterise anything constrained, such as a
-standard deviation as its log, a probability as its logit, or a correlation
-as its Fisher $z$. The parameterisation also matters for accuracy, since each
-parameter's skew-normal lives on the scale you choose, and scales on which
-the posterior is closer to Gaussian work better.
+The approximation works on an unconstrained scale[^unconstrained], where each
+parameter is free to take any real value. Reparameterise anything
+constrained, such as a standard deviation as its log, a probability as its
+logit, or a correlation as its Fisher $z$. The parameterisation also matters
+for accuracy, since each parameter's skew-normal lives on the scale you
+choose, and scales on which the posterior is closer to Gaussian work better.
+
+[^unconstrained]: In practice, it is enough for the posterior to sit well
+    away from any boundary. Apart from the search for the mode, the fit
+    evaluates `logpost` only within about 4 posterior SDs of the mode (the
+    width of the skew-normal scans), so a variance can stay on its natural
+    scale if its posterior is far from zero. The optimiser may still stray
+    onto illegal values on its way to the mode, so have `logpost` return
+    `-Inf` there: it then steps back instead of raising warnings or errors.
 
 `logpost` is then the log density of the parameters you pass. A prior stated
 on the natural scale needs the log-Jacobian of the transformation. For the
@@ -430,6 +461,11 @@ fit <- inla_vanilla(
   grad = function(theta) -as.vector(obj$gr(theta))
 )
 ```
+
+The articles [Speeding up with Rcpp](rcpp.html) and [Using TMB](tmb.html)
+work through both routes for a structural equation model with 39
+parameters: in C++ with an analytic gradient, and as a TMB template with
+automatic differentiation.
 
 ## References
 

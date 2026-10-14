@@ -4,23 +4,31 @@
 # warn_fit_diagnostics() do, and the flags of summary() and print() come from
 # check_flags() (R/methods.R) on the same numbers, so none of them can
 # disagree. The warning checks, in INLAvaan's order, the mode shift, NMAD,
-# the scan-end mass, the VB shift and the Hessian condition number, at
-# INLAvaan's levels; the heavy-tails check, after the scan-end mass, is
-# inlavanilla's own. INLAvaan's bullet for a non-zero return code of
-# nlminb() is left out: without a gradient nlminb() reports false
-# convergence at accurate modes. The VB fallback is recorded only, as in
-# INLAvaan. summary() flags every warned check at the same level, and also
-# the scan-path bend and the SN-VB gap, which never warn. A check that did
-# not run (VB with vb = FALSE, the scans with Gaussian marginals) is NA and
-# never flagged; one that ran and gave a value that is not finite is.
+# the unscanned mass, the VB shift and the Hessian condition number, at
+# INLAvaan's levels. Two checks are inlavanilla's own: whether the VB
+# correction settled, after the mode shift, since the two together are what
+# print() calls converged, and the heavy tails, after the unscanned mass.
+# INLAvaan's bullet for a non-zero return code of nlminb() is left out:
+# without a gradient nlminb() reports false convergence at accurate modes.
+# The VB fallback is recorded only, as in INLAvaan: it is a route of the
+# solver, and the settling check judges where it lands. summary() flags
+# every warned check at the same level, and also the ridge bend and the mean
+# gap, which never warn. A check that did not run (VB with vb = FALSE, the
+# scans with Gaussian marginals) is NA and never flagged; one that ran and
+# gave a value that is not finite is.
 warn_levels <- list(
   mode_shift = 0.1,
   nmad = 0.1,
-  scan_end_mass = 0.05,
+  unscanned_mass = 0.05,
   vb_shift = 1,
-  hess_cond = 1e8
+  hess_cond = 1e8,
+  # inlavanilla's own: the VB correction settles as the mode search does
+  vb_step = 0.1
 )
-summary_levels <- list(bend = 0.1, sn_vs_vb = 0.1)
+# The ridge bend level is a marginal SD about 10% too small,
+# 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
+# (lab/bend-threshold.md).
+summary_levels <- list(ridge_bend = 0.25, mean_gap = 0.1)
 
 # TRUE where `x` is above `level` or not finite.
 off_level <- function(x, level) {
@@ -32,7 +40,7 @@ off_level <- function(x, level) {
 # VB mean (`pars`, for grad_inf_rel and grad_rel; NA when not given). It runs
 # before the fit object exists, for the warning. The definitions are
 # INLAvaan's (R/method-diagnostics.R), with `grad` the gradient of minus the
-# log-posterior; the scan-end mass, the VB shifts and the KL divergences are
+# log-posterior; the unscanned mass, the VB shifts and the KL divergences are
 # computed in vanilla_fit(). The per-parameter frame has no row names, as
 # INLAvaan's. `message` is nlminb()'s, for the warning.
 diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
@@ -63,11 +71,12 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     kld_mean = mean_na(d$kld),
     nmad_max = max_na(d$nmad),
     nmad_mean = mean_na(d$nmad),
-    scan_end_mass_max = max_na(d$scan_end_mass),
+    unscanned_mass_max = max_na(d$unscanned_mass),
     # inlavanilla's own
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
-    sn_vs_vb_max = max_na(abs(d$sn_vs_vb)),
-    bend_max = max_na(d$bend),
+    vb_step_max = max_na(d$vb_step_sigma),
+    mean_gap_max = max_na(abs(d$mean_gap)),
+    ridge_bend_max = max_na(d$ridge_bend),
     n_heavy_tails = if (all(is.na(d$tails))) {
       NA_real_
     } else {
@@ -87,12 +96,13 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     vb_shift_sigma = d$vb_shift_sigma,
     nmad = d$nmad,
     alpha = d$alpha,
-    scan_end_mass = d$scan_end_mass,
+    unscanned_mass = d$unscanned_mass,
     # inlavanilla's own
-    sn_vs_vb = d$sn_vs_vb,
+    vb_step_sigma = d$vb_step_sigma,
+    mean_gap = d$mean_gap,
     gamma1 = d$gamma1,
     tails = d$tails,
-    bend = d$bend,
+    ridge_bend = d$ridge_bend,
     row.names = NULL,
     stringsAsFactors = FALSE
   )
@@ -139,7 +149,7 @@ list_template <- function(env, key, names, values = NULL, n = 3L) {
 # template (see list_template()).
 flagged_list <- function(env, key, dg, column, level, n) {
   x <- dg$param[[column]]
-  if (column %in% c("vb_shift_sigma", "sn_vs_vb")) {
+  if (column %in% c("vb_shift_sigma", "mean_gap")) {
     x <- abs(x)
   }
   bad <- which(off_level(x, level))
@@ -153,10 +163,11 @@ fmt_g3 <- function(x) {
 }
 
 # The sentence for a flagged check, as a cli template whose values are put
-# in `env`: INLAvaan's for the checks it shares, which summary() also prints
-# with every parameter listed (`n = Inf`), and inlavanilla's own for the
-# others. The mode and VB bullets name the worst parameter only, as
-# INLAvaan's do; summary() has its own lines for those two.
+# in `env`: INLAvaan's words for the checks it shares, with the SD unit of
+# sd_unit(), which summary() also prints with every parameter listed
+# (`n = Inf`), and inlavanilla's own for the others. The mode and VB
+# bullets name the worst parameter only, as INLAvaan's do; summary() has its
+# own lines for those two.
 problem_text <- function(check, dg, env, n = 3L) {
   p <- dg$param
   glob <- dg$global
@@ -169,7 +180,19 @@ problem_text <- function(check, dg, env, n = 3L) {
       paste0(
         "The gradient at the posterior mode is not zero (max |grad| = ",
         "{mode_grad}): a Newton step would move {.code {mode_worst}} by ",
-        "{mode_shift} posterior SDs."
+        "{mode_shift}",
+        sd_unit(),
+        "."
+      )
+    },
+    vb_step = {
+      env$vbs_worst <- p$names[worst_first(p$vb_step_sigma)[1L]]
+      env$vbs_step <- fmt_g3(glob[["vb_step_max"]])
+      paste0(
+        "The VB correction did not settle: one more step would move ",
+        "{.code {vbs_worst}} by {vbs_step}",
+        sd_unit(),
+        "."
       )
     },
     nmad = paste0(
@@ -179,17 +202,18 @@ problem_text <- function(check, dg, env, n = 3L) {
       flagged_list(env, "nmad", dg, "nmad", warn_levels$nmad, n),
       "."
     ),
-    scan_end_mass = paste0(
+    unscanned_mass = paste0(
       "The fitted marginal puts more than ",
-      warn_levels$scan_end_mass,
-      " of its mass beyond the scanned window (4 posterior SDs either side ",
-      "of the mode) for ",
+      warn_levels$unscanned_mass,
+      " of its mass beyond the scanned window (4",
+      sd_unit(),
+      " either side of the mode) for ",
       flagged_list(
         env,
         "sem",
         dg,
-        "scan_end_mass",
-        warn_levels$scan_end_mass,
+        "unscanned_mass",
+        warn_levels$unscanned_mass,
         n
       ),
       "; its credible limits rely on extrapolation."
@@ -198,17 +222,18 @@ problem_text <- function(check, dg, env, n = 3L) {
       "Heavy tails for ",
       list_template(env, "tails", p$names[!p$tails %in% TRUE], n = n),
       ": the density is still over 5% of its peak at the ends of the ",
-      "scanned window (4 posterior SDs either side of the mode), and the ",
-      "skew-normal extrapolates beyond it."
+      "scanned window (4",
+      sd_unit(),
+      " either side of the mode), and the skew-normal extrapolates beyond it."
     ),
     vb = {
       shift <- abs(p$vb_shift_sigma)
       env$vb_worst <- p$names[worst_first(shift)[1L]]
       env$vb_shift <- fmt_g3(glob[["vb_shift_max"]])
       paste0(
-        "The VB correction shifted {.code {vb_worst}} by {vb_shift} ",
-        "posterior SDs; the Gaussian approximation at the mode may be ",
-        "inaccurate."
+        "The VB correction shifted {.code {vb_worst}} by {vb_shift}",
+        sd_unit(),
+        "; the Gaussian approximation at the mode may be inaccurate."
       )
     },
     hess_cond = {
@@ -218,33 +243,78 @@ problem_text <- function(check, dg, env, n = 3L) {
         "{hess_cond}); some parameters may be weakly identified."
       )
     },
-    bend = paste0(
-      "The straight scan misses more than ",
-      summary_levels$bend,
-      " nats at +-2 posterior SDs for ",
-      flagged_list(env, "bend", dg, "bend", summary_levels$bend, n),
-      ": the marginal may be too narrow."
+    ridge_bend = paste0(
+      "Ridge bend > ",
+      summary_levels$ridge_bend,
+      " for ",
+      flagged_list(
+        env,
+        "ridge_bend",
+        dg,
+        "ridge_bend",
+        summary_levels$ridge_bend,
+        n
+      ),
+      ": the marginal SD may be >10% too small."
     ),
-    sn_vs_vb = paste0(
-      "Skew-normal and VB means differ by more than ",
-      summary_levels$sn_vs_vb,
-      " posterior SDs for ",
-      flagged_list(env, "gap", dg, "sn_vs_vb", summary_levels$sn_vs_vb, n),
-      "."
+    mean_gap = paste0(
+      "Mean gap > ",
+      with_sd(summary_levels$mean_gap),
+      " for ",
+      flagged_list(env, "gap", dg, "mean_gap", summary_levels$mean_gap, n),
+      ": the posterior is far from Gaussian there, and either mean may be off."
     )
   )
 }
 
 # The bullets of the fit-time warning, in INLAvaan's order with tails after
-# the scan-end mass, as cli templates with the environment that fills them
+# the unscanned mass, as cli templates with the environment that fills them
 # in attribute "envir". A flagged mode adds nlminb()'s message and a hint.
-diagnostic_problems <- function(dg, gaussian) {
+diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = baseenv())
   out <- character()
-  warned <- c("mode", "nmad", "scan_end_mass", "tails", "vb", "hess_cond")
+  warned <- c(
+    "mode",
+    "vb_step",
+    "nmad",
+    "unscanned_mass",
+    "tails",
+    "vb",
+    "hess_cond"
+  )
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
+    if (check == "vb_step") {
+      # Without a gradient the likely cause is the rule's error on a
+      # posterior far from Gaussian, which a gradient removes, not the
+      # solver. Then what the unsettled VB mean moves: not skew-normal
+      # marginals, which are scanned around the mode, but Gaussian ones,
+      # which are centred on it.
+      if (!has_grad) {
+        out <- c(
+          out,
+          i = paste0(
+            "Without a gradient the VB mean is approximate on a posterior ",
+            "this far from Gaussian; supply {.arg grad} if you can."
+          )
+        )
+      }
+      out <- c(
+        out,
+        i = if (gaussian) {
+          paste0(
+            "The Gaussian marginals are centred on the VB mean; ",
+            "{.code vb = FALSE} centres them at the mode."
+          )
+        } else {
+          paste0(
+            "The skew-normal marginals do not depend on it; ",
+            "{.code vb = FALSE} leaves it out."
+          )
+        }
+      )
+    }
     if (check == "mode") {
       env$mode_message <- dg$message
       out <- c(
@@ -264,8 +334,8 @@ diagnostic_problems <- function(dg, gaussian) {
 
 # One warning, of class inlavanilla_diagnostics_warning, when any check is
 # off; FALSE (invisibly) when none is.
-warn_diagnostics <- function(dg, gaussian) {
-  problems <- diagnostic_problems(dg, gaussian)
+warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
+  problems <- diagnostic_problems(dg, gaussian, has_grad)
   if (length(problems) == 0L) {
     return(invisible(FALSE))
   }
@@ -301,10 +371,10 @@ warn_diagnostics <- function(dg, gaussian) {
 #'
 #' Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 #' (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-#' (`sn_vs_vb`) as an internal check (Section 5.1). The mode shift, the
-#' Hessian condition number and the scan-end mass come from INLAvaan's
-#' `diagnostics()`, not from the paper. `tails` and `bend` are inlavanilla's
-#' own.
+#' (`mean_gap`) as an internal check (Section 5.1). The mode shift, the
+#' Hessian condition number and the unscanned mass come from INLAvaan's
+#' `diagnostics()`, not from the paper. `vb_step_sigma`, `tails` and
+#' `ridge_bend` are inlavanilla's own.
 #'
 #' @details
 #' A posterior SD here is the Laplace SD at the mode,
@@ -341,15 +411,17 @@ warn_diagnostics <- function(dg, gaussian) {
 #'   the VB term of the log marginal likelihood.
 #' * `kld_max`, `kld_mean`: the largest and the mean `kld`.
 #' * `nmad_max`, `nmad_mean`: the largest and the mean `nmad`.
-#' * `scan_end_mass_max`: the largest `scan_end_mass`.
+#' * `unscanned_mass_max`: the largest `unscanned_mass`.
 #'
 #' and then inlavanilla's own:
 #' * `vb_fallback`: 1 if the VB fixed-point iteration handed over to the
 #'   fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 #'   but flags nothing: the fallback is a route of the solver, not a measure
 #'   of the approximation.
-#' * `sn_vs_vb_max`: the largest absolute `sn_vs_vb`.
-#' * `bend_max`: the largest `bend`.
+#' * `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
+#'   should be close to 0.
+#' * `mean_gap_max`: the largest absolute `mean_gap`.
+#' * `ridge_bend_max`: the largest `ridge_bend`.
 #' * `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
 #'
 #' **Per-parameter diagnostics** (`type = "param"`), a data frame:
@@ -374,10 +446,19 @@ warn_diagnostics <- function(dg, gaussian) {
 #' * `vb_shift_sigma`: the same in posterior SDs.
 #' * `nmad`: the NMAD of the skew-normal fit.
 #' * `alpha`: the shape of the fitted skew-normal marginal.
-#' * `scan_end_mass`: the mass the fitted skew-normal puts beyond the
+#' * `unscanned_mass`: the mass the fitted skew-normal puts beyond the
 #'   scanned window.
 #'
-#' and then inlavanilla's own: `sn_vs_vb`, `gamma1`, `tails` and `bend`.
+#' and then inlavanilla's own:
+#' * `vb_step_sigma`: the step still to go at the VB mean, in posterior SDs:
+#'   the fixed-point step there, the Newton step of the VB stationarity
+#'   condition, as `mode_shift_sigma` is for the mode. After the fallback
+#'   optimiser it is taken where the optimiser landed. On the fixed-point
+#'   path it is the last step taken, which bounds the next, unless that step
+#'   was 0.1 or more (a `vb_tol` above 0.1), when it is taken afresh. It
+#'   should be close to 0 (`Inf` where the step is not finite).
+#' * `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
+#'   [summary.inla_vanilla()] describes.
 #'
 #' Some of INLAvaan's diagnostics are left out. `nsamp` counts posterior
 #' draws, which [sampling()] makes on demand rather than during the fit.
@@ -483,7 +564,12 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
     "vb_fallback",
     "n_heavy_tails"
   )
-  sci_names <- c("hess_cond", "mode_shift_max", "scan_end_mass_max")
+  sci_names <- c(
+    "hess_cond",
+    "mode_shift_max",
+    "unscanned_mass_max",
+    "vb_step_max"
+  )
   formatted <- vapply(
     seq_along(x),
     function(i) {
@@ -506,13 +592,13 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
   invisible(x)
 }
 
-# A healthy scan-end mass is below the last of four decimals, so it keeps
+# A healthy unscanned mass is below the last of four decimals, so it keeps
 # three significant figures instead, as in INLAvaan.
 #' @export
 print.inla_vanilla_diagnostics_param <- function(x, digits = 4, ...) {
   out <- x
   for (nm in names(out)[vapply(out, is.numeric, logical(1))]) {
-    out[[nm]] <- if (nm == "scan_end_mass") {
+    out[[nm]] <- if (nm == "unscanned_mass") {
       signif(out[[nm]], 3)
     } else {
       round(out[[nm]], digits)

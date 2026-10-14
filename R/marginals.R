@@ -114,7 +114,7 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
     8,
     dimnames = list(
       names(mode),
-      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "bend", "logC")
+      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "ridge_bend", "logC")
     )
   )
   heights <- matrix(
@@ -123,7 +123,7 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
     m,
     dimnames = list(NULL, names(mode))
   )
-  # Scan points for the bend check (see scan_bend())
+  # Scan points for the ridge bend (see scan_bend())
   i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
 
   for (j in seq_len(m)) {
@@ -176,12 +176,12 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
 # The mass each fitted marginal puts outside the window that was scanned to
 # fit it, mode +- 4 Laplace SDs: there the skew-normal is extrapolated, so
 # when this is large the outer quantiles are the ones to distrust. This is
-# INLAvaan's `scan_end_mass` (in its diagnostics()). A Gaussian marginal
-# gives 2 pnorm(-4) = 6.3e-5; larger values mean more of the marginal is
-# extrapolated. summary() flags it, and the fit warns, above 0.05. INLAvaan's
-# docs give 1e-3 to 1e-2 as the healthy range; its lower end fails for
-# healthy fits here (see lab/DESIGN.md), so no range is given.
-scan_end_mass <- function(sn, mode, sds) {
+# INLAvaan's `scan_end_mass` (in its diagnostics()), renamed. A Gaussian
+# marginal gives 2 pnorm(-4) = 6.3e-5; larger values mean more of the
+# marginal is extrapolated. summary() flags it, and the fit warns, above
+# 0.05. INLAvaan's docs give 1e-3 to 1e-2 as the healthy range; its lower
+# end fails for healthy fits here (see lab/DESIGN.md), so no range is given.
+unscanned_mass <- function(sn, mode, sds) {
   lo <- psnorm(mode - 4 * sds, sn[, "xi"], sn[, "omega"], sn[, "alpha"])
   hi <- psnorm(
     mode + 4 * sds,
@@ -207,8 +207,8 @@ scan_end_mass <- function(sn, mode, sds) {
 # a noise scale does for a regression coefficient at small n), and the
 # marginal comes out too narrow. Returns the larger of the gains. The
 # gradient is the user's, or one-sided differences in the other coordinates
-# only (m - 1 calls per point, reusing the scan's height), with their bias
-# removed by the Laplace curvature as in the VB stage.
+# only (m - 1 calls per point, reusing the scan's height), with their bias,
+# half a step times the curvature, removed with the Laplace curvature.
 scan_bend <- function(j, lp, gr, lap, Vscan, t, f_t) {
   m <- length(lap$mode)
   if (m < 2L) {

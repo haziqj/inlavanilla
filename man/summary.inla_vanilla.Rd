@@ -26,13 +26,18 @@ scale of \code{logpost}, together with diagnostics of each stage of the
 approximation.
 }
 \details{
+Printed, the summary gives the fit first (the log marginal likelihood
+and whether the fit converged, the parts of the log marginal likelihood,
+and the calls and time each stage took), then the posterior marginals,
+then the diagnostics.
+
 Most of the checks are those of INLAvaan's \code{diagnostics()}, and
 \code{\link[=diagnostics]{diagnostics()}} returns them under the same names. Jamil and Rue (2026) use
 the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 gap between the skew-normal and VB means as an internal check (Section
-5.1). The mode shift, the Hessian condition number and the scan-end mass
-come from INLAvaan's \code{diagnostics()}, not from the paper. \code{tails} and
-\code{bend} are inlavanilla's own.
+5.1). The mode shift, the Hessian condition number and the unscanned mass
+come from INLAvaan's \code{diagnostics()}, not from the paper. \code{vb_step_sigma},
+\code{tails} and \code{ridge_bend} are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -45,7 +50,7 @@ SDs: how far one step of Newton's method would still move each
 parameter. It is flagged above 0.1, whatever the return code of
 \code{\link[stats:nlminb]{stats::nlminb()}}, whose message is then shown: without a gradient
 \code{nlminb()} can report failure at an accurate mode, and success short of
-one.
+one. With the VB check below, it is what makes the fit converged.
 \item \strong{Hessian.} \code{hess_cond}, the condition number of the Hessian at the
 mode with each parameter in posterior-SD units (the eigenvalue ratio of
 the posterior correlation matrix). It is flagged above \eqn{10^8}: some
@@ -62,19 +67,26 @@ its VB-shifted copy, is \code{vb_shift_sigma^2 / 2}, as in INLAvaan; it is
 not flagged. When the fixed-point iteration hands over to the fallback
 optimiser, the VB line says so, but, as in INLAvaan, that is not
 flagged: it is a route of the solver, not a sign of a poor
-approximation.
+approximation. Where the solver lands is checked, as the mode is:
+\code{vb_step_sigma} is the step still to go at the VB mean, in posterior
+SDs (the fixed-point step there, which is the Newton step of the VB
+stationarity condition; see \code{\link[=diagnostics]{diagnostics()}}). It is flagged above 0.1,
+the level of the mode check, as a correction that did not settle. That
+check is inlavanilla's own.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and
 the scanned density, relative to its peak (Jamil & Rue, 2026, Section
-4.4), flagged above 0.1. \code{alpha} (the Shape column) is the shape of the
-fitted skew-normal marginal, on the unconstrained scale: zero is a
-Gaussian marginal, and the sign gives the direction of the skew. It is
-not flagged.
+4.4), flagged above 0.1. \code{alpha} is the shape of the fitted skew-normal
+marginal, on the unconstrained scale: zero is a Gaussian marginal, and
+the sign gives the direction of the skew. It describes the marginal
+rather than checking it, so it is not in the printed table: it is in
+\code{summary(fit)$diagnostics} and \code{\link[=diagnostics]{diagnostics()}}, and \code{fit$sn} holds it
+with the other skew-normal parameters.
 \item \strong{Volume correction.} \code{gamma1}, the slope added to the scanned
 log-heights, per posterior SD along the scan, for the changing volume of
 the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
 \code{summary(fit)$diagnostics} and in the verbose output of the fit, not in
 the printed table, and it is not flagged.
-\item \strong{Scan-end mass.} \code{scan_end_mass}, the mass each fitted skew-normal
+\item \strong{Unscanned mass.} \code{unscanned_mass}, the mass each fitted skew-normal
 puts outside the scanned window (4 posterior SDs either side of the
 mode), where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
 reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
@@ -83,45 +95,65 @@ It is flagged above 0.05.
 \item \strong{Tails.} \code{tails} is \code{FALSE} (and flagged) when the density at an end
 of the scan is still over 5\% of its peak: the Laplace SD badly
 understates a heavy tail there, and the skew-normal extrapolates it.
-\item \strong{Scan path.} Each parameter is scanned along the conditional mode path
-of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a straight line
-that is a first-order approximation to a possibly curved ridge (Section
-3.2.1). \code{bend} is the log-density, in nats, that the straight scan
-misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
-towards the conditional mode of the other parameters. It is flagged
-above 0.1. A large value means the other parameters' conditional mode
-bends away from the line, as a poorly determined noise scale does for a
-regression coefficient at small n, and the marginal comes out too
-narrow, by roughly 0.35 to 0.5 times \code{bend} in relative SD (see the
-Accuracy section of \code{\link[=inla_vanilla]{inla_vanilla()}}).
-\item \strong{Skew-normal and VB means.} \code{sn_vs_vb}, the gap between the
-skew-normal mean and the VB-corrected mean in posterior SDs. Both means
-target the posterior mean, so they should agree closely (to
-\eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4), and a gap signals
-higher-order effects or numerical error (Section 5.1). A gap above 0.1
-SDs is flagged: the posterior is far from Gaussian along that
-parameter, and either approximation may be off.
+\item \strong{Ridge bend.} Each parameter is scanned along the conditional mode
+path (CMP) of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a
+straight line that is a first-order approximation to a possibly curved
+ridge of high posterior density (Section 3.2.1). \code{ridge_bend} is the
+log-density, in nats, that the straight scan misses at \eqn{\pm 2}
+posterior SDs: the gain from one Newton step towards the conditional
+mode of the other parameters. A large value means the ridge bends away
+from the CMP, as it does for a regression coefficient when the noise
+scale is poorly determined at small n, and the marginal comes out too
+narrow. For a normal mean with an unknown SD, a ridge bend \eqn{b} makes
+the marginal SD too small by
+\eqn{1 - \sqrt{1 - 3b/4}}{1 - sqrt(1 - 3b/4)}, about \eqn{3b/8}. In
+other models this is a rough guide: on test models it was mostly within
+a factor of 1.5 of the true shortfall, above it in logistic and Poisson
+regressions and below it in a nonlinear regression. \code{ridge_bend} is
+flagged above 0.25, a shortfall of 10\% by that formula (see the Accuracy
+section of \code{\link[=inla_vanilla]{inla_vanilla()}}).
+\item \strong{Mean gap.} \code{mean_gap}, the gap between the skew-normal mean and the
+VB-corrected mean, in posterior SDs. Both recover the leading,
+\eqn{O(n^{-1})} shift from the mode to the posterior mean, so they
+agree to \eqn{O(n^{-2})} (Jamil & Rue, 2026, Proposition 3.4). A gap
+signals that the higher-order terms of that expansion about the mode
+matter, or numerical error (Section 5.1). A gap above 0.1 SDs is
+flagged: the posterior is far from Gaussian along that parameter, and
+either approximation may be off.
 }
 
-Every check flagged here but the scan path and the SN-VB gap also raises
+Every check flagged here but the ridge bend and the mean gap also raises
 one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
-mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
-are those of INLAvaan's fit-time warning; the heavy-tails check is
-inlavanilla's own, as are the scan-path and SN-VB flags. Every level is a
-package default, chosen so that a healthy fit stays silent, and not a
-calibrated cut-off: a tripped check is a prompt to look again, and
+mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
+are those of INLAvaan's fit-time warning; the VB settling and
+heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap flags. Every
+level is a package default, chosen so that a healthy fit stays silent, and
+not a calibrated cut-off: a tripped check is a prompt to look again, and
 silence is not a certificate of accuracy. In the simulations of Jamil and
 Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
 and the paper reports a calibration of the expected error against them in
 its Supplementary Material.
 
-The status lines list every flagged parameter, worst first, with its
-value (the heavy-tails line, a yes/no check, lists names only, in
+The table gives each value to two significant figures, as a tibble
+prints numbers, with the flagged values in red where the console shows
+colour. The status lines list every flagged parameter, worst first, with
+its value (the heavy-tails line, a yes/no check, lists names only, in
 parameter order); the warning lists at most three, as INLAvaan's does. With
-\code{silent = TRUE} the warning is only recorded in \code{fit$warnings}. Printing
-the fit ends with a line for its warnings and one counting the checks
-flagged here, each shown only when there are any.
+\code{silent = TRUE} the warning is only recorded in \code{fit$warnings}.
+
+Printing the fit and its summary both open with a headline: the log
+marginal likelihood, and whether the fit converged, with the iterations
+of \code{\link[stats:nlminb]{stats::nlminb()}} and the time the whole fit took. Converged means
+that the computation reached its solution: both the mode check and the VB
+check pass, so no further step at the mode or at the VB mean would move
+a parameter by more than 0.1 posterior SDs. It says nothing of how well
+the approximation fits the posterior, which the other checks judge.
+Without a gradient a strongly skewed posterior can read "Not converged:
+VB did not settle": the VB mean from \code{logpost} values alone is then
+approximate, and supplying \code{grad} is the fix.
+Printing the fit ends with a line for its warnings and one counting the
+checks flagged here, each shown only when there are any.
 \code{vignette("diagnostics", package = "inlavanilla")} explains every check
 with examples.
 

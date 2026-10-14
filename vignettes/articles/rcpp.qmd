@@ -16,15 +16,22 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-# Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
-`inla_vanilla()` calls `logpost` many times, and the count grows quickly
-with the number of parameters $m$. Without a gradient, the VB correction
-alone needs $(m + 1)(2m^2 + 1)$ calls per sweep. That is 76 calls for 3
-parameters, and 121,720 for 39. Two things help: a faster `logpost`, and a
-gradient.
+`inla_vanilla()` calls `logpost` many times, and without a gradient the
+count grows with the square of the number of parameters $m$: the Hessian by
+finite differences takes about $m^2$ calls, the skew-normal scans about
+$2m^2$, and the VB correction $(m + 1)(m + 2)$ per sweep, over a few sweeps.
+For 39 parameters that is over 20,000 calls. Two things help: a faster
+`logpost`, and a gradient.
 
 This article does both for a structural equation model (SEM) with 39
 parameters. We write the log-posterior in plain R first, then in C++ with
@@ -299,10 +306,9 @@ fit_r$counts
 
 These two stages take
 `r format(fit_r$counts[["logpost"]], big.mark = ",")` calls. The VB
-correction would add far more: it evaluates the gradient at
-$2m^2 + 1 = 3{,}043$ points per sweep, and without `grad` each gradient costs
-$m + 1 = 40$ calls, over a few sweeps. We come back to the cost of a full fit
-below.
+correction would add $(m + 1)(m + 2) = 1{,}640$ calls per sweep, over a few
+sweeps: without a gradient it takes the expected gradient from values of
+`logpost` alone. We come back to the cost of a full fit below.
 
 ## The log-posterior in C++
 
@@ -556,10 +562,10 @@ Now the full fit, with the VB correction, first without a gradient:
 fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
 ```
 
-It took `r format(fit_cpp$counts[["logpost"]], big.mark = ",")` calls, nearly
-all in the VB correction. In R, at `r round(us_r)` microseconds a call, these
-would take about `r round(fit_cpp$counts[["logpost"]] * us_r / 1e6)` seconds.
-With the gradient:
+It took `r format(fit_cpp$counts[["logpost"]], big.mark = ",")` calls. In R,
+at `r round(us_r)` microseconds a call, these would take about
+`r round(fit_cpp$counts[["logpost"]] * us_r / 1e6, 1)` seconds. With the
+gradient:
 
 ```{r}
 #| label: fit-grad
@@ -575,6 +581,12 @@ Here neither does. The calls and times (in seconds) of the three fits:
 fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 ```
+
+The VB correction takes the same nodes either way: the gradient at
+$(m + 1)(m + 2) + 1 = 1{,}641$ points per sweep, or `logpost` at all but the
+centre. The gradient buys accuracy there: its VB mean is exact when the
+log-posterior is a polynomial of degree six, against degree four from
+`logpost` alone.
 
 The three fits agree. The skew-normal marginals do not depend on the VB
 correction, so even `fit_r` gives the same table. The largest difference in a
@@ -601,20 +613,21 @@ mildly right-skewed. The most skewed marginal is that of the disturbance
 variance of `dem65`. Democracy in 1960 and industrialisation explain most of
 the variation in democracy in 1965 (see $R^2$ below), so this variance is
 small and poorly determined, and its log has a long left tail. `summary()`
-flags it and a few others: there, the straight scan through the mode misses
-some log-density, and the marginal may come out too narrow. The skew-normal
-and VB means of `logv_dem65` also differ by 0.2 posterior SDs, another sign
-that its marginal is hard to approximate.
+flags it twice: the straight scan through the mode misses enough
+log-density that its marginal may come out too narrow, and its skew-normal
+and VB means differ by 0.2 posterior SDs, another sign that the marginal is
+hard to approximate.
 
-Here the warning is borne out. Checked against MCMC, the marginals of
+Here the flags are borne out. Checked against MCMC, the marginals of
 `logv_dem65` and `logv_x2` are less than half as wide as the posterior, with
 the 2.5% quantile of `logv_dem65` at −3.6 against −7.3. The data cannot rule
 out a variance near zero, so on the log scale the posterior has a long
 exponential left tail, held back only by the prior, and a skew-normal cannot
 follow it. On the variance scale, where the tail near zero is compressed, the
 error is much smaller: the posterior means of the two variances are 0.2
-posterior SDs too high. The other 37 marginals agree with MCMC to within 7% in
-SD.
+posterior SDs too high. No check flags `logv_x2`: its ridge bends less,
+and none of the checks is aimed at a tail like this. The other 37 marginals
+agree with MCMC to within 7% in SD.
 
 ```{r}
 #| label: plot

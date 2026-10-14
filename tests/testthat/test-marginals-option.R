@@ -38,11 +38,7 @@ scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
-  x <- gsub(
-    "Newton step [-+0-9.e]+ posterior SDs",
-    "Newton step <g> posterior SDs",
-    x
-  )
+  x <- gsub("Newton step [-+0-9.e]+ SD", "Newton step <g> SD", x)
   x
 }
 
@@ -254,15 +250,15 @@ test_that("print() and summary() describe Gaussian marginals", {
   expect_snapshot(print(summary(fit_g_vb)), transform = scrub_output)
   expect_snapshot(print(summary(fit_g)), transform = scrub_output)
 
-  # No skew-normal diagnostics or warnings: the bend that the skew-normal fit
-  # of this model flags is not computed
+  # No skew-normal diagnostics or warnings: the ridge bend that the
+  # skew-normal fit of this model flags is not computed
   out <- capture_output(print(summary(fit_g_vb)))
-  expect_no_match(out, "Shape|NMAD|Bend|End mass|SN - VB|straight scan")
+  expect_no_match(out, "Shape|NMAD|Ridge bend|Unscanned|Mean gap|straight scan")
   expect_match(out, "VB shift")
   out <- capture_output(print(summary(fit_g)))
   expect_no_match(out, "VB shift")
   expect_true(all(is.na(summary(fit_g)$diagnostics$nmad)))
-  expect_true(all(is.na(summary(fit_g)$diagnostics$scan_end_mass)))
+  expect_true(all(is.na(summary(fit_g)$diagnostics$unscanned_mass)))
 
   # Nor any scans to plot
   expect_null(fit_g$scan)

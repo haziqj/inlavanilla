@@ -26,7 +26,7 @@ normal_scale <- function(n) {
     integrate(function(x) x^2 * marginal(x), -Inf, Inf, rel.tol = 1e-10)$value
   )
   sd_exact <- 1 / sqrt(n - 3)
-  b <- unname(fit$diagnostics$marginals["mu", "bend"])
+  b <- unname(fit$diagnostics$marginals["mu", "ridge_bend"])
   sd_fit <- unname(fit$summary["mu", "SD"])
   stopifnot(
     abs(b - 4 / n) < 1e-5,
@@ -75,7 +75,7 @@ volume_fit <- inla_vanilla(
   vb = FALSE,
   silent = TRUE
 )
-volume_bend <- unname(volume_fit$diagnostics$marginals["x", "bend"])
+volume_bend <- unname(volume_fit$diagnostics$marginals["x", "ridge_bend"])
 volume_sd <- unname(volume_fit$summary["x", "SD"])
 stopifnot(abs(volume_bend) < 1e-10, abs(volume_sd - 1) < 1e-4)
 cat("\nZero-bend counterexample:\n")

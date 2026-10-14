@@ -3,7 +3,7 @@
 #
 # One warning, of class inlavanilla_diagnostics_warning, in INLAvaan's words
 # and order: the mode shift above 0.1 posterior SDs, NMAD above 0.1, the
-# scan-end mass above 0.05, heavy tails (inlavanilla's own), the VB shift
+# unscanned mass above 0.05, heavy tails (inlavanilla's own), the VB shift
 # above 1 SD and the Hessian condition number above 1e8. A healthy fit stays
 # silent. diagnostics() returns INLAvaan's global and per-parameter
 # diagnostics, computed by the same function as the warning.
@@ -40,11 +40,12 @@ healthy <- data.frame(
   vb_shift_sigma = c(0.1, -0.2),
   nmad = c(0.01, 0.02),
   alpha = c(0.5, -0.3),
-  scan_end_mass = c(1e-3, 2e-3),
-  sn_vs_vb = c(0.01, 0.02),
+  unscanned_mass = c(1e-3, 2e-3),
+  vb_step_sigma = c(1e-4, 2e-4),
+  mean_gap = c(0.01, 0.02),
   gamma1 = c(0, 0),
   tails = c(TRUE, TRUE),
-  bend = c(0.01, 0.02),
+  ridge_bend = c(0.01, 0.02),
   row.names = c("a", "b")
 )
 
@@ -56,9 +57,9 @@ problems <- function(..., gaussian = FALSE) {
 }
 # The warning's message as plain text (no colours, no wrapping), or "" when
 # there is none
-warning_text <- function(..., gaussian = FALSE) {
+warning_text <- function(..., gaussian = FALSE, has_grad = TRUE) {
   w <- tryCatch(
-    warn_diagnostics(dg_of(...), gaussian),
+    warn_diagnostics(dg_of(...), gaussian, has_grad),
     inlavanilla_diagnostics_warning = identity
   )
   if (inherits(w, "condition")) w[["text"]] else ""
@@ -85,7 +86,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     text,
     paste0(
       "x The gradient at the posterior mode is not zero (max |grad| = 0.5): ",
-      "a Newton step would move `b` by 0.15 posterior SDs.\n",
+      "a Newton step would move `b` by 0.15 SD.\n",
       "i `nlminb()` says: \"relative convergence (4)\".\n",
       "i Try other starting values, or supply `grad`."
     ),
@@ -115,13 +116,13 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   expect_length(problems(d), 0)
 
   d <- healthy
-  d$scan_end_mass[2] <- 0.06
+  d$unscanned_mass[2] <- 0.06
   expect_match(
     warning_text(d),
     paste0(
       "x The fitted marginal puts more than 0.05 of its mass beyond the ",
-      "scanned window (4 posterior SDs either side of the mode) for `b` ",
-      "(0.06); its credible limits rely on extrapolation."
+      "scanned window (4 SD either side of the mode) for `b` (0.06); its ",
+      "credible limits rely on extrapolation."
     ),
     fixed = TRUE
   )
@@ -132,8 +133,8 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     warning_text(d),
     paste0(
       "x Heavy tails for `b`: the density is still over 5% of its peak at ",
-      "the ends of the scanned window (4 posterior SDs either side of the ",
-      "mode), and the skew-normal extrapolates beyond it."
+      "the ends of the scanned window (4 SD either side of the mode), and ",
+      "the skew-normal extrapolates beyond it."
     ),
     fixed = TRUE
   )
@@ -145,12 +146,52 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   expect_match(
     text,
     paste0(
-      "x The VB correction shifted `b` by 3 posterior SDs; the Gaussian ",
-      "approximation at the mode may be inaccurate."
+      "x The VB correction shifted `b` by 3 SD; the Gaussian approximation ",
+      "at the mode may be inaccurate."
     ),
     fixed = TRUE
   )
   expect_no_match(text, "`a`")
+
+  # A VB correction that did not settle names the worst parameter, with a
+  # hint; strictly above the level, as the mode check
+  d <- healthy
+  d$vb_step_sigma <- c(0.2, 0.5)
+  text <- warning_text(d)
+  expect_match(
+    text,
+    paste0(
+      "x The VB correction did not settle: one more step would move `b` by ",
+      "0.5 SD.\n",
+      "i The skew-normal marginals do not depend on it; `vb = FALSE` leaves ",
+      "it out."
+    ),
+    fixed = TRUE
+  )
+  expect_no_match(text, "`a`")
+  # Without a gradient the hint names the remedy first, and says nothing of
+  # it with one
+  expect_match(
+    warning_text(d, has_grad = FALSE),
+    paste0(
+      "i Without a gradient the VB mean is approximate on a posterior this ",
+      "far from Gaussian; supply `grad` if you can.\n",
+      "i The skew-normal marginals do not depend on it"
+    ),
+    fixed = TRUE
+  )
+  expect_no_match(warning_text(d), "Without a gradient")
+  # Gaussian marginals are centred on the VB mean, so the hint says so
+  expect_match(
+    warning_text(d, gaussian = TRUE),
+    paste0(
+      "i The Gaussian marginals are centred on the VB mean; `vb = FALSE` ",
+      "centres them at the mode."
+    ),
+    fixed = TRUE
+  )
+  d$vb_step_sigma <- c(0.1, 0.1)
+  expect_length(problems(d), 0)
 
   o <- healthy_optim
   o$hess_cond <- 2e10
@@ -177,7 +218,8 @@ test_that("the VB fallback is recorded, not warned about, as in INLAvaan", {
   expect_length(bullets, 1)
   expect_match(bullets, "The VB correction shifted")
   # No VB correction, no VB check
-  d[c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")] <- NA_real_
+  d[c("kld", "vb_shift", "vb_shift_sigma", "vb_step_sigma", "mean_gap")] <-
+    NA_real_
   expect_length(problems(d, vb = NULL), 0)
 })
 
@@ -189,7 +231,7 @@ test_that("lists name at most three parameters, worst first, with values where t
   rownames(d) <- nm
   o <- modifyList(healthy_optim, list(grad = setNames(rep(1e-7, 5), nm)))
   d$nmad <- c(0.2, 0.5, 0.01, 0.3, 0.15)
-  d$scan_end_mass <- c(0.06, 0.01, 0.01, 0.01, 0.07)
+  d$unscanned_mass <- c(0.06, 0.01, 0.01, 0.01, 0.07)
   d$tails <- c(TRUE, FALSE, TRUE, FALSE, TRUE)
   text <- warning_text(d, o)
   expect_match(
@@ -215,22 +257,29 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   d$mode_shift_sigma[1] <- 0.5
   d$tails[1] <- FALSE
   d$nmad[1] <- 0.2
-  d$scan_end_mass[1] <- 0.3
+  d$unscanned_mass[1] <- 0.3
   d$vb_shift_sigma[1] <- 2
+  d$vb_step_sigma[2] <- 0.4
   bullets <- problems(d, o)
-  expect_identical(names(bullets), c("x", "i", "i", "x", "x", "x", "x", "x"))
+  expect_identical(
+    names(bullets),
+    c("x", "i", "i", "x", "i", "x", "x", "x", "x", "x")
+  )
   text <- warning_text(d, o)
   lines <- strsplit(text, "\n")[[1]]
-  expect_identical(lines[1], "Fit diagnostics flagged 6 potential issues:")
-  # each line shows its own value, in INLAvaan's order
+  expect_identical(lines[1], "Fit diagnostics flagged 7 potential issues:")
+  # each line shows its own value, in INLAvaan's order, with the VB check of
+  # inlavanilla's own after the mode, the other half of converged
   patterns <- c(
-    "^x The gradient at the posterior mode .* by 0.5 posterior SDs",
+    "^x The gradient at the posterior mode .* by 0.5 SD",
     "^i `nlminb\\(\\)` says",
     "^i Try other starting values",
+    "^x The VB correction did not settle: .* `b` by 0.4 SD",
+    "^i The skew-normal marginals do not depend on it",
     "^x The fitted marginal deviates .* `a` \\(0.20\\)",
     "^x The fitted marginal puts .* `a` \\(0.30\\)",
     "^x Heavy tails for `a`",
-    "^x The VB correction shifted `a` by 2 posterior SDs",
+    "^x The VB correction shifted `a` by 2 SD",
     "^x The Hessian at the mode is near-singular \\(condition number = 1e\\+09\\)",
     "^i Inspect with `diagnostics\\(fit\\)` and `diagnostics\\(fit, type = \"param\"\\)`; `vignette\\(\"diagnostics\", package = \"inlavanilla\"\\)` explains each check\\.$"
   )
@@ -239,18 +288,18 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   }
   expect_identical(
     vapply(patterns, function(p) grep(p, lines)[1], 1L, USE.NAMES = FALSE),
-    2:10
+    2:12
   )
 })
 
-test_that("bend and the SN-VB gap are flagged by summary() but never warn", {
+test_that("the ridge bend and the mean gap are flagged by summary() but never warn", {
   d <- healthy
-  d$bend[1] <- 0.5
-  d$sn_vs_vb[2] <- -0.3
+  d$ridge_bend[1] <- 0.5
+  d$mean_gap[2] <- -0.3
   expect_length(problems(d), 0)
   expect_identical(warning_text(d), "")
   flags <- check_flags(dg_of(d), gaussian = FALSE)
-  expect_identical(names(flags)[flags], c("bend", "sn_vs_vb"))
+  expect_identical(names(flags)[flags], c("ridge_bend", "mean_gap"))
 })
 
 test_that("a value that is not finite is flagged; a check that did not run is not", {
@@ -259,12 +308,12 @@ test_that("a value that is not finite is flagged; a check that did not run is no
   expect_match(warning_text(d), "(NMAD > 0.1) for `b` (NaN)", fixed = TRUE)
   d <- healthy
   d$mode_shift_sigma[1] <- NA
-  expect_match(warning_text(d), "would move `a` by NA posterior SDs")
+  expect_match(warning_text(d), "would move `a` by NA SD")
 
   # Gaussian marginals: no scans, so only the mode, Hessian and VB checks
   d <- healthy
-  d[c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "bend")] <- NA
-  d$sn_vs_vb <- NA_real_
+  d[c("nmad", "alpha", "unscanned_mass", "gamma1", "tails", "ridge_bend")] <- NA
+  d$mean_gap <- NA_real_
   expect_length(problems(d, gaussian = TRUE), 0)
   d$vb_shift_sigma[1] <- 3
   expect_length(problems(d, gaussian = TRUE), 1)
@@ -385,10 +434,11 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "kld_mean",
       "nmad_max",
       "nmad_mean",
-      "scan_end_mass_max",
+      "unscanned_mass_max",
       "vb_fallback",
-      "sn_vs_vb_max",
-      "bend_max",
+      "vb_step_max",
+      "mean_gap_max",
+      "ridge_bend_max",
       "n_heavy_tails"
     )
   )
@@ -408,11 +458,12 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "vb_shift_sigma",
       "nmad",
       "alpha",
-      "scan_end_mass",
-      "sn_vs_vb",
+      "unscanned_mass",
+      "vb_step_sigma",
+      "mean_gap",
       "gamma1",
       "tails",
-      "bend"
+      "ridge_bend"
     )
   )
   expect_identical(p$names, names(init_reg))
@@ -440,10 +491,10 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
   expect_identical(g[["kld_mean"]], mean(d$kld))
   expect_identical(g[["nmad_max"]], max(d$nmad))
   expect_identical(g[["nmad_mean"]], mean(d$nmad))
-  expect_identical(g[["sn_vs_vb_max"]], max(abs(d$sn_vs_vb)))
+  expect_identical(g[["mean_gap_max"]], max(abs(d$mean_gap)))
   expect_identical(g[["vb_fallback"]], 0)
-  expect_identical(g[["scan_end_mass_max"]], max(d$scan_end_mass))
-  expect_identical(g[["bend_max"]], max(d$bend))
+  expect_identical(g[["unscanned_mass_max"]], max(d$unscanned_mass))
+  expect_identical(g[["ridge_bend_max"]], max(d$ridge_bend))
   expect_identical(g[["n_heavy_tails"]], 0)
   expect_equal(p$grad, unname(grad))
   expect_equal(p$grad_abs, abs(unname(grad)))
@@ -463,14 +514,21 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
   for (nm in c(
     "nmad_max",
     "nmad_mean",
-    "scan_end_mass_max",
-    "bend_max",
+    "unscanned_mass_max",
+    "ridge_bend_max",
     "n_heavy_tails"
   )) {
     expect_identical(g_n[[nm]], NA_real_, label = nm)
   }
   p_n <- diagnostics(fit_n, type = "param")
-  for (col in c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "bend")) {
+  for (col in c(
+    "nmad",
+    "alpha",
+    "unscanned_mass",
+    "gamma1",
+    "tails",
+    "ridge_bend"
+  )) {
     expect_true(all(is.na(p_n[[col]])), label = col)
   }
   expect_false(anyNA(p_n$vb_shift_sigma))
@@ -535,19 +593,20 @@ test_that("diagnostics() prints in INLAvaan's formats", {
   )
   expect_match(fmt("grad_inf"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("hess_cond"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
-  expect_match(fmt("scan_end_mass_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
+  expect_match(fmt("unscanned_mass_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("mode_shift_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
+  expect_match(fmt("vb_step_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("nmad_max"), "^0\\.[0-9]{4}$")
   expect_identical(fmt("n_heavy_tails"), "0")
   expect_identical(fmt("vb_fallback"), "0")
 
   # The table rounds to four decimals, but keeps three significant figures
-  # of the scan-end mass, which is below the fourth decimal when healthy
+  # of the unscanned mass, which is below the fourth decimal when healthy
   p <- diagnostics(fit, type = "param")
   out <- capture_output(res <- withVisible(print(p)))
   expect_identical(res$value, p)
-  expect_match(out, "scan_end_mass")
-  expect_match(out, format(signif(p$scan_end_mass[1], 3)), fixed = TRUE)
+  expect_match(out, "unscanned_mass")
+  expect_match(out, format(signif(p$unscanned_mass[1], 3)), fixed = TRUE)
 
   # Missing values print as NA
   fit <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)

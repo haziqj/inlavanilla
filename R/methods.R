@@ -1,31 +1,39 @@
 #' @export
 print.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
+    width = out_width(),
     left = cli::style_bold("INLAvanilla"),
     right = cli::col_grey(method_label(is_gaussian(x), isTRUE(x$vb))),
-    line_col = "cyan"
+    line_col = vanilla_hex
+  )
+  cli::cat_line()
+  dg <- diagnostics_internal(
+    x$diagnostics$optim,
+    x$diagnostics$vb,
+    x$diagnostics$marginals
+  )
+  flags <- check_flags(dg, is_gaussian(x))
+  cat_headline(
+    x$logml,
+    2,
+    flags,
+    x$diagnostics$optim$iterations,
+    x$timing[["total"]]
   )
   cli::cat_line()
   cat_table(x$summary, digits = digits, scale = x$summary[, "SD"])
-  cli::cat_line()
-  cli::cat_line(
-    cli::style_bold("Log marginal likelihood: "),
-    cli::col_cyan(format(round(x$logml, 2), nsmall = 2))
-  )
   # Whether to trust the table: shown only when something is off
   n_warnings <- length(x$warnings)
+  n_flagged <- sum(flags)
+  if (n_warnings > 0L || n_flagged > 0L) {
+    cli::cat_line()
+  }
   if (n_warnings > 0L) {
     cat_status(
       "warn",
       "{n_warnings} warning{?s} during the fit, kept in {.code $warnings}."
     )
   }
-  dg <- diagnostics_internal(
-    x$diagnostics$optim,
-    x$diagnostics$vb,
-    x$diagnostics$marginals
-  )
-  n_flagged <- sum(check_flags(dg, is_gaussian(x)))
   if (n_flagged > 0L) {
     cat_status("warn", "{n_flagged} check{?s} flagged by {.fn summary}.")
   }
@@ -38,13 +46,18 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' scale of `logpost`, together with diagnostics of each stage of the
 #' approximation.
 #'
+#' Printed, the summary gives the fit first (the log marginal likelihood
+#' and whether the fit converged, the parts of the log marginal likelihood,
+#' and the calls and time each stage took), then the posterior marginals,
+#' then the diagnostics.
+#'
 #' Most of the checks are those of INLAvaan's `diagnostics()`, and
 #' [diagnostics()] returns them under the same names. Jamil and Rue (2026) use
 #' the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 #' gap between the skew-normal and VB means as an internal check (Section
-#' 5.1). The mode shift, the Hessian condition number and the scan-end mass
-#' come from INLAvaan's `diagnostics()`, not from the paper. `tails` and
-#' `bend` are inlavanilla's own.
+#' 5.1). The mode shift, the Hessian condition number and the unscanned mass
+#' come from INLAvaan's `diagnostics()`, not from the paper. `vb_step_sigma`,
+#' `tails` and `ridge_bend` are inlavanilla's own.
 #'
 #' A posterior SD here is the Laplace SD at the mode,
 #' \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -56,7 +69,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   parameter. It is flagged above 0.1, whatever the return code of
 #'   [stats::nlminb()], whose message is then shown: without a gradient
 #'   `nlminb()` can report failure at an accurate mode, and success short of
-#'   one.
+#'   one. With the VB check below, it is what makes the fit converged.
 #' * **Hessian.** `hess_cond`, the condition number of the Hessian at the
 #'   mode with each parameter in posterior-SD units (the eigenvalue ratio of
 #'   the posterior correlation matrix). It is flagged above \eqn{10^8}: some
@@ -73,19 +86,26 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   not flagged. When the fixed-point iteration hands over to the fallback
 #'   optimiser, the VB line says so, but, as in INLAvaan, that is not
 #'   flagged: it is a route of the solver, not a sign of a poor
-#'   approximation.
+#'   approximation. Where the solver lands is checked, as the mode is:
+#'   `vb_step_sigma` is the step still to go at the VB mean, in posterior
+#'   SDs (the fixed-point step there, which is the Newton step of the VB
+#'   stationarity condition; see [diagnostics()]). It is flagged above 0.1,
+#'   the level of the mode check, as a correction that did not settle. That
+#'   check is inlavanilla's own.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and
 #'   the scanned density, relative to its peak (Jamil & Rue, 2026, Section
-#'   4.4), flagged above 0.1. `alpha` (the Shape column) is the shape of the
-#'   fitted skew-normal marginal, on the unconstrained scale: zero is a
-#'   Gaussian marginal, and the sign gives the direction of the skew. It is
-#'   not flagged.
+#'   4.4), flagged above 0.1. `alpha` is the shape of the fitted skew-normal
+#'   marginal, on the unconstrained scale: zero is a Gaussian marginal, and
+#'   the sign gives the direction of the skew. It describes the marginal
+#'   rather than checking it, so it is not in the printed table: it is in
+#'   `summary(fit)$diagnostics` and [diagnostics()], and `fit$sn` holds it
+#'   with the other skew-normal parameters.
 #' * **Volume correction.** `gamma1`, the slope added to the scanned
 #'   log-heights, per posterior SD along the scan, for the changing volume of
 #'   the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
 #'   `summary(fit)$diagnostics` and in the verbose output of the fit, not in
 #'   the printed table, and it is not flagged.
-#' * **Scan-end mass.** `scan_end_mass`, the mass each fitted skew-normal
+#' * **Unscanned mass.** `unscanned_mass`, the mass each fitted skew-normal
 #'   puts outside the scanned window (4 posterior SDs either side of the
 #'   mode), where the marginal is extrapolated, as INLAvaan's `diagnostics()`
 #'   reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
@@ -94,44 +114,64 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' * **Tails.** `tails` is `FALSE` (and flagged) when the density at an end
 #'   of the scan is still over 5% of its peak: the Laplace SD badly
 #'   understates a heavy tail there, and the skew-normal extrapolates it.
-#' * **Scan path.** Each parameter is scanned along the conditional mode path
-#'   of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a straight line
-#'   that is a first-order approximation to a possibly curved ridge (Section
-#'   3.2.1). `bend` is the log-density, in nats, that the straight scan
-#'   misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
-#'   towards the conditional mode of the other parameters. It is flagged
-#'   above 0.1. A large value means the other parameters' conditional mode
-#'   bends away from the line, as a poorly determined noise scale does for a
-#'   regression coefficient at small n, and the marginal comes out too
-#'   narrow, by roughly 0.35 to 0.5 times `bend` in relative SD (see the
-#'   Accuracy section of [inla_vanilla()]).
-#' * **Skew-normal and VB means.** `sn_vs_vb`, the gap between the
-#'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
-#'   target the posterior mean, so they should agree closely (to
-#'   \eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4), and a gap signals
-#'   higher-order effects or numerical error (Section 5.1). A gap above 0.1
-#'   SDs is flagged: the posterior is far from Gaussian along that
-#'   parameter, and either approximation may be off.
+#' * **Ridge bend.** Each parameter is scanned along the conditional mode
+#'   path (CMP) of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a
+#'   straight line that is a first-order approximation to a possibly curved
+#'   ridge of high posterior density (Section 3.2.1). `ridge_bend` is the
+#'   log-density, in nats, that the straight scan misses at \eqn{\pm 2}
+#'   posterior SDs: the gain from one Newton step towards the conditional
+#'   mode of the other parameters. A large value means the ridge bends away
+#'   from the CMP, as it does for a regression coefficient when the noise
+#'   scale is poorly determined at small n, and the marginal comes out too
+#'   narrow. For a normal mean with an unknown SD, a ridge bend \eqn{b} makes
+#'   the marginal SD too small by
+#'   \eqn{1 - \sqrt{1 - 3b/4}}{1 - sqrt(1 - 3b/4)}, about \eqn{3b/8}. In
+#'   other models this is a rough guide: on test models it was mostly within
+#'   a factor of 1.5 of the true shortfall, above it in logistic and Poisson
+#'   regressions and below it in a nonlinear regression. `ridge_bend` is
+#'   flagged above 0.25, a shortfall of 10% by that formula (see the Accuracy
+#'   section of [inla_vanilla()]).
+#' * **Mean gap.** `mean_gap`, the gap between the skew-normal mean and the
+#'   VB-corrected mean, in posterior SDs. Both recover the leading,
+#'   \eqn{O(n^{-1})} shift from the mode to the posterior mean, so they
+#'   agree to \eqn{O(n^{-2})} (Jamil & Rue, 2026, Proposition 3.4). A gap
+#'   signals that the higher-order terms of that expansion about the mode
+#'   matter, or numerical error (Section 5.1). A gap above 0.1 SDs is
+#'   flagged: the posterior is far from Gaussian along that parameter, and
+#'   either approximation may be off.
 #'
-#' Every check flagged here but the scan path and the SN-VB gap also raises
+#' Every check flagged here but the ridge bend and the mean gap also raises
 #' one warning at the end of the fit, of class
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
-#' mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
-#' are those of INLAvaan's fit-time warning; the heavy-tails check is
-#' inlavanilla's own, as are the scan-path and SN-VB flags. Every level is a
-#' package default, chosen so that a healthy fit stays silent, and not a
-#' calibrated cut-off: a tripped check is a prompt to look again, and
+#' mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
+#' are those of INLAvaan's fit-time warning; the VB settling and
+#' heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap flags. Every
+#' level is a package default, chosen so that a healthy fit stays silent, and
+#' not a calibrated cut-off: a tripped check is a prompt to look again, and
 #' silence is not a certificate of accuracy. In the simulations of Jamil and
 #' Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
 #' and the paper reports a calibration of the expected error against them in
 #' its Supplementary Material.
 #'
-#' The status lines list every flagged parameter, worst first, with its
-#' value (the heavy-tails line, a yes/no check, lists names only, in
+#' The table gives each value to two significant figures, as a tibble
+#' prints numbers, with the flagged values in red where the console shows
+#' colour. The status lines list every flagged parameter, worst first, with
+#' its value (the heavy-tails line, a yes/no check, lists names only, in
 #' parameter order); the warning lists at most three, as INLAvaan's does. With
-#' `silent = TRUE` the warning is only recorded in `fit$warnings`. Printing
-#' the fit ends with a line for its warnings and one counting the checks
-#' flagged here, each shown only when there are any.
+#' `silent = TRUE` the warning is only recorded in `fit$warnings`.
+#'
+#' Printing the fit and its summary both open with a headline: the log
+#' marginal likelihood, and whether the fit converged, with the iterations
+#' of [stats::nlminb()] and the time the whole fit took. Converged means
+#' that the computation reached its solution: both the mode check and the VB
+#' check pass, so no further step at the mode or at the VB mean would move
+#' a parameter by more than 0.1 posterior SDs. It says nothing of how well
+#' the approximation fits the posterior, which the other checks judge.
+#' Without a gradient a strongly skewed posterior can read "Not converged:
+#' VB did not settle": the VB mean from `logpost` values alone is then
+#' approximate, and supplying `grad` is the fix.
+#' Printing the fit ends with a line for its warnings and one counting the
+#' checks flagged here, each shown only when there are any.
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check
 #' with examples.
 #'
@@ -190,54 +230,85 @@ summary.inla_vanilla <- function(
 #' @export
 print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
+    width = out_width(),
     left = cli::style_bold("INLAvanilla summary"),
     right = cli::col_grey(method_label(is_gaussian(x), !is.null(x$vb))),
-    line_col = "cyan"
+    line_col = vanilla_hex
   )
   cli::cat_line()
-  cli::cat_line(cli::style_bold("Posterior marginals"))
-  cat_table(x$table, digits = digits, scale = x$table[, "SD"])
-  cli::cat_line()
-
-  cli::cat_line(cli::style_bold("Diagnostics"))
+  # The fit, then its parameters, then how far to trust them. The fit is the
+  # headline of print(), then the parts of the log marginal likelihood and
+  # what each stage cost.
   diag <- x$diagnostics
   gaussian <- is_gaussian(x)
   has_vb <- !is.null(x$vb)
-  cols <- c(
-    "vb_shift_sigma",
-    "sn_vs_vb",
-    "alpha",
-    "nmad",
-    "bend",
-    "scan_end_mass"
-  )
-  heads <- c("VB shift", "SN - VB", "Shape", "NMAD", "Bend", "End mass")
-  keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)) &
-    (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
-  if (any(keep)) {
-    dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
-    colnames(dtab) <- heads[keep]
-    cat_table(dtab, digits = 2, by_cell = TRUE)
-    cli::cat_line()
-  }
-
-  # One status line per check, and one "!" line for each flag, so that the
-  # count in print() matches. Flagged lines list every flagged parameter,
-  # worst first, through variables in `env` (see list_template()).
   opt <- x$optim
   dg <- diagnostics_internal(opt, x$vb, diag)
   glob <- dg$global
   flags <- check_flags(dg, gaussian)
+  tm <- x$timing
+  cat_headline(x$logml, 3, flags, opt$iterations, tm[["total"]])
+  if (has_vb) {
+    cat_wrap(cli::col_grey(
+      "Laplace ",
+      format(round(x$logml_laplace, 3), nsmall = 3),
+      " + VB term ",
+      format(signif(x$logml - x$logml_laplace, 2))
+    ))
+  }
+  calls <- paste0(x$counts[["logpost"]], " logpost")
+  if (x$has_grad) {
+    calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
+  }
+  cat_wrap(cli::col_grey(
+    calls,
+    " calls: mode ",
+    format_time(tm[["laplace"]]),
+    ", VB ",
+    format_time(tm[["vb"]]),
+    ", marginals ",
+    format_time(tm[["marginals"]])
+  ))
+  cli::cat_line()
+
+  cat_heading("Posterior marginals")
+  cat_table(x$table, digits = digits, scale = x$table[, "SD"])
+  cli::cat_line()
+
+  cat_heading("Diagnostics")
+  # VB first, then the skew-normal checks in the order of their status
+  # lines, ending with the comparison of the two means
+  cols <- c(
+    "vb_shift_sigma",
+    "nmad",
+    "unscanned_mass",
+    "ridge_bend",
+    "mean_gap"
+  )
+  heads <- c("VB shift", "NMAD", "Unscanned", "Ridge bend", "Mean gap")
+  keep <- (has_vb | c(FALSE, TRUE, TRUE, TRUE, FALSE)) &
+    (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE))
+  if (any(keep)) {
+    dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
+    colnames(dtab) <- heads[keep]
+    flag <- param_flags(dg, gaussian)[, cols[keep], drop = FALSE]
+    cat_table(dtab, digits = 2, flag = flag)
+    cli::cat_line()
+  }
+
+  # A status line per stage, and one "!" line for each flagged check, so that
+  # the count in print() matches. Flagged lines list every flagged parameter,
+  # worst first, through variables in `env` (see list_template()).
   env <- new.env(parent = environment())
   flagged_line <- function(check) {
     cat_status("warn", problem_text(check, dg, env, n = Inf), .envir = env)
   }
 
   if (!flags[["mode"]]) {
-    msm <- glob[["mode_shift_max"]]
+    msm <- with_sd(glob[["mode_shift_max"]])
     cat_status(
       "ok",
-      "Mode found in {opt$iterations} iteration{?s} (Newton step {fmt_num(msm)} posterior SDs)."
+      "Mode found in {opt$iterations} iteration{?s} (Newton step {msm})."
     )
   } else {
     listed <- flagged_list(
@@ -251,10 +322,9 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     cat_status(
       "warn",
       paste0(
-        "Mode search stopped short ({.val {opt$message}}): the Newton step ",
-        "is more than ",
-        warn_levels$mode_shift,
-        " posterior SDs for ",
+        "Mode search stopped short ({.val {opt$message}}): Newton step > ",
+        with_sd(warn_levels$mode_shift),
+        " for ",
         listed,
         "."
       ),
@@ -266,21 +336,42 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     flagged_line("hess_cond")
   } else if (glob[["npar"]] > 1) {
     hc <- glob[["hess_cond"]]
-    cat_status(
-      "ok",
-      "Hessian condition number {fmt_num(hc)}, in posterior-SD units."
-    )
+    cat_status("ok", "Hessian condition number {fmt_num(hc)}, in SD units.")
   }
 
   if (has_vb) {
     how <- if (isTRUE(x$vb$fallback)) " (via the fallback optimiser)" else ""
-    if (!flags[["vb"]]) {
-      max_shift <- glob[["vb_shift_max"]]
+    # Whether it settled, the VB half of converged, then the size of the
+    # shift: a line for each that is flagged, or one line when neither is
+    if (flags[["vb_step"]]) {
+      listed <- flagged_list(
+        env,
+        "vbstep",
+        dg,
+        "vb_step_sigma",
+        warn_levels$vb_step,
+        Inf
+      )
+      cat_status(
+        "warn",
+        paste0(
+          "VB correction did not settle in {x$vb$iterations} ",
+          "iteration{?s}{how}: step > ",
+          with_sd(warn_levels$vb_step),
+          " for ",
+          listed,
+          "."
+        ),
+        .envir = env
+      )
+    }
+    if (!flags[["vb"]] && !flags[["vb_step"]]) {
+      max_shift <- with_sd(glob[["vb_shift_max"]])
       cat_status(
         "ok",
-        "VB correction in {x$vb$iterations} iteration{?s}{how}: max shift {fmt_num(max_shift)} posterior SDs."
+        "VB correction settled in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
       )
-    } else {
+    } else if (flags[["vb"]]) {
       listed <- flagged_list(
         env,
         "vbs",
@@ -292,10 +383,9 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       cat_status(
         "warn",
         paste0(
-          "VB correction in {x$vb$iterations} iteration{?s}{how}: the ",
-          "shift is more than ",
-          warn_levels$vb_shift,
-          " posterior SD for ",
+          "VB correction in {x$vb$iterations} iteration{?s}{how}: shift > ",
+          with_sd(warn_levels$vb_shift),
+          " for ",
           listed,
           "."
         ),
@@ -312,64 +402,39 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       "Gaussian marginals: no scans, so no skew-normal checks."
     )
   } else {
-    if (flags[["nmad"]]) {
-      flagged_line("nmad")
-    } else {
-      max_nmad <- glob[["nmad_max"]]
-      cat_status("ok", "Skew-normal fits: max NMAD {fmt_num(max_nmad)}.")
+    # One line for the checks that pass, with the largest value of each as
+    # the table shows it, then a line for each that does not
+    fmt_cell <- function(v) trimws(format_sigfig(v, 2)$plain)
+    healthy <- c(
+      if (!flags[["nmad"]]) {
+        paste("NMAD", fmt_cell(glob[["nmad_max"]]))
+      },
+      if (!flags[["unscanned_mass"]]) {
+        paste("unscanned mass", fmt_cell(glob[["unscanned_mass_max"]]))
+      },
+      if (!flags[["ridge_bend"]]) {
+        paste("ridge bend", fmt_cell(glob[["ridge_bend_max"]]))
+      },
+      if (has_vb && !flags[["mean_gap"]]) {
+        paste0("mean gap ", fmt_cell(glob[["mean_gap_max"]]), sd_unit())
+      }
+    )
+    if (length(healthy) > 0L) {
+      sn_ok <- paste(healthy, collapse = ", ")
+      cat_status("ok", "Skew-normal fits: max {sn_ok}.")
     }
-    for (check in c("scan_end_mass", "tails", "bend")) {
+    for (check in c(
+      "nmad",
+      "unscanned_mass",
+      "tails",
+      "ridge_bend",
+      "mean_gap"
+    )) {
       if (flags[[check]]) {
         flagged_line(check)
       }
     }
-    if (has_vb) {
-      if (flags[["sn_vs_vb"]]) {
-        flagged_line("sn_vs_vb")
-      } else {
-        max_gap <- glob[["sn_vs_vb_max"]]
-        cat_status(
-          "ok",
-          "Skew-normal and VB means agree to within {fmt_num(max_gap)} posterior SDs."
-        )
-      }
-    }
   }
-  cli::cat_line()
-
-  vb_term <- x$logml - x$logml_laplace
-  cat_wrap(paste0(
-    cli::style_bold("Log marginal likelihood: "),
-    cli::col_cyan(format(round(x$logml, 3), nsmall = 3)),
-    if (!is.null(x$vb)) {
-      cli::col_grey(
-        " (Laplace ",
-        format(round(x$logml_laplace, 3), nsmall = 3),
-        ", VB term ",
-        format(signif(vb_term, 2)),
-        ")"
-      )
-    }
-  ))
-  calls <- paste0(x$counts[["logpost"]], " logpost")
-  if (x$has_grad) {
-    calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
-  }
-  tm <- x$timing
-  cat_wrap(
-    cli::col_grey(
-      calls,
-      " calls in ",
-      format_time(tm[["total"]]),
-      " (mode ",
-      format_time(tm[["laplace"]]),
-      ", VB ",
-      format_time(tm[["vb"]]),
-      ", marginals ",
-      format_time(tm[["marginals"]]),
-      ")"
-    )
-  )
   invisible(x)
 }
 
@@ -634,22 +699,36 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
   )
 }
 
-# Print a numeric matrix as an aligned table: bold column headers, cyan row
+# Print a numeric matrix as an aligned table: bold column headers, plain row
 # names. With `scale` (one value per row, such as the posterior SD), each row
 # is printed to `digits` significant figures of its scale, so parameters on
-# different scales each get a sensible number of decimals. With `by_cell`,
-# each number is formatted on its own. Widths are worked out on the plain
-# strings before any styling.
-cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
-  cells <- matrix("", nrow(tab), ncol(tab))
-  for (i in seq_len(nrow(tab))) {
-    cells[i, ] <- if (by_cell) {
-      formatC(tab[i, ], digits = digits, format = "g")
-    } else {
+# different scales each get a sensible number of decimals. Without it, each
+# column is formatted as a tibble prints it (see format_sigfig()), to
+# `digits` significant figures. The cells where `flag` (a logical matrix
+# like `tab`) is TRUE are red. Widths are worked out on the plain strings
+# before any styling.
+cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
+  cells <- styled <- matrix("", nrow(tab), ncol(tab))
+  if (is.null(scale)) {
+    for (j in seq_len(ncol(tab))) {
+      col <- format_sigfig(tab[, j], digits)
+      cells[, j] <- col$plain
+      styled[, j] <- col$styled
+    }
+  } else {
+    for (i in seq_len(nrow(tab))) {
       s <- abs(scale[i])
       dec <- if (is.finite(s) && s > 0) digits - 1 - floor(log10(s)) else digits
-      formatC(tab[i, ], digits = min(max(dec, 0), 8), format = "f")
+      cells[i, ] <- formatC(
+        tab[i, ],
+        digits = min(max(dec, 0), 8),
+        format = "f"
+      )
     }
+    styled <- cells
+  }
+  if (!is.null(flag)) {
+    styled[flag] <- cli::col_red(cells[flag])
   }
   heads <- colnames(tab)
   widths <- pmax(nchar(heads), apply(nchar(cells), 2, max))
@@ -658,9 +737,14 @@ cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
   pad <- function(s, w) {
     vapply(seq_along(s), function(i) formatC(s[i], width = w[i]), "")
   }
+  # Right-align a styled cell by the width of its plain text
+  pad_cells <- function(i, cols) {
+    w <- widths[cols]
+    paste0(strrep(" ", w - nchar(cells[i, cols])), styled[i, cols])
+  }
   # Split the columns into blocks that fit the console width, as print() does
   # for a wide matrix
-  avail <- cli::console_width() - rw
+  avail <- out_width() - rw
   block <- integer(length(widths))
   b <- 1L
   used <- 0
@@ -687,11 +771,133 @@ cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
     )
     for (i in seq_len(nrow(cells))) {
       cli::cat_line(
-        cli::col_cyan(formatC(rn[i], width = -rw)),
-        paste0("  ", pad(cells[i, cols], widths[cols]), collapse = "")
+        formatC(rn[i], width = -rw),
+        paste0("  ", pad_cells(i, cols), collapse = "")
       )
     }
   }
+}
+
+# Format a numeric column as the pillar package prints a tibble's: `sigfig`
+# significant figures for each number, every digit before the decimal point
+# kept, and a decimal digit dropped only where the number has no more (so 1.5
+# and 0.33 but 0.30 for 0.3001). A number rounded to a whole one keeps its
+# point ("123."). The decimal points line up. A column wider than 13
+# characters is printed in scientific notation instead. Returns the plain
+# cells, padded to one width, and the same cells styled: the leading zeros
+# of a number below 1 and the digits past the significant ones are grey.
+format_sigfig <- function(x, sigfig = 3) {
+  n <- length(x)
+  neg <- ifelse(!is.na(x) & x < 0, "-", "")
+  lhs <- rhs <- lhs_grey <- character(n)
+  for (k in seq_len(n)) {
+    ax <- abs(x[k])
+    if (!is.finite(ax)) {
+      neg[k] <- ""
+      lhs[k] <- format(x[k])
+      next
+    }
+    if (ax == 0) {
+      lhs[k] <- "0"
+      next
+    }
+    expo <- floor(log10(ax))
+    # Decimals for `sigfig` figures, fewer where the number has no more
+    rhs_digits <- max(sigfig - 1 - expo, 0)
+    while (rhs_digits > 0) {
+      v <- ax * 10^(rhs_digits - 1)
+      if (abs(v - round(v)) > sqrt(.Machine$double.eps) * max(1, v)) {
+        break
+      }
+      rhs_digits <- rhs_digits - 1
+    }
+    r <- signif(ax, max(sigfig, expo + 1))
+    s <- formatC(r, format = "f", digits = rhs_digits)
+    if (rhs_digits == 0 && r != ax) {
+      s <- paste0(s, ".")
+    }
+    parts <- regmatches(s, regexpr("\\.", s), invert = TRUE)[[1]]
+    lhs[k] <- parts[1]
+    rhs[k] <- if (length(parts) > 1) paste0(".", parts[2]) else ""
+  }
+  plain_num <- paste0(neg, lhs, rhs)
+  if (max(nchar(plain_num)) > 13) {
+    expo <- ifelse(is.finite(x) & x != 0, floor(log10(abs(x))), 0)
+    mant <- trimws(formatC(x / 10^expo, format = "fg", digits = sigfig))
+    plain_num <- ifelse(is.finite(x), paste0(mant, "e", expo), format(x))
+    plain <- formatC(plain_num, width = max(nchar(plain_num)))
+    return(list(plain = plain, styled = plain))
+  }
+  # Line up the decimal points: integer parts right-aligned, decimals left
+  int <- paste0(neg, lhs)
+  int_w <- max(nchar(int))
+  dec_w <- max(nchar(rhs))
+  pad_l <- strrep(" ", int_w - nchar(int))
+  pad_r <- strrep(" ", dec_w - nchar(rhs))
+  plain <- paste0(pad_l, int, rhs, pad_r)
+  # Grey: "0.00" before the first significant digit of a number below 1, and
+  # the integer digits past `sigfig`
+  grey <- cli::col_grey
+  styled <- character(n)
+  for (k in seq_len(n)) {
+    if (lhs[k] == "0" && nzchar(rhs[k])) {
+      lead <- regmatches(rhs[k], regexpr("^\\.0*", rhs[k]))
+      body <- paste0(
+        neg[k],
+        grey(paste0("0", lead)),
+        substring(rhs[k], nchar(lead) + 1)
+      )
+    } else if (grepl("^[0-9]+$", lhs[k]) && nchar(lhs[k]) > sigfig) {
+      body <- paste0(
+        neg[k],
+        substring(lhs[k], 1, sigfig),
+        grey(substring(lhs[k], sigfig + 1)),
+        rhs[k]
+      )
+    } else {
+      body <- paste0(neg[k], lhs[k], rhs[k])
+    }
+    styled[k] <- paste0(pad_l[k], body, pad_r[k])
+  }
+  list(plain = plain, styled = styled)
+}
+
+# The headline of print() and summary(): the log marginal likelihood, to
+# `digits` decimals, and whether the fit converged. Converged means that both
+# convergence checks pass: no further Newton step at the mode, and no further
+# fixed-point step at the VB mean, would move a parameter by more than 0.1
+# posterior SDs. The iterations are the mode search's, and the time is the
+# whole fit's. On one line, or on two when that does not fit.
+cat_headline <- function(logml, digits, flags, iterations, secs) {
+  value <- paste0(
+    cli::style_bold("Log marginal likelihood: "),
+    col_vanilla(format(round(logml, digits), nsmall = digits))
+  )
+  its <- plural(iterations, "iteration")
+  conv <- if (flags[["mode"]]) {
+    cli::col_yellow(paste("Not converged after", its))
+  } else if (flags[["vb_step"]]) {
+    cli::col_yellow("Not converged: VB did not settle")
+  } else {
+    paste("Converged in", its)
+  }
+  conv <- paste0(conv, " (", format_time(secs), ")")
+  sep <- if (cli::is_utf8_output()) " \u00b7 " else " | "
+  line <- paste0(value, sep, conv)
+  if (cli::ansi_nchar(line) <= out_width()) {
+    cli::cat_line(line)
+  } else {
+    cat_wrap(value, exdent = 2)
+    cat_wrap(conv, exdent = 2)
+  }
+}
+
+# A section heading, as cli's level-two headings look ("-- Title --", drawn
+# with box-drawing lines), and a blank line under it.
+cat_heading <- function(title) {
+  line <- col_vanilla(strrep(cli::symbol$line, 2))
+  cli::cat_line(line, " ", cli::style_bold(title), " ", line)
+  cli::cat_line()
 }
 
 cat_status <- function(type, msg, .envir = parent.frame()) {
@@ -700,15 +906,15 @@ cat_status <- function(type, msg, .envir = parent.frame()) {
     ok = cli::col_green(cli::symbol$tick),
     warn = cli::col_yellow("!"),
     fail = cli::col_red(cli::symbol$cross),
-    info = cli::col_cyan(cli::symbol$info)
+    info = col_vanilla(cli::symbol$info)
   )
   cat_wrap(paste(sym, cli::format_inline(msg, .envir = .envir)), exdent = 2)
 }
 
-# Write a line wrapped to the console width, with continuation lines indented
-# by `exdent` spaces. cli::console_width() follows options(width) in knitr.
+# Write a line wrapped to out_width(), with continuation lines indented by
+# `exdent` spaces.
 cat_wrap <- function(text, exdent = 0) {
-  cli::cat_line(cli::ansi_strwrap(text, exdent = exdent))
+  cli::cat_line(cli::ansi_strwrap(text, width = out_width(), exdent = exdent))
 }
 
 # Whether a fit has Gaussian marginals (marginals = "gaussian").
@@ -723,30 +929,48 @@ method_label <- function(gaussian, vb) {
   paste0(if (gaussian) "Laplace" else "Skew-normal", if (vb) " + VB")
 }
 
-# The checks that summary() flags, each TRUE when flagged: the mode, the
-# Hessian condition number, the VB shift, and, for skew-normal marginals,
-# NMAD, the scan-end mass, the tails, the scan-path bend and the SN-VB gap.
+# The checks that summary() flags, each TRUE when flagged: the mode, the VB
+# step, the Hessian condition number, the VB shift, and, for skew-normal
+# marginals, NMAD, the unscanned mass, the tails, the ridge bend and the mean
+# gap.
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
-# warning (warn_levels), which raises every one of these but the bend and
-# the SN-VB gap (summary_levels). A check that did not run is not flagged;
-# a value that is not finite is. print() counts the flags, and summary()
-# prints one "!" line for each.
+# warning (warn_levels), which raises every one of these but the ridge bend
+# and the mean gap (summary_levels). A check that did not run is not
+# flagged; a value that is not finite is. print() counts the flags, and
+# summary() prints one "!" line for each and colours the flagged cells of
+# its table, all from param_flags().
 check_flags <- function(dg, gaussian) {
+  pf <- param_flags(dg, gaussian)
+  c(
+    mode = any(pf[, "mode_shift_sigma"]),
+    vb_step = any(pf[, "vb_step_sigma"]),
+    hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
+    vb = any(pf[, "vb_shift_sigma"]),
+    nmad = any(pf[, "nmad"]),
+    unscanned_mass = any(pf[, "unscanned_mass"]),
+    tails = any(pf[, "tails"]),
+    ridge_bend = any(pf[, "ridge_bend"]),
+    mean_gap = any(pf[, "mean_gap"])
+  )
+}
+
+# The per-parameter flags behind check_flags(): a logical matrix with a row
+# per parameter and a column per check, named as in dg$param.
+param_flags <- function(dg, gaussian) {
   p <- dg$param
   sn <- !gaussian
   vb <- isTRUE(dg$global[["vb_applied"]] == 1)
-  c(
-    mode = any(off_level(p$mode_shift_sigma, warn_levels$mode_shift)),
-    hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
-    vb = vb && any(off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift)),
-    nmad = sn && any(off_level(p$nmad, warn_levels$nmad)),
-    scan_end_mass = sn &&
-      any(off_level(p$scan_end_mass, warn_levels$scan_end_mass)),
-    tails = sn && !all(p$tails %in% TRUE),
-    bend = sn && any(off_level(p$bend, summary_levels$bend)),
-    sn_vs_vb = sn &&
-      vb &&
-      any(off_level(abs(p$sn_vs_vb), summary_levels$sn_vs_vb))
+  cbind(
+    mode_shift_sigma = off_level(p$mode_shift_sigma, warn_levels$mode_shift),
+    vb_step_sigma = vb & off_level(p$vb_step_sigma, warn_levels$vb_step),
+    vb_shift_sigma = vb &
+      off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift),
+    nmad = sn & off_level(p$nmad, warn_levels$nmad),
+    unscanned_mass = sn &
+      off_level(p$unscanned_mass, warn_levels$unscanned_mass),
+    tails = sn & !p$tails %in% TRUE,
+    ridge_bend = sn & off_level(p$ridge_bend, summary_levels$ridge_bend),
+    mean_gap = sn & vb & off_level(abs(p$mean_gap), summary_levels$mean_gap)
   )
 }
 

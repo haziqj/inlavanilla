@@ -70,7 +70,9 @@
 #' parameter, its marginal comes out too narrow, by a factor that vanishes as
 #' O(1/n). Examples are a regression coefficient or a mean when the noise SD
 #' is uncertain. For a normal mean with unknown variance the SD is about 11%
-#' too small at n = 12, 3% at n = 50, and under 1% at n = 200.
+#' too small at n = 12, 3% at n = 50, and under 1% at n = 200. The
+#' `ridge_bend` diagnostic of [summary.inla_vanilla()] flags this narrowing
+#' where it predicts about 10% or more.
 #'
 #' A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 #' structural equation model with 39 parameters and n = 75, the data could not
@@ -83,24 +85,34 @@
 #' too high and SDs 10 to 15% too small. INLAvaan's marginals of this model
 #' are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
 #' the same miss in the lower tail of a variance near zero, the boundary
-#' pile-up that a unimodal skew-normal cannot capture. The `bend` diagnostic
-#' of [summary.inla_vanilla()] flagged both, but its size does not say how
-#' far off a marginal is, and the `tails` check, which looks only 4 posterior
-#' SDs either side of the mode (the Laplace SDs), missed them.
+#' pile-up that a unimodal skew-normal cannot capture. No check is aimed at
+#' this. The `ridge_bend` diagnostic of [summary.inla_vanilla()] flagged one
+#' of the two (0.44), but the other's ridge bend (0.11) was no larger than
+#' that of marginals within 7% in SD, and the `tails` check, which looks only
+#' 4 posterior SDs either side of the mode (the Laplace SDs), missed both.
 #'
 #' @section Gradients:
 #' `grad` is optional. Without it, derivatives come from finite differences
-#' of `logpost`, and the number of calls grows quickly with the number of
-#' parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
-#' take about m(`n_grid` + 2m + 5). The VB correction takes about
-#' (m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
-#' beyond a handful of parameters: at m = 20 a fit makes on the order of
-#' 50,000 calls. With `grad`, the VB correction takes 2m^2 + 1 gradient calls
-#' per sweep instead, and the fit is faster and more accurate. For more than
-#' about 10 parameters, supply `grad`, or set `vb = FALSE` to skip the VB
-#' correction (and its term in the log marginal likelihood): the skew-normal
-#' marginals do not depend on it. `marginals = "gaussian"` saves the calls of
-#' the scans.
+#' of `logpost`, and the number of calls grows with the square of the number
+#' of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
+#' marginals about m(`n_grid` + 2m + 5). The VB correction takes at most
+#' (m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no derivatives,
+#' because Stein's identity gives the expected gradient from values of
+#' `logpost` alone. Its VB mean is then exact when the log-posterior is a
+#' polynomial of degree four in whitened coordinates, and up to degree six
+#' with `grad`. On test models it was about 0.01 posterior SDs from exact VB
+#' (0.003 with `grad`), and up to 0.1 on a strongly skewed posterior (0.03
+#' with `grad`), against a VB error of 0.01 to 0.2 SDs from the posterior mean
+#' itself. On the most skewed posteriors the VB correction may then not
+#' settle, and the fit says it has not converged (see
+#' [summary.inla_vanilla()]); `grad` is the remedy.
+#'
+#' With `grad`, every stage is faster and more accurate. The VB correction
+#' then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
+#' nodes. Beyond a handful of parameters it and the marginals are the slowest
+#' stages. `vb = FALSE` skips the VB correction (and its term in the log
+#' marginal likelihood), and the skew-normal marginals do not depend on it;
+#' `marginals = "gaussian"` saves the calls of the scans.
 #'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -117,7 +129,9 @@
 #' * `log_threshold`: grid points whose log-posterior falls more than this
 #'   below the maximum are ignored in the skew-normal fit (default `-6`).
 #' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
-#'   tolerance in posterior SDs (default `1e-3`) for the VB correction.
+#'   tolerance in posterior SDs (default `1e-3`) for the VB correction's
+#'   fixed-point iteration. If it has not converged after `vb_maxit` steps,
+#'   [stats::nlminb()] takes over.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
 #'   `iter.max` and `eval.max` default to `1000` and `2000`, and `trace = 1`
 #'   prints its iterations.
@@ -151,10 +165,11 @@
 #'   units; and the Laplace log marginal likelihood.
 #' * The VB correction: the largest step, in posterior SDs, at each
 #'   fixed-point iteration, whether Anderson acceleration or the fallback
-#'   optimiser was used, the largest shift, and the term it adds to the log
-#'   marginal likelihood.
-#' * The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
-#'   correction `gamma1` of each parameter, with the values that
+#'   optimiser was used (and, after the fallback, the step still to go where
+#'   it landed), the largest shift, and the term it adds to the log marginal
+#'   likelihood.
+#' * The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
+#'   volume correction `gamma1` of each parameter, with the values that
 #'   [summary.inla_vanilla()] flags marked.
 #' * The calls of `logpost` and `grad` in each stage, and in all, with the
 #'   total time.
@@ -224,9 +239,9 @@
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
 #'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
-#'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `scan_end_mass`,
-#'     `sn_vs_vb`, `gamma1`, `tails` and `bend`, with `NA` for the checks the
-#'     fit did not run.
+#'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
+#'     `vb_step_sigma`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with
+#'     `NA` for the checks the fit did not run.
 #'   * `scan`: the scans the skew-normals were fitted to, for
 #'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
 #'     mode, the log-posterior at each point (`logpost`, a column per
@@ -502,44 +517,33 @@ vanilla_fit <- function(
     report_mode(prog, lap, calls_since())
   }
 
-  # Gradients for the VB correction: the user's, or one-sided differences
-  # stepping a thousandth of a posterior SD. A one-sided difference is biased
-  # by half a step times the curvature; the bias is removed with the Laplace
-  # curvature diag(H), which is close to the curvature at every node. This
-  # takes m + 1 calls per gradient rather than the 2m of central differences,
-  # and the VB stage is where most calls go without a gradient. In tests the
-  # shift moved by about 1e-4 posterior SDs against central differences, far
-  # below the error of the cubature rule itself.
   sds <- sqrt(diag(lap$Sigma))
-  gr_vb <- if (is.null(gr)) {
-    h_vb <- 1e-3 * sds
-    bias <- 0.5 * h_vb * diag(lap$H)
-    function(x) fd_grad_forward(lp, x, h = h_vb) + bias
-  } else {
-    gr
-  }
 
   # 1b. VB mean correction ---------------------------------------------------
+  # With the user's gradient when there is one; without, from log-posterior
+  # values alone (see vb_correct())
   t0 <- elapsed()
   vbc <- NULL
   if (vb) {
     progress_start(prog, "Applying the VB mean correction")
     vbc <- with_context(
       "applying the VB mean correction",
-      vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
+      vb_correct(lp, gr, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
     )
     # The fallback is a route of the solver, reported but not marked, as in
-    # INLAvaan
+    # INLAvaan. A correction that did not settle is marked.
     vb_max <- max(abs(vbc$shift) / sds)
+    settled <- !any(off_level(vbc$step_sigma, warn_levels$vb_step))
     progress_done(
       prog,
       paste0(
         "VB mean correction, max shift ",
         hl(paste0(format(signif(vb_max, 2)), sd_unit())),
-        if (vbc$fallback) " (fallback optimiser)" else ""
+        if (vbc$fallback) " (fallback optimiser)" else "",
+        if (!settled) ", not settled" else ""
       ),
       elapsed() - t0,
-      ok = is.finite(vb_max) && vb_max <= warn_levels$vb_shift
+      ok = settled && is.finite(vb_max) && vb_max <= warn_levels$vb_shift
     )
     if (prog$detail) {
       report_vb(prog, vbc, sds, lap$logml, calls_since())
@@ -563,7 +567,7 @@ vanilla_fit <- function(
     )
     sn <- cbind(
       mar$sn,
-      scan_end_mass = scan_end_mass(mar$sn, lap$mode, sds)
+      unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
     )
     # The scans, kept for plot(type = "sn_fit"): no further calls
     scan <- list(z = mar$z, logpost = mar$logpost, logC = sn[, "logC"])
@@ -589,9 +593,9 @@ vanilla_fit <- function(
       gamma1 = na,
       nmad = na,
       tails = na,
-      bend = na,
+      ridge_bend = na,
       logC = na,
-      scan_end_mass = na
+      unscanned_mass = na
     )
     rownames(sn) <- parnames
     scan <- NULL
@@ -634,11 +638,12 @@ vanilla_fit <- function(
       vb_shift_sigma = if (vb) shift / sds else na,
       nmad = sn[, "nmad"],
       alpha = if (skew) sn[, "alpha"] else na,
-      scan_end_mass = sn[, "scan_end_mass"],
-      sn_vs_vb = if (vb && skew) (mom$mean - mean_vb) / sds else na,
+      unscanned_mass = sn[, "unscanned_mass"],
+      vb_step_sigma = if (vb) vbc$step_sigma else na,
+      mean_gap = if (vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
-      bend = sn[, "bend"],
+      ridge_bend = sn[, "ridge_bend"],
       row.names = parnames
     )
   )
@@ -652,7 +657,8 @@ vanilla_fit <- function(
       diagnostics$marginals,
       pars = mean_vb
     ),
-    gaussian = !skew
+    gaussian = !skew,
+    has_grad = has_grad
   )
 
   t_total <- elapsed() - t_start

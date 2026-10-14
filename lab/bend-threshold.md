@@ -1,24 +1,39 @@
 # Research: calibrating the scan-path bend threshold
 
-Date: 2026-10-13. Reproduce the calculations with
-`Rscript lab/bend-threshold.R` from the package root.
+Date: 2026-10-13, with the cross-model check of 2026-10-14. Reproduce the
+calculations with `Rscript lab/bend-threshold.R` and
+`Rscript lab/bend-calibration.R` from the package root.
 
-## Recommendation
+The diagnostic was renamed `ridge_bend` on 2026-10-14, after this note was
+written. The note keeps its old name, `bend`. The scripts use the new one.
 
-There is no universal, literature-established cutoff for this diagnostic.
-The existing 0.1 is a reasonable screening heuristic, but not an error bound.
-A principled calibration starts by choosing an accuracy target and a reference
-family. For a 5% relative marginal SD shortfall in the normal-mean/unknown-scale
-reference family derived below, the threshold is **0.13 nats**. This is an
-analytic calibration, not evidence that every marginal with bend below 0.13
-has less than 5% SD error.
+## Decision (2026-10-14)
 
-Do not simply increase the package default to 0.13 on this evidence alone.
-The existing SEM investigation in `lab/DESIGN.md` includes a badly inaccurate
-marginal with bend about 0.11; increasing the cutoff would hide that flag.
-Keep 0.1 as a provisional screening threshold until calibration across the
-intended model families justifies a change. Document its meaning and make the
-accuracy target explicit in any successor diagnostic.
+`summary()` flags `bend` above **0.25 nats**, up from 0.1. The level comes
+from an accuracy target chosen first: a marginal SD about 10% too small. In
+the normal-mean reference family below, a 10% shortfall is a bend of 0.253.
+The cross-model check at the end of this note shows that bend predicts the
+scan-path narrowing well enough for that target to carry over, and that 0.1,
+a 3.8% target, is too tight to separate the marginals that are off from
+those that are not. The flag still certifies nothing: the zero-bend
+counterexample below stands, and the SEM's `logv_x2`, which is badly off for
+another reason, is no longer flagged.
+
+The original recommendation of 2026-10-13, kept for the record:
+
+> There is no universal, literature-established cutoff for this diagnostic.
+> The existing 0.1 is a reasonable screening heuristic, but not an error
+> bound. A principled calibration starts by choosing an accuracy target and
+> a reference family. For a 5% relative marginal SD shortfall in the
+> normal-mean/unknown-scale reference family derived below, the threshold is
+> 0.13 nats. Do not simply increase the package default on this evidence
+> alone: the SEM investigation in `lab/DESIGN.md` includes a badly inaccurate
+> marginal with bend about 0.11, and increasing the cutoff would hide that
+> flag. Keep 0.1 until calibration across the intended model families
+> justifies a change.
+
+The cross-model check is that calibration. The SEM marginal with bend 0.11
+is `logv_x2`, and bend flagged it by chance (see below).
 
 For a diagnostic that directly answers whether marginal uncertainty is
 materially affected, compare SDs and credible limits from the current scan
@@ -27,7 +42,8 @@ Flag a chosen relative SD change (for example, 5%) and separately assess
 credible-limit changes. Even that comparison is sensitivity to a more
 accurate approximation, not a guarantee against unvisited tails or modes.
 
-No production behavior was changed by this research.
+The research of 2026-10-13 changed no package behaviour; the decision above
+did.
 
 ## What the package actually calculates
 
@@ -240,3 +256,61 @@ into the tails or additional modes.
 
 A simple replacement of 0.1 by another constant cannot supply that missing
 validation.
+
+## Cross-model check (2026-10-14)
+
+`lab/bend-calibration.R` compares bend with the error of each skew-normal
+marginal on 51 parameters: 12 small models against a grid over +-8 Laplace
+SDs, and the 39 parameters of the Political Democracy SEM against HMC
+(`lab/sem-hmc.R`). "Predicted" is the normal-family shortfall
+`1 - sqrt(1 - 3 * bend / 4)`; "cover" is the exact mass inside the
+skew-normal 95% interval.
+
+| Model | Parameter | Bend | Predicted | SD short | Cover |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Poisson, n = 8 (interface tests) | slope | 0.139 | 5.3% | 3.3% | 94.1% |
+| Logistic, mtcars (main vignette) | `b0` | 0.144 | 5.5% | 4.5% | 93.7% |
+| Normal mean, n = 30 | `mu` | 0.133 | 5.1% | 5.1% | 93.5% |
+| Normal mean, n = 20 | `mu` | 0.200 | 7.8% | 7.8% | 92.7% |
+| Weibull, n = 15 | `log_scale` | 0.294 | 11.7% | 11.0% | 91.8% |
+| Logistic, n = 30 (simulated) | `b0` | 0.308 | 12.3% | 4.1% | 93.7% |
+| Normal mean, n = 12 | `mu` | 0.333 | 13.4% | 13.4% | 91.1% |
+| Logistic, n = 30 (simulated) | `b2` | 0.346 | 13.9% | 9.1% | 92.4% |
+| Puromycin, n = 12 | `log_Vm`, `log_K` | 0.35 | 14% | 17.8% | 89.7% |
+
+The other small-model parameters have bend below 0.09 and SDs within about
+5% (one of them 5% too wide). On the SEM:
+
+| Parameter | Bend | Predicted | SD short | Cover |
+| --- | ---: | ---: | ---: | ---: |
+| 33 others | 0.015 to 0.094 | under 3.6% | -0.1% to 6.8% | 93.2% to 95.0% |
+| `b` | 0.108 | 4.1% | 6.6% | 93.3% |
+| `logv_x2` | 0.114 | 4.4% | 59.9% | 81.0% |
+| `z_y2_y6` | 0.115 | 4.4% | 3.1% | 94.3% |
+| `z_y4_y8` | 0.127 | 4.9% | 6.7% | 93.6% |
+| `logv_x1` | 0.141 | 5.4% | 6.1% | 93.7% |
+| `logv_dem65` | 0.436 | 18.0% | 53.0% | 81.1% |
+
+Findings:
+
+- **Bend predicts the scan-path narrowing.** The normal-family formula is
+  exact for the normal mean and within about a factor of 1.5 in most other
+  models. It overstates the narrowing in GLMs (most of all for `b0` at
+  n = 30, 12% against 4%) and understates it for Puromycin, where the linear
+  volume correction adds to the error (14% against 18%).
+- **0.1 is too tight to separate anything.** It is a 3.8% target in the
+  reference family. Of the 16 parameters it flags, 4 are under 5% short,
+  including the intercept of the main vignette, whose 95% interval holds
+  93.7% of the exact mass. On the SEM, 4 of its 6 flags are 3% to 7% short,
+  no different from the 33 unflagged parameters (up to 6.8%). For scale, an
+  MCMC run with an effective sample size of 400 estimates an SD only to
+  about 3.5%.
+- **0.25 flags every scan-path narrowing of 10% or more** (Weibull, normal
+  n = 12, Puromycin, `logv_dem65`), with one false alarm under 5% (`b0` at
+  n = 30) and one near miss (`b2` at n = 30, 9.1%).
+- **`logv_x2` was flagged by chance.** It is 60% too narrow because of the
+  boundary tail of a variance near zero, which bend does not measure; its
+  bend of 0.114 sits between `b` (0.108, 6.6% short) and `z_y2_y6` (0.115,
+  3.1% short). At 0.25 no check flags it. The fix is a check aimed at that
+  failure, such as the slope of the scan at its ends against the Gaussian
+  slope (`lab/DESIGN.md`, "Later"), not a bend level kept low to catch it.

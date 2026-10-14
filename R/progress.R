@@ -91,7 +91,7 @@ progress_done <- function(p, text, secs, ok = TRUE) {
 
 # Highlight a value in a progress line.
 hl <- function(x) {
-  cli::col_cyan(x)
+  col_vanilla(x)
 }
 
 # Verbose detail ---------------------------------------------------------------
@@ -100,10 +100,10 @@ hl <- function(x) {
 # only what the fit has already computed, with no further calls of logpost or
 # grad.
 
-# A line of its own, marked with a cyan i.
+# A line of its own, marked with an i in the package's colour.
 progress_info <- function(p, text) {
   if (p$detail) {
-    message(cli::col_cyan(cli::symbol$info), " ", text)
+    message(wrap_detail(paste(col_vanilla(cli::symbol$info), text), 0))
   }
 }
 
@@ -112,9 +112,23 @@ progress_info <- function(p, text) {
 progress_detail <- function(p, lines) {
   if (p$detail) {
     for (line in lines) {
-      message("  ", line)
+      message(wrap_detail(line, 2))
     }
   }
+}
+
+# A line indented by `indent` spaces and wrapped to out_width(), with
+# continuation lines indented two spaces more. A line that fits is left as
+# it is, so the aligned rows of a table keep their spacing.
+wrap_detail <- function(line, indent) {
+  w <- out_width()
+  if (cli::ansi_nchar(line) + indent <= w) {
+    return(paste0(strrep(" ", indent), line))
+  }
+  paste(
+    cli::ansi_strwrap(line, width = w, indent = indent, exdent = indent + 2),
+    collapse = "\n"
+  )
 }
 
 grey <- function(...) {
@@ -177,7 +191,7 @@ report_start <- function(p, init, lp_init, grad_check, calls) {
       ),
       if (grad_check > 1e-3) flag() else "",
       grey(
-        " (warning above 0.001), ",
+        " (warning > 0.001), ",
         format_calls(calls[[1]], calls[[2]])
       )
     )
@@ -240,7 +254,7 @@ report_mode <- function(p, lap, calls) {
       } else {
         ""
       },
-      grey(" (warning above ", with_sd(warn_levels$mode_shift), ")")
+      grey(" (warning > ", with_sd(warn_levels$mode_shift), ")")
     )
   )
   hs <- lap$hessian
@@ -258,7 +272,7 @@ report_mode <- function(p, lap, calls) {
         paste0(
           grey("Jacobian asymmetry ", fmt_num(lap$asymmetry)),
           if (lap$asymmetry > 1e-3) flag() else "",
-          grey(" (warning above 0.001)")
+          grey(" (warning > 0.001)")
         )
       )
     } else {
@@ -302,7 +316,7 @@ report_mode <- function(p, lap, calls) {
         grey("Hessian condition number ", fmt_num(lap$hess_cond)),
         if (off_level(lap$hess_cond, warn_levels$hess_cond)) flag() else "",
         grey(
-          ", in posterior-SD units (warning above ",
+          ", in SD units (warning > ",
           fmt_num(warn_levels$hess_cond),
           ")"
         )
@@ -338,13 +352,23 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   lines <- c(
     lines,
     if (vbc$fallback) {
-      grey(
-        "Fell back to nlminb, as ",
-        h$reason,
-        ": ",
-        h$nlminb,
-        ", after ",
-        plural(vbc$iterations, "iteration")
+      # Where it landed: the step still to go there, marked when the
+      # correction did not settle
+      step_max <- max(vbc$step_sigma)
+      c(
+        grey(
+          "Fell back to nlminb, as ",
+          h$reason,
+          ": ",
+          h$nlminb,
+          ", after ",
+          plural(vbc$iterations, "iteration")
+        ),
+        paste0(
+          grey("One more step would move a mean by ", with_sd(step_max)),
+          if (off_level(step_max, warn_levels$vb_step)) flag() else "",
+          grey(" (warning > ", with_sd(warn_levels$vb_step), ")")
+        )
       )
     } else {
       grey(
@@ -369,7 +393,7 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
       grey(
         ", for ",
         names(vbc$shift)[j],
-        " (warning above ",
+        " (warning > ",
         with_sd(warn_levels$vb_shift),
         ")"
       )
@@ -392,18 +416,18 @@ report_marginals <- function(p, sn, calls) {
   cols <- list(
     Shape = formatC(sn[, "alpha"], digits = 2, format = "f"),
     NMAD = formatC(sn[, "nmad"], digits = 2, format = "g"),
-    Bend = formatC(sn[, "bend"], digits = 2, format = "g"),
+    `Ridge bend` = formatC(sn[, "ridge_bend"], digits = 2, format = "g"),
     Tails = ifelse(sn[, "tails"] == 1, "ok", "heavy"),
-    `End mass` = formatC(sn[, "scan_end_mass"], digits = 2, format = "g"),
+    Unscanned = formatC(sn[, "unscanned_mass"], digits = 2, format = "g"),
     gamma1 = formatC(sn[, "gamma1"], digits = 2, format = "g")
   )
   none <- logical(length(rn))
   flags <- list(
     Shape = none,
     NMAD = off_level(sn[, "nmad"], warn_levels$nmad),
-    Bend = off_level(sn[, "bend"], summary_levels$bend),
+    `Ridge bend` = off_level(sn[, "ridge_bend"], summary_levels$ridge_bend),
     Tails = !sn[, "tails"] %in% 1,
-    `End mass` = off_level(sn[, "scan_end_mass"], warn_levels$scan_end_mass),
+    Unscanned = off_level(sn[, "unscanned_mass"], warn_levels$unscanned_mass),
     gamma1 = none
   )
   rw <- max(nchar(rn))
@@ -451,12 +475,12 @@ report_marginals <- function(p, sn, calls) {
       paste0(
         flag(),
         grey(
-          " marks what summary() flags: NMAD above ",
+          " marks what summary() flags: NMAD > ",
           warn_levels$nmad,
-          ", bend above ",
-          summary_levels$bend,
-          ", heavy tails, scan-end mass above ",
-          warn_levels$scan_end_mass
+          ", ridge bend > ",
+          summary_levels$ridge_bend,
+          ", heavy tails, unscanned mass > ",
+          warn_levels$unscanned_mass
         )
       ),
       grey(format_calls(calls[[1]], calls[[2]]))

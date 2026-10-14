@@ -15,8 +15,14 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-# Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
 [TMB](https://github.com/kaskr/adcomp) (Kristensen et al., 2016) compiles a
@@ -313,9 +319,9 @@ c(
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for finite
-differences. Without it, the VB correction alone would take over 120,000
-evaluations per sweep. A hand-written gradient, as in the Rcpp article, can
-be faster still, but it has to be derived and checked; TMB's needs neither.
+differences. Without it, the fit would take over 20,000 evaluations of the
+objective. A hand-written gradient, as in the Rcpp article, can be faster
+still, but it has to be derived and checked; TMB's needs neither.
 
 ## Results
 
@@ -326,9 +332,9 @@ fit
 
 This agrees with the Rcpp article's fit, which uses the same log-posterior,
 to within about $10^{-4}$ posterior SDs. The two checks flagged by
-`summary()` are the scan-path bend, for several parameters, and the gap
-between the skew-normal and VB means of `logv_dem65`; the
-[Rcpp article](rcpp.html) discusses both.
+`summary()` are the ridge bend and the gap between the skew-normal and
+VB means, both for `logv_dem65`; the [Rcpp article](rcpp.html) discusses
+them.
 
 ```{r}
 #| label: plot

@@ -37,10 +37,10 @@ flagged.
 
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-(\code{sn_vs_vb}) as an internal check (Section 5.1). The mode shift, the
-Hessian condition number and the scan-end mass come from INLAvaan's
-\code{diagnostics()}, not from the paper. \code{tails} and \code{bend} are inlavanilla's
-own.
+(\code{mean_gap}) as an internal check (Section 5.1). The mode shift, the
+Hessian condition number and the unscanned mass come from INLAvaan's
+\code{diagnostics()}, not from the paper. \code{vb_step_sigma}, \code{tails} and
+\code{ridge_bend} are inlavanilla's own.
 }
 \details{
 A posterior SD here is the Laplace SD at the mode,
@@ -78,7 +78,7 @@ Gaussian and its VB-shifted copy,
 the VB term of the log marginal likelihood.
 \item \code{kld_max}, \code{kld_mean}: the largest and the mean \code{kld}.
 \item \code{nmad_max}, \code{nmad_mean}: the largest and the mean \code{nmad}.
-\item \code{scan_end_mass_max}: the largest \code{scan_end_mass}.
+\item \code{unscanned_mass_max}: the largest \code{unscanned_mass}.
 }
 
 and then inlavanilla's own:
@@ -87,8 +87,10 @@ and then inlavanilla's own:
 fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 but flags nothing: the fallback is a route of the solver, not a measure
 of the approximation.
-\item \code{sn_vs_vb_max}: the largest absolute \code{sn_vs_vb}.
-\item \code{bend_max}: the largest \code{bend}.
+\item \code{vb_step_max}: the largest \code{vb_step_sigma}. Like \code{mode_shift_max} it
+should be close to 0.
+\item \code{mean_gap_max}: the largest absolute \code{mean_gap}.
+\item \code{ridge_bend_max}: the largest \code{ridge_bend}.
 \item \code{n_heavy_tails}: the number of parameters whose \code{tails} is \code{FALSE}.
 }
 
@@ -115,11 +117,22 @@ the mode, on the scale of \code{logpost}.
 \item \code{vb_shift_sigma}: the same in posterior SDs.
 \item \code{nmad}: the NMAD of the skew-normal fit.
 \item \code{alpha}: the shape of the fitted skew-normal marginal.
-\item \code{scan_end_mass}: the mass the fitted skew-normal puts beyond the
+\item \code{unscanned_mass}: the mass the fitted skew-normal puts beyond the
 scanned window.
 }
 
-and then inlavanilla's own: \code{sn_vs_vb}, \code{gamma1}, \code{tails} and \code{bend}.
+and then inlavanilla's own:
+\itemize{
+\item \code{vb_step_sigma}: the step still to go at the VB mean, in posterior SDs:
+the fixed-point step there, the Newton step of the VB stationarity
+condition, as \code{mode_shift_sigma} is for the mode. After the fallback
+optimiser it is taken where the optimiser landed. On the fixed-point
+path it is the last step taken, which bounds the next, unless that step
+was 0.1 or more (a \code{vb_tol} above 0.1), when it is taken afresh. It
+should be close to 0 (\code{Inf} where the step is not finite).
+\item \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, which
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} describes.
+}
 
 Some of INLAvaan's diagnostics are left out. \code{nsamp} counts posterior
 draws, which \code{\link[=sampling]{sampling()}} makes on demand rather than during the fit.

@@ -584,21 +584,28 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
       nig$log_sigma$sd
     expect_lt(abs(mode_err), 0.05)
     # Right skew, and the VB mean moves right: observed shift 0.36 SDs, VB
-    # mean error 0.028 SDs against the posterior mean
+    # mean error 0.028 SDs against the posterior mean with the gradient and
+    # 0.036 without
     expect_gt(fit$sn["log_sigma", "alpha"], 1)
     expect_gt(fit$mean_vb[["log_sigma"]], fit$mode[["log_sigma"]])
     expect_lt(abs(err$mean_vb), 0.08)
     # Against the exact VB solution, the VB mean is off only by the error of
-    # the cubature rule: observed 5.2e-5 SDs for log_sigma, 3e-5 (finite
-    # differences) or 5e-9 (gradient) for mu. The VB term of the log marginal
-    # likelihood, 0.5 shift' H shift, is off by 1.9e-5 against the exact
-    # shift and the exact H.
+    # the seven-point rule: observed 2.8e-4 SDs for log_sigma and 5e-9 for
+    # mu with the gradient. Without one, Stein's identity on the same rule is
+    # exact for log-densities of degree four only: observed 9.0e-3 SDs for
+    # log_sigma and 1.2e-6 for mu. The VB term of the log marginal
+    # likelihood, 0.5 shift' H shift, is off by 1.0e-4 and 3.2e-3 against
+    # the exact shift and the exact H.
+    analytic <- !is.null(gr)
     sds <- sqrt(diag(nig$joint_cov))
-    expect_lt(max(abs(fit$mean_vb - nig$vb_mean) / sds), 2e-4)
+    expect_lt(
+      max(abs(fit$mean_vb - nig$vb_mean) / sds),
+      if (analytic) 8e-4 else 0.025
+    )
     shift <- nig$vb_mean - nig$joint_mode
     expect_lt(
       abs(fit$logml - fit$logml_laplace - 0.5 * sum(shift^2 / sds^2)),
-      6e-5
+      if (analytic) 3e-4 else 0.01
     )
 
     # mu: a Student-t with 2 an = 14 degrees of freedom, symmetric about mn.
@@ -636,8 +643,8 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
     expect_lt(max(abs(err$quantile_sn)), 0.35)
     expect_lt(max(abs(err$quantile_sn[3:5])), 0.08)
 
-    # Log marginal likelihood: observed error 0.0011 with the VB term,
-    # -0.063 for plain Laplace
+    # Log marginal likelihood: observed error 0.0010 with the VB term (and
+    # -0.0021 without a gradient), -0.063 for plain Laplace
     expect_lt(abs(fit$logml - nig$logml), 0.003)
     expect_lt(
       abs(fit$logml - nig$logml),
@@ -756,7 +763,7 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   expect_lt(abs(err$sd_sn), 1e-3)
   expect_lt(abs(err$sd_sn), abs(err$sd_laplace))
   # Left skew, and the VB mean moves left: observed shift -0.44 SDs, VB mean
-  # error 0.066 SDs
+  # error 0.068 SDs
   expect_lt(fit$sn["z", "alpha"], -1)
   expect_lt(fit$mean_vb[["z"]], fit$mode[["z"]])
   expect_lt(abs(err$mean_vb), 0.15)
@@ -795,7 +802,7 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   }
 
   # Log marginal likelihood, the log integral of p(y, z): observed error
-  # -0.0013 with the VB term, -0.098 for plain Laplace
+  # -0.0023 with the VB term, -0.098 for plain Laplace
   logml <- bvn_ref_z$log_norm
   expect_lt(abs(fit$logml - logml), 0.004)
   expect_lt(abs(fit$logml - logml), abs(fit$logml_laplace - logml))
@@ -925,8 +932,9 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
     expect_lt(abs(err_scale$sd_sn), 0.13)
     expect_lt(abs(err_scale$sd_sn), abs(err_scale$sd_laplace))
 
-    # The VB means, against the reference means: observed errors 0.020 SDs
-    # (log_shape, moved by -0.34 SDs from the mode) and 0.004 SDs (log_scale)
+    # The VB means, against the reference means: observed errors 0.021 SDs
+    # with the gradient and 0.034 without (log_shape, moved by -0.34 SDs from
+    # the mode), and 0.005 and 0.013 SDs (log_scale)
     expect_lt(abs(err_shape$mean_vb), 0.05)
     expect_lt(abs(err_scale$mean_vb), 0.05)
 
@@ -942,8 +950,8 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
       0.5 * avg(c(err_shape$quantile_laplace, err_scale$quantile_laplace))
     )
 
-    # Log marginal likelihood: observed error 0.0030 with the VB term, -0.063
-    # for plain Laplace
+    # Log marginal likelihood: observed error 0.0023 with the VB term and the
+    # gradient, -0.0037 without the gradient, -0.063 for plain Laplace
     expect_lt(abs(fit$logml - ref$logml), 0.01)
     expect_lt(abs(fit$logml - ref$logml), abs(fit$logml_laplace - ref$logml))
   }
@@ -977,7 +985,7 @@ expect_same_marginals <- function(fit1, fit2, tol_laplace, tol_sn) {
   d1 <- summary(fit1)$diagnostics
   d2 <- summary(fit2)$diagnostics[pars, ]
   expect_lt(max(abs(d2$vb_shift_sigma - d1$vb_shift_sigma)), tol_laplace)
-  expect_lt(max(abs(d2$sn_vs_vb - d1$sn_vs_vb)), tol_sn)
+  expect_lt(max(abs(d2$mean_gap - d1$mean_gap)), tol_sn)
 }
 
 test_that("permuting the parameters permutes the marginals (finite differences)", {

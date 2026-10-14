@@ -48,8 +48,8 @@ gr_pois <- function(theta, y, a0, b0) {
 
 # A Poisson regression with fixed data: two correlated (r = -0.56), skewed
 # parameters, so that every diagnostic in summary() is well away from
-# rounding noise (the slope's scan-path bend is flagged, at 0.14). The fit is
-# deterministic. Used for the printed output and the plots.
+# rounding noise (the slope's ridge bend is 0.14, below its flag level).
+# The fit is deterministic. Used for the printed output and the plots.
 reg_x <- c(-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75)
 reg_y <- c(1, 0, 2, 1, 3, 4, 2, 6)
 lp_reg <- function(theta) {
@@ -78,12 +78,21 @@ scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
-  x <- gsub(
-    "Newton step [-+0-9.e]+ posterior SDs",
-    "Newton step <g> posterior SDs",
-    x
-  )
+  x <- gsub("Newton step [-+0-9.e]+ SD", "Newton step <g> SD", x)
   x
+}
+
+# Output is wrapped to 80 columns, with each continuation line indented.
+# unwrap() joins the continuation lines back, so that a test can match a
+# sentence wherever it was wrapped.
+unwrap <- function(x) {
+  gsub("\n {2,}", " ", x)
+}
+
+# Each message of verbose = TRUE is one line of output, so a newline inside
+# one comes from wrapping. Joins the messages into one text, a line each.
+unwrap_msgs <- function(msgs) {
+  paste0(gsub("\n +", " ", sub("\n$", "", msgs)), "\n", collapse = "")
 }
 
 # For the detail lines of verbose = TRUE, which show many more numbers, some
@@ -94,6 +103,11 @@ scrub_output <- function(x) {
 # of VB steps and whether Anderson acceleration was used), and the runs of
 # spaces that align the numbers in the table of marginals.
 scrub_numbers <- function(x) {
+  # Wrapped detail lines are joined first (their continuation lines are
+  # indented four spaces), because where a line wraps depends on the widths
+  # of its numbers. A test below checks that every line fits in 80 columns.
+  x <- paste(x, collapse = "\n")
+  x <- strsplit(gsub("\n    (?=\\S)", " ", x, perl = TRUE), "\n")[[1]]
   x <- scrub_output(x)
   x <- gsub("nlminb: .*, after", "nlminb: <message>, after", x)
   x <- gsub(
@@ -109,7 +123,7 @@ scrub_numbers <- function(x) {
     x
   )
   x <- gsub(
-    "(?<![A-Za-z0-9_.])(?<!above )-?([0-9]+\\.[0-9]+(e[-+]?[0-9]+)?|[0-9]+e[-+]?[0-9]+)",
+    "(?<![A-Za-z0-9_.])(?<!> )-?([0-9]+\\.[0-9]+(e[-+]?[0-9]+)?|[0-9]+e[-+]?[0-9]+)",
     "#",
     x,
     perl = TRUE
@@ -609,7 +623,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
     "while fitting the skew-normal marginals",
     class = "inlavanilla_error"
   )
-  msg <- conditionMessage(err)
+  msg <- unwrap(conditionMessage(err))
   # The value reported is one where logpost fails
   at <- regmatches(
     msg,
@@ -1031,8 +1045,8 @@ test_that("a one-parameter model works end to end", {
   # No Hessian condition number with one parameter: it is always 1
   expect_no_match(out, "Hessian condition")
   expect_match(capture_output(print(summary(fit_reg))), "Hessian condition")
-  # No scan-path bend with one parameter
-  expect_identical(summary(fit)$diagnostics$bend, 0)
+  # No ridge bend with one parameter
+  expect_identical(summary(fit)$diagnostics$ridge_bend, 0)
 
   calls <- record_plot(plot(fit))
   expect_true("theta[1]" %in% plot_strings(calls))
@@ -1124,7 +1138,7 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
     ),
     class = "inlavanilla_diagnostics_warning"
   )
-  text <- cli::ansi_strip(conditionMessage(w))
+  text <- unwrap(cli::ansi_strip(conditionMessage(w)))
   expect_match(
     text,
     "x The gradient at the posterior mode is not zero \\(max \\|grad\\| = [0-9.]+\\): a Newton step"
@@ -1273,7 +1287,7 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_match(msgs[!is_stage], "^(  |i )")
   expect_gt(sum(!is_stage), 15)
 
-  text <- paste(msgs, collapse = "")
+  text <- unwrap_msgs(msgs)
   for (pattern in c(
     "i 2 parameters: intercept and slope",
     "Derivatives by finite differences of logpost",
@@ -1286,7 +1300,7 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
     "Fixed-point steps, largest over the parameters \\(SD\\): ",
     "KL term [0-9.e-]+, giving a log marginal likelihood of -?[0-9.]+",
     "Largest shift -0.2[0-9]* SD, for intercept",
-    "Shape +NMAD +Bend +Tails +End mass +gamma1",
+    "Shape +NMAD +Ridge bend +Tails +Unscanned +gamma1",
     "marks what summary\\(\\) flags",
     "i Done: [0-9]+ logpost calls in [0-9.]+m?s"
   )) {
@@ -1307,11 +1321,10 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
       format(round(fit$logml, 2), nsmall = 2)
     )
   )
-  # The slope's bend is flagged, as in summary(), and nothing else
+  # Nothing is flagged, as in summary()
   rows <- grep("^  (intercept|slope) ", msgs, value = TRUE)
   expect_length(rows, 2)
-  expect_match(rows[[2]], "^  slope .*[0-9]!")
-  expect_no_match(rows[[1]], "!")
+  expect_no_match(rows, "!")
   # The calls of the stages add up to the total
   per_stage <- as.integer(sub(
     "^  ([0-9]+) logpost calls\n$",
@@ -1323,18 +1336,15 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_match(text, paste("Done:", fit$counts[["logpost"]], "logpost calls"))
 
   # With a gradient: its check at init and the asymmetry of its Jacobian
-  text <- paste(
-    capture_messages(
-      inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
-    ),
-    collapse = ""
-  )
+  text <- unwrap_msgs(capture_messages(
+    inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
+  ))
   expect_match(
     text,
-    "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning above 0.001\\), [0-9]+ logpost calls"
+    "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning > 0.001\\), [0-9]+ logpost calls"
   )
   expect_match(text, "Hessian by central differences of grad: 4 calls")
-  expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning above 0.001\\)")
+  expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning > 0.001\\)")
   expect_match(text, "Done: [0-9]+ logpost and [0-9]+ grad calls")
 
   # Without VB or scans, it says so
@@ -1367,6 +1377,83 @@ test_that("verbose output keeps its layout", {
   )
 })
 
+test_that("printed output fits in 80 columns, however wide the console", {
+  testthat::local_reproducible_output(width = 200)
+  lines <- function(x) unlist(strsplit(x, "\n"))
+  widest <- function(x) max(cli::ansi_nchar(lines(x)))
+  out <- capture_output(print(fit_reg), width = 200)
+  expect_lte(widest(out), 80)
+  # The rule spans the 80 columns
+  expect_identical(cli::ansi_nchar(lines(out)[1]), 80L)
+  expect_lte(
+    widest(capture_output(print(summary(fit_reg)), width = 200)),
+    80
+  )
+  msgs <- capture_messages(
+    inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
+  )
+  expect_lte(widest(msgs), 80)
+  # The bullets of the fit-time warning are wrapped too
+  w <- expect_warning(
+    suppressMessages(inla_vanilla(
+      lp_pois,
+      3,
+      y = pois_y,
+      a0 = pois_a0,
+      b0 = pois_b0,
+      control = list(nlminb = list(iter.max = 1))
+    )),
+    class = "inlavanilla_diagnostics_warning"
+  )
+  expect_lte(widest(conditionMessage(w)), 80)
+  expect_gt(length(lines(conditionMessage(w))), 10)
+
+  # A narrower console narrows everything
+  expect_lte(
+    widest(capture_output(print(summary(fit_reg)), width = 60)),
+    60
+  )
+})
+
+test_that("a VB correction that does not settle is flagged from end to end", {
+  # Without a gradient the fallback minimises the rule's mean of logpost with
+  # Stein's identity as its gradient. On a log-posterior of degree six the
+  # two disagree, and nlminb() stops short. Observed: a step of 0.14 SDs
+  # still to go.
+  lp_x6 <- function(theta) -theta[[1]]^6 - 0.5 * theta[[1]]^2 + theta[[1]]
+  w <- expect_warning(
+    msgs <- capture_messages(fit <- inla_vanilla(lp_x6, c(t = 0.3))),
+    class = "inlavanilla_diagnostics_warning"
+  )
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_gt(fit$diagnostics$marginals$vb_step_sigma, 0.1)
+  expect_match(
+    unwrap(cli::ansi_strip(conditionMessage(w))),
+    "x The VB correction did not settle: one more step would move `t` by"
+  )
+  expect_match(fit$warnings, "The VB correction did not settle")
+  # The fit has no gradient, so the hint names one as the remedy
+  expect_match(fit$warnings, "Without a gradient the VB mean is approximate")
+  # The stage line is marked, and says so
+  expect_match(
+    msgs,
+    "^! VB mean correction, max shift .*, not settled",
+    all = FALSE
+  )
+  expect_match(
+    capture_output(print(fit)),
+    "\\| Not converged: VB did not settle \\("
+  )
+  # The verbose report marks the step where the fallback landed
+  text <- unwrap_msgs(capture_messages(suppressWarnings(
+    inla_vanilla(lp_x6, c(t = 0.3), verbose = TRUE)
+  )))
+  expect_match(
+    text,
+    "One more step would move a mean by [0-9.]+ SD! \\(warning > 0.1 SD\\)"
+  )
+})
+
 test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   # The unreached mode of the test above: nlminb() is restarted with the
   # parameters rescaled, the VB correction falls back to nlminb(), and the
@@ -1380,21 +1467,22 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     control = list(nlminb = list(iter.max = 1)),
     verbose = TRUE
   )))
-  text <- paste(msgs, collapse = "")
+  text <- unwrap_msgs(msgs)
   expect_match(text, "Restarted nlminb with each parameter scaled")
   expect_match(
     text,
-    "whitened gradient [0-9.e-]+ SD, Newton step [0-9.e-]+ SD! \\(warning above"
+    "whitened gradient [0-9.e-]+ SD, Newton step [0-9.e-]+ SD! \\(warning >"
   )
   expect_match(
     text,
     "\n *Fell back to nlminb, as a step was over 1 posterior SD"
   )
+  expect_match(text, "\n *One more step would move a mean by [0-9.e-]+ SD")
   expect_no_match(text, "! Fell back")
   # The VB shift and the scan-end mass are marked where they are shown
   expect_match(
     text,
-    "Largest shift -?[0-9.]+ SD!, for theta\\[1\\] \\(warning above 1 SD\\)"
+    "Largest shift -?[0-9.]+ SD!, for theta\\[1\\] \\(warning > 1 SD\\)"
   )
   expect_match(text, "heavy! +0\\.9[0-9]*! +")
   expect_match(text, "heavy!")
@@ -1425,17 +1513,17 @@ test_that("verbose = TRUE marks each value that summary() flags, and only those"
   ))
   expect_match(
     paste(msgs, collapse = ""),
-    "Hessian condition number [0-9.e+]+!, in posterior-SD units"
+    "Hessian condition number [0-9.e+]+!, in SD units"
   )
 
-  # A healthy fit: no marks except the bend of the slope, which summary()
-  # also flags
+  # A healthy fit: no marks. The slope's ridge bend, 0.14, is below its
+  # level.
   msgs <- capture_messages(inla_vanilla(lp_reg, init_reg, verbose = TRUE))
   text <- paste(msgs, collapse = "")
-  expect_match(text, "Hessian condition number [0-9.]+, in posterior-SD")
+  expect_match(text, "Hessian condition number [0-9.]+, in SD units")
   expect_match(text, "Largest shift -?[0-9.]+ SD, for intercept")
   marked <- regmatches(text, gregexpr("[^ \n]+!", text))[[1]]
-  expect_identical(marked, "0.14!")
+  expect_identical(marked, character())
 })
 
 test_that("silent = TRUE prints nothing at all", {
@@ -1598,9 +1686,14 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   out <- capture_output(res <- withVisible(print(fit_reg)))
   expect_false(res$visible)
   expect_identical(res$value, fit_reg)
-  # The rule names the approximation, not the time it took
+  # The rule names the approximation, not the time it took, which the
+  # headline under it gives, with the log marginal likelihood
   expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ VB --\n")
-  expect_no_match(out, "[0-9](ms|s)\\b|parameters")
+  expect_no_match(strsplit(out, "\n")[[1]][1], "[0-9](ms|s)\\b|parameters")
+  expect_match(
+    out,
+    "--\n\nLog marginal likelihood: [-0-9.]+ \\| Converged in [0-9]+ iterations? \\([0-9.]+m?s\\)\n\n"
+  )
   # The log marginal likelihood shown is fit$logml, to 2 decimals
   expect_match(out, format(round(fit_reg$logml, 2), nsmall = 2), fixed = TRUE)
 
@@ -1615,10 +1708,67 @@ test_that("print() shows the summary table and returns the fit invisibly", {
 test_that("print() points to the fit's warnings and to flagged checks", {
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
   # A Gaussian posterior: no warnings and no flags, so the output ends with
-  # the log marginal likelihood
+  # the table
   fit_ok <- inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), silent = TRUE)
   out <- capture_output(print(fit_ok))
-  expect_match(out, "Log marginal likelihood: [-0-9.]+$")
+  expect_match(
+    out,
+    "Log marginal likelihood: [-0-9.]+ \\| Converged in [0-9]+ iterations? \\([0-9.]+m?s\\)\n"
+  )
+  expect_match(out, "\nb +[-0-9. ]+$")
+
+  # Converged means both checks pass: the mode check, and the VB
+  # correction's settling
+  fit <- fit_ok
+  fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
+  out <- capture_output(print(fit))
+  expect_match(
+    out,
+    "\\| Not converged after [0-9]+ iterations? \\([0-9.]+m?s\\)\n"
+  )
+  expect_no_match(out, "Converged")
+  fit <- fit_ok
+  fit$diagnostics$marginals$vb_step_sigma[2] <- 0.5
+  out <- capture_output(print(fit))
+  expect_match(
+    out,
+    "\\| Not converged: VB did not settle \\([0-9.]+m?s\\)\n"
+  )
+  # With vb = FALSE only the mode check counts
+  fit$diagnostics$marginals$vb_step_sigma[2] <- NA
+  fit$diagnostics$vb <- NULL
+  expect_match(capture_output(print(fit)), "\\| Converged in")
+  # Too narrow for one line, the headline takes two, and wraps further on a
+  # console narrower still
+  out <- capture_output(print(fit_ok), width = 50)
+  expect_match(
+    out,
+    "\nLog marginal likelihood: [-0-9.]+\nConverged in [0-9]+ iterations?"
+  )
+  fit <- fit_ok
+  fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
+  out <- capture_output(print(fit), width = 30)
+  expect_lte(max(nchar(strsplit(out, "\n")[[1]])), 30)
+  expect_match(unwrap(out), "\nNot converged after [0-9]+ iterations?")
+
+  # summary() opens with the same headline, with the mode check first
+  headline <- function(f) {
+    strsplit(capture_output(print(summary(f))), "\n")[[1]][3]
+  }
+  expect_match(headline(fit_ok), "\\| Converged in [0-9]+ iterations? \\(")
+  fit <- fit_ok
+  fit$diagnostics$marginals$vb_step_sigma[2] <- 0.5
+  expect_match(headline(fit), "\\| Not converged: VB did not settle \\(")
+  fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
+  expect_match(headline(fit), "\\| Not converged after [0-9]+ iterations? \\(")
+
+  # In UTF-8 the separator is a middle dot
+  testthat::local_reproducible_output(width = 80, unicode = TRUE)
+  expect_match(
+    capture_output(print(fit_ok)),
+    "Log marginal likelihood: [-0-9.]+ \u00b7 Converged in"
+  )
+  testthat::local_reproducible_output(width = 80, unicode = FALSE)
 
   fit <- fit_ok
   fit$warnings <- c("first", "second")
@@ -1650,6 +1800,10 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
       f
     },
+    vb_step = function(f) {
+      f$diagnostics$marginals$vb_step_sigma[2] <- 0.4
+      f
+    },
     hess_cond = function(f) {
       f$diagnostics$optim$hess_cond <- 1e9
       f
@@ -1662,20 +1816,20 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$nmad[2] <- 0.2
       f
     },
-    scan_end_mass = function(f) {
-      f$diagnostics$marginals$scan_end_mass[1] <- 0.3
+    unscanned_mass = function(f) {
+      f$diagnostics$marginals$unscanned_mass[1] <- 0.3
       f
     },
     tails = function(f) {
       f$diagnostics$marginals$tails[2] <- FALSE
       f
     },
-    bend = function(f) {
-      f$diagnostics$marginals$bend[1] <- 0.5
+    ridge_bend = function(f) {
+      f$diagnostics$marginals$ridge_bend[1] <- 0.5
       f
     },
-    sn_vs_vb = function(f) {
-      f$diagnostics$marginals$sn_vs_vb[2] <- -0.3
+    mean_gap = function(f) {
+      f$diagnostics$marginals$mean_gap[2] <- -0.3
       f
     }
   )
@@ -1689,7 +1843,7 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     expect_identical(n_counted(fit), 1L, label = check)
     expect_identical(n_flag_lines(fit), 1L, label = check)
   }
-  out <- capture_output(print(trip$bend(fit_ok)))
+  out <- capture_output(print(trip$ridge_bend(fit_ok)))
   expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
   expect_no_match(out, "warning")
   fit <- fit_ok
@@ -1697,16 +1851,25 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     fit <- f(fit)
   }
   out <- capture_output(print(fit))
-  expect_match(out, "! 8 checks flagged by `summary()`.", fixed = TRUE)
-  expect_identical(n_flag_lines(fit), 8L)
+  expect_match(out, "! 9 checks flagged by `summary()`.", fixed = TRUE)
+  expect_identical(n_flag_lines(fit), 9L)
 
-  # The small Poisson regression: summary() flags the bend of the slope,
-  # with or without VB; there is no SN-VB gap to flag without VB
-  out <- capture_output(print(fit_reg))
+  # A normal mean with an unknown SD from 12 observations: summary() flags
+  # the ridge bend of the mean alone (4 / 12 nats), and nothing in the small
+  # Poisson regression, whose largest ridge bend is 0.14
+  y12 <- c(9.6, 11.2, 8.1, 10.4, 12.9, 9.9, 7.4, 10.8, 11.6, 9.0, 10.1, 12.2)
+  lp_mean <- function(theta) {
+    sum(dnorm(y12, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE))
+  }
+  fit <- inla_vanilla(lp_mean, c(mu = 10, log_sigma = 0), silent = TRUE)
+  expect_identical(names(which(check_flags(fit_dg(fit), FALSE))), "ridge_bend")
+  out <- capture_output(print(fit))
   expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
-  expect_identical(n_flag_lines(fit_reg), 1L)
-  expect_identical(n_counted(fit_reg_novb), 1L)
-  expect_identical(n_flag_lines(fit_reg_novb), 1L)
+  expect_identical(n_flag_lines(fit), 1L)
+  expect_no_match(capture_output(print(fit_reg)), "flagged")
+  expect_identical(n_flag_lines(fit_reg), 0L)
+  expect_identical(n_counted(fit_reg_novb), 0L)
+  expect_identical(n_flag_lines(fit_reg_novb), 0L)
   # Gaussian marginals have no scans, so nothing to flag here
   fit_n <- inla_vanilla(lp_reg, init_reg, marginals = "gaussian", silent = TRUE)
   expect_identical(n_counted(fit_n), 0L)
@@ -1796,7 +1959,8 @@ test_that("print(summary()) fits the console width", {
   }
   expect_gt(sum(grepl("^intercept ", out)), 2)
   # A status line wraps with a hanging indent
-  i <- grep("^! The straight scan", out)
+  i <- grep("^v Mode found", out)
+  expect_length(i, 1)
   expect_match(out[i + 1], "^  [^ ]")
 })
 
@@ -1854,11 +2018,12 @@ test_that("summary() returns the table and the diagnostics", {
       "vb_shift_sigma",
       "nmad",
       "alpha",
-      "scan_end_mass",
-      "sn_vs_vb",
+      "unscanned_mass",
+      "vb_step_sigma",
+      "mean_gap",
       "gamma1",
       "tails",
-      "bend"
+      "ridge_bend"
     )
   )
   expect_identical(rownames(s$diagnostics), names(init_reg))
@@ -1873,7 +2038,7 @@ test_that("summary() returns the table and the diagnostics", {
     unname((fit_reg$mean_vb - fit_reg$mode) / sds)
   )
   expect_equal(
-    s$diagnostics$sn_vs_vb,
+    s$diagnostics$mean_gap,
     unname((fit_reg$summary[, "Mean"] - fit_reg$mean_vb) / sds)
   )
   expect_equal(s$diagnostics$alpha, unname(fit_reg$sn[, "alpha"]))
@@ -1884,9 +2049,11 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   # freeze is right, against a 201 x 201 grid over +-7 Laplace SDs. Observed:
   # skew-normal means 0.0022 and 0.0059 SDs off (Laplace 0.23 and 0.084),
   # the intercept's SD 0.37% too large, and the slope's SD 3.3% too small:
-  # the small-n narrowing of the straight scan path, which the bend
-  # diagnostic flags for the slope alone (0.14, against 0.037 for the
-  # intercept). The log marginal likelihood is 0.017 too large.
+  # the small-n narrowing of the straight scan path, which the ridge
+  # bend measures for the slope (0.14, against 0.037 for the intercept).
+  # That is below the flag level, and below the 5.3% that the ridge bend
+  # predicts through the normal-mean formula, which overstates the
+  # narrowing in this GLM. The log marginal likelihood is 0.017 too large.
   sds <- sqrt(diag(fit_reg$cov))
   ga <- fit_reg$mode[["intercept"]] + seq(-7, 7, length.out = 201) * sds[[1]]
   gb <- fit_reg$mode[["slope"]] + seq(-7, 7, length.out = 201) * sds[[2]]
@@ -1913,8 +2080,10 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   expect_lt(abs(sd_ratio[["intercept"]] - 1), 0.01)
   expect_gt(sd_ratio[["slope"]], 0.94)
   expect_lt(sd_ratio[["slope"]], 1)
-  bend <- summary(fit_reg)$diagnostics$bend
-  expect_identical(bend > 0.1, c(FALSE, TRUE))
+  bend <- summary(fit_reg)$diagnostics$ridge_bend
+  expect_gt(bend[[2]], 3 * bend[[1]])
+  expect_true(all(bend < summary_levels$ridge_bend))
+  expect_lt(1 - sd_ratio[["slope"]], 1 - sqrt(1 - 0.75 * bend[[2]]))
   expect_lt(abs(fit_reg$logml - exact_logml), 0.035)
 })
 
@@ -1976,12 +2145,45 @@ test_that("summary() with no probabilities gives a table without quantiles", {
   expect_output(print(res), "Posterior marginals")
 })
 
+test_that("the diagnostics table formats numbers as a tibble prints them", {
+  # The expected cells are what tibble 3.3 prints with pillar.sigfig = 2:
+  # decimal points lined up, a trailing zero kept only where it is
+  # significant, and a point left on a number rounded to a whole one
+  cells <- function(x) format_sigfig(x, sigfig = 2)$plain
+  expect_identical(cells(c(-0.0017, 0.38)), c("-0.0017", " 0.38  "))
+  expect_identical(cells(c(4.5e-05, 0.011)), c("0.000045", "0.011   "))
+  expect_identical(cells(c(0.33, 1e-05)), c("0.33   ", "0.00001"))
+  expect_identical(cells(c(123.456, 1.5)), c("123. ", "  1.5"))
+  expect_identical(cells(c(0.3001, 9.99)), c(" 0.30", "10.0 "))
+  expect_identical(cells(c(0, 2)), c("0", "2"))
+  expect_identical(cells(c(NA, Inf, -Inf)), c("  NA", " Inf", "-Inf"))
+  # A column too wide for fixed notation goes scientific
+  expect_identical(cells(c(1e-14, 2)), c("1e-14", "  2e0"))
+
+  # Leading zeros are grey; a flagged cell is red, and keeps its width
+  local_reproducible_output(crayon = TRUE)
+  styled <- format_sigfig(c(0.0017, 12345), sigfig = 2)$styled
+  expect_identical(cli::ansi_strip(styled), c("    0.0017", "12345     "))
+  expect_match(styled[1], cli::col_grey("0.00"), fixed = TRUE)
+  expect_match(styled[2], cli::col_grey("345"), fixed = TRUE)
+  tab <- matrix(c(0.33, 0.01), 2, dimnames = list(c("a", "b"), "Ridge bend"))
+  out <- capture_output(
+    cat_table(tab, digits = 2, flag = matrix(c(TRUE, FALSE), 2))
+  )
+  expect_match(out, cli::col_red("0.33"), fixed = TRUE)
+  expect_identical(
+    cli::ansi_strip(strsplit(out, "\n")[[1]]),
+    c("   Ridge bend", "a        0.33", "b        0.01")
+  )
+})
+
 test_that("summary() flags each diagnostic at its documented level", {
   # The levels documented in ?summary.inla_vanilla, those of the fit-time
-  # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
-  # number 1e8, the VB shift 1 SD, NMAD 0.1, the scan-end mass 0.05 and
-  # tails; and, flagged by summary() alone, the bend 0.1 nats and the SN - VB
-  # gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
+  # warning: the Newton step at the mode 0.1 SDs, the step still to go at
+  # the VB mean 0.1 SDs, the Hessian condition number 1e8, the VB shift 1
+  # SD, NMAD 0.1, the unscanned mass 0.05 and tails; and, flagged by
+  # summary() alone, the ridge bend 0.25 nats and the
+  # mean gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
   # nothing may be flagged, and then 2% above it, where each must be, with
   # the warning's sentence where it has one.
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
@@ -1989,10 +2191,11 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$optim$hess_cond <- 0.98e8
   below$diagnostics$mode_shift_sigma <- c(0.098, 0.098)
   below$diagnostics$vb_shift_sigma <- c(0.98, -0.98)
-  below$diagnostics$bend <- c(0.098, 0.098)
+  below$diagnostics$ridge_bend <- c(0.245, 0.245)
   below$diagnostics$nmad <- c(0.098, 0.098)
-  below$diagnostics$scan_end_mass <- c(0.049, 0.049)
-  below$diagnostics$sn_vs_vb <- c(0.098, -0.098)
+  below$diagnostics$unscanned_mass <- c(0.049, 0.049)
+  below$diagnostics$mean_gap <- c(0.098, -0.098)
+  below$diagnostics$vb_step_sigma <- c(0.098, 0.098)
   below$diagnostics$tails <- c(TRUE, TRUE)
   below$vb$fallback <- FALSE
   # Fixed, so the lines do not depend on the optimiser's path
@@ -2000,18 +2203,17 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$optim$iterations <- 9L
   below$vb$iterations <- 3L
   flagged <- function(s) {
-    lines <- strsplit(capture_output(print(s), width = 200), "\n")[[1]]
+    lines <- strsplit(unwrap(capture_output(print(s))), "\n")[[1]]
     grep("^! ", lines, value = TRUE)
   }
 
   expect_length(flagged(below), 0)
-  out <- capture_output(print(below))
+  out <- unwrap(capture_output(print(below)))
   for (line in c(
-    "v Mode found in 9 iterations (Newton step 0.098 posterior SDs).",
-    "v Hessian condition number 9.8e+07, in posterior-SD units.",
-    "v VB correction in 3 iterations: max shift 0.98 posterior SDs.",
-    "v Skew-normal fits: max NMAD 0.098.",
-    "v Skew-normal and VB means agree to within 0.098 posterior SDs."
+    "v Mode found in 9 iterations (Newton step 0.098 SD).",
+    "v Hessian condition number 9.8e+07, in SD units.",
+    "v VB correction settled in 3 iterations: max shift 0.98 SD.",
+    "v Skew-normal fits: max NMAD 0.098, unscanned mass 0.049, ridge bend 0.24, mean gap 0.098 SD."
   )) {
     expect_match(out, line, fixed = TRUE)
   }
@@ -2020,22 +2222,24 @@ test_that("summary() flags each diagnostic at its documented level", {
   above$optim$hess_cond <- 1.02e8
   above$diagnostics$mode_shift_sigma <- c(0.098, 0.102)
   above$diagnostics$vb_shift_sigma <- c(0.98, -1.02)
-  above$diagnostics$bend <- c(0.098, 0.102)
+  above$diagnostics$ridge_bend <- c(0.245, 0.255)
   above$diagnostics$nmad <- c(0.098, 0.102)
-  above$diagnostics$scan_end_mass <- c(0.049, 0.051)
-  above$diagnostics$sn_vs_vb <- c(0.098, -0.102)
+  above$diagnostics$unscanned_mass <- c(0.049, 0.051)
+  above$diagnostics$mean_gap <- c(0.098, -0.102)
+  above$diagnostics$vb_step_sigma <- c(0.098, 0.102)
   above$diagnostics$tails <- c(TRUE, FALSE)
   expect_identical(
     flagged(above),
     c(
-      "! Mode search stopped short (\"relative convergence (4)\"): the Newton step is more than 0.1 posterior SDs for `slope` (0.10).",
+      "! Mode search stopped short (\"relative convergence (4)\"): Newton step > 0.1 SD for `slope` (0.10).",
       "! The Hessian at the mode is near-singular (condition number = 1.02e+08); some parameters may be weakly identified.",
-      "! VB correction in 3 iterations: the shift is more than 1 posterior SD for `slope` (1.02).",
+      "! VB correction did not settle in 3 iterations: step > 0.1 SD for `slope` (0.10).",
+      "! VB correction in 3 iterations: shift > 1 SD for `slope` (1.02).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.10).",
-      "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 posterior SDs either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
-      "! Heavy tails for `slope`: the density is still over 5% of its peak at the ends of the scanned window (4 posterior SDs either side of the mode), and the skew-normal extrapolates beyond it.",
-      "! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope` (0.10): the marginal may be too narrow.",
-      "! Skew-normal and VB means differ by more than 0.1 posterior SDs for `slope` (0.10)."
+      "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 SD either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
+      "! Heavy tails for `slope`: the density is still over 5% of its peak at the ends of the scanned window (4 SD either side of the mode), and the skew-normal extrapolates beyond it.",
+      "! Ridge bend > 0.25 for `slope` (0.26): the marginal SD may be >10% too small.",
+      "! Mean gap > 0.1 SD for `slope` (0.10): the posterior is far from Gaussian there, and either mean may be off."
     )
   )
 
@@ -2047,9 +2251,23 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_identical(
     flagged(both),
     c(
-      "! VB correction in 3 iterations: the shift is more than 1 posterior SD for `intercept` (1.50), `slope` (1.20).",
+      "! VB correction in 3 iterations: shift > 1 SD for `intercept` (1.50), `slope` (1.20).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.25), `intercept` (0.12)."
     )
+  )
+
+  # The VB step alone, after the fallback: its own line, which names the
+  # fallback, and no line saying the correction settled
+  unsettled <- below
+  unsettled$vb$fallback <- TRUE
+  unsettled$diagnostics$vb_step_sigma <- c(0.098, 0.3)
+  expect_identical(
+    flagged(unsettled),
+    "! VB correction did not settle in 3 iterations (via the fallback optimiser): step > 0.1 SD for `slope` (0.30)."
+  )
+  expect_no_match(
+    unwrap(capture_output(print(unsettled))),
+    "VB correction settled"
   )
 
   # The fallback optimiser is reported but not flagged, as in INLAvaan
@@ -2057,13 +2275,13 @@ test_that("summary() flags each diagnostic at its documented level", {
   fallback$vb$fallback <- TRUE
   expect_length(flagged(fallback), 0)
   expect_match(
-    capture_output(print(fallback), width = 200),
-    "v VB correction in 3 iterations (via the fallback optimiser): max shift 0.98 posterior SDs.",
+    unwrap(capture_output(print(fallback))),
+    "v VB correction settled in 3 iterations (via the fallback optimiser): max shift 0.98 SD.",
     fixed = TRUE
   )
 
   # A value that is not finite is flagged, not an error
-  for (col in c("mode_shift_sigma", "nmad", "bend")) {
+  for (col in c("mode_shift_sigma", "vb_step_sigma", "nmad", "ridge_bend")) {
     odd <- below
     odd$diagnostics[[col]][1] <- NaN
     expect_length(flagged(odd), 1)
@@ -2381,7 +2599,7 @@ test_that("plot(type = \"sn_fit\") draws each skew-normal fit against its scan",
   )
 })
 
-test_that("scan_end_mass is the fitted mass outside the scanned window", {
+test_that("unscanned_mass is the fitted mass outside the scanned window", {
   # The fitted skew-normal integrated outside mode +- 4 Laplace SDs, with the
   # density written out independently of the package
   d <- fit_reg$diagnostics$marginals
@@ -2399,22 +2617,22 @@ test_that("scan_end_mass is the fitted mass outside the scanned window", {
     hi <- fit_reg$mode[[j]] + 4 * sds[[j]]
     ref <- integrate(f, -Inf, lo, rel.tol = 1e-10)$value +
       integrate(f, hi, Inf, rel.tol = 1e-10)$value
-    expect_equal(d$scan_end_mass[j], ref, tolerance = 1e-6)
+    expect_equal(d$unscanned_mass[j], ref, tolerance = 1e-6)
   }
-  expect_true(all(d$scan_end_mass > 0 & d$scan_end_mass < 0.05))
+  expect_true(all(d$unscanned_mass > 0 & d$unscanned_mass < 0.05))
 
   # A Gaussian posterior: the fit is Gaussian, so the mass is 2 pnorm(-4)
   lp <- function(theta) sum(dnorm(theta, c(1, -2), c(0.5, 3), log = TRUE))
   fit <- inla_vanilla(lp, c(a = 0, b = 0), silent = TRUE)
   expect_equal(
-    fit$diagnostics$marginals$scan_end_mass,
+    fit$diagnostics$marginals$unscanned_mass,
     rep(2 * pnorm(-4), 2),
     tolerance = 1e-3
   )
 
   # Shown in the table, and not flagged
   out <- capture_output(print(summary(fit_reg)))
-  expect_match(out, "End mass")
+  expect_match(out, "Unscanned")
   expect_no_match(out, "beyond the scanned window")
 })
 

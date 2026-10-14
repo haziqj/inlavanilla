@@ -80,9 +80,9 @@ the iterations of the VB correction, whether it fell back to
 \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb = FALSE}. \code{marginals}
 is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
-\code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{scan_end_mass},
-\code{sn_vs_vb}, \code{gamma1}, \code{tails} and \code{bend}, with \code{NA} for the checks the
-fit did not run.
+\code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
+\code{vb_step_sigma}, \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with
+\code{NA} for the checks the fit did not run.
 \item \code{scan}: the scans the skew-normals were fitted to, for
 \code{plot(fit, type = "sn_fit")}: the grid \code{z} in posterior SDs from the
 mode, the log-posterior at each point (\code{logpost}, a column per
@@ -167,7 +167,9 @@ parameter's spread depends strongly on another, poorly determined
 parameter, its marginal comes out too narrow, by a factor that vanishes as
 O(1/n). Examples are a regression coefficient or a mean when the noise SD
 is uncertain. For a normal mean with unknown variance the SD is about 11\%
-too small at n = 12, 3\% at n = 50, and under 1\% at n = 200.
+too small at n = 12, 3\% at n = 50, and under 1\% at n = 200. The
+\code{ridge_bend} diagnostic of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags this narrowing
+where it predicts about 10\% or more.
 
 A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could not
@@ -180,26 +182,36 @@ near zero is compressed, the two were much closer: means 0.2 posterior SDs
 too high and SDs 10 to 15\% too small. INLAvaan's marginals of this model
 are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
 the same miss in the lower tail of a variance near zero, the boundary
-pile-up that a unimodal skew-normal cannot capture. The \code{bend} diagnostic
-of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged both, but its size does not say how
-far off a marginal is, and the \code{tails} check, which looks only 4 posterior
-SDs either side of the mode (the Laplace SDs), missed them.
+pile-up that a unimodal skew-normal cannot capture. No check is aimed at
+this. The \code{ridge_bend} diagnostic of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flagged one
+of the two (0.44), but the other's ridge bend (0.11) was no larger than
+that of marginals within 7\% in SD, and the \code{tails} check, which looks only
+4 posterior SDs either side of the mode (the Laplace SDs), missed both.
 }
 
 \section{Gradients}{
 
 \code{grad} is optional. Without it, derivatives come from finite differences
-of \code{logpost}, and the number of calls grows quickly with the number of
-parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
-take about m(\code{n_grid} + 2m + 5). The VB correction takes about
-(m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
-beyond a handful of parameters: at m = 20 a fit makes on the order of
-50,000 calls. With \code{grad}, the VB correction takes 2m^2 + 1 gradient calls
-per sweep instead, and the fit is faster and more accurate. For more than
-about 10 parameters, supply \code{grad}, or set \code{vb = FALSE} to skip the VB
-correction (and its term in the log marginal likelihood): the skew-normal
-marginals do not depend on it. \code{marginals = "gaussian"} saves the calls of
-the scans.
+of \code{logpost}, and the number of calls grows with the square of the number
+of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
+marginals about m(\code{n_grid} + 2m + 5). The VB correction takes at most
+(m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no derivatives,
+because Stein's identity gives the expected gradient from values of
+\code{logpost} alone. Its VB mean is then exact when the log-posterior is a
+polynomial of degree four in whitened coordinates, and up to degree six
+with \code{grad}. On test models it was about 0.01 posterior SDs from exact VB
+(0.003 with \code{grad}), and up to 0.1 on a strongly skewed posterior (0.03
+with \code{grad}), against a VB error of 0.01 to 0.2 SDs from the posterior mean
+itself. On the most skewed posteriors the VB correction may then not
+settle, and the fit says it has not converged (see
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}); \code{grad} is the remedy.
+
+With \code{grad}, every stage is faster and more accurate. The VB correction
+then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
+nodes. Beyond a handful of parameters it and the marginals are the slowest
+stages. \code{vb = FALSE} skips the VB correction (and its term in the log
+marginal likelihood), and the skew-normal marginals do not depend on it;
+\code{marginals = "gaussian"} saves the calls of the scans.
 
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -219,7 +231,9 @@ vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on.
 \item \code{log_threshold}: grid points whose log-posterior falls more than this
 below the maximum are ignored in the skew-normal fit (default \code{-6}).
 \item \code{vb_maxit}, \code{vb_tol}: iteration limit (default \code{25}) and convergence
-tolerance in posterior SDs (default \code{1e-3}) for the VB correction.
+tolerance in posterior SDs (default \code{1e-3}) for the VB correction's
+fixed-point iteration. If it has not converged after \code{vb_maxit} steps,
+\code{\link[stats:nlminb]{stats::nlminb()}} takes over.
 \item \code{nlminb}: a list of \code{\link[stats:nlminb]{stats::nlminb()}} controls for the mode search.
 \code{iter.max} and \code{eval.max} default to \code{1000} and \code{2000}, and \code{trace = 1}
 prints its iterations.
@@ -257,10 +271,11 @@ identified, and the condition number of the Hessian in posterior-SD
 units; and the Laplace log marginal likelihood.
 \item The VB correction: the largest step, in posterior SDs, at each
 fixed-point iteration, whether Anderson acceleration or the fallback
-optimiser was used, the largest shift, and the term it adds to the log
-marginal likelihood.
-\item The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
-correction \code{gamma1} of each parameter, with the values that
+optimiser was used (and, after the fallback, the step still to go where
+it landed), the largest shift, and the term it adds to the log marginal
+likelihood.
+\item The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
+volume correction \code{gamma1} of each parameter, with the values that
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.
 \item The calls of \code{logpost} and \code{grad} in each stage, and in all, with the
 total time.

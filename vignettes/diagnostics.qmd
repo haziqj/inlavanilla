@@ -16,8 +16,14 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-# Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
 ## What can go wrong
@@ -34,35 +40,43 @@ table, which is the skew-normal's.
 Each stage is checked as it runs, at almost no cost: the checks reuse what the
 fit has already computed. `summary()` reports every check and flags the
 values that look off, and `diagnostics()` returns them as numbers. Most
-problems also raise one warning at the end of the fit. Printing the fit ends
-with a line counting its warnings and one counting the flagged checks, each
-shown only when there are any, so even a fit run with `silent = TRUE` shows
-that something needs a look.
+problems also raise one warning at the end of the fit. Printing the fit opens
+with the log marginal likelihood and whether the fit converged, and ends with
+a line counting its warnings and one counting the flagged checks, each shown
+only when there are any, so even a fit run with `silent = TRUE` shows that
+something needs a look.
+
+Two of the checks say whether the computation reached its solution: the mode
+check and the VB check. When both pass, the fit has converged. The others
+judge how well the approximation fits the posterior, which a converged fit
+can still do badly.
 
 | Check | In `diagnostics(fit, type = "param")` | Flagged by `summary()` | Fit-time warning | From |
 |---|---|---|---|---|
 | Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
+| VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
 | Hessian | `hess_cond` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
-| Scan-end mass | `scan_end_mass` | above 0.05 | the same | INLAvaan |
+| Unscanned mass | `unscanned_mass` | above 0.05 | the same | INLAvaan |
 | Tails | `tails` | heavy | the same | inlavanilla |
-| Scan path | `bend` | above 0.1 nats | no | inlavanilla |
-| Skew-normal and VB means | `sn_vs_vb` | above 0.1 SDs | no | inlavanilla |
+| Ridge bend | `ridge_bend` | above 0.25 nats | no | inlavanilla |
+| Mean gap | `mean_gap` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan's `diagnostics()`, under the same
 names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics,
 and the gap between the skew-normal and VB means as an internal check; the
-mode shift, the Hessian condition number and the scan-end mass come from
+mode shift, the Hessian condition number and the unscanned mass come from
 INLAvaan's `diagnostics()`, not from the paper. The levels of those five
-checks are INLAvaan's, and the fit-time warning uses its words. The tails
-check is inlavanilla's own, and so are the scan-path and SN-VB checks, which
-only `summary()` flags. Every level is a package default, chosen so that a
-healthy fit stays silent, and not a calibrated cut-off: a tripped check is a
-prompt to look again, and silence is not a certificate of accuracy. In the
-simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD track
-the loss of accuracy, and the paper reports a calibration of the expected
-error against them in its Supplementary Material.
+checks are INLAvaan's, and the fit-time warning uses its words. The VB
+settling and tails checks are inlavanilla's own, and so are the ridge bend and mean gap
+checks, which only `summary()` flags. Every level is a package default, chosen so
+that a healthy fit stays silent, and not a calibrated cut-off: a tripped
+check is a prompt to look again, and silence is not a certificate of
+accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB
+shift and NMAD track the loss of accuracy, and the paper reports a
+calibration of the expected error against them in its Supplementary
+Material.
 
 ## A healthy fit
 
@@ -83,7 +97,8 @@ fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
 ```
 
-Every check passes. The marginal is mildly skewed (shape about -1.4), the
+Every check passes. The marginal is mildly skewed (its skew-normal shape
+`alpha`, in `diagnostics(fit_pois, type = "param")`, is about -1.4), the
 skew-normal matches the scan to within 1% of its peak (NMAD), and its mean
 agrees with the VB-corrected mean.
 
@@ -109,18 +124,33 @@ Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026, Section
 3.1). `vb_shift_sigma` is how far it moved each mean from the mode, in
 posterior SDs. `vb_shift` is the same shift on the scale of `logpost`, and
 `kld`, half the square of `vb_shift_sigma`, is the Kullback-Leibler divergence
-of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift
-above 1 SD means that the posterior is far from the Laplace Gaussian. When
-the fixed-point iteration hands over to the optimiser, `fit$diagnostics$vb`
-records it, and `summary()` and the verbose output report it, but, as in
-INLAvaan, it is not flagged: it is a route of the solver, not a sign of a
-poor approximation.
+of each shifted marginal from the unshifted one. A shift of a few tenths is
+normal for a skewed posterior; a shift above 1 SD means that the posterior is
+far from the Laplace Gaussian. When the fixed-point iteration hands over to
+the optimiser, `fit$diagnostics$vb` records it, and `summary()` and the
+verbose output report it, but, as in INLAvaan, it is not flagged: it is a
+route of the solver, not a sign of a poor approximation.
+
+Where the solver lands is checked as the mode is. `vb_step_sigma` is the step
+still to go at the VB mean, in posterior SDs: the fixed-point step there,
+which is the Newton step of the condition the VB mean solves. Above 0.1, the
+level of the mode check, the correction has not settled and the fit has not
+converged. The VB mean is then off, and with it the VB term of the log
+marginal likelihood and the expansions of `loo()` and `waic()`. The
+skew-normal marginals do not depend on it, since they are scanned around the
+mode, and `vb = FALSE` leaves it out. Gaussian marginals
+(`marginals = "gaussian"`) are centred on it, and `vb = FALSE` centres them
+at the mode instead. Without a gradient, the usual cause is not the solver
+but the VB mean itself: from `logpost` values alone it is exact only for a
+log-posterior of degree four, and on a strongly skewed posterior it can be
+about 0.1 SDs out. Supplying `grad` is the fix.
 
 The skew-normal mean and the VB mean both estimate the posterior mean, by
-different routes, so they should agree closely (Jamil & Rue, 2026,
-Proposition 3.4); a gap signals higher-order effects or numerical error
-(Section 5.1). `sn_vs_vb` is their gap in posterior SDs, and a gap above 0.1
-is flagged.
+different routes. Both recover the leading, $O(n^{-1})$ shift from the mode
+to the mean, so they agree to $O(n^{-2})$ (Jamil & Rue, 2026, Proposition
+3.4). `mean_gap` is their gap in posterior SDs. A gap signals that the
+higher-order terms of that expansion about the mode matter, or numerical
+error (Section 5.1), and a gap above 0.1 is flagged.
 
 ## The skew-normal fit
 
@@ -191,23 +221,24 @@ legend(
 )
 ```
 
-## The scan path
+## Ridge bend
 
-Each marginal is scanned along a straight line through the mode, the path
-on which the Laplace Gaussian puts the other parameters at their conditional
-mode given this one (Jamil & Rue, 2026, Lemma 3.1). The straight line is a
-first-order approximation to a possibly curved ridge (Section 3.2.1). When
-the true conditional mode bends away from the line, the scan misses
-log-density, and the marginal comes out too narrow. `bend`, inlavanilla's
-own check, is the log-density, in nats, that one Newton step in the other
-parameters would recover at $\pm 2$ posterior SDs.
+Each marginal is scanned along a straight line through the mode, the
+conditional mode path (CMP) on which the Laplace Gaussian puts the other
+parameters at their conditional mode given this one (Jamil & Rue, 2026,
+Lemma 3.1). The straight line is a first-order approximation to a possibly
+curved ridge of high posterior density (Section 3.2.1). When the ridge bends
+away from the CMP, the scan misses log-density, and the marginal comes out
+too narrow. The ridge bend, `ridge_bend`, inlavanilla's own check, is the
+log-density, in nats, that one Newton step in the other parameters would
+recover at $\pm 2$ posterior SDs.
 
 This happens when a parameter's spread depends on another parameter that the
 data pin down poorly. A normal mean with an unknown SD, from 12
 observations, is the textbook case:
 
 ```{r}
-#| label: bend
+#| label: ridge-bend
 set.seed(4)
 y12 <- rnorm(12, 10, 2)
 logpost_norm <- function(theta, y) {
@@ -218,14 +249,14 @@ logpost_norm <- function(theta, y) {
 fit_norm <- inla_vanilla(
   logpost_norm, c(mu = 9, log_sigma = 0.5), y = y12, silent = TRUE
 )
-signif(fit_norm$diagnostics$marginals[, c("nmad", "bend")], 2)
+signif(fit_norm$diagnostics$marginals[, c("nmad", "ridge_bend")], 2)
 ```
 
-`summary()` flags the bend for `mu`. The exact marginal SD of `mu`, from a
-grid, shows how much narrower the skew-normal is:
+`summary()` flags the ridge bend of `mu`. The exact marginal SD of `mu`,
+from a grid, shows how much narrower the skew-normal is:
 
 ```{r}
-#| label: bend-exact
+#| label: ridge-bend-exact
 grid <- expand.grid(
   mu = seq(7, 15, length.out = 401),
   log_sigma = seq(-1, 2.5, length.out = 401)
@@ -234,16 +265,27 @@ lp <- apply(grid, 1, function(g) logpost_norm(g, y12))
 w <- exp(lp - max(lp))
 w <- w / sum(w)
 m <- sum(w * grid$mu)
-sds <- c(exact = sqrt(sum(w * (grid$mu - m)^2)), skew_normal = fit_norm$summary["mu", "SD"])
+sds <- c(
+  exact = sqrt(sum(w * (grid$mu - m)^2)),
+  skew_normal = fit_norm$summary["mu", "SD"]
+)
 sds
 ```
 
 The skew-normal SD of `mu` is `r round(100 * (1 - sds[[2]] / sds[[1]]))`% too
 small here. The gap shrinks as $1/n$: for a normal mean with an unknown SD it
-is about 3% at 50 observations and under 1% at 200. The `bend` value says
-which parameters are at risk, not exactly how much.
+is about 3% at 50 observations and under 1% at 200. For this model the ridge
+bend $b$ gives the gap: the SD is too small by $1 - \sqrt{1 - 3b/4}$, roughly
+$3b/8$, and $b$ is close to $4/n$. From its ridge bend of
+`r round(fit_norm$diagnostics$marginals["mu", "ridge_bend"], 2)`, the
+formula gives
+`r round(100 * (1 - sqrt(1 - 0.75 * fit_norm$diagnostics$marginals["mu", "ridge_bend"])))`%.
+`summary()` flags a ridge bend above 0.25, where the formula gives 10%. In
+other models it is a rough guide to how much: on test models it was mostly
+within a factor of 1.5 of the true gap, and it overstated the narrowing in
+logistic and Poisson regressions.
 
-## Tails and scan-end mass
+## Tails and unscanned mass
 
 Both checks are about the edge of the scanned window, but they look at
 different things:
@@ -252,7 +294,7 @@ different things:
   is flagged when either end is still within 3 nats of the peak, that is, when
   the density there is over 5% of its peak. A Gaussian is 8 nats down at
   $\pm 4$ SDs.
-* `scan_end_mass` is the mass the **fitted skew-normal** puts beyond the
+* `unscanned_mass` is the mass the **fitted skew-normal** puts beyond the
   window, where it is extrapolated (as INLAvaan's `diagnostics()` reports
   it). A Gaussian marginal gives $2\Phi(-4) = 6.3 \times 10^{-5}$; the
   larger it is, the more of the marginal is extrapolated.
@@ -295,7 +337,7 @@ case <- function(logpost, init, zlim, ...) {
   d <- fit$diagnostics$marginals
   list(
     z = z, ref_d = ref_d, sn_d = sn_d, zs = zs, scan = scan,
-    tails = d$tails, sem = d$scan_end_mass, ref_out = outside
+    tails = d$tails, sem = d$unscanned_mass, ref_out = outside
   )
 }
 # A variance that the data can only bound from above: y ~ N(0, 1 + v), with
@@ -389,13 +431,13 @@ for (k in 1:3) {
   lines(cs$z, cs$sn_d, lwd = 2, col = col_sn)
   mtext("posterior SDs from the mode", side = 1, line = 2.1, cex = 0.85, col = ink2)
   mtext(sprintf("outside: exact %s", fmt(cs$ref_out)), side = 1, line = 3.3, adj = 0, cex = 0.85, col = ink)
-  mtext(sprintf("scan_end_mass %s", fmt(cs$sem)), side = 1, line = 4.3, adj = 0, cex = 0.85, col = ink)
+  mtext(sprintf("unscanned_mass %s", fmt(cs$sem)), side = 1, line = 4.3, adj = 0, cex = 0.85, col = ink)
 }
 par(op)
 ```
 
 In the top row, `tails` reads the open circles against the dashed line 3 nats
-below the peak. In the bottom row, the orange shading is `scan_end_mass` and
+below the peak. In the bottom row, the orange shading is `unscanned_mass` and
 the grey shading is the exact posterior's mass beyond the window.
 
 1. **Well behaved.** The scan ends are 5.8 and 11.6 nats down, either side
@@ -403,7 +445,7 @@ the grey shading is the exact posterior's mass beyond the window.
    the fit nor the posterior has much mass outside. Both checks
    are rightly quiet.
 2. **Heavy inside the window.** A Cauchy posterior is still high at the ends
-   of the scan, so `tails` fires, and the fit warns. `scan_end_mass` stays
+   of the scan, so `tails` fires, and the fit warns. `unscanned_mass` stays
    under 0.05: the skew-normal has Gaussian tails, so whatever it fits, it
    puts little mass outside the window. It exceeds 0.05 only when the fit
    itself is very wide or very skewed, as for the mixture above.
@@ -432,13 +474,15 @@ The fit-time warning is a condition of class
 Its headline counts the problems, as INLAvaan's does, and it names at most
 three parameters for each; `summary()` lists them all. With `silent = TRUE`
 nothing is printed, and every warning raised during the fit is kept in
-`fit$warnings` as plain text, which suits simulations:
+`fit$warnings` as plain text, a line per bullet with no wrapping, which
+suits simulations. Here it is wrapped to fit the page:
 
 ```{r}
 #| label: silent
 fit_mix_quiet <- inla_vanilla(logpost_mix, c(theta = -0.2), silent = TRUE)
 length(fit_mix_quiet$warnings)
-cat(fit_mix_quiet$warnings)
+bullets <- strsplit(fit_mix_quiet$warnings, "\n")[[1]]
+writeLines(strwrap(bullets, width = 76, exdent = 2))
 ```
 
 To handle the warning in code, catch its class:
