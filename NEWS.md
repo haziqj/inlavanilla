@@ -1,3 +1,18 @@
+# inlavanilla 0.1.1
+
+* `inla_vanilla()` takes the Hessian of `logpost` as an optional `hess`,
+  after `grad`, as `nlminb()` does. With it, `nlminb()` takes Newton steps to
+  the mode, the Hessian at the mode is the supplied one, and the volume
+  correction of each skew-normal marginal takes one `hess` call instead of
+  2m + 2 `grad` calls. RTMB gives it with the gradient, as `obj$he`. The fit
+  is the same, except that the mode is found more precisely, and on test
+  models it took 13% to 35% less time. A supplied `hess` is checked at the
+  mode against central differences of `grad`, and `fit$counts` counts its
+  calls.
+* The website article "Gradients with RTMB" is now "Gradients and Hessians
+  with RTMB". It passes RTMB's Hessian too, and shows where the fit uses it,
+  the time it saves and the more precise mode it finds.
+
 # inlavanilla 0.1.0
 
 * Initial version. `inla_vanilla()` approximates the posterior of any
@@ -29,11 +44,11 @@
   degree four in whitened coordinates (six with a gradient). On test models
   it was a median 0.015 posterior SDs from exact VB, but up to about 0.1 on
   strongly skewed posteriors, where a gradient gives about 0.03.
-* Two website articles, "Speeding up with Rcpp" and "Gradients and Hessians
-  with RTMB", fit a structural equation model with 39 parameters from a
-  log-posterior written in R, in C++ with an analytic gradient, and in R for
-  RTMB, which gives the gradient and the Hessian by automatic
-  differentiation, and compare the routes for speed and accuracy.
+* Two website articles, "Speeding up with Rcpp" and "Gradients with RTMB",
+  fit a structural equation model with 39 parameters from a log-posterior
+  written in R, in C++ with an analytic gradient, and in R for RTMB, which
+  gives the gradient by automatic differentiation, and compare the routes
+  for speed and accuracy.
 * A website article, "Multilevel models", fits a linear mixed model with the
   random effects integrated out, checks its marginals against brms, and draws
   the random effects for a caterpillar plot.
@@ -125,15 +140,6 @@
 * The check of a user `grad` also compares it with finite differences one
   curvature scale from `init`, so a gradient that is wrong by a constant
   factor is caught even when `init` is at the mode.
-* `inla_vanilla()` takes the Hessian of `logpost` as an optional `hess`,
-  after `grad`, as `nlminb()` does. With it, `nlminb()` takes Newton steps to
-  the mode, the Hessian at the mode is the supplied one, and the volume
-  correction of each skew-normal marginal takes one `hess` call instead of
-  2m + 2 `grad` calls. RTMB gives it with the gradient, as `obj$he`. The fit
-  is the same, except that the mode is found more precisely, and on test
-  models it took 13% to 35% less time. A supplied `hess` is checked at the
-  mode against central differences of `grad`, and `fit$counts` counts its
-  calls.
 * `print()` names the approximation on its header rule ("Skew-normal + VB",
   "Skew-normal", "Laplace + VB" or "Laplace"), as `summary()` now does,
   instead of the run time, which `summary()` still reports. It ends with a
