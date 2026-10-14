@@ -47,7 +47,7 @@ that something needs a look.
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
 | Scan-end mass | `scan_end_mass` | above 0.05 | the same | INLAvaan |
 | Tails | `tails` | heavy | the same | inlavanilla |
-| Scan path | `bend` | above 0.1 nats | no | inlavanilla |
+| Scan path | `bend` | above 0.25 nats | no | inlavanilla |
 | Skew-normal and VB means | `sn_vs_vb` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan's `diagnostics()`, under the same
@@ -240,8 +240,15 @@ sds
 
 The skew-normal SD of `mu` is `r round(100 * (1 - sds[[2]] / sds[[1]]))`% too
 small here. The gap shrinks as $1/n$: for a normal mean with an unknown SD it
-is about 3% at 50 observations and under 1% at 200. The `bend` value says
-which parameters are at risk, not exactly how much.
+is about 3% at 50 observations and under 1% at 200. For this model the bend
+$b$ gives the gap: the SD is too small by $1 - \sqrt{1 - 3b/4}$, roughly
+$3b/8$, and $b$ is close to $4/n$. From its bend of
+`r round(fit_norm$diagnostics$marginals["mu", "bend"], 2)`, the formula gives
+`r round(100 * (1 - sqrt(1 - 0.75 * fit_norm$diagnostics$marginals["mu", "bend"])))`%.
+`summary()` flags a bend above 0.25, where the formula gives 10%. In other
+models it is a rough guide to how much: on test models it was mostly within
+a factor of 1.5 of the true gap, and it overstated the narrowing in logistic
+and Poisson regressions.
 
 ## Tails and scan-end mass
 

@@ -607,20 +607,21 @@ mildly right-skewed. The most skewed marginal is that of the disturbance
 variance of `dem65`. Democracy in 1960 and industrialisation explain most of
 the variation in democracy in 1965 (see $R^2$ below), so this variance is
 small and poorly determined, and its log has a long left tail. `summary()`
-flags it and a few others: there, the straight scan through the mode misses
-some log-density, and the marginal may come out too narrow. The skew-normal
-and VB means of `logv_dem65` also differ by 0.2 posterior SDs, another sign
-that its marginal is hard to approximate.
+flags it twice: the straight scan through the mode misses enough
+log-density that its marginal may come out too narrow, and its skew-normal
+and VB means differ by 0.2 posterior SDs, another sign that the marginal is
+hard to approximate.
 
-Here the warning is borne out. Checked against MCMC, the marginals of
+Here the flags are borne out. Checked against MCMC, the marginals of
 `logv_dem65` and `logv_x2` are less than half as wide as the posterior, with
 the 2.5% quantile of `logv_dem65` at −3.6 against −7.3. The data cannot rule
 out a variance near zero, so on the log scale the posterior has a long
 exponential left tail, held back only by the prior, and a skew-normal cannot
 follow it. On the variance scale, where the tail near zero is compressed, the
 error is much smaller: the posterior means of the two variances are 0.2
-posterior SDs too high. The other 37 marginals agree with MCMC to within 7% in
-SD.
+posterior SDs too high. No check flags `logv_x2`: its scan path bends less,
+and none of the checks is aimed at a tail like this. The other 37 marginals
+agree with MCMC to within 7% in SD.
 
 ```{r}
 #| label: plot
