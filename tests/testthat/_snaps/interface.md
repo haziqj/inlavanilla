@@ -140,6 +140,7 @@
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Log marginal likelihood: -16.25
+      Converged in <n> iteration(s) (<time>).
 
 # print(summary()) shows marginals, diagnostics and the evidence
 

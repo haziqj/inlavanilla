@@ -135,8 +135,10 @@ colour. The status lines list every flagged parameter, worst first, with
 its value (the heavy-tails line, a yes/no check, lists names only, in
 parameter order); the warning lists at most three, as INLAvaan's does. With
 \code{silent = TRUE} the warning is only recorded in \code{fit$warnings}. Printing
-the fit ends with a line for its warnings and one counting the checks
-flagged here, each shown only when there are any.
+the fit ends by saying whether it converged, which is the mode check
+here, with the iterations of \code{\link[stats:nlminb]{stats::nlminb()}} and the time the whole fit
+took. A line for its warnings and one counting the checks flagged here
+follow, each shown only when there are any.
 \code{vignette("diagnostics", package = "inlavanilla")} explains every check
 with examples.
 

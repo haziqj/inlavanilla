@@ -1646,9 +1646,11 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   out <- capture_output(res <- withVisible(print(fit_reg)))
   expect_false(res$visible)
   expect_identical(res$value, fit_reg)
-  # The rule names the approximation, not the time it took
+  # The rule names the approximation, not the time it took, which the
+  # convergence line gives
   expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ VB --\n")
-  expect_no_match(out, "[0-9](ms|s)\\b|parameters")
+  expect_no_match(strsplit(out, "\n")[[1]][1], "[0-9](ms|s)\\b|parameters")
+  expect_match(out, "\nConverged in [0-9]+ iterations? \\([0-9.]+m?s\\)\\.$")
   # The log marginal likelihood shown is fit$logml, to 2 decimals
   expect_match(out, format(round(fit_reg$logml, 2), nsmall = 2), fixed = TRUE)
 
@@ -1663,10 +1665,23 @@ test_that("print() shows the summary table and returns the fit invisibly", {
 test_that("print() points to the fit's warnings and to flagged checks", {
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
   # A Gaussian posterior: no warnings and no flags, so the output ends with
-  # the log marginal likelihood
+  # the log marginal likelihood and the convergence line
   fit_ok <- inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), silent = TRUE)
   out <- capture_output(print(fit_ok))
-  expect_match(out, "Log marginal likelihood: [-0-9.]+$")
+  expect_match(
+    out,
+    "Log marginal likelihood: [-0-9.]+\nConverged in [0-9]+ iterations? \\([0-9.]+m?s\\)\\.$"
+  )
+
+  # A fit that fails the mode check has not converged
+  fit <- fit_ok
+  fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
+  out <- capture_output(print(fit))
+  expect_match(
+    out,
+    "\n! Not converged after [0-9]+ iterations? \\([0-9.]+m?s\\)\\."
+  )
+  expect_no_match(out, "\nConverged")
 
   fit <- fit_ok
   fit$warnings <- c("first", "second")

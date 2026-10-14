@@ -13,6 +13,25 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
     cli::style_bold("Log marginal likelihood: "),
     cli::col_cyan(format(round(x$logml, 2), nsmall = 2))
   )
+  # Converged means the mode check of summary() passes, whatever the return
+  # code of nlminb(): the Newton step at the mode is within its level
+  dg <- diagnostics_internal(
+    x$diagnostics$optim,
+    x$diagnostics$vb,
+    x$diagnostics$marginals
+  )
+  flags <- check_flags(dg, is_gaussian(x))
+  took <- paste0(
+    plural(x$diagnostics$optim$iterations, "iteration"),
+    " (",
+    format_time(x$timing[["total"]]),
+    ")"
+  )
+  if (flags[["mode"]]) {
+    cat_status("warn", "Not converged after {took}.")
+  } else {
+    cli::cat_line("Converged in ", took, ".")
+  }
   # Whether to trust the table: shown only when something is off
   n_warnings <- length(x$warnings)
   if (n_warnings > 0L) {
@@ -21,12 +40,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
       "{n_warnings} warning{?s} during the fit, kept in {.code $warnings}."
     )
   }
-  dg <- diagnostics_internal(
-    x$diagnostics$optim,
-    x$diagnostics$vb,
-    x$diagnostics$marginals
-  )
-  n_flagged <- sum(check_flags(dg, is_gaussian(x)))
+  n_flagged <- sum(flags)
   if (n_flagged > 0L) {
     cat_status("warn", "{n_flagged} check{?s} flagged by {.fn summary}.")
   }
@@ -146,8 +160,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' its value (the heavy-tails line, a yes/no check, lists names only, in
 #' parameter order); the warning lists at most three, as INLAvaan's does. With
 #' `silent = TRUE` the warning is only recorded in `fit$warnings`. Printing
-#' the fit ends with a line for its warnings and one counting the checks
-#' flagged here, each shown only when there are any.
+#' the fit ends by saying whether it converged, which is the mode check
+#' here, with the iterations of [stats::nlminb()] and the time the whole fit
+#' took. A line for its warnings and one counting the checks flagged here
+#' follow, each shown only when there are any.
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check
 #' with examples.
 #'
