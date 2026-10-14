@@ -472,10 +472,10 @@ log-posterior, to be minimised, so negate its `obj$fn`, `obj$gr` and
 `obj$he`.
 
 The articles [Speeding up with Rcpp](rcpp.html) and
-[Gradients with RTMB](rtmb.html) work through both routes for a structural
-equation model with 39 parameters. C++ makes each call about ten times
-faster than R. A gradient from RTMB makes the fit more accurate, at about
-the speed of R.
+[Gradients and Hessians with RTMB](rtmb.html) work through both routes for a
+structural equation model with 39 parameters. C++ makes each call about ten
+times faster than R. A gradient from RTMB makes the fit more accurate, at
+about the speed of R, and its Hessian makes it a little faster.
 
 ## References
 
