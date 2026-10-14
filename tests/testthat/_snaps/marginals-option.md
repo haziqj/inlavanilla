@@ -33,7 +33,7 @@
       
       Diagnostics
                  VB shift
-      intercept     -0.23
+      intercept    -0.23 
       slope         0.084
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).

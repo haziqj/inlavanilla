@@ -151,8 +151,8 @@
       
       Diagnostics
                  VB shift  Mean gap   NMAD  Ridge bend  Unscanned
-      intercept     -0.23   -0.0068   0.01       0.037    0.00078
-      slope         0.084   -0.0042  0.015        0.14    0.00013
+      intercept    -0.23    -0.0068  0.010       0.037    0.00078
+      slope         0.084   -0.0042  0.015       0.14     0.00013
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
       v Hessian condition number 3.6, in posterior-SD units.
@@ -177,8 +177,8 @@
       
       Diagnostics
                   NMAD  Ridge bend  Unscanned
-      intercept   0.01       0.037    0.00078
-      slope      0.015        0.14    0.00013
+      intercept  0.010       0.037    0.00078
+      slope      0.015       0.14     0.00013
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
       v Hessian condition number 3.6, in posterior-SD units.
