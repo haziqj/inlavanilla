@@ -249,9 +249,9 @@ rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 ```
 
 The two fits agree to several decimal places, and the gradient version calls
-`logpost` far less often. `inla_vanilla()` checks a supplied gradient against
-finite differences at `init` and warns if they disagree, which catches most
-slips in hand-derived gradients.
+`logpost` about half as often. `inla_vanilla()` checks a supplied gradient
+against finite differences at `init` and warns if they disagree, which
+catches most slips in hand-derived gradients.
 
 ## Cheaper approximations
 
@@ -285,8 +285,9 @@ Without the VB correction the skew-normal marginals are the same, because
 they are scanned around the mode, but the log marginal likelihood is the
 Laplace one. The VB correction moves the Gaussian's centre most of the way to
 the posterior mean, but a Gaussian cannot follow the long tail. Without a
-gradient the VB correction is the most expensive stage, and its cost grows
-fastest with the number of parameters.
+gradient it takes the expected gradient from values of `logpost` alone, and
+costs about as much as finding the mode. With a gradient it is more accurate,
+and its cost grows fastest with the number of parameters.
 
 ## Derived quantities
 

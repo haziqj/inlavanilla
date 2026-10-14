@@ -313,9 +313,9 @@ c(
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for finite
-differences. Without it, the VB correction alone would take over 120,000
-evaluations per sweep. A hand-written gradient, as in the Rcpp article, can
-be faster still, but it has to be derived and checked; TMB's needs neither.
+differences. Without it, the fit would take over 20,000 evaluations of the
+objective. A hand-written gradient, as in the Rcpp article, can be faster
+still, but it has to be derived and checked; TMB's needs neither.
 
 ## Results
 
