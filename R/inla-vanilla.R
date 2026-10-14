@@ -107,9 +107,12 @@
 #' settle, and the fit says it has not converged (see
 #' [summary.inla_vanilla()]); `grad` is the remedy.
 #'
-#' With `grad`, every stage is faster and more accurate. The VB correction
-#' then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
-#' nodes. Beyond a handful of parameters it and the marginals are the slowest
+#' With `grad`, every stage is more accurate. The fit is also faster when a
+#' gradient call costs about as much as a `logpost` call, as a hand-written
+#' gradient usually does, since it then makes about half as many calls in
+#' all. A gradient by automatic differentiation (RTMB, TMB) costs about two,
+#' and the fit takes about as long as without one. The VB correction takes at
+#' most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same nodes. Beyond a handful of parameters it and the marginals are the slowest
 #' stages. `vb = FALSE` skips the VB correction (and its term in the log
 #' marginal likelihood), and the skew-normal marginals do not depend on it;
 #' `marginals = "gaussian"` saves the calls of the scans.
@@ -117,9 +120,11 @@
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
 #' check fails. Any R function works for `logpost` and `grad`, including
-#' compiled code (Rcpp, TMB, RTMB). For a TMB object, which minimises, pass
-#' `function(x) -obj$fn(x)` and `function(x) -as.vector(obj$gr(x))`, with
-#' `init = obj$par`; its repeated names (one per element of a parameter
+#' compiled code (Rcpp, TMB) and RTMB, which differentiates R code. An RTMB
+#' function can return the log-posterior itself, and its `obj$fn` and
+#' `obj$gr` are then passed as they are. For a TMB template that returns the
+#' negative log-posterior, pass `function(x) -obj$fn(x)` and
+#' `function(x) -as.vector(obj$gr(x))`, with `init = obj$par`; its repeated names (one per element of a parameter
 #' vector) are numbered, as `beta[1]`, `beta[2]`, and so on.
 #'
 #' @section Control:

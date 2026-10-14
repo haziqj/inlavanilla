@@ -206,9 +206,12 @@ itself. On the most skewed posteriors the VB correction may then not
 settle, and the fit says it has not converged (see
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}); \code{grad} is the remedy.
 
-With \code{grad}, every stage is faster and more accurate. The VB correction
-then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
-nodes. Beyond a handful of parameters it and the marginals are the slowest
+With \code{grad}, every stage is more accurate. The fit is also faster when a
+gradient call costs about as much as a \code{logpost} call, as a hand-written
+gradient usually does, since it then makes about half as many calls in
+all. A gradient by automatic differentiation (RTMB, TMB) costs about two,
+and the fit takes about as long as without one. The VB correction takes at
+most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same nodes. Beyond a handful of parameters it and the marginals are the slowest
 stages. \code{vb = FALSE} skips the VB correction (and its term in the log
 marginal likelihood), and the skew-normal marginals do not depend on it;
 \code{marginals = "gaussian"} saves the calls of the scans.
@@ -216,9 +219,11 @@ marginal likelihood), and the skew-normal marginals do not depend on it;
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either
 check fails. Any R function works for \code{logpost} and \code{grad}, including
-compiled code (Rcpp, TMB, RTMB). For a TMB object, which minimises, pass
-\code{function(x) -obj$fn(x)} and \code{function(x) -as.vector(obj$gr(x))}, with
-\code{init = obj$par}; its repeated names (one per element of a parameter
+compiled code (Rcpp, TMB) and RTMB, which differentiates R code. An RTMB
+function can return the log-posterior itself, and its \code{obj$fn} and
+\code{obj$gr} are then passed as they are. For a TMB template that returns the
+negative log-posterior, pass \code{function(x) -obj$fn(x)} and
+\code{function(x) -as.vector(obj$gr(x))}, with \code{init = obj$par}; its repeated names (one per element of a parameter
 vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on.
 }
 
