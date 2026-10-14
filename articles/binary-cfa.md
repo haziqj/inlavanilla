@@ -14,9 +14,9 @@ library(inlavanilla)
 ## The model
 
 Person \\i\\ answers item \\j\\ with \\y\_{ij} = 1\\ when a latent
-response \\y^\*\_{ij} = \lambda_j \eta_i + \varepsilon\_{ij}\\ exceeds
-the threshold \\\tau_j\\, with factor \\\eta_i \sim N(0, 1)\\. We use
-the *delta* parameterisation, as lavaan (Rosseel, 2012) calls it, which
+response \\y^\*\_{ij} = \lambda_j \eta_i + \epsilon\_{ij}\\ exceeds the
+threshold \\\tau_j\\, with factor \\\eta_i \sim N(0, 1)\\. We use the
+*delta* parameterisation, as lavaan (Rosseel, 2012) calls it, which
 fixes \\\operatorname{Var}(y^\*\_{ij}) = 1\\. Then \\\lambda_j\\ is the
 correlation of \\y^\*\_{ij}\\ with the factor, \\\tau_j =
 -\Phi^{-1}\\P(y\_{ij} = 1)\\\\, and
@@ -127,13 +127,13 @@ fit <- inla_vanilla(
   count = count,
   nodes = nodes
 )
-#> ✔ Found the posterior mode in 35 iterations [180ms]
-#> ✔ VB mean correction, max shift 0.17σ [107ms]
-#> ✔ Fitted 12 skew-normal marginals [182ms]
+#> ✔ Found the posterior mode in 35 iterations [114ms]
+#> ✔ VB mean correction, max shift 0.17σ [95ms]
+#> ✔ Fitted 12 skew-normal marginals [118ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (490ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (340ms)
 #> 
 #>                      Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 atanh_lambda1   0.4016  0.0832   0.2402   0.4009   0.5665   0.3996

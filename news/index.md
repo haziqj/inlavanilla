@@ -47,8 +47,8 @@
   for RTMB, which gives the gradient by automatic differentiation, and
   compare the routes for speed and accuracy.
 - A website article, “Multilevel models”, fits a linear mixed model with
-  the random effects integrated out, and checks its marginals against
-  brms.
+  the random effects integrated out, checks its marginals against brms,
+  and draws the random effects for a caterpillar plot.
 - A website article, “Diagnostic classification models”, fits the DINA
   model to the ECPE data with the latent classes summed out, checks its
   marginals against Stan, and classifies examinees from draws.

@@ -90,7 +90,7 @@
 
 
     <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> knows nothing about levels or clusters: it sees one log-posterior and a vector of parameters. A multilevel model fits in that mould when the random effects are integrated out inside <code>logpost</code>, so that the parameters are only the fixed effects and the variance components. For a linear mixed model the integral is in closed form.</p>
-<p>This article fits a model with correlated random intercepts and slopes, and compares the posterior marginals with those of <a href="https://paulbuerkner.com/brms/" class="external-link">brms</a> (Bürkner, 2017), which samples the full model, random effects included, with Stan.</p>
+<p>This article fits a model with correlated random intercepts and slopes, draws the random effects from the fit afterwards, and compares both with <a href="https://paulbuerkner.com/brms/" class="external-link">brms</a> (Bürkner, 2017), which samples the full model, random effects included, with Stan.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
@@ -101,11 +101,11 @@
 <p>The <code>sleepstudy</code> data (Belenky et al., 2003; Bates et al., 2015) record the reaction times <span class="math inline">\(y_{ij}\)</span> of 18 subjects over 10 days of sleep deprivation. Each subject <span class="math inline">\(j\)</span> has their own intercept and slope:</p>
 <p><span class="math display">\[
 y_{ij} = \beta_0 + u_{0j} + (\beta_1 + u_{1j})\,\text{day}_{ij} +
-\varepsilon_{ij},
+\epsilon_{ij},
 \qquad
 \begin{pmatrix} u_{0j} \\ u_{1j} \end{pmatrix} \sim N(0, G),
 \qquad
-\varepsilon_{ij} \sim N(0, \sigma^2),
+\epsilon_{ij} \sim N(0, \sigma^2),
 \]</span></p>
 <p>where <span class="math inline">\(G\)</span> has standard deviations <span class="math inline">\(\tau_0\)</span> and <span class="math inline">\(\tau_1\)</span> and correlation <span class="math inline">\(\rho\)</span>. Integrating out <span class="math inline">\(u_j\)</span> leaves, for each subject’s vector of reaction times,</p>
 <p><span class="math display">\[
@@ -161,13 +161,13 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span>  atanh_rho <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">25</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [142ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [120ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [159ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [86ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [102ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [95ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -894.67 · Converged in 20 iterations (449ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -894.67 · Converged in 20 iterations (303ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                  Mean      SD      2.5%       50%     97.5%      Mode</span></span>
 <span><span class="co">#&gt; 1 b0         251.35    6.84    237.93    251.35    264.75    251.36  </span></span>
@@ -261,16 +261,87 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 </div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> took a fraction of a second. brms takes seconds to sample, after about a minute compiling the model.</p>
+</section><section class="level2"><h2 id="the-random-effects">The random effects<a class="anchor" aria-label="anchor" href="#the-random-effects"></a>
+</h2>
+<p>The fit has no random effects, because <code>logpost</code> integrated them out, but draws bring them back. Given the parameters <span class="math inline">\(\theta\)</span>, each subject’s random effects are Gaussian:</p>
+<p><span class="math display">\[
+u_j \mid y, \theta \sim N(m_j, V_j),
+\qquad
+V_j = \left(G^{-1} + X_j^\top X_j / \sigma^2\right)^{-1},
+\qquad
+m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
+\]</span></p>
+<p>So a draw of <span class="math inline">\(\theta\)</span> from the fit, followed by a draw of each <span class="math inline">\(u_j\)</span> given <span class="math inline">\(\theta\)</span>, is a draw from the posterior of the random effects. <code><a href="../reference/sampling.html">sampling()</a></code> passes <code>ys</code> and <code>xs</code> on to <code>fun</code>:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">draw_ranef</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">ys</span>, <span class="va">xs</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"b0"</span><span class="op">]</span><span class="op">]</span>, <span class="va">theta</span><span class="op">[[</span><span class="st">"b1"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="va">tau</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"log_tau0"</span><span class="op">]</span><span class="op">]</span>, <span class="va">theta</span><span class="op">[[</span><span class="st">"log_tau1"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">rho</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Hyperbolic.html" class="external-link">tanh</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"atanh_rho"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="va">sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"log_sigma"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span>  <span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">tau</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="va">g</span><span class="op">[</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">g</span><span class="op">[</span><span class="fl">2</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">rho</span> <span class="op">*</span> <span class="va">tau</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">tau</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span>
+<span>  <span class="va">g_inv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/solve.html" class="external-link">solve</a></span><span class="op">(</span><span class="va">g</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="co"># One draw of (u0, u1) for each subject, given theta</span></span>
+<span>  <span class="va">u</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">ys</span><span class="op">)</span>,</span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">j</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">x</span> <span class="op">&lt;-</span> <span class="va">xs</span><span class="op">[[</span><span class="va">j</span><span class="op">]</span><span class="op">]</span></span>
+<span>      <span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/solve.html" class="external-link">solve</a></span><span class="op">(</span><span class="va">g_inv</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/crossprod.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">/</span> <span class="va">sigma</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span>      <span class="va">m</span> <span class="op">&lt;-</span> <span class="va">v</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/crossprod.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">ys</span><span class="op">[[</span><span class="va">j</span><span class="op">]</span><span class="op">]</span> <span class="op">-</span> <span class="va">x</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">b</span><span class="op">)</span> <span class="op">/</span> <span class="va">sigma</span><span class="op">^</span><span class="fl">2</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/base/drop.html" class="external-link">drop</a></span><span class="op">(</span><span class="va">m</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="va">v</span><span class="op">)</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">}</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>u0 <span class="op">=</span> <span class="va">u</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span>, u1 <span class="op">=</span> <span class="va">u</span><span class="op">[</span><span class="fl">2</span>, <span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">u_draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">20000</span>, fun <span class="op">=</span> <span class="va">draw_ranef</span>, ys <span class="op">=</span> <span class="va">ys</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">)</span></span></code></pre></div>
+</div>
+<p>A caterpillar plot shows each subject’s posterior mean and 95% credible interval, sorted by the mean, with brms in grey:</p>
+<div class="cell" data-layout-align="center">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">plot_caterpillar</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">u_draws</span>, <span class="va">ref</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">op</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">3.5</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">op</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">xlabs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>u0 <span class="op">=</span> <span class="st">"Intercept, u0 (ms)"</span>, u1 <span class="op">=</span> <span class="st">"Slope, u1 (ms per day)"</span><span class="op">)</span></span>
+<span>  <span class="kw">for</span> <span class="op">(</span><span class="va">k</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">xlabs</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">d</span> <span class="op">&lt;-</span> <span class="va">u_draws</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/startsWith.html" class="external-link">startsWith</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">u_draws</span><span class="op">)</span>, <span class="va">k</span><span class="op">)</span><span class="op">]</span></span>
+<span>    <span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">d</span>, <span class="fl">2</span>, <span class="va">quantile</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">est_ref</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">ref</span><span class="op">$</span><span class="va">ranef</span><span class="op">[[</span><span class="va">k</span><span class="op">]</span><span class="op">]</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"2.5%"</span>, <span class="st">"97.5%"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span>    <span class="va">o</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">est</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span>    <span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">o</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
+<span>      <span class="va">est</span><span class="op">[</span><span class="va">o</span>, <span class="fl">1</span><span class="op">]</span>, <span class="va">y</span>, type <span class="op">=</span> <span class="st">"n"</span>, xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">est</span>, <span class="va">est_ref</span><span class="op">)</span>,</span>
+<span>      xlab <span class="op">=</span> <span class="va">xlabs</span><span class="op">[[</span><span class="va">k</span><span class="op">]</span><span class="op">]</span>, ylab <span class="op">=</span> <span class="st">""</span>, yaxt <span class="op">=</span> <span class="st">"n"</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/axis.html" class="external-link">axis</a></span><span class="op">(</span><span class="fl">2</span>, at <span class="op">=</span> <span class="va">y</span>, labels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">est_ref</span><span class="op">)</span><span class="op">[</span><span class="va">o</span><span class="op">]</span>, las <span class="op">=</span> <span class="fl">1</span>, cex.axis <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/abline.html" class="external-link">abline</a></span><span class="op">(</span>v <span class="op">=</span> <span class="fl">0</span>, col <span class="op">=</span> <span class="st">"grey85"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/segments.html" class="external-link">segments</a></span><span class="op">(</span><span class="va">est_ref</span><span class="op">[</span><span class="va">o</span>, <span class="fl">2</span><span class="op">]</span>, <span class="va">y</span>, <span class="va">est_ref</span><span class="op">[</span><span class="va">o</span>, <span class="fl">3</span><span class="op">]</span>, <span class="va">y</span>, lwd <span class="op">=</span> <span class="fl">4</span>, col <span class="op">=</span> <span class="st">"grey75"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/segments.html" class="external-link">segments</a></span><span class="op">(</span><span class="va">est</span><span class="op">[</span><span class="va">o</span>, <span class="fl">2</span><span class="op">]</span>, <span class="va">y</span>, <span class="va">est</span><span class="op">[</span><span class="va">o</span>, <span class="fl">3</span><span class="op">]</span>, <span class="va">y</span>, lwd <span class="op">=</span> <span class="fl">1.5</span>, col <span class="op">=</span> <span class="st">"#B5772E"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/graphics/points.html" class="external-link">points</a></span><span class="op">(</span><span class="va">est</span><span class="op">[</span><span class="va">o</span>, <span class="fl">1</span><span class="op">]</span>, <span class="va">y</span>, pch <span class="op">=</span> <span class="fl">19</span>, cex <span class="op">=</span> <span class="fl">0.6</span>, col <span class="op">=</span> <span class="st">"#B5772E"</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
+<span><span class="op">}</span></span>
+<span><span class="fu">plot_caterpillar</span><span class="op">(</span><span class="va">u_draws</span>, <span class="va">ref</span><span class="op">$</span><span class="va">subjects_18</span><span class="op">)</span></span></code></pre></div>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure><p><img src="multilevel_files/figure-html/caterpillar-1.png" class="quarto-figure quarto-figure-center" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>The means agree with brms to within 1% of the interval’s width, and the intervals are at most 5% narrower.</p>
 </section><section class="level2"><h2 id="with-fewer-subjects">With fewer subjects<a class="anchor" aria-label="anchor" href="#with-fewer-subjects"></a>
 </h2>
 <p>With only the first six subjects, the variance components are poorly determined:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span></span>
 <span><span class="va">fit_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [60ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [59ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [76ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [28ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [49ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [55ms]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">draws_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_6</span>, nsamp <span class="op">=</span> <span class="fl">20000</span>, fun <span class="op">=</span> <span class="va">natural</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu">compare</span><span class="op">(</span><span class="va">draws_6</span>, <span class="va">ref</span><span class="op">$</span><span class="va">subjects_6</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -284,13 +355,13 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 </div>
 <p>The variance components still match, but the fixed effects are now well too narrow: the standard deviation of <span class="math inline">\(\beta_1\)</span> is a third too small. Given the variance components, <span class="math inline">\(\beta\)</span> is Gaussian, but its marginal mixes those Gaussians over the uncertain <span class="math inline">\(\tau_0\)</span>, <span class="math inline">\(\tau_1\)</span> and <span class="math inline">\(\rho\)</span>, which gives it heavier tails than a skew-normal has. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags this as a large ridge bend:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -322.764 · Converged in 20 iterations (199ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -322.764 · Converged in 20 iterations (135ms)</span></span>
 <span><span class="co">#&gt; Laplace -322.994 + VB term 0.23</span></span>
-<span><span class="co">#&gt; 937 logpost calls: mode 60ms, VB 59ms, marginals 77ms</span></span>
+<span><span class="co">#&gt; 937 logpost calls: mode 28ms, VB 50ms, marginals 55ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -322,7 +393,7 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span><span class="co">#&gt;   is far from Gaussian there, and either mean may be off.</span></span></code></pre></div>
 </div>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plot_compare</span><span class="op">(</span><span class="va">draws_6</span>, <span class="va">ref</span><span class="op">$</span><span class="va">subjects_6</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">

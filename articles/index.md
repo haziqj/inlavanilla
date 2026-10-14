@@ -16,8 +16,8 @@
 - [Multilevel
   models](http://haziqj.ml/inlavanilla/articles/multilevel.md):
 
-  A linear mixed model with the random effects integrated out, checked
-  against brms.
+  A linear mixed model with the random effects integrated out and drawn
+  back afterwards, checked against brms.
 
 - [Diagnostic classification
   models](http://haziqj.ml/inlavanilla/articles/dcm.md):

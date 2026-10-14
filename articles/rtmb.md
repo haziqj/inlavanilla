@@ -355,15 +355,15 @@ us <- rbind(
   )
 )
 round(us, 1)
-#>              R  RTMB  C++
-#> logpost  110.7 145.7  9.4
-#> gradient    NA 322.2 11.8
+#>             R  RTMB C++
+#> logpost  57.6  48.2 5.6
+#> gradient   NA 106.4 7.0
 ```
 
-Replaying the tape takes 1.3 times as long as a call of `logpost_r()`,
+Replaying the tape takes 0.8 times as long as a call of `logpost_r()`,
 and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++
-is 12 times faster than R, and the hand-written gradient costs as much
-as 1.3 calls of its log-posterior. The four fits:
+is 10 times faster than R, and the hand-written gradient costs as much
+as 1.2 calls of its log-posterior. The four fits:
 
 ``` r
 
@@ -382,17 +382,17 @@ fits <- list(
 seconds <- vapply(fits, function(f) f$timing[["total"]], 0)
 cbind(t(sapply(fits, function(f) f$counts)), seconds = round(seconds, 2))
 #>                  logpost grad seconds
-#> R                  22495    0    2.96
-#> RTMB                1537 9931    3.68
-#> C++                22192    0    0.56
-#> C++ and gradient    1537 9933    0.35
+#> R                  22255    0    1.57
+#> RTMB                1530 9928    1.25
+#> C++                22437    0    0.32
+#> C++ and gradient    1535 9931    0.21
 ```
 
-Without a gradient the fit calls `logpost` 22,495 times. With one it
-calls `logpost` 1,537 times and the gradient 9,931 times. Both counts
+Without a gradient the fit calls `logpost` 22,255 times. With one it
+calls `logpost` 1,530 times and the gradient 9,928 times. Both counts
 grow with the square of the number of parameters, so a gradient saves
 time only when it costs less than 2.1 calls of `logpost`. RTMB’s costs
-about that, and its fit takes 1.2 times as long as R’s. The speed comes
+about that, and its fit takes 0.8 times as long as R’s. The speed comes
 from C++, and a hand-written gradient in C++ is the fastest of all.
 
 ## Accuracy
@@ -416,9 +416,9 @@ signif(
   2
 )
 #>                  marginals vb_mean    logml
-#> R                  5.7e-05 4.3e-02 -2.9e-02
-#> RTMB               6.0e-05 7.5e-05 -2.7e-05
-#> C++                5.0e-05 4.4e-02 -2.9e-02
+#> R                  4.5e-05 4.3e-02 -2.9e-02
+#> RTMB               5.8e-05 5.4e-05  2.1e-05
+#> C++                3.0e-05 4.3e-02 -2.9e-02
 #> C++ and gradient   0.0e+00 0.0e+00  0.0e+00
 ```
 

@@ -8,7 +8,7 @@ parameters are only the fixed effects and the variance components. For a
 linear mixed model the integral is in closed form.
 
 This article fits a model with correlated random intercepts and slopes,
-and compares the posterior marginals with those of
+draws the random effects from the fit afterwards, and compares both with
 [brms](https://paulbuerkner.com/brms/) (Bürkner, 2017), which samples
 the full model, random effects included, with Stan.
 
@@ -25,9 +25,8 @@ the reaction times \\y\_{ij}\\ of 18 subjects over 10 days of sleep
 deprivation. Each subject \\j\\ has their own intercept and slope:
 
 \\ y\_{ij} = \beta_0 + u\_{0j} + (\beta_1 + u\_{1j})\\\text{day}\_{ij} +
-\varepsilon\_{ij}, \qquad \begin{pmatrix} u\_{0j} \\ u\_{1j}
-\end{pmatrix} \sim N(0, G), \qquad \varepsilon\_{ij} \sim N(0,
-\sigma^2), \\
+\epsilon\_{ij}, \qquad \begin{pmatrix} u\_{0j} \\ u\_{1j} \end{pmatrix}
+\sim N(0, G), \qquad \epsilon\_{ij} \sim N(0, \sigma^2), \\
 
 where \\G\\ has standard deviations \\\tau_0\\ and \\\tau_1\\ and
 correlation \\\rho\\. Integrating out \\u_j\\ leaves, for each subject’s
@@ -94,13 +93,13 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [142ms]
-#> ✔ VB mean correction, max shift 0.3σ [120ms]
-#> ✔ Fitted 6 skew-normal marginals [159ms]
+#> ✔ Found the posterior mode in 20 iterations [86ms]
+#> ✔ VB mean correction, max shift 0.3σ [102ms]
+#> ✔ Fitted 6 skew-normal marginals [95ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -894.67 · Converged in 20 iterations (449ms)
+#> Log marginal likelihood: -894.67 · Converged in 20 iterations (303ms)
 #> 
 #>                  Mean      SD      2.5%       50%     97.5%      Mode
 #> 1 b0         251.35    6.84    237.93    251.35    264.75    251.36  
@@ -208,6 +207,83 @@ plot_compare(draws, ref$subjects_18)
 took a fraction of a second. brms takes seconds to sample, after about a
 minute compiling the model.
 
+## The random effects
+
+The fit has no random effects, because `logpost` integrated them out,
+but draws bring them back. Given the parameters \\\theta\\, each
+subject’s random effects are Gaussian:
+
+\\ u_j \mid y, \theta \sim N(m_j, V_j), \qquad V_j = \left(G^{-1} +
+X_j^\top X_j / \sigma^2\right)^{-1}, \qquad m_j = V_j X_j^\top (y_j -
+X_j \beta) / \sigma^2. \\
+
+So a draw of \\\theta\\ from the fit, followed by a draw of each \\u_j\\
+given \\\theta\\, is a draw from the posterior of the random effects.
+[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+passes `ys` and `xs` on to `fun`:
+
+``` r
+
+draw_ranef <- function(theta, ys, xs) {
+  b <- c(theta[["b0"]], theta[["b1"]])
+  tau <- exp(c(theta[["log_tau0"]], theta[["log_tau1"]]))
+  rho <- tanh(theta[["atanh_rho"]])
+  sigma <- exp(theta[["log_sigma"]])
+  g <- diag(tau^2)
+  g[1, 2] <- g[2, 1] <- rho * tau[1] * tau[2]
+  g_inv <- solve(g)
+
+  # One draw of (u0, u1) for each subject, given theta
+  u <- vapply(
+    names(ys),
+    function(j) {
+      x <- xs[[j]]
+      v <- solve(g_inv + crossprod(x) / sigma^2)
+      m <- v %*% crossprod(x, ys[[j]] - x %*% b) / sigma^2
+      drop(m + t(chol(v)) %*% rnorm(2))
+    },
+    numeric(2)
+  )
+  c(u0 = u[1, ], u1 = u[2, ])
+}
+set.seed(1)
+u_draws <- sampling(fit, nsamp = 20000, fun = draw_ranef, ys = ys, xs = xs)
+```
+
+A caterpillar plot shows each subject’s posterior mean and 95% credible
+interval, sorted by the mean, with brms in grey:
+
+``` r
+
+plot_caterpillar <- function(u_draws, ref) {
+  op <- par(mfrow = c(1, 2), mar = c(4, 3.5, 1, 1))
+  on.exit(par(op))
+  xlabs <- c(u0 = "Intercept, u0 (ms)", u1 = "Slope, u1 (ms per day)")
+  for (k in names(xlabs)) {
+    d <- u_draws[, startsWith(colnames(u_draws), k)]
+    est <- cbind(colMeans(d), t(apply(d, 2, quantile, c(0.025, 0.975))))
+    est_ref <- as.matrix(ref$ranef[[k]][, c("mean", "2.5%", "97.5%")])
+    o <- order(est[, 1])
+    y <- seq_along(o)
+    plot(
+      est[o, 1], y, type = "n", xlim = range(est, est_ref),
+      xlab = xlabs[[k]], ylab = "", yaxt = "n"
+    )
+    axis(2, at = y, labels = rownames(est_ref)[o], las = 1, cex.axis = 0.7)
+    abline(v = 0, col = "grey85")
+    segments(est_ref[o, 2], y, est_ref[o, 3], y, lwd = 4, col = "grey75")
+    segments(est[o, 2], y, est[o, 3], y, lwd = 1.5, col = "#B5772E")
+    points(est[o, 1], y, pch = 19, cex = 0.6, col = "#B5772E")
+  }
+}
+plot_caterpillar(u_draws, ref$subjects_18)
+```
+
+![](multilevel_files/figure-html/caterpillar-1.png)
+
+The means agree with brms to within 1% of the interval’s width, and the
+intervals are at most 5% narrower.
+
 ## With fewer subjects
 
 With only the first six subjects, the variance components are poorly
@@ -217,9 +293,9 @@ determined:
 
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [60ms]
-#> ✔ VB mean correction, max shift 0.42σ [59ms]
-#> ✔ Fitted 6 skew-normal marginals [76ms]
+#> ✔ Found the posterior mode in 20 iterations [28ms]
+#> ✔ VB mean correction, max shift 0.42σ [49ms]
+#> ✔ Fitted 6 skew-normal marginals [55ms]
 set.seed(1)
 draws_6 <- sampling(fit_6, nsamp = 20000, fun = natural)
 round(compare(draws_6, ref$subjects_6), 3)
@@ -245,9 +321,9 @@ ridge bend:
 summary(fit_6)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -322.764 · Converged in 20 iterations (199ms)
+#> Log marginal likelihood: -322.764 · Converged in 20 iterations (135ms)
 #> Laplace -322.994 + VB term 0.23
-#> 937 logpost calls: mode 60ms, VB 59ms, marginals 77ms
+#> 937 logpost calls: mode 28ms, VB 50ms, marginals 55ms
 #> 
 #> ── Posterior marginals ──
 #> 

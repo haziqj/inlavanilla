@@ -96,7 +96,7 @@
 </div>
 <section class="level2"><h2 id="the-model">The model<a class="anchor" aria-label="anchor" href="#the-model"></a>
 </h2>
-<p>Person <span class="math inline">\(i\)</span> answers item <span class="math inline">\(j\)</span> with <span class="math inline">\(y_{ij} = 1\)</span> when a latent response <span class="math inline">\(y^*_{ij} = \lambda_j \eta_i + \varepsilon_{ij}\)</span> exceeds the threshold <span class="math inline">\(\tau_j\)</span>, with factor <span class="math inline">\(\eta_i \sim N(0, 1)\)</span>. We use the <em>delta</em> parameterisation, as lavaan (Rosseel, 2012) calls it, which fixes <span class="math inline">\(\operatorname{Var}(y^*_{ij}) = 1\)</span>. Then <span class="math inline">\(\lambda_j\)</span> is the correlation of <span class="math inline">\(y^*_{ij}\)</span> with the factor, <span class="math inline">\(\tau_j = -\Phi^{-1}\{P(y_{ij} = 1)\}\)</span>, and</p>
+<p>Person <span class="math inline">\(i\)</span> answers item <span class="math inline">\(j\)</span> with <span class="math inline">\(y_{ij} = 1\)</span> when a latent response <span class="math inline">\(y^*_{ij} = \lambda_j \eta_i + \epsilon_{ij}\)</span> exceeds the threshold <span class="math inline">\(\tau_j\)</span>, with factor <span class="math inline">\(\eta_i \sim N(0, 1)\)</span>. We use the <em>delta</em> parameterisation, as lavaan (Rosseel, 2012) calls it, which fixes <span class="math inline">\(\operatorname{Var}(y^*_{ij}) = 1\)</span>. Then <span class="math inline">\(\lambda_j\)</span> is the correlation of <span class="math inline">\(y^*_{ij}\)</span> with the factor, <span class="math inline">\(\tau_j = -\Phi^{-1}\{P(y_{ij} = 1)\}\)</span>, and</p>
 <p><span class="math display">\[
 P(y_{ij} = 1 \mid \eta_i) =
 \Phi\left( \frac{\lambda_j \eta_i - \tau_j}{\sqrt{1 - \lambda_j^2}} \right).
@@ -180,13 +180,13 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span>  count <span class="op">=</span> <span class="va">count</span>,</span>
 <span>  nodes <span class="op">=</span> <span class="va">nodes</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [180ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [107ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [182ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [114ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [95ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [118ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (490ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (340ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                      Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt;  1 atanh_lambda1   0.4016  0.0832   0.2402   0.4009   0.5665   0.3996</span></span>
