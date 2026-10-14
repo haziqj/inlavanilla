@@ -16,6 +16,10 @@ articles:
   contents:
   - diagnostics
   - model-comparison
+- title: Examples
+  navbar: ~
+  contents:
+  - articles/multilevel
 - title: Compiled code
   desc: >
     Faster log-posteriors for larger models. Both articles fit the same

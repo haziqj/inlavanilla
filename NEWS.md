@@ -32,6 +32,8 @@
 * Two website articles, "Speeding up with Rcpp" and "Using TMB", fit a
   structural equation model with 39 parameters from a log-posterior written
   in R, in C++ with an analytic gradient, and as a TMB template.
+* A website article, "Multilevel models", fits a linear mixed model with the
+  random effects integrated out, and checks its marginals against brms.
 * Three output levels: by default each stage prints one line; `verbose =
   TRUE` adds a full diagnostic of each stage (the optimiser's report, how the
   Hessian was taken, the posterior correlations, the VB iterations, a line per
