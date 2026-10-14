@@ -22,6 +22,7 @@ articles:
   - articles/multilevel
   - articles/dcm
   - articles/correlation
+  - articles/binary-cfa
 - title: Compiled code
   desc: >
     Faster log-posteriors for larger models. Both articles fit the same
