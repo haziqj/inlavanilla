@@ -416,10 +416,11 @@ double logpost_cpp(const Map<VectorXd> theta, const Map<MatrixXd> Y) {
 
 ### The gradient
 
-The gradient follows from the chain rule, and costs about as much as the
-log-likelihood itself. Write $D$ for the $n \times 11$ matrix of data minus
-$\nu$ and $\Omega = \Sigma^{-1}$. The derivative of the log-likelihood is
-$\Omega D^\top \mathbf{1}$ with respect to $\nu$, and
+The gradient of the log-likelihood has a closed form (Neudecker & Satorra,
+1991), and costs about as much as the log-likelihood itself. Write $D$ for
+the $n \times 11$ matrix of data minus $\nu$ and $\Omega = \Sigma^{-1}$. The
+derivative of the log-likelihood is $\Omega D^\top \mathbf{1}$ with respect
+to $\nu$, and
 
 $$
 G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
@@ -746,3 +747,7 @@ Carlo error, which the deterministic cubature rule avoids.
 
 Bollen, K. A. (1989). *Structural equations with latent variables*. Wiley.
 <https://doi.org/10.1002/9781118619179>
+
+Neudecker, H., & Satorra, A. (1991). Linear structural relations: Gradient
+and Hessian of the fitting function. *Statistics & Probability Letters*,
+*11*(1), 57–61. <https://doi.org/10.1016/0167-7152(91)90178-T>
