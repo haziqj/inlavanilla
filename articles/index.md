@@ -13,8 +13,8 @@
   A linear mixed model with the random effects integrated out and drawn
   back afterwards, checked against brms.
 
-- [Diagnostic classification
-  models](http://haziqj.ml/inlavanilla/articles/dcm.md):
+- [Cognitive diagnostic
+  models](http://haziqj.ml/inlavanilla/articles/cdm.md):
 
   A DINA model for binary items, with the latent classes summed out,
   checked against Stan.

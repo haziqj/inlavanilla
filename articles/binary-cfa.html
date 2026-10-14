@@ -49,7 +49,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-examples">
 <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
-    <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
+    <li><a class="dropdown-item" href="../articles/cdm.html">Cognitive diagnostic models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
@@ -186,13 +186,13 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span>  count <span class="op">=</span> <span class="va">count</span>,</span>
 <span>  nodes <span class="op">=</span> <span class="va">nodes</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [102ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [84ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [104ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [178ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [104ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [179ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (303ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (481ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                      Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt;  1 atanh_lambda1   0.4016  0.0832   0.2402   0.4009   0.5665   0.3996</span></span>

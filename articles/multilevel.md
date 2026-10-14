@@ -93,13 +93,13 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [75ms]
-#> ✔ VB mean correction, max shift 0.3σ [91ms]
-#> ✔ Fitted 6 skew-normal marginals [88ms]
+#> ✔ Found the posterior mode in 20 iterations [133ms]
+#> ✔ VB mean correction, max shift 0.3σ [113ms]
+#> ✔ Fitted 6 skew-normal marginals [151ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -894.67 · Converged in 20 iterations (269ms)
+#> Log marginal likelihood: -894.67 · Converged in 20 iterations (423ms)
 #> 
 #>                  Mean      SD      2.5%       50%     97.5%      Mode
 #> 1 b0         251.35    6.84    237.93    251.35    264.75    251.36  
@@ -293,9 +293,9 @@ determined:
 
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [26ms]
-#> ✔ VB mean correction, max shift 0.42σ [44ms]
-#> ✔ Fitted 6 skew-normal marginals [51ms]
+#> ✔ Found the posterior mode in 20 iterations [48ms]
+#> ✔ VB mean correction, max shift 0.42σ [56ms]
+#> ✔ Fitted 6 skew-normal marginals [64ms]
 set.seed(1)
 draws_6 <- sampling(fit_6, nsamp = 20000, fun = natural)
 round(compare(draws_6, ref$subjects_6), 3)
@@ -321,9 +321,9 @@ ridge bend:
 summary(fit_6)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -322.764 · Converged in 20 iterations (124ms)
+#> Log marginal likelihood: -322.764 · Converged in 20 iterations (172ms)
 #> Laplace -322.994 + VB term 0.23
-#> 937 logpost calls: mode 26ms, VB 44ms, marginals 52ms
+#> 937 logpost calls: mode 48ms, VB 56ms, marginals 64ms
 #> 
 #> ── Posterior marginals ──
 #> 

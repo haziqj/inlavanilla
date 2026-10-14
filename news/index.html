@@ -26,7 +26,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-examples" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Examples</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-examples"><li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
-    <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
+    <li><a class="dropdown-item" href="../articles/cdm.html">Cognitive diagnostic models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
@@ -60,6 +60,7 @@
 <ul><li>
 <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> takes the Hessian of <code>logpost</code> as an optional <code>hess</code>, after <code>grad</code>, as <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> does. With it, <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code> takes Newton steps to the mode, the Hessian at the mode is the supplied one, and the volume correction of each skew-normal marginal takes one <code>hess</code> call instead of 2m + 2 <code>grad</code> calls. RTMB gives it with the gradient, as <code>obj$he</code>. The fit is the same, except that the mode is found more precisely, and on test models it took 13% to 35% less time. A supplied <code>hess</code> is checked at the mode against central differences of <code>grad</code>, and <code>fit$counts</code> counts its calls.</li>
 <li>The website article “Gradients with RTMB” is now “Gradients and Hessians with RTMB”. It passes RTMB’s Hessian too, and shows where the fit uses it, the time it saves and the more precise mode it finds.</li>
+<li>The website article “Diagnostic classification models” is now “Cognitive diagnostic models”.</li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="inlavanilla-010">inlavanilla 0.1.0<a class="anchor" aria-label="anchor" href="#inlavanilla-010"></a></h2>

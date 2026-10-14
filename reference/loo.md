@@ -188,8 +188,8 @@ logpost <- function(theta, time, y) {
 
 fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
 #> ✔ Found the posterior mode in 9 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.12σ [0ms]
-#> ✔ Fitted 2 skew-normal marginals [3ms]
+#> ✔ VB mean correction, max shift 0.12σ [1ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 loo(fit, loglik, time = time, y = y)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 
