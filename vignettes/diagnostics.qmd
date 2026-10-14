@@ -453,13 +453,15 @@ The fit-time warning is a condition of class
 Its headline counts the problems, as INLAvaan's does, and it names at most
 three parameters for each; `summary()` lists them all. With `silent = TRUE`
 nothing is printed, and every warning raised during the fit is kept in
-`fit$warnings` as plain text, which suits simulations:
+`fit$warnings` as plain text, a line per bullet with no wrapping, which
+suits simulations. Here it is wrapped to fit the page:
 
 ```{r}
 #| label: silent
 fit_mix_quiet <- inla_vanilla(logpost_mix, c(theta = -0.2), silent = TRUE)
 length(fit_mix_quiet$warnings)
-cat(fit_mix_quiet$warnings)
+bullets <- strsplit(fit_mix_quiet$warnings, "\n")[[1]]
+writeLines(strwrap(bullets, width = 76, exdent = 2))
 ```
 
 To handle the warning in code, catch its class:
