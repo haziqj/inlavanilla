@@ -584,21 +584,28 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
       nig$log_sigma$sd
     expect_lt(abs(mode_err), 0.05)
     # Right skew, and the VB mean moves right: observed shift 0.36 SDs, VB
-    # mean error 0.028 SDs against the posterior mean
+    # mean error 0.028 SDs against the posterior mean with the gradient and
+    # 0.036 without
     expect_gt(fit$sn["log_sigma", "alpha"], 1)
     expect_gt(fit$mean_vb[["log_sigma"]], fit$mode[["log_sigma"]])
     expect_lt(abs(err$mean_vb), 0.08)
     # Against the exact VB solution, the VB mean is off only by the error of
-    # the cubature rule: observed 5.2e-5 SDs for log_sigma, 3e-5 (finite
-    # differences) or 5e-9 (gradient) for mu. The VB term of the log marginal
-    # likelihood, 0.5 shift' H shift, is off by 1.9e-5 against the exact
-    # shift and the exact H.
+    # the cubature rule: observed 5.2e-5 SDs for log_sigma and 5e-9 for mu
+    # with the gradient. Without one, Stein's identity on the seven-point
+    # rule is exact for log-densities of degree four only: observed 9.0e-3
+    # SDs for log_sigma and 1.2e-6 for mu. The VB term of the log marginal
+    # likelihood, 0.5 shift' H shift, is off by 1.9e-5 and 3.2e-3 against
+    # the exact shift and the exact H.
+    analytic <- !is.null(gr)
     sds <- sqrt(diag(nig$joint_cov))
-    expect_lt(max(abs(fit$mean_vb - nig$vb_mean) / sds), 2e-4)
+    expect_lt(
+      max(abs(fit$mean_vb - nig$vb_mean) / sds),
+      if (analytic) 2e-4 else 0.025
+    )
     shift <- nig$vb_mean - nig$joint_mode
     expect_lt(
       abs(fit$logml - fit$logml_laplace - 0.5 * sum(shift^2 / sds^2)),
-      6e-5
+      if (analytic) 6e-5 else 0.01
     )
 
     # mu: a Student-t with 2 an = 14 degrees of freedom, symmetric about mn.

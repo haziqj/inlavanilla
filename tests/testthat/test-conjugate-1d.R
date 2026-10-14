@@ -591,8 +591,10 @@ test_that("without the VB correction the log marginal likelihood is the Laplace 
 # `vb_tol` bounds the VB mean's error in Laplace SDs, which comes from the
 # cubature rule (for the log-gamma the degree-5 rule's relative error in
 # E[exp(theta)] is s^6 / 120 for Laplace SD s, so 6e-5 at S = 5, and 1.4e-4
-# SDs in the VB mean). `vb_logml_tol` bounds the error of fit$logml against
-# the exact Laplace plus VB term.
+# SDs in the VB mean). Without a gradient the VB mean comes from Stein's
+# identity on the three-point rule, exact for log-densities of degree four
+# rather than six, and its error is larger. `vb_logml_tol` bounds the error
+# of fit$logml against the exact Laplace plus VB term.
 expect_stages_exact <- function(fit, model, gradient, vb_tol, vb_logml_tol) {
   err <- approx_errors(fit, model)
   if (gradient) {
@@ -641,14 +643,15 @@ test_that("a skewed beta-binomial posterior is recovered on the logit scale", {
   fits <- fit_both_ways(bb_skewed, c(theta = 0))
   for (way in names(fits)) {
     fit <- fits[[way]]
-    # VB mean: observed error 6.5e-5 (finite differences) and 3.5e-5 Laplace
-    # SDs; VB log marginal likelihood: observed 1.3e-5 and 6.9e-6
+    # VB mean: observed error 3.5e-5 Laplace SDs with the gradient and 5.3e-3
+    # without; VB log marginal likelihood: observed 6.9e-6 and 1.1e-3
+    analytic <- way == "analytic"
     err <- expect_stages_exact(
       fit,
       bb_skewed,
-      gradient = way == "analytic",
-      vb_tol = 2e-4,
-      vb_logml_tol = 4e-5
+      gradient = analytic,
+      vb_tol = if (analytic) 2e-4 else 0.015,
+      vb_logml_tol = if (analytic) 4e-5 else 3e-3
     )
 
     # Mean: observed SN error 0.0022 SDs, Laplace (the mode) 0.20 SDs
@@ -686,14 +689,15 @@ test_that("a near-symmetric beta-binomial posterior is recovered on the logit sc
   fits <- fit_both_ways(bb_symmetric, c(theta = 0))
   for (way in names(fits)) {
     fit <- fits[[way]]
-    # VB mean: observed error 3.2e-5 and 2.1e-5 Laplace SDs; VB log marginal
-    # likelihood: observed 2.8e-7
+    # VB mean: observed error 2.1e-5 Laplace SDs with the gradient and 2.3e-4
+    # without; VB log marginal likelihood: observed 2.8e-7 and 3.2e-6
+    analytic <- way == "analytic"
     err <- expect_stages_exact(
       fit,
       bb_symmetric,
-      gradient = way == "analytic",
-      vb_tol = 1e-4,
-      vb_logml_tol = 1e-6
+      gradient = analytic,
+      vb_tol = if (analytic) 1e-4 else 7e-4,
+      vb_logml_tol = if (analytic) 1e-6 else 1e-5
     )
 
     # Mean: observed SN error 0.00012 SDs, Laplace 0.014 SDs
@@ -771,14 +775,16 @@ test_that("a skewed gamma-Poisson posterior is recovered on the log scale", {
   fits <- fit_both_ways(gp_skewed, c(log_lambda = 0))
   for (way in names(fits)) {
     fit <- fits[[way]]
-    # VB mean: observed error 1.4e-4 Laplace SDs both ways, the error of the
-    # cubature rule; VB log marginal likelihood: observed 3e-5
+    # VB mean: observed error 1.4e-4 Laplace SDs with the gradient, the error
+    # of the cubature rule, and 4.3e-3 without; VB log marginal likelihood:
+    # observed 3e-5 and 9.6e-4
+    analytic <- way == "analytic"
     err <- expect_stages_exact(
       fit,
       gp_skewed,
-      gradient = way == "analytic",
-      vb_tol = 4e-4,
-      vb_logml_tol = 1e-4
+      gradient = analytic,
+      vb_tol = if (analytic) 4e-4 else 0.013,
+      vb_logml_tol = if (analytic) 1e-4 else 3e-3
     )
 
     # Mean: observed SN error 0.0024 SDs, Laplace 0.22 SDs
@@ -817,14 +823,16 @@ test_that("a near-symmetric gamma-Poisson posterior is recovered on the log scal
   fits <- fit_both_ways(gp_symmetric, c(log_lambda = 0))
   for (way in names(fits)) {
     fit <- fits[[way]]
-    # VB mean: observed error 5.2e-8 Laplace SDs (the cubature rule is nearly
-    # exact at S = 120); VB log marginal likelihood: observed 3.6e-8
+    # VB mean: observed error 5.2e-8 Laplace SDs with the gradient (the
+    # cubature rule is nearly exact at S = 120) and 3.8e-5 without; VB log
+    # marginal likelihood: observed 3.6e-8 and 1.8e-6
+    analytic <- way == "analytic"
     err <- expect_stages_exact(
       fit,
       gp_symmetric,
-      gradient = way == "analytic",
-      vb_tol = 1.5e-7,
-      vb_logml_tol = 1e-7
+      gradient = analytic,
+      vb_tol = if (analytic) 1.5e-7 else 1.2e-4,
+      vb_logml_tol = if (analytic) 1e-7 else 6e-6
     )
 
     # Mean: observed SN error 8e-5 SDs, Laplace 0.046 SDs

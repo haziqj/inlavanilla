@@ -189,17 +189,23 @@ SDs either side of the mode (the Laplace SDs), missed them.
 \section{Gradients}{
 
 \code{grad} is optional. Without it, derivatives come from finite differences
-of \code{logpost}, and the number of calls grows quickly with the number of
-parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
-take about m(\code{n_grid} + 2m + 5). The VB correction takes about
-(m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
-beyond a handful of parameters: at m = 20 a fit makes on the order of
-50,000 calls. With \code{grad}, the VB correction takes 2m^2 + 1 gradient calls
-per sweep instead, and the fit is faster and more accurate. For more than
-about 10 parameters, supply \code{grad}, or set \code{vb = FALSE} to skip the VB
-correction (and its term in the log marginal likelihood): the skew-normal
-marginals do not depend on it. \code{marginals = "gaussian"} saves the calls of
-the scans.
+of \code{logpost}, and the number of calls grows with the square of the number
+of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
+marginals about m(\code{n_grid} + 2m + 5). The VB correction takes at most
+(m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no derivatives,
+because Stein's identity gives the expected gradient from values of
+\code{logpost} alone. Its VB mean is then exact when the log-posterior is a
+polynomial of degree four in whitened coordinates, and up to degree six
+with \code{grad}. On test models it was about 0.01 posterior SDs from exact VB
+(0.003 with \code{grad}), and up to 0.1 on a strongly skewed posterior, against
+a VB error of 0.01 to 0.2 SDs from the posterior mean itself.
+
+With \code{grad}, the mode, the Hessian and the marginals are faster and more
+accurate, and the VB correction takes 2m^2 + 1 gradient calls per sweep.
+Beyond a handful of parameters it is then the slowest stage, and
+\code{vb = FALSE} skips it (and its term in the log marginal likelihood): the
+skew-normal marginals do not depend on it. \code{marginals = "gaussian"} saves
+the calls of the scans.
 
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either

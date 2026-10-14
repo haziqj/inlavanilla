@@ -90,17 +90,23 @@
 #'
 #' @section Gradients:
 #' `grad` is optional. Without it, derivatives come from finite differences
-#' of `logpost`, and the number of calls grows quickly with the number of
-#' parameters m. The mode and Hessian take about m^2 + 6m calls. The marginals
-#' take about m(`n_grid` + 2m + 5). The VB correction takes about
-#' (m + 1)(2m^2 + 1) calls per sweep, over a few sweeps, so it dominates
-#' beyond a handful of parameters: at m = 20 a fit makes on the order of
-#' 50,000 calls. With `grad`, the VB correction takes 2m^2 + 1 gradient calls
-#' per sweep instead, and the fit is faster and more accurate. For more than
-#' about 10 parameters, supply `grad`, or set `vb = FALSE` to skip the VB
-#' correction (and its term in the log marginal likelihood): the skew-normal
-#' marginals do not depend on it. `marginals = "gaussian"` saves the calls of
-#' the scans.
+#' of `logpost`, and the number of calls grows with the square of the number
+#' of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
+#' marginals about m(`n_grid` + 2m + 5). The VB correction takes at most
+#' (m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no derivatives,
+#' because Stein's identity gives the expected gradient from values of
+#' `logpost` alone. Its VB mean is then exact when the log-posterior is a
+#' polynomial of degree four in whitened coordinates, and up to degree six
+#' with `grad`. On test models it was about 0.01 posterior SDs from exact VB
+#' (0.003 with `grad`), and up to 0.1 on a strongly skewed posterior, against
+#' a VB error of 0.01 to 0.2 SDs from the posterior mean itself.
+#'
+#' With `grad`, the mode, the Hessian and the marginals are faster and more
+#' accurate, and the VB correction takes 2m^2 + 1 gradient calls per sweep.
+#' Beyond a handful of parameters it is then the slowest stage, and
+#' `vb = FALSE` skips it (and its term in the log marginal likelihood): the
+#' skew-normal marginals do not depend on it. `marginals = "gaussian"` saves
+#' the calls of the scans.
 #'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -502,31 +508,18 @@ vanilla_fit <- function(
     report_mode(prog, lap, calls_since())
   }
 
-  # Gradients for the VB correction: the user's, or one-sided differences
-  # stepping a thousandth of a posterior SD. A one-sided difference is biased
-  # by half a step times the curvature; the bias is removed with the Laplace
-  # curvature diag(H), which is close to the curvature at every node. This
-  # takes m + 1 calls per gradient rather than the 2m of central differences,
-  # and the VB stage is where most calls go without a gradient. In tests the
-  # shift moved by about 1e-4 posterior SDs against central differences, far
-  # below the error of the cubature rule itself.
   sds <- sqrt(diag(lap$Sigma))
-  gr_vb <- if (is.null(gr)) {
-    h_vb <- 1e-3 * sds
-    bias <- 0.5 * h_vb * diag(lap$H)
-    function(x) fd_grad_forward(lp, x, h = h_vb) + bias
-  } else {
-    gr
-  }
 
   # 1b. VB mean correction ---------------------------------------------------
+  # With the user's gradient when there is one; without, from log-posterior
+  # values alone (see vb_correct())
   t0 <- elapsed()
   vbc <- NULL
   if (vb) {
     progress_start(prog, "Applying the VB mean correction")
     vbc <- with_context(
       "applying the VB mean correction",
-      vb_correct(lp, gr_vb, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
+      vb_correct(lp, gr, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
     )
     # The fallback is a route of the solver, reported but not marked, as in
     # INLAvaan
