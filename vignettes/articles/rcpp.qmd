@@ -576,10 +576,10 @@ fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 ```
 
-With the gradient, the VB correction is the slowest stage: it takes the
-gradient at $2m^2 + 1 = 3{,}043$ points per sweep, where without one it takes
-`logpost` at 1,640. The gradient buys accuracy there: its VB mean is exact
-when the log-posterior is a polynomial of degree six, against degree four from
+The VB correction takes the same nodes either way: the gradient at
+$(m + 1)(m + 2) + 1 = 1{,}641$ points per sweep, or `logpost` at all but the
+centre. The gradient buys accuracy there: its VB mean is exact when the
+log-posterior is a polynomial of degree six, against degree four from
 `logpost` alone.
 
 The three fits agree. The skew-normal marginals do not depend on the VB
