@@ -64,11 +64,18 @@
   (names only for the heavy-tails check, which is yes or no).
   Healthy fits stay silent. A new vignette, "Diagnostics", explains every
   check, with citations of Jamil and Rue (2026a).
-* `summary()` prints its table of diagnostics (VB shift, NMAD, unscanned
-  mass, ridge bend and mean gap) with numbers formatted as a tibble prints
-  them and the flagged values in red. One line gives the largest value of
-  each skew-normal check that passes, and each flagged check has a line of
-  its own.
+* `summary()` prints the fit first (the log marginal likelihood, and the
+  calls and time each stage took), then the posterior marginals, then the
+  diagnostics, each under its own heading. Its table of diagnostics (VB
+  shift, NMAD, unscanned mass, ridge bend and mean gap) has numbers
+  formatted as a tibble prints them and the flagged values in red. One line
+  gives the largest value of each skew-normal check that passes, and each
+  flagged check has a line of its own. `print()` says whether the fit
+  converged, with the iterations and the time the fit took.
+* Printed output is never wider than 80 columns, or the console if it is
+  narrower: the summaries, the verbose report and the fit-time warning wrap
+  their long lines. The rendered documentation is 76 columns wide, so that
+  no output scrolls sideways on the website.
 * `diagnostics(fit)` and `diagnostics(fit, type = "param")` return the
   checks as numbers, with the names, order and print formats of INLAvaan's
   `diagnostics()`, followed by inlavanilla's own. `plot(fit, type =
