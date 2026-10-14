@@ -135,8 +135,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' and the paper reports a calibration of the expected error against them in
 #' its Supplementary Material.
 #'
-#' The status lines list every flagged parameter, worst first, with its
-#' value; the warning lists at most three, as INLAvaan's does. With
+#' The table gives each value to two significant figures, as a tibble
+#' prints numbers, with the flagged values in red where the console shows
+#' colour. The status lines list every flagged parameter, worst first, with
+#' its value; the warning lists at most three, as INLAvaan's does. With
 #' `silent = TRUE` the warning is only recorded in `fit$warnings`. Printing
 #' the fit ends with a line for its warnings and one counting the checks
 #' flagged here, each shown only when there are any.
@@ -211,6 +213,9 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   diag <- x$diagnostics
   gaussian <- is_gaussian(x)
   has_vb <- !is.null(x$vb)
+  opt <- x$optim
+  dg <- diagnostics_internal(opt, x$vb, diag)
+  glob <- dg$global
   cols <- c(
     "vb_shift_sigma",
     "mean_gap",
@@ -224,16 +229,14 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   if (any(keep)) {
     dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
     colnames(dtab) <- heads[keep]
-    cat_table(dtab, digits = 2, by_cell = TRUE)
+    flag <- param_flags(dg, gaussian)[, cols[keep], drop = FALSE]
+    cat_table(dtab, digits = 2, flag = flag)
     cli::cat_line()
   }
 
   # One status line per check, and one "!" line for each flag, so that the
   # count in print() matches. Flagged lines list every flagged parameter,
   # worst first, through variables in `env` (see list_template()).
-  opt <- x$optim
-  dg <- diagnostics_internal(opt, x$vb, diag)
-  glob <- dg$global
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = environment())
   flagged_line <- function(check) {
@@ -644,19 +647,33 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
 # Print a numeric matrix as an aligned table: bold column headers, cyan row
 # names. With `scale` (one value per row, such as the posterior SD), each row
 # is printed to `digits` significant figures of its scale, so parameters on
-# different scales each get a sensible number of decimals. With `by_cell`,
-# each number is formatted on its own. Widths are worked out on the plain
-# strings before any styling.
-cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
-  cells <- matrix("", nrow(tab), ncol(tab))
-  for (i in seq_len(nrow(tab))) {
-    cells[i, ] <- if (by_cell) {
-      formatC(tab[i, ], digits = digits, format = "g")
-    } else {
+# different scales each get a sensible number of decimals. Without it, each
+# column is formatted as a tibble prints it (see format_sigfig()), to
+# `digits` significant figures. The cells where `flag` (a logical matrix
+# like `tab`) is TRUE are red. Widths are worked out on the plain strings
+# before any styling.
+cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
+  cells <- styled <- matrix("", nrow(tab), ncol(tab))
+  if (is.null(scale)) {
+    for (j in seq_len(ncol(tab))) {
+      col <- format_sigfig(tab[, j], digits)
+      cells[, j] <- col$plain
+      styled[, j] <- col$styled
+    }
+  } else {
+    for (i in seq_len(nrow(tab))) {
       s <- abs(scale[i])
       dec <- if (is.finite(s) && s > 0) digits - 1 - floor(log10(s)) else digits
-      formatC(tab[i, ], digits = min(max(dec, 0), 8), format = "f")
+      cells[i, ] <- formatC(
+        tab[i, ],
+        digits = min(max(dec, 0), 8),
+        format = "f"
+      )
     }
+    styled <- cells
+  }
+  if (!is.null(flag)) {
+    styled[flag] <- cli::col_red(cells[flag])
   }
   heads <- colnames(tab)
   widths <- pmax(nchar(heads), apply(nchar(cells), 2, max))
@@ -664,6 +681,11 @@ cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
   rw <- max(nchar(rn), 0L)
   pad <- function(s, w) {
     vapply(seq_along(s), function(i) formatC(s[i], width = w[i]), "")
+  }
+  # Right-align a styled cell by the width of its plain text
+  pad_cells <- function(i, cols) {
+    w <- widths[cols]
+    paste0(strrep(" ", w - nchar(cells[i, cols])), styled[i, cols])
   }
   # Split the columns into blocks that fit the console width, as print() does
   # for a wide matrix
@@ -695,10 +717,94 @@ cat_table <- function(tab, digits = 3, scale = NULL, by_cell = FALSE) {
     for (i in seq_len(nrow(cells))) {
       cli::cat_line(
         cli::col_cyan(formatC(rn[i], width = -rw)),
-        paste0("  ", pad(cells[i, cols], widths[cols]), collapse = "")
+        paste0("  ", pad_cells(i, cols), collapse = "")
       )
     }
   }
+}
+
+# Format a numeric column as the pillar package prints a tibble's: `sigfig`
+# significant figures for each number, every digit before the decimal point
+# kept, and a decimal digit dropped only where the number has no more (so 1.5
+# and 0.33 but 0.30 for 0.3001). A number rounded to a whole one keeps its
+# point ("123."). The decimal points line up. A column wider than 13
+# characters is printed in scientific notation instead. Returns the plain
+# cells, padded to one width, and the same cells styled: the leading zeros
+# of a number below 1 and the digits past the significant ones are grey.
+format_sigfig <- function(x, sigfig = 3) {
+  n <- length(x)
+  neg <- ifelse(!is.na(x) & x < 0, "-", "")
+  lhs <- rhs <- lhs_grey <- character(n)
+  for (k in seq_len(n)) {
+    ax <- abs(x[k])
+    if (!is.finite(ax)) {
+      neg[k] <- ""
+      lhs[k] <- format(x[k])
+      next
+    }
+    if (ax == 0) {
+      lhs[k] <- "0"
+      next
+    }
+    expo <- floor(log10(ax))
+    # Decimals for `sigfig` figures, fewer where the number has no more
+    rhs_digits <- max(sigfig - 1 - expo, 0)
+    while (rhs_digits > 0) {
+      v <- ax * 10^(rhs_digits - 1)
+      if (abs(v - round(v)) > sqrt(.Machine$double.eps) * max(1, v)) {
+        break
+      }
+      rhs_digits <- rhs_digits - 1
+    }
+    r <- signif(ax, max(sigfig, expo + 1))
+    s <- formatC(r, format = "f", digits = rhs_digits)
+    if (rhs_digits == 0 && r != ax) {
+      s <- paste0(s, ".")
+    }
+    parts <- regmatches(s, regexpr("\\.", s), invert = TRUE)[[1]]
+    lhs[k] <- parts[1]
+    rhs[k] <- if (length(parts) > 1) paste0(".", parts[2]) else ""
+  }
+  plain_num <- paste0(neg, lhs, rhs)
+  if (max(nchar(plain_num)) > 13) {
+    expo <- ifelse(is.finite(x) & x != 0, floor(log10(abs(x))), 0)
+    mant <- trimws(formatC(x / 10^expo, format = "fg", digits = sigfig))
+    plain_num <- ifelse(is.finite(x), paste0(mant, "e", expo), format(x))
+    plain <- formatC(plain_num, width = max(nchar(plain_num)))
+    return(list(plain = plain, styled = plain))
+  }
+  # Line up the decimal points: integer parts right-aligned, decimals left
+  int <- paste0(neg, lhs)
+  int_w <- max(nchar(int))
+  dec_w <- max(nchar(rhs))
+  pad_l <- strrep(" ", int_w - nchar(int))
+  pad_r <- strrep(" ", dec_w - nchar(rhs))
+  plain <- paste0(pad_l, int, rhs, pad_r)
+  # Grey: "0.00" before the first significant digit of a number below 1, and
+  # the integer digits past `sigfig`
+  grey <- cli::col_grey
+  styled <- character(n)
+  for (k in seq_len(n)) {
+    if (lhs[k] == "0" && nzchar(rhs[k])) {
+      lead <- regmatches(rhs[k], regexpr("^\\.0*", rhs[k]))
+      body <- paste0(
+        neg[k],
+        grey(paste0("0", lead)),
+        substring(rhs[k], nchar(lead) + 1)
+      )
+    } else if (grepl("^[0-9]+$", lhs[k]) && nchar(lhs[k]) > sigfig) {
+      body <- paste0(
+        neg[k],
+        substring(lhs[k], 1, sigfig),
+        grey(substring(lhs[k], sigfig + 1)),
+        rhs[k]
+      )
+    } else {
+      body <- paste0(neg[k], lhs[k], rhs[k])
+    }
+    styled[k] <- paste0(pad_l[k], body, pad_r[k])
+  }
+  list(plain = plain, styled = styled)
 }
 
 cat_status <- function(type, msg, .envir = parent.frame()) {
@@ -736,24 +842,39 @@ method_label <- function(gaussian, vb) {
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
 # warning (warn_levels), which raises every one of these but the ridge bend
 # and the mean gap (summary_levels). A check that did not run is not
-# flagged; a value that is not finite is. print() counts the flags, and summary()
-# prints one "!" line for each.
+# flagged; a value that is not finite is. print() counts the flags, and
+# summary() prints one "!" line for each and colours the flagged cells of
+# its table, all from param_flags().
 check_flags <- function(dg, gaussian) {
+  pf <- param_flags(dg, gaussian)
+  c(
+    mode = any(pf[, "mode_shift_sigma"]),
+    hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
+    vb = any(pf[, "vb_shift_sigma"]),
+    nmad = any(pf[, "nmad"]),
+    unscanned_mass = any(pf[, "unscanned_mass"]),
+    tails = any(pf[, "tails"]),
+    ridge_bend = any(pf[, "ridge_bend"]),
+    mean_gap = any(pf[, "mean_gap"])
+  )
+}
+
+# The per-parameter flags behind check_flags(): a logical matrix with a row
+# per parameter and a column per check, named as in dg$param.
+param_flags <- function(dg, gaussian) {
   p <- dg$param
   sn <- !gaussian
   vb <- isTRUE(dg$global[["vb_applied"]] == 1)
-  c(
-    mode = any(off_level(p$mode_shift_sigma, warn_levels$mode_shift)),
-    hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
-    vb = vb && any(off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift)),
-    nmad = sn && any(off_level(p$nmad, warn_levels$nmad)),
-    unscanned_mass = sn &&
-      any(off_level(p$unscanned_mass, warn_levels$unscanned_mass)),
-    tails = sn && !all(p$tails %in% TRUE),
-    ridge_bend = sn && any(off_level(p$ridge_bend, summary_levels$ridge_bend)),
-    mean_gap = sn &&
-      vb &&
-      any(off_level(abs(p$mean_gap), summary_levels$mean_gap))
+  cbind(
+    mode_shift_sigma = off_level(p$mode_shift_sigma, warn_levels$mode_shift),
+    vb_shift_sigma = vb &
+      off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift),
+    nmad = sn & off_level(p$nmad, warn_levels$nmad),
+    unscanned_mass = sn &
+      off_level(p$unscanned_mass, warn_levels$unscanned_mass),
+    tails = sn & !p$tails %in% TRUE,
+    ridge_bend = sn & off_level(p$ridge_bend, summary_levels$ridge_bend),
+    mean_gap = sn & vb & off_level(abs(p$mean_gap), summary_levels$mean_gap)
   )
 }
 
