@@ -178,15 +178,17 @@ plural <- function(n, word) {
   paste0(n, " ", word, if (n == 1) "" else "s")
 }
 
-# "12 logpost calls", "3 logpost and 40 grad calls"
-format_calls <- function(n_lp, n_gr) {
+# "12 logpost calls", "3 logpost and 40 grad calls",
+# "3 logpost, 40 grad and 2 hess calls"
+format_calls <- function(n_lp, n_gr, n_he = 0L) {
   parts <- c(
-    if (n_lp > 0 || n_gr == 0) paste(n_lp, "logpost"),
-    if (n_gr > 0) paste(n_gr, "grad")
+    if (n_lp > 0 || n_gr + n_he == 0) paste(n_lp, "logpost"),
+    if (n_gr > 0) paste(n_gr, "grad"),
+    if (n_he > 0) paste(n_he, "hess")
   )
   paste0(
-    paste(parts, collapse = " and "),
-    if (n_lp + n_gr == 1) " call" else " calls"
+    format_names(parts),
+    if (n_lp + n_gr + n_he == 1) " call" else " calls"
   )
 }
 
@@ -206,7 +208,7 @@ format_value <- function(x) {
 
 # Before the mode search: the parameters, where the derivatives come from,
 # logpost at init, and for a user gradient its check at init.
-report_start <- function(p, init, lp_init, grad_check, calls) {
+report_start <- function(p, init, lp_init, grad_check, calls, has_hess) {
   m <- length(init)
   progress_info(
     p,
@@ -223,9 +225,12 @@ report_start <- function(p, init, lp_init, grad_check, calls) {
       if (grad_check > 1e-3) flag() else "",
       grey(
         " (warning > 0.001), ",
-        format_calls(calls[[1]], calls[[2]])
+        format_calls(calls[[1]], calls[[2]], calls[[3]])
       )
     )
+  }
+  if (has_hess) {
+    lines <- c(lines, grey("Hessian from hess, checked at the mode"))
   }
   lines <- c(lines, grey("logpost at init ", format_value(lp_init[[1L]])))
   progress_detail(p, lines)
@@ -291,7 +296,19 @@ report_mode <- function(p, lap, calls) {
   hs <- lap$hessian
   lines <- c(
     lines,
-    if (hs$by == "grad") {
+    if (hs$by == "hess") {
+      c(
+        grey("Hessian from hess: ", plural(hs$calls, "call")),
+        paste0(
+          grey(
+            "Discrepancy from central differences of grad ",
+            fmt_num(lap$hess_error)
+          ),
+          if (!isTRUE(lap$hess_error <= 1e-3)) flag() else "",
+          grey(" (warning > 0.001), ", plural(hs$check_calls, "grad call"))
+        )
+      )
+    } else if (hs$by == "grad") {
       c(
         grey(
           "Hessian by central differences of grad: ",
@@ -357,7 +374,7 @@ report_mode <- function(p, lap, calls) {
   lines <- c(
     lines,
     grey("Laplace log marginal likelihood ", format_value(lap$logml)),
-    grey(format_calls(calls[[1]], calls[[2]]))
+    grey(format_calls(calls[[1]], calls[[2]], calls[[3]]))
   )
   progress_detail(p, lines)
 }
@@ -440,7 +457,7 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
       ", giving a log marginal likelihood of ",
       format_value(logml_laplace + vbc$kld_global)
     ),
-    grey(format_calls(calls[[1]], calls[[2]]))
+    grey(format_calls(calls[[1]], calls[[2]], calls[[3]]))
   )
   progress_detail(p, lines)
 }
@@ -519,19 +536,19 @@ report_marginals <- function(p, sn, calls) {
           warn_levels$unscanned_mass
         )
       ),
-      grey(format_calls(calls[[1]], calls[[2]]))
+      grey(format_calls(calls[[1]], calls[[2]], calls[[3]]))
     )
   )
 }
 
 # The end of the fit: the calls and time in all, and the warnings.
-report_end <- function(p, n_lp, n_gr, secs) {
+report_end <- function(p, n_lp, n_gr, n_he, secs) {
   n_warn <- length(p$warnings)
   progress_info(
     p,
     paste0(
       "Done: ",
-      format_calls(n_lp, n_gr),
+      format_calls(n_lp, n_gr, n_he),
       " in ",
       format_time(secs),
       if (n_warn > 0) {

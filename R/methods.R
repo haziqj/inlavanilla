@@ -227,8 +227,7 @@ summary.inla_vanilla <- function(
       vb = object$diagnostics$vb,
       counts = object$counts,
       timing = object$timing,
-      marginals = object$marginals,
-      has_grad = object$has_grad
+      marginals = object$marginals
     ),
     class = "summary.inla_vanilla"
   )
@@ -263,13 +262,13 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       format(signif(x$logml - x$logml_laplace, 2))
     ))
   }
-  calls <- paste0(x$counts[["logpost"]], " logpost")
-  if (x$has_grad) {
-    calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
-  }
   cat_wrap(cli::col_grey(
-    calls,
-    " calls: mode ",
+    format_calls(
+      x$counts[["logpost"]],
+      x$counts[["grad"]],
+      x$counts[["hess"]]
+    ),
+    ": mode ",
     format_time(tm[["laplace"]]),
     ", VB ",
     format_time(tm[["vb"]]),

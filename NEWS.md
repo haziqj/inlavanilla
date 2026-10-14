@@ -1,3 +1,18 @@
+# inlavanilla 0.1.1
+
+* `inla_vanilla()` takes the Hessian of `logpost` as an optional `hess`,
+  after `grad`, as `nlminb()` does. With it, `nlminb()` takes Newton steps to
+  the mode, the Hessian at the mode is the supplied one, and the volume
+  correction of each skew-normal marginal takes one `hess` call instead of
+  2m + 2 `grad` calls. RTMB gives it with the gradient, as `obj$he`. The fit
+  is the same, except that the mode is found more precisely, and on test
+  models it took 13% to 35% less time. A supplied `hess` is checked at the
+  mode against central differences of `grad`, and `fit$counts` counts its
+  calls.
+* The website article "Gradients with RTMB" is now "Gradients and Hessians
+  with RTMB". It passes RTMB's Hessian too, and shows where the fit uses it,
+  the time it saves and the more precise mode it finds.
+
 # inlavanilla 0.1.0
 
 * Initial version. `inla_vanilla()` approximates the posterior of any

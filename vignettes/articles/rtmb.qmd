@@ -1,9 +1,9 @@
 ---
-title: "Gradients with RTMB"
+title: "Gradients and Hessians with RTMB"
 description: >
   The structural equation model of the Rcpp article written for RTMB, which
-  differentiates R code automatically, and compared with R and C++ for speed
-  and accuracy.
+  differentiates R code automatically to give the gradient and the Hessian,
+  and compared with R and C++ for speed and accuracy.
 knitr:
   opts_chunk:
     collapse: true
@@ -28,17 +28,17 @@ options(
 
 [RTMB](https://github.com/kaskr/RTMB) (Kristensen, 2026) differentiates a
 function written in R. `RTMB::MakeADFun()` runs the function once on RTMB's
-own type of number and records every operation. `obj$fn` and `obj$gr` then
-replay that record, the *tape*, to give the value and the exact gradient at
-any parameter value. RTMB is the R interface to TMB (Kristensen et al.,
-2016), whose models are written as C++ templates. RTMB needs neither C++ nor
-a compiler.
+own type of number and records every operation. `obj$fn`, `obj$gr` and
+`obj$he` then replay that record, the *tape*, to give the value, the exact
+gradient and the exact Hessian at any parameter value. RTMB is the R
+interface to TMB (Kristensen et al., 2016), whose models are written as C++
+templates. RTMB needs neither C++ nor a compiler.
 
 This article writes the structural equation model of
 [Speeding up with Rcpp](rcpp.html), with 39 parameters, for RTMB, and
 compares the fit with the R and C++ fits of that article, for speed and for
-accuracy. The model, its parameterisation and its priors are described
-there.
+accuracy, with and without RTMB's Hessian. The model, its parameterisation
+and its priors are described there.
 
 ```{r}
 #| label: packages
@@ -317,8 +317,8 @@ logpost_rtmb <- function(theta, Y) {
 `RTMB::MakeADFun()` takes a function of a list of parameters. TMB's
 objectives are usually negative log-likelihoods, to be minimised, but the
 sign matters only when random effects are integrated out. There are none
-here, so the function returns the log-posterior itself, and `obj$fn` and
-`obj$gr` go to `inla_vanilla()` as they are.
+here, so the function returns the log-posterior itself, and `obj$fn`,
+`obj$gr` and `obj$he` go to `inla_vanilla()` as they are.
 
 ```{r}
 #| label: make-adfun
@@ -327,6 +327,20 @@ obj <- RTMB::MakeADFun(
   list(theta = unname(init)),
   silent = TRUE
 )
+```
+
+`obj$he` works out the Hessian from the recorded function at each call. A
+*Hessian tape* is faster: `RTMB::MakeTape()` records the function, which
+here takes the parameter vector itself, `$jacfun()` records the computation
+of its gradient, and a second `$jacfun()` that of its Hessian, so that each
+call replays the Hessian's own computation.
+
+```{r}
+#| label: hessian-tape
+hess_tape <- RTMB::MakeTape(
+  function(theta) logpost_rtmb(theta, Y),
+  unname(init)
+)$jacfun()$jacfun()
 ```
 
 At 200 points around the starting values, the value matches the R
@@ -369,9 +383,16 @@ us <- rbind(
     R = NA,
     RTMB = time_per_call(obj$gr),
     `C++` = time_per_call(function(th) grad_cpp(th, Y))
-  )
+  ),
+  hessian = c(R = NA, RTMB = time_per_call(hess_tape, reps = 1), `C++` = NA)
 )
 round(us, 1)
+```
+
+```{r}
+#| label: speed-he
+#| include: false
+us_he <- time_per_call(obj$he, reps = 1)
 ```
 
 Replaying the tape takes
@@ -382,13 +403,24 @@ its log-posterior. C++ is
 `r round(us[["logpost", "R"]] / us[["logpost", "C++"]])` times faster than
 R, and the hand-written gradient costs as much as
 `r round(us[["gradient", "C++"]] / us[["logpost", "C++"]], 1)` calls of its
-log-posterior. The four fits:
+log-posterior. RTMB's Hessian tape costs as much as
+`r round(us[["hessian", "RTMB"]] / us[["gradient", "RTMB"]])` gradients,
+about one for each of the 39 parameters, and `obj$he`
+`r round(us_he / us[["gradient", "RTMB"]])`. The five fits, with the
+Hessian tape in the third:
 
 ```{r}
 #| label: fits
 fits <- list(
   R = inla_vanilla(logpost_r, init, Y = Y, silent = TRUE),
   RTMB = inla_vanilla(obj$fn, init, grad = obj$gr, silent = TRUE),
+  `RTMB and Hessian` = inla_vanilla(
+    obj$fn,
+    init,
+    grad = obj$gr,
+    hess = hess_tape,
+    silent = TRUE
+  ),
   `C++` = inla_vanilla(logpost_cpp, init, Y = Y, silent = TRUE),
   `C++ and gradient` = inla_vanilla(
     logpost_cpp,
@@ -451,17 +483,70 @@ logml_gap <- abs(fits$R$logml - ref$logml)
 ```
 
 RTMB's fit is the hand-written gradient's fit, since the two gradients
-agree to rounding error. The skew-normal marginals are the same on every
-route: they are scanned around the mode and do not depend on the VB
-correction. The gradient changes the VB correction. With it, the VB mean is
-exact when the log-posterior is a polynomial of degree six in whitened
-coordinates, against degree four from values of `logpost` alone (see the
-Gradients section of `?inla_vanilla`). Here the fits without a gradient
+agree to rounding error, and so is the fit with RTMB's Hessian. The
+skew-normal marginals are the same on every route: they are scanned around
+the mode and do not depend on the VB correction. Their differences, about a
+ten-thousandth of a posterior SD, come from where `nlminb()` stopped (see
+the next section). The gradient changes the VB correction. With it, the VB
+mean is exact when the log-posterior is a polynomial of degree six in
+whitened coordinates, against degree four from values of `logpost` alone
+(see the section on gradients and Hessians in `?inla_vanilla`). Here the
+fits without a gradient
 move the VB mean by up to `r signif(vb_gap, 1)` posterior SDs and the log
 marginal likelihood by `r signif(logml_gap, 1)`. That is small, but it
 carries over to everything built on the VB mean: the log marginal
 likelihood, `loo()` and `waic()`, and the Gaussian marginals of
 `marginals = "gaussian"`.
+
+## The Hessian
+
+`inla_vanilla()` takes the Hessian as `hess`, after `grad`, as `nlminb()`
+does, and uses it in three places. `nlminb()` takes Newton steps to the
+mode. The Hessian at the mode, which gives the covariance of the Laplace
+approximation, is RTMB's rather than central differences of the gradient.
+And the volume correction of each skew-normal marginal reads the two
+curvatures it needs off one Hessian, instead of taking them by central
+differences of 2m + 2 = 80 gradients. The time each stage took, in seconds:
+
+```{r}
+#| label: hessian
+rtmb_fits <- fits[c("RTMB", "RTMB and Hessian")]
+t(sapply(rtmb_fits, function(f) round(f$timing, 2)))
+```
+
+```{r}
+#| label: hessian-numbers
+#| include: false
+tm <- sapply(rtmb_fits, function(f) f$timing)
+marg_speedup <- tm[["marginals", "RTMB"]] /
+  tm[["marginals", "RTMB and Hessian"]]
+saved <- 1 - tm[["total", "RTMB and Hessian"]] / tm[["total", "RTMB"]]
+```
+
+The marginals stage is `r round(marg_speedup, 1)` times as fast. A
+Hessian costs about as much as m gradients, so it saves about half of the
+volume correction, and the VB correction, the slowest stage, uses none. The
+whole fit takes `r round(100 * saved)`% less time. The saving is larger
+where the Hessian is sparse, as when each of many parameters enters only a
+few terms of the log-posterior: a Hessian tape then costs far fewer than m
+gradients.
+
+The Hessian also finds the mode more precisely. `nlminb()` stops when its
+steps become small. The whitened gradient where it stopped in each fit is
+about how far it was from the mode, in posterior SDs:
+
+```{r}
+#| label: hessian-mode
+signif(sapply(fits, function(f) f$diagnostics$optim$grad_mode), 1)
+```
+
+Without the Hessian, `nlminb()` stops about a ten-thousandth of a posterior
+SD from the mode, which is also about how much the marginals of the five
+fits differ. With the Hessian it stops within a millionth. Either is far
+inside the check of the mode, which asks for a tenth. A supplied
+`hess` is itself checked at the mode against central differences of `grad`,
+with a warning if they do not match. With random effects integrated out,
+TMB gives no Hessian.
 
 ## Choosing a route
 
@@ -470,13 +555,17 @@ In order of the work they take, with the first two about equal:
 | Route | What you write | Speed | Accuracy |
 |:------|:---------------|:-----:|:--------:|
 | R | `logpost` in R | ✗ | ✗ |
-| RTMB | `logpost` in R, with RTMB's functions | ✗ | ✓ |
+| RTMB | `logpost` in R, with RTMB's functions, which give `grad` and `hess` | ✗ | ✓ |
 | Rcpp | `logpost` in C++ | ✓ | ✗ |
 | R and a gradient | `logpost` and its gradient in R | ✗ | ✓ |
 | Rcpp and a gradient | `logpost` and its gradient in C++ | ✓ | ✓ |
 
 Start with R. If RTMB has the functions your log-posterior needs, it gives
-the gradient's accuracy for the same work and about the same time. C++ buys
+the gradient's accuracy for the same work, and with its Hessian the fit
+takes `r round(seconds[["RTMB and Hessian"]] / seconds[["R"]], 1)` times as
+long as R's. A Hessian speeds up only part of the fit, the mode and the
+marginals but not the VB correction, so it is worth passing when it comes
+free, as from RTMB, but seldom worth deriving by hand. C++ buys
 speed, which matters when each call is expensive, as with a large data set,
 or when there are many, as with many parameters or many fits in a
 simulation study. A gradient by hand is the most work, since it has to be

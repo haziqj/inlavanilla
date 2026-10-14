@@ -91,7 +91,7 @@
 #' that of marginals within 7% in SD, and the `tails` check, which looks only
 #' 4 posterior SDs either side of the mode (the Laplace SDs), missed both.
 #'
-#' @section Gradients:
+#' @section Gradients and Hessians:
 #' `grad` is optional. Without it, derivatives come from finite differences
 #' of `logpost`, and the number of calls grows with the square of the number
 #' of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
@@ -117,15 +117,30 @@
 #' marginal likelihood), and the skew-normal marginals do not depend on it;
 #' `marginals = "gaussian"` saves the calls of the scans.
 #'
+#' `hess` is optional too, and needs `grad`, as in [stats::nlminb()]. With
+#' it, [stats::nlminb()] takes Newton steps to the mode, the Hessian at the
+#' mode is the supplied one, and the volume correction of each skew-normal
+#' marginal takes one `hess` call instead of 2m + 2 `grad` calls. The VB
+#' correction and the scans do not use it. The fit is the one `grad` alone
+#' gives, to the error of its finite differences (about 1e-8, relative),
+#' except that the mode is found more precisely, so `hess` saves time rather
+#' than adding accuracy. On test models with an automatic-differentiation
+#' Hessian (RTMB) the fits took 13% to 35% less time, the most where the
+#' Hessian was sparse.
+#'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
-#' check fails. Any R function works for `logpost` and `grad`, including
-#' compiled code (Rcpp, TMB) and RTMB, which differentiates R code. An RTMB
-#' function can return the log-posterior itself, and its `obj$fn` and
-#' `obj$gr` are then passed as they are. For a TMB template that returns the
-#' negative log-posterior, pass `function(x) -obj$fn(x)` and
-#' `function(x) -as.vector(obj$gr(x))`, with `init = obj$par`; its repeated names (one per element of a parameter
-#' vector) are numbered, as `beta[1]`, `beta[2]`, and so on.
+#' check fails. A supplied `hess` is checked at the mode against central
+#' differences of `grad`, along two directions, with a warning if it does
+#' not match. Any R function works for `logpost`, `grad` and `hess`,
+#' including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
+#' An RTMB function can return the log-posterior itself, and its `obj$fn`,
+#' `obj$gr` and `obj$he` are then passed as they are. For a TMB template that
+#' returns the negative log-posterior, pass `function(x) -obj$fn(x)`,
+#' `function(x) -as.vector(obj$gr(x))` and `function(x) -obj$he(x)`, with
+#' `init = obj$par`; its repeated names (one per element of a parameter
+#' vector) are numbered, as `beta[1]`, `beta[2]`, and so on. TMB gives no
+#' Hessian for a model with random effects.
 #'
 #' @section Control:
 #' `control` is a list with any of:
@@ -164,7 +179,9 @@
 #'   log-posterior at the mode, the whitened gradient there (which decides
 #'   the restart) and the largest Newton step in posterior SDs (which the
 #'   fit-time warning checks); how the Hessian was taken (and, for a
-#'   supplied `grad`, the asymmetry of its Jacobian); the largest posterior
+#'   supplied `grad`, the asymmetry of its Jacobian, or, for a supplied
+#'   `hess`, how far it is from central differences of `grad`); the largest
+#'   posterior
 #'   correlation and the smallest eigenvalue of the correlation matrix, which
 #'   is near zero when some combination of the parameters is poorly
 #'   identified, and the condition number of the Hessian in posterior-SD
@@ -177,17 +194,18 @@
 #' * The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 #'   volume correction `gamma1` of each parameter, with the values that
 #'   [summary.inla_vanilla()] flags marked.
-#' * The calls of `logpost` and `grad` in each stage, and in all, with the
-#'   total time.
+#' * The calls of `logpost`, `grad` and `hess` in each stage, and in all,
+#'   with the total time.
 #'
 #' For the iteration trace of [stats::nlminb()] itself, pass
 #' `control = list(nlminb = list(trace = 1))`.
 #'
 #' `silent = TRUE` prints nothing, for simulations and other repeated fits:
 #' no progress bars and no stage lines, and every warning and message raised
-#' during the fit, including those of `logpost` and `grad`, is muffled.
-#' Errors are still raised. Output printed with [cat()] or [print()], by
-#' `logpost`, `grad` or the trace of [stats::nlminb()], is not captured.
+#' during the fit, including those of `logpost`, `grad` and `hess`, is
+#' muffled. Errors are still raised. Output printed with [cat()] or
+#' [print()], by `logpost`, `grad`, `hess` or the trace of [stats::nlminb()],
+#' is not captured.
 #'
 #' Whatever the level, the warnings raised during the fit are recorded in
 #' `fit$warnings`, so that a simulation can check them afterwards.
@@ -202,13 +220,18 @@
 #' @param grad Optional function `grad(theta, ...)` returning the gradient of
 #'   `logpost` as a numeric vector. When `NULL` (the default), finite
 #'   differences are used.
-#' @param ... Further arguments passed to `logpost` and `grad`, such as the
-#'   data. As in [stats::optim()] and [stats::nlminb()], they come after the
-#'   gradient, and the arguments after them (`vb`, `marginals`, `verbose`,
+#' @param hess Optional function `hess(theta, ...)` returning the Hessian of
+#'   `logpost`, the m x m matrix of its second derivatives (a sparse matrix
+#'   from the Matrix package, and a number when m = 1, work too). It needs
+#'   `grad`. When `NULL` (the default), finite differences of `grad` are used.
+#' @param ... Further arguments passed to `logpost`, `grad` and `hess`, such
+#'   as the data. As in [stats::nlminb()], they come after the gradient and
+#'   the Hessian, and the arguments after them (`vb`, `marginals`, `verbose`,
 #'   `silent`, `control`) must be given by their full names, so data
 #'   arguments cannot partially match them. The arguments before them can be
-#'   matched, as in `optim()`: a data argument named `g` or `gr` would be
-#'   taken as `grad`, so give it a longer name.
+#'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
+#'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
+#'   longer name.
 #' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
 #'   the log marginal likelihood, and the skew-normal means are checked against
 #'   it (see [summary.inla_vanilla()]).
@@ -313,6 +336,7 @@ inla_vanilla <- function(
   logpost,
   init,
   grad = NULL,
+  hess = NULL,
   ...,
   vb = TRUE,
   marginals = c("skewnormal", "gaussian"),
@@ -326,6 +350,16 @@ inla_vanilla <- function(
   check_function(logpost, "logpost")
   if (!is.null(grad)) {
     check_function(grad, "grad")
+  }
+  if (!is.null(hess)) {
+    check_function(hess, "hess")
+    if (is.null(grad)) {
+      abort(c(
+        "{.arg hess} needs {.arg grad}.",
+        "i" = "Supply the gradient too, or leave out {.arg hess}. As in
+               {.fn stats::nlminb}, a Hessian is used only with a gradient."
+      ))
+    }
   }
   check_flag(vb, "vb")
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
@@ -346,9 +380,10 @@ inla_vanilla <- function(
   # one of their formals.
   logpost_x <- function(x) logpost(x, ...)
   grad_x <- if (is.null(grad)) NULL else function(x) grad(x, ...)
+  hess_x <- if (is.null(hess)) NULL else function(x) hess(x, ...)
 
-  # Every warning raised during the fit, by the package or by logpost and
-  # grad, is recorded once in fit$warnings. With silent = TRUE it is then
+  # Every warning raised during the fit, by the package or by logpost, grad
+  # and hess, is recorded once in fit$warnings. With silent = TRUE it is then
   # muffled, and so is every message; otherwise it is signalled as usual.
   # Errors pass through either way.
   prog <- progress_new(show = !silent, detail = verbose)
@@ -356,6 +391,7 @@ inla_vanilla <- function(
     vanilla_fit(
       logpost_x,
       grad_x,
+      hess_x,
       init,
       vb = vb,
       marginals = marginals,
@@ -389,6 +425,7 @@ inla_vanilla <- function(
 vanilla_fit <- function(
   logpost_x,
   grad_x,
+  hess_x,
   init,
   vb,
   marginals,
@@ -400,20 +437,22 @@ vanilla_fit <- function(
   m <- length(init)
   parnames <- names(init)
   has_grad <- !is.null(grad_x)
+  has_hess <- !is.null(hess_x)
 
   # The engine calls these wrappers, which name the parameters, count the
-  # calls and tick the progress bar. The spinner counts the stage's logpost
-  # and grad calls together, from `stage_calls()`, so stages driven by grad
-  # tick too.
+  # calls and tick the progress bar. The spinner counts the stage's logpost,
+  # grad and hess calls together, from `stage_calls()`, so stages driven by
+  # grad tick too.
   n_lp <- 0L
   n_gr <- 0L
+  n_he <- 0L
   n_base <- 0L
   stage_calls <- function() {
-    n_base <<- n_lp + n_gr
+    n_base <<- n_lp + n_gr + n_he
   }
   last_x <- init
   tick <- function() {
-    n <- n_lp + n_gr
+    n <- n_lp + n_gr + n_he
     if (prog$calls && n %% 16L == 0L) {
       progress_tick(prog, set = n - n_base)
     }
@@ -438,15 +477,28 @@ vanilla_fit <- function(
       as.numeric(grad_x(x))
     }
   }
+  # A plain m x m matrix, whatever the user's function returns (a sparse
+  # matrix from the Matrix package, or a number when m = 1)
+  he <- if (!has_hess) {
+    NULL
+  } else {
+    function(x) {
+      names(x) <- parnames
+      last_x <<- x
+      n_he <<- n_he + 1L
+      tick()
+      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
+    }
+  }
   # The calls since the last stage, for verbose output
-  calls_seen <- c(0L, 0L)
+  calls_seen <- c(0L, 0L, 0L)
   calls_since <- function() {
-    now <- c(n_lp, n_gr)
+    now <- c(n_lp, n_gr, n_he)
     out <- now - calls_seen
     calls_seen <<- now
     out
   }
-  # An error inside logpost or grad stops the fit; say where it happened
+  # An error inside logpost, grad or hess stops the fit; say where it happened
   # and at which parameter value.
   with_context <- function(stage, expr) {
     tryCatch(expr, error = function(e) {
@@ -477,8 +529,14 @@ vanilla_fit <- function(
       check_grad_at_init(grad_x, lp, init)
     )
   }
+  if (has_hess) {
+    with_context(
+      "evaluating hess at init",
+      check_hess_at_init(hess_x, init)
+    )
+  }
   if (prog$detail) {
-    report_start(prog, init, lp_init, grad_check, calls_since())
+    report_start(prog, init, lp_init, grad_check, calls_since(), has_hess)
   }
 
   # 1a. Joint Gaussian -------------------------------------------------------
@@ -487,15 +545,24 @@ vanilla_fit <- function(
   progress_start(prog, "Finding the posterior mode, {cli::pb_current} calls")
   lap <- with_context(
     "finding the posterior mode",
-    laplace_fit(lp, gr, init, ctrl)
+    laplace_fit(lp, gr, init, ctrl, he)
   )
-  if (has_grad && lap$asymmetry > 1e-3) {
+  if (has_grad && !has_hess && lap$asymmetry > 1e-3) {
     warn(c(
       "{.arg grad} does not look like the gradient of {.arg logpost}.",
       "x" = "Its Jacobian at the mode is not symmetric (relative asymmetry
              {signif(lap$asymmetry, 2)}), as the Hessian of a function must
              be.",
       "i" = "A wrong gradient gives a wrong mode and wrong marginals."
+    ))
+  }
+  if (has_hess && !isTRUE(lap$hess_error <= 1e-3)) {
+    warn(c(
+      "{.arg hess} does not look like the Hessian of {.arg logpost}.",
+      "x" = "At the mode it differs from central differences of {.arg grad}
+             by {signif(lap$hess_error, 2)}, in units where the Hessian is
+             the identity.",
+      "i" = "A wrong Hessian gives a wrong covariance and wrong marginals."
     ))
   }
   # INLAvaan's Newton step at the mode, in posterior SDs, decides whether the
@@ -588,7 +655,14 @@ vanilla_fit <- function(
     )
     mar <- with_context(
       "fitting the skew-normal marginals",
-      fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))
+      fit_marginals(
+        lp,
+        gr,
+        lap,
+        ctrl,
+        tick = function() progress_tick(prog),
+        he = he
+      )
     )
     sn <- cbind(
       mar$sn,
@@ -688,7 +762,7 @@ vanilla_fit <- function(
 
   t_total <- elapsed() - t_start
   if (prog$detail) {
-    report_end(prog, n_lp, n_gr, t_total)
+    report_end(prog, n_lp, n_gr, n_he, t_total)
   }
   new_inla_vanilla(
     sn = sn[, c("xi", "omega", "alpha"), drop = FALSE],
@@ -699,7 +773,7 @@ vanilla_fit <- function(
     logml_laplace = lap$logml,
     diagnostics = diagnostics,
     scan = scan,
-    counts = c(logpost = n_lp, grad = n_gr),
+    counts = c(logpost = n_lp, grad = n_gr, hess = n_he),
     timing = c(
       laplace = t_laplace,
       vb = t_vb,
@@ -923,6 +997,29 @@ check_logpost_at_init <- function(logpost, init) {
     )
   }
   invisible(v)
+}
+
+# A Hessian of the right shape, finite at init. Whether it is the Hessian of
+# `logpost` is checked at the mode, against the gradient (hess_discrepancy()).
+check_hess_at_init <- function(hess, init) {
+  m <- length(init)
+  h <- hess(init)
+  H <- tryCatch(as.matrix(h), error = function(e) NULL)
+  if (!is.numeric(H) || !identical(dim(H), c(m, m))) {
+    shape <- if (is.null(dim(h))) {
+      paste("of length", length(h))
+    } else {
+      paste("with dimensions", paste(dim(h), collapse = " x "))
+    }
+    abort(c(
+      "{.arg hess} must return a numeric {m} x {m} matrix.",
+      "x" = "{.code hess(init)} returned {.obj_type_friendly {h}} {shape}."
+    ))
+  }
+  if (!all(is.finite(H))) {
+    abort("{.arg hess} is not finite at {.arg init}.")
+  }
+  invisible(H)
 }
 
 check_grad_at_init <- function(grad, lp, init) {

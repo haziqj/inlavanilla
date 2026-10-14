@@ -36,6 +36,19 @@ gamma1_grad <- function(j, gr, mode, Vscan, L, d_outer = 0.01, h = 1e-5) {
   -0.5 * (tr - m) / d_outer + 0.5 * (vHv - 1) / d_outer
 }
 
+# The same correction from one call of the user's Hessian at
+# mode + d_outer v_j: the whitened trace tr(L' H L) = tr(H Sigma) and the
+# curvature along v_j, read off the one matrix. The baselines m and 1 hold
+# exactly, since Sigma is the inverse of the user's Hessian at the mode.
+gamma1_hess <- function(j, he, mode, Vscan, Sigma, d_outer = 0.01) {
+  m <- length(mode)
+  vj <- Vscan[, j]
+  H <- -he(mode + vj * d_outer)
+  tr <- sum(H * Sigma)
+  vHv <- sum(vj * (H %*% vj))
+  -0.5 * (tr - m) / d_outer + 0.5 * (vHv - 1) / d_outer
+}
+
 # The same correction from the log-posterior alone. Each whitened curvature is
 # a second difference of the log-posterior rather than a difference of two
 # finite-difference gradients, so the cost is 2m + 5 calls per parameter
@@ -87,13 +100,24 @@ whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
 # bulk of others (a Fisher-z correlation lost an order of magnitude in SD
 # accuracy), so the problem is reported instead.
 #
+# The volume correction takes the best route the user's functions allow:
+# gamma1_hess() with a Hessian `he`, gamma1_grad() with a gradient, and
+# gamma1_lp() otherwise.
+#
 # Returns `sn`, a matrix with a row per parameter (the skew-normal on the
 # theta scale, the diagnostics, and `logC`, the log scale factor that sets
 # the fitted density's height against the scan normalised to a peak of 1),
 # the scan grid `z`, and `logpost`, the raw log-heights along each scan (a
 # column per parameter). plot(type = "sn_fit") draws them as INLAvaan's
 # visual_debug() does.
-fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
+fit_marginals <- function(
+  lp,
+  gr,
+  lap,
+  ctrl,
+  tick = function() NULL,
+  he = NULL
+) {
   mode <- lap$mode
   Sigma <- lap$Sigma
   L <- lap$L
@@ -127,7 +151,9 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
   i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
 
   for (j in seq_len(m)) {
-    g1 <- if (is.null(gr)) {
+    g1 <- if (!is.null(he)) {
+      gamma1_hess(j, he, mode, Vscan, Sigma)
+    } else if (is.null(gr)) {
       gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, tr0)
     } else {
       gamma1_grad(j, gr, mode, Vscan, L)

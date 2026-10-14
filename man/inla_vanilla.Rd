@@ -8,6 +8,7 @@ inla_vanilla(
   logpost,
   init,
   grad = NULL,
+  hess = NULL,
   ...,
   vb = TRUE,
   marginals = c("skewnormal", "gaussian"),
@@ -30,13 +31,19 @@ way.}
 \code{logpost} as a numeric vector. When \code{NULL} (the default), finite
 differences are used.}
 
-\item{...}{Further arguments passed to \code{logpost} and \code{grad}, such as the
-data. As in \code{\link[stats:optim]{stats::optim()}} and \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the
-gradient, and the arguments after them (\code{vb}, \code{marginals}, \code{verbose},
+\item{hess}{Optional function \code{hess(theta, ...)} returning the Hessian of
+\code{logpost}, the m x m matrix of its second derivatives (a sparse matrix
+from the Matrix package, and a number when m = 1, work too). It needs
+\code{grad}. When \code{NULL} (the default), finite differences of \code{grad} are used.}
+
+\item{...}{Further arguments passed to \code{logpost}, \code{grad} and \code{hess}, such
+as the data. As in \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the gradient and
+the Hessian, and the arguments after them (\code{vb}, \code{marginals}, \code{verbose},
 \code{silent}, \code{control}) must be given by their full names, so data
 arguments cannot partially match them. The arguments before them can be
-matched, as in \code{optim()}: a data argument named \code{g} or \code{gr} would be
-taken as \code{grad}, so give it a longer name.}
+matched, as in \code{nlminb()}: a data argument named \code{g} or \code{gr} would be
+taken as \code{grad}, and one named \code{h} or \code{he} as \code{hess}, so give it a
+longer name.}
 
 \item{vb}{Logical. Apply the VB mean correction? Default \code{TRUE}. It enters
 the log marginal likelihood, and the skew-normal means are checked against
@@ -189,7 +196,7 @@ that of marginals within 7\% in SD, and the \code{tails} check, which looks only
 4 posterior SDs either side of the mode (the Laplace SDs), missed both.
 }
 
-\section{Gradients}{
+\section{Gradients and Hessians}{
 
 \code{grad} is optional. Without it, derivatives come from finite differences
 of \code{logpost}, and the number of calls grows with the square of the number
@@ -216,15 +223,30 @@ stages. \code{vb = FALSE} skips the VB correction (and its term in the log
 marginal likelihood), and the skew-normal marginals do not depend on it;
 \code{marginals = "gaussian"} saves the calls of the scans.
 
+\code{hess} is optional too, and needs \code{grad}, as in \code{\link[stats:nlminb]{stats::nlminb()}}. With
+it, \code{\link[stats:nlminb]{stats::nlminb()}} takes Newton steps to the mode, the Hessian at the
+mode is the supplied one, and the volume correction of each skew-normal
+marginal takes one \code{hess} call instead of 2m + 2 \code{grad} calls. The VB
+correction and the scans do not use it. The fit is the one \code{grad} alone
+gives, to the error of its finite differences (about 1e-8, relative),
+except that the mode is found more precisely, so \code{hess} saves time rather
+than adding accuracy. On test models with an automatic-differentiation
+Hessian (RTMB) the fits took 13\% to 35\% less time, the most where the
+Hessian was sparse.
+
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either
-check fails. Any R function works for \code{logpost} and \code{grad}, including
-compiled code (Rcpp, TMB) and RTMB, which differentiates R code. An RTMB
-function can return the log-posterior itself, and its \code{obj$fn} and
-\code{obj$gr} are then passed as they are. For a TMB template that returns the
-negative log-posterior, pass \code{function(x) -obj$fn(x)} and
-\code{function(x) -as.vector(obj$gr(x))}, with \code{init = obj$par}; its repeated names (one per element of a parameter
-vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on.
+check fails. A supplied \code{hess} is checked at the mode against central
+differences of \code{grad}, along two directions, with a warning if it does
+not match. Any R function works for \code{logpost}, \code{grad} and \code{hess},
+including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
+An RTMB function can return the log-posterior itself, and its \code{obj$fn},
+\code{obj$gr} and \code{obj$he} are then passed as they are. For a TMB template that
+returns the negative log-posterior, pass \code{function(x) -obj$fn(x)},
+\code{function(x) -as.vector(obj$gr(x))} and \code{function(x) -obj$he(x)}, with
+\code{init = obj$par}; its repeated names (one per element of a parameter
+vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on. TMB gives no
+Hessian for a model with random effects.
 }
 
 \section{Control}{
@@ -270,7 +292,9 @@ and whether it was restarted with the parameters rescaled; the
 log-posterior at the mode, the whitened gradient there (which decides
 the restart) and the largest Newton step in posterior SDs (which the
 fit-time warning checks); how the Hessian was taken (and, for a
-supplied \code{grad}, the asymmetry of its Jacobian); the largest posterior
+supplied \code{grad}, the asymmetry of its Jacobian, or, for a supplied
+\code{hess}, how far it is from central differences of \code{grad}); the largest
+posterior
 correlation and the smallest eigenvalue of the correlation matrix, which
 is near zero when some combination of the parameters is poorly
 identified, and the condition number of the Hessian in posterior-SD
@@ -283,8 +307,8 @@ the term it adds to the log marginal likelihood.
 \item The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 volume correction \code{gamma1} of each parameter, with the values that
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.
-\item The calls of \code{logpost} and \code{grad} in each stage, and in all, with the
-total time.
+\item The calls of \code{logpost}, \code{grad} and \code{hess} in each stage, and in all,
+with the total time.
 }
 
 For the iteration trace of \code{\link[stats:nlminb]{stats::nlminb()}} itself, pass
@@ -292,9 +316,10 @@ For the iteration trace of \code{\link[stats:nlminb]{stats::nlminb()}} itself, p
 
 \code{silent = TRUE} prints nothing, for simulations and other repeated fits:
 no progress bars and no stage lines, and every warning and message raised
-during the fit, including those of \code{logpost} and \code{grad}, is muffled.
-Errors are still raised. Output printed with \code{\link[=cat]{cat()}} or \code{\link[=print]{print()}}, by
-\code{logpost}, \code{grad} or the trace of \code{\link[stats:nlminb]{stats::nlminb()}}, is not captured.
+during the fit, including those of \code{logpost}, \code{grad} and \code{hess}, is
+muffled. Errors are still raised. Output printed with \code{\link[=cat]{cat()}} or
+\code{\link[=print]{print()}}, by \code{logpost}, \code{grad}, \code{hess} or the trace of \code{\link[stats:nlminb]{stats::nlminb()}},
+is not captured.
 
 Whatever the level, the warnings raised during the fit are recorded in
 \code{fit$warnings}, so that a simulation can check them afterwards.
