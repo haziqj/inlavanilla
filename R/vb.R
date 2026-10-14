@@ -5,62 +5,33 @@
 #
 # Ported from INLAvaan: the same fixed-point iteration with Anderson(1)
 # acceleration and an nlminb() fallback. The Gaussian expectation uses a
-# deterministic cubature rule rather than INLAvaan's Sobol points: with a
-# gradient, the expected gradient over the nodes of vb_nodes(); without one,
-# Stein's identity on the nodes of vb_simplex_nodes(), from log-posterior
-# values alone.
+# deterministic degree-5 cubature rule built on a regular simplex (see
+# vb_nodes()) rather than INLAvaan's Sobol points: with a gradient, the
+# expected gradient over its nodes; without one, Stein's identity on the same
+# nodes, from log-posterior values alone.
 
-# Node set for the Gaussian expectation: the fully symmetric degree-5 rule on
-# the principal axes a_1, ..., a_m of Sigma, with 2m^2 + 1 nodes,
-#   the centre                          weight 1 + (m^2 - 7m) / 18,
-#   +/- sqrt(3) a_i                     weight (4 - m) / 18 each,
-#   +/- sqrt(3) a_i +/- sqrt(3) a_j     weight 1 / 36 each (i < j).
-# In whitened coordinates the rule integrates every monomial of degree five
-# or less exactly against N(0, I), including the mixed moments
-# E[z_r^2 z_s^2] = 1 that axis-only rules miss. The expected gradient is
-# therefore exact whenever the log-posterior is a polynomial of degree six or
-# less in whitened coordinates, and the shift is the same on every run. In a
-# benchmark against exact VB solutions (lab/vb-benchmark.R) it was 10 to 150
-# times more accurate than INLAvaan's 64 Sobol points in one and two
-# dimensions, and still the most accurate at 30 parameters. The cost is
-# 2m^2 + 1 gradient calls per sweep. Some weights are negative, so sums are
-# taken as differences from the centre to keep large terms from cancelling.
-vb_nodes <- function(Sigma) {
-  m <- ncol(Sigma)
-  e <- eigen(Sigma, symmetric = TRUE)
-  A <- sqrt(3) * sweep(e$vectors, 2, sqrt(pmax(e$values, 0)), "*")
-  At <- t(A)
-  nodes <- rbind(0, At, -At)
-  weights <- c(1 + (m^2 - 7 * m) / 18, rep((4 - m) / 18, 2 * m))
-  if (m > 1) {
-    pairs <- utils::combn(m, 2)
-    Ai <- At[pairs[1, ], , drop = FALSE]
-    Aj <- At[pairs[2, ], , drop = FALSE]
-    nodes <- rbind(nodes, Ai + Aj, Ai - Aj, -Ai + Aj, -Ai - Aj)
-    weights <- c(weights, rep(1 / 36, 4 * ncol(pairs)))
-  }
-  list(nodes = nodes, weights = weights)
-}
-
-# Node set for the Gaussian expectation without a gradient: a degree-5 rule
-# built on a regular simplex, on the principal axes of Sigma. In whitened
-# coordinates its nodes are the centre and
+# Node set for the Gaussian expectation: a degree-5 rule built on a regular
+# simplex, on the principal axes of Sigma. In whitened coordinates its nodes
+# are the centre and
 #   +/- r a_k    at the m + 1 vertices a_k of a regular simplex (unit
 #                vectors with a_k' a_l = -1/m),
 #   +/- s b_kl   along the m (m + 1) / 2 edge directions
 #                b_kl = (a_k + a_l) / |a_k + a_l|,
-# (m + 1)(m + 2) nodes besides the centre, against the 2m^2 of vb_nodes().
-# The node set is invariant under the symmetries of the simplex and under -I,
-# so by Sobolev's theorem the rule integrates every polynomial of degree five
-# or less exactly once it integrates the invariant ones: 1, |z|^2, |z|^4 and
-# p4(z) = sum_k (a_k' z)^4, whose Gaussian moments are 1, m, m(m + 2) and
-# 3(m + 1). Given the radii, these fix the total weight of each shell. While
-# the vertex shell's weight is not negative (m <= 7) both shells sit on the
-# sphere of radius sqrt(m + 2), and every weight is positive. Beyond that the
-# vertex weights are negative whatever the radii; r^2 = 3 then keeps them
-# small, as in vb_nodes(), and s^2 falls from 8.4 (m = 8) towards 6. At m = 7
+# (m + 1)(m + 2) nodes besides the centre, about half the 2m^2 of the fully
+# symmetric degree-5 rule on the principal axes, which the package used
+# before. The node set is invariant under the symmetries of the simplex and
+# under -I, so by Sobolev's theorem the rule integrates every polynomial of
+# degree five or less exactly once it integrates the invariant ones: 1,
+# |z|^2, |z|^4 and p4(z) = sum_k (a_k' z)^4, whose Gaussian moments are 1, m,
+# m(m + 2) and 3(m + 1). Given the radii, these fix the total weight of each
+# shell. While the vertex shell's weight is not negative (m <= 7) both shells
+# sit on the sphere of radius sqrt(m + 2), and every weight is positive.
+# Beyond that the vertex weights are negative whatever the radii; r^2 = 3
+# then keeps them small, and s^2 falls from 8.4 (m = 8) towards 6. At m = 7
 # the vertex weight is exactly zero and those nodes are dropped. No node is
-# more than 3 posterior SDs from the centre.
+# more than 3 posterior SDs from the centre. Some weights are negative, so
+# sums over the nodes are taken as differences, which keeps large terms from
+# cancelling.
 #
 # For m <= 3 some directions coincide (a_2 = -a_1 at m = 1, a_k + a_l = -a_j
 # at m = 2, a_1 + a_2 = -(a_3 + a_4) at m = 3), and each node is kept once.
@@ -70,9 +41,10 @@ vb_nodes <- function(Sigma) {
 #
 # The nodes come in antipodal pairs: the centre, then one node of each pair,
 # then their negatives in the same order. The principal axes take a fixed
-# sign (each with its largest entry positive), because the simplex, unlike
-# the nodes of vb_nodes(), is not symmetric under the sign of a single axis.
-vb_simplex_nodes <- function(Sigma) {
+# sign (each with its largest entry positive), because the simplex is not
+# symmetric under the sign of a single axis, so the rule must not depend on
+# the signs that eigen() happens to return.
+vb_nodes <- function(Sigma) {
   m <- ncol(Sigma)
   e <- eigen(Sigma, symmetric = TRUE)
   # Each axis with its largest entry positive
@@ -84,7 +56,7 @@ vb_simplex_nodes <- function(Sigma) {
   list(nodes = rbind(0, half, -half), weights = rule$weights)
 }
 
-# The rule of vb_simplex_nodes() in whitened coordinates
+# The rule of vb_nodes() in whitened coordinates
 simplex_rule <- function(m) {
   # Unit vertices: the rows of a Helmert contrast matrix, rescaled
   H <- matrix(0, m + 1, m)
@@ -141,7 +113,7 @@ simplex_rule <- function(m) {
 vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   m <- length(mode)
   stein <- is.null(gr)
-  rule <- if (stein) vb_simplex_nodes(Sigma) else vb_nodes(Sigma)
+  rule <- vb_nodes(Sigma)
   Z <- rule$nodes
   w <- rule$weights
   nn <- nrow(Z)
@@ -167,16 +139,18 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
 
   # The fixed-point step Sigma E[grad log pi(mode + shift + z)] at a shift.
   # With a gradient, the expected gradient is the weighted mean over the
-  # nodes, written as differences from the centre gradient. Without one it
-  # comes from Stein's identity, E[z f(mu + z)] = Sigma E[grad f(mu + z)] for
-  # z ~ N(0, Sigma), applied to the simplex rule: the step is the weighted sum
-  # of the nodes times the log-posterior there, taken over antipodal pairs as
-  # w_b z_b (f(mu + z_b) - f(mu - z_b)), which cancels the size of the
-  # log-posterior. z f(mu + z) has degree five when the log-posterior is a
-  # polynomial of degree four in whitened coordinates, so the shift is then
-  # exact, as it is up to degree six with a gradient. The cost is at most
-  # (m + 1)(m + 2) log-posterior calls per sweep, against (m + 1)(2m^2 + 1)
-  # for the gradient rule on finite differences.
+  # nodes, written as differences from the centre gradient: at most
+  # (m + 1)(m + 2) + 1 gradient calls per sweep, and exact when the
+  # log-posterior is a polynomial of degree six or less in whitened
+  # coordinates. Without one it comes from Stein's identity,
+  # E[z f(mu + z)] = Sigma E[grad f(mu + z)] for z ~ N(0, Sigma), on the same
+  # nodes: the step is the weighted sum of the nodes times the log-posterior
+  # there, taken over antipodal pairs as w_b z_b (f(mu + z_b) - f(mu - z_b)),
+  # which cancels the size of the log-posterior. That takes at most
+  # (m + 1)(m + 2) log-posterior calls per sweep, against m + 1 times as many
+  # for the gradient form on finite differences, and z f(mu + z) has degree
+  # five when the log-posterior has degree four, so the shift is then
+  # exact.
   if (stein) {
     n_pairs <- (nn - 1) %/% 2
     plus <- seq_len(n_pairs)
