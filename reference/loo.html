@@ -43,6 +43,9 @@ functions, and logpost as their sum."><meta property="og:image" content="http://
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
+    <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
+    <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -246,8 +249,8 @@ widely applicable information criterion in singular learning theory.
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">0</span>, b <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[1ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[1ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
 <span class="r-in"><span><span class="fu">loo</span><span class="op">(</span><span class="va">fit</span>, <span class="va">loglik</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">Leave-one-out cross-validation</span> <span style="color: #D7875F;">───────────────────────────────</span> <span style="color: #555555;">9 units</span> <span style="color: #D7875F;">──</span></span>

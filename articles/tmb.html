@@ -50,6 +50,9 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
+    <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
+    <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -364,9 +367,9 @@
 <span>  <span class="va">init</span>,</span>
 <span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 91 iterations [55ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [1.3s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [717ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 91 iterations [54ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [1.2s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [701ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> checks the gradient against finite differences at <code>init</code>, and would warn if it disagreed. The calls, and the time per call in microseconds:</p>
 <div class="cell" data-layout-align="center">
@@ -386,8 +389,8 @@
 <span>  fn <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span>,</span>
 <span>  gr <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;    fn    gr </span></span>
-<span><span class="co">#&gt;  59.5 146.0</span></span></code></pre></div>
+<span><span class="co">#&gt;  fn  gr </span></span>
+<span><span class="co">#&gt;  59 147</span></span></code></pre></div>
 </div>
 <p>A gradient costs a few evaluations of the objective, against 40 for finite differences. Without it, the fit would take over 20,000 evaluations of the objective. A hand-written gradient, as in the Rcpp article, can be faster still, but it has to be derived and checked; TMB’s needs neither.</p>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
@@ -397,7 +400,7 @@
 <code class="sourceCode R"><span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1686.85 · Converged in 91 iterations (2.1s)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1686.85 · Converged in 91 iterations (2.0s)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                         Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt;  1 nu_x1              5.0538  0.0846   4.8880   5.0538   5.2195   5.0538</span></span>

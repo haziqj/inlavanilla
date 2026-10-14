@@ -44,6 +44,17 @@
 - Two website articles, “Speeding up with Rcpp” and “Using TMB”, fit a
   structural equation model with 39 parameters from a log-posterior
   written in R, in C++ with an analytic gradient, and as a TMB template.
+- A website article, “Multilevel models”, fits a linear mixed model with
+  the random effects integrated out, and checks its marginals against
+  brms.
+- A website article, “Diagnostic classification models”, fits the DINA
+  model to the ECPE data with the latent classes summed out, checks its
+  marginals against Stan, and classifies examinees from draws.
+- A website article, “Correlation matrices”, puts an LKJ prior on the
+  correlation matrix of a multivariate normal, through its canonical
+  partial correlations on the atanh scale, fits it to the Holzinger and
+  Swineford tests, checks the marginals against Stan, and gives the
+  reliability of each scale from draws.
 - Three output levels: by default each stage prints one line;
   `verbose = TRUE` adds a full diagnostic of each stage (the optimiser’s
   report, how the Hessian was taken, the posterior correlations, the VB
@@ -154,3 +165,10 @@
   VB mean: 0.29 posterior SDs on a one-parameter posterior with a
   boundary. Fits whose fallback settles are unchanged, and
   `verbose = TRUE` reports the rerun.
+- A VB fixed-point step over 1.5 posterior SDs is now cut to 1.5, and
+  the iteration goes on; only two such steps in a row hand over to the
+  fallback optimiser. INLAvaan hands over at the first step over 1 SD,
+  but on a skewed posterior the first step overshoots and the iteration
+  then comes back. On a DINA model with 63 parameters and a gradient the
+  handover cost 54,000 calls to reach the point that six fixed-point
+  steps reach.

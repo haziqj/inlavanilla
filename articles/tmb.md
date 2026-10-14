@@ -278,9 +278,9 @@ fit <- inla_vanilla(
   init,
   grad = function(theta) -as.vector(obj$gr(theta))
 )
-#> ✔ Found the posterior mode in 91 iterations [55ms]
-#> ✔ VB mean correction, max shift 0.43σ [1.3s]
-#> ✔ Fitted 39 skew-normal marginals [717ms]
+#> ✔ Found the posterior mode in 91 iterations [54ms]
+#> ✔ VB mean correction, max shift 0.43σ [1.2s]
+#> ✔ Fitted 39 skew-normal marginals [701ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -304,8 +304,8 @@ c(
   fn = time_per_call(function() obj$fn(init), n = 2000),
   gr = time_per_call(function() obj$gr(init), n = 1000)
 )
-#>    fn    gr 
-#>  59.5 146.0
+#>  fn  gr 
+#>  59 147
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for
@@ -321,7 +321,7 @@ TMB’s needs neither.
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -1686.85 · Converged in 91 iterations (2.1s)
+#> Log marginal likelihood: -1686.85 · Converged in 91 iterations (2.0s)
 #> 
 #>                         Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 nu_x1              5.0538  0.0846   4.8880   5.0538   5.2195   5.0538

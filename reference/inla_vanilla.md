@@ -281,8 +281,10 @@ names (one per element of a parameter vector) are numbered, as
 
 - `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
   tolerance in posterior SDs (default `1e-3`) for the VB correction's
-  fixed-point iteration. If it has not converged after `vb_maxit` steps,
-  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes over.
+  fixed-point iteration. A step over 1.5 posterior SDs is cut to 1.5. If
+  two steps in a row are cut, or it has not converged after `vb_maxit`
+  steps, [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes
+  over.
 
 - `nlminb`: a list of
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) controls for
@@ -393,13 +395,13 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ Found the posterior mode in 10 iterations [3ms]
 #> ✔ VB mean correction, max shift 0.24σ [1ms]
 #> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (15ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (14ms)
 #> 
 #>               Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu         5.159  0.327  4.517  5.159  5.800  5.159
@@ -433,7 +435,7 @@ fit <- inla_vanilla(
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
 #>   Largest shift 0.24σ, for log_sigma (warning > 1σ)
@@ -446,7 +448,7 @@ fit <- inla_vanilla(
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   66 logpost calls
-#> ℹ Done: 147 logpost calls in 28ms
+#> ℹ Done: 147 logpost calls in 27ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

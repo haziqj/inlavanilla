@@ -46,17 +46,8 @@ y <- mtcars$am
 
 With 32 cars and two strong predictors the two classes nearly separate,
 so the likelihood is lopsided: it falls away steeply on one side of the
-maximum and slowly on the other. Maximum likelihood gives large,
-uncertain coefficients:
-
-``` r
-
-coef(summary(glm(am ~ scale(wt) + scale(hp), binomial, data = mtcars)))
-#>              Estimate Std. Error   z value    Pr(>|z|)
-#> (Intercept) -1.822019   1.091908 -1.668657 0.095185417
-#> scale(wt)   -7.909336   3.002568 -2.634191 0.008433813
-#> scale(hp)    2.485788   1.215904  2.044394 0.040914646
-```
+maximum and slowly on the other. The posterior inherits that skew, which
+a Gaussian approximation misses.
 
 ### Writing the log-posterior
 
@@ -85,13 +76,13 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [8ms]
+#> ✔ Found the posterior mode in 10 iterations [7ms]
 #> ✔ VB mean correction, max shift 0.44σ [16ms]
-#> ✔ Fitted 3 skew-normal marginals [11ms]
+#> ✔ Fitted 3 skew-normal marginals [10ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.61 · Converged in 10 iterations (42ms)
+#> Log marginal likelihood: -11.61 · Converged in 10 iterations (39ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -120,9 +111,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.612 · Converged in 10 iterations (42ms)
+#> Log marginal likelihood: -11.612 · Converged in 10 iterations (39ms)
 #> Laplace -11.709 + VB term 0.097
-#> 263 logpost calls: mode 8ms, VB 17ms, marginals 12ms
+#> 263 logpost calls: mode 7ms, VB 16ms, marginals 10ms
 #> 
 #> ── Posterior marginals ──
 #> 

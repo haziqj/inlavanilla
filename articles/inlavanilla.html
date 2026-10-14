@@ -50,6 +50,9 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
+    <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
+    <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -109,20 +112,12 @@
 <span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">wt</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">hp</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="va">mtcars</span><span class="op">$</span><span class="va">am</span></span></code></pre></div>
 </div>
-<p>With 32 cars and two strong predictors the two classes nearly separate, so the likelihood is lopsided: it falls away steeply on one side of the maximum and slowly on the other. Maximum likelihood gives large, uncertain coefficients:</p>
-<div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/glm.html" class="external-link">glm</a></span><span class="op">(</span><span class="va">am</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">wt</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">hp</span><span class="op">)</span>, <span class="va">binomial</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;              Estimate Std. Error   z value    Pr(&gt;|z|)</span></span>
-<span><span class="co">#&gt; (Intercept) -1.822019   1.091908 -1.668657 0.095185417</span></span>
-<span><span class="co">#&gt; scale(wt)   -7.909336   3.002568 -2.634191 0.008433813</span></span>
-<span><span class="co">#&gt; scale(hp)    2.485788   1.215904  2.044394 0.040914646</span></span></code></pre></div>
-</div>
+<p>With 32 cars and two strong predictors the two classes nearly separate, so the likelihood is lopsided: it falls away steeply on one side of the maximum and slowly on the other. The posterior inherits that skew, which a Gaussian approximation misses.</p>
 <section class="level3"><h3 id="writing-the-log-posterior">Writing the log-posterior<a class="anchor" aria-label="anchor" href="#writing-the-log-posterior"></a>
 </h3>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> needs a function of the parameter vector that returns the log-posterior density, up to a constant. We give each coefficient a weakly informative <span class="math inline">\(N(0, 2.5^2)\)</span> prior. Regression coefficients can take any real value, so they need no reparameterisation.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">X</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">eta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">theta</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">dbinom</a></span><span class="op">(</span><span class="va">y</span>, <span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">eta</span><span class="op">)</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -133,16 +128,16 @@
 </section><section class="level3"><h3 id="fitting">Fitting<a class="anchor" aria-label="anchor" href="#fitting"></a>
 </h3>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [8ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [7ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [16ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [11ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [10ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.61 · Converged in 10 iterations (42ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.61 · Converged in 10 iterations (39ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
@@ -152,13 +147,13 @@
 <p>The header names the approximation: skew-normal marginals, with the VB mean correction. The line under it gives the log marginal likelihood and whether the fit converged: whether the mode search and the VB correction both reached their solutions. The table summarises each parameter’s skew-normal marginal: the mean, standard deviation, quantiles and mode. Had the fit raised a warning, or <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flagged one of its checks, a line below the table would say so. Each step of the fit reports as it finishes, with the time it took. <code>verbose = TRUE</code> adds a full diagnostic of each step, and <code>silent = TRUE</code> prints nothing at all, as in a simulation; the warnings it would have shown are kept in <code>fit$warnings</code>. The fits below use <code>silent = TRUE</code>.</p>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds diagnostics for each stage:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.612 · Converged in 10 iterations (42ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.612 · Converged in 10 iterations (39ms)</span></span>
 <span><span class="co">#&gt; Laplace -11.709 + VB term 0.097</span></span>
-<span><span class="co">#&gt; 263 logpost calls: mode 8ms, VB 17ms, marginals 12ms</span></span>
+<span><span class="co">#&gt; 263 logpost calls: mode 7ms, VB 16ms, marginals 10ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -198,7 +193,7 @@
 </h3>
 <p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> draws each skew-normal marginal (solid), with the Laplace Gaussian (dashed) for comparison:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <div class="quarto-figure quarto-figure-center">
@@ -212,7 +207,7 @@
 </h2>
 <p>With three parameters we can afford the exact posterior by brute force: the log-posterior on a fine grid, normalised numerically. This is the reference the approximations are trying to match.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">s</span> <span class="op">&lt;-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span></span>
 <span><span class="va">axes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">j</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">half</span> <span class="op">&lt;-</span> <span class="fl">7</span> <span class="op">*</span> <span class="va">s</span><span class="op">[</span><span class="va">j</span>, <span class="st">"SD"</span><span class="op">]</span></span>
@@ -233,7 +228,7 @@
 </div>
 <p>A caterpillar plot compares the exact posterior with the skew-normal marginals and the Laplace Gaussian: thick bars are the central 50% intervals, thin bars the 95% intervals, and dots the medians. The dotted line is the exact median.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">probs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="fl">0.975</span><span class="op">)</span></span>
 <span><span class="va">sn_q</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span>, probs <span class="op">=</span> <span class="va">probs</span><span class="op">)</span><span class="op">$</span><span class="va">table</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fl">100</span> <span class="op">*</span> <span class="va">probs</span>, <span class="st">"%"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>Exact <span class="op">=</span> <span class="st">"grey20"</span>, `Skew-normal` <span class="op">=</span> <span class="st">"#C2410C"</span>, Laplace <span class="op">=</span> <span class="st">"#0F766E"</span><span class="op">)</span></span>
@@ -268,13 +263,13 @@
 </figure>
 </div>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">op</span><span class="op">)</span></span></code></pre></div>
 </div>
 <p>The skew-normal intervals track the exact ones closely. The intercept’s is a little narrow, by about 5%, as its ridge bend suggested. The Laplace intervals are symmetric about the mode, so they cut the long tails short and miss values on the far side.</p>
 <p>The grid also gives the exact log marginal likelihood:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cell</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/prod.html" class="external-link">prod</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">axes</span>, <span class="kw">function</span><span class="op">(</span><span class="va">a</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/diff.html" class="external-link">diff</a></span><span class="op">(</span><span class="va">a</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">lp</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">w</span><span class="op">)</span> <span class="op">*</span> <span class="va">cell</span><span class="op">)</span>,</span>
@@ -289,7 +284,7 @@
 </h2>
 <p>Without a gradient, <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> uses finite differences of <code>logpost</code>. An analytic gradient makes the fit faster and more accurate, and it pays off more as the number of parameters grows. For logistic regression it is short:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">grad</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">X</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">eta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">theta</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/crossprod.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">eta</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">-</span> <span class="va">theta</span> <span class="op">/</span> <span class="fl">2.5</span><span class="op">^</span><span class="fl">2</span></span>
@@ -307,7 +302,7 @@
 </h2>
 <p>The VB correction and the skew-normal marginals are optional, and independent of each other. <code>vb = FALSE</code> skips the VB correction, and <code>marginals = "gaussian"</code> skips the scans and keeps the Gaussian marginals. With both, the fit is the Laplace approximation alone.</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_fast</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
@@ -336,7 +331,7 @@
 </h2>
 <p><code><a href="../reference/sampling.html">sampling()</a></code> draws from the approximate joint posterior. The draws come from the skew-normal marginals, coupled by a Gaussian copula, and never call <code>logpost</code>, so even large numbers of draws are cheap:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -347,7 +342,7 @@
 </div>
 <p>Its <code>fun</code> argument maps each draw to any quantity of interest. Here is the weight, in pounds, at which a car of average horsepower is equally likely to be manual or automatic. That is where the linear predictor crosses zero, a ratio of coefficients and so skewed:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wt_mean</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">wt</span><span class="op">)</span></span>
 <span><span class="va">wt_sd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">wt</span><span class="op">)</span></span>
 <span><span class="va">crossover</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
@@ -359,7 +354,7 @@
 </div>
 <p>The same idea gives the whole fitted curve. Here is the probability of a manual gearbox against weight, for a car of average horsepower, with a 95% credible band:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">wt_grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">5.5</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
 <span><span class="va">z_grid</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">wt_grid</span> <span class="op">-</span> <span class="va">wt_mean</span><span class="op">)</span> <span class="op">/</span> <span class="va">wt_sd</span></span>
 <span><span class="va">prob</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">4000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
@@ -388,7 +383,7 @@
 </h2>
 <p>The log marginal likelihood compares models through Bayes factors. Does horsepower help, once weight is known?</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_wt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">logpost</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
@@ -408,7 +403,7 @@
 <p>The approximation works on an unconstrained scale<a class="footnote-ref" role="doc-noteref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt;In practice, it is enough for the posterior to sit well away from any boundary. Apart from the search for the mode, the fit evaluates &lt;code&gt;logpost&lt;/code&gt; only within about 4 posterior SDs of the mode (the width of the skew-normal scans), so a variance can stay on its natural scale if its posterior is far from zero. The optimiser may still stray onto illegal values on its way to the mode, so have &lt;code&gt;logpost&lt;/code&gt; return &lt;code&gt;-Inf&lt;/code&gt; there: it then steps back instead of raising warnings or errors.&lt;/p&gt;"><sup>1</sup></a>, where each parameter is free to take any real value. Reparameterise anything constrained, such as a standard deviation as its log, a probability as its logit, or a correlation as its Fisher <span class="math inline">\(z\)</span>. The parameterisation also matters for accuracy, since each parameter’s skew-normal lives on the scale you choose, and scales on which the posterior is closer to Gaussian work better.</p>
 <p><code>logpost</code> is then the log density of the parameters you pass. A prior stated on the natural scale needs the log-Jacobian of the transformation. For the share of manual cars <span class="math inline">\(p\)</span>, with a uniform prior, on the logit scale <span class="math inline">\(\vartheta = \operatorname{logit} p\)</span>, the Jacobian is <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">logpost_p</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">dbinom</a></span><span class="op">(</span><span class="va">y</span>, <span class="fl">1</span>, <span class="va">p</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -419,7 +414,7 @@
 </div>
 <p>Natural-scale summaries come from the draws, and match the exact Beta posterior:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p_draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_p</span>, nsamp <span class="op">=</span> <span class="fl">20000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
@@ -435,7 +430,7 @@
 </h2>
 <p>Any R function works as <code>logpost</code> and <code>grad</code>, including compiled code from Rcpp, TMB or RTMB. TMB minimises, so negate its objective and gradient:</p>
 <div class="cell" data-layout-align="center">
-<div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">TMB</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/TMB/man/MakeADFun.html" class="external-link">MakeADFun</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">parameters</span>, DLL <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span>,</span>
