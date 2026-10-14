@@ -430,8 +430,11 @@ warn_diagnostics <- function(dg, gaussian) {
 #' and then inlavanilla's own:
 #' * `vb_step_sigma`: the step still to go at the VB mean, in posterior SDs:
 #'   the fixed-point step there, the Newton step of the VB stationarity
-#'   condition, as `mode_shift_sigma` is for the mode. It should be close to
-#'   0 (`Inf` where the step is not finite).
+#'   condition, as `mode_shift_sigma` is for the mode. After the fallback
+#'   optimiser it is taken where the optimiser landed. On the fixed-point
+#'   path it is the last step taken, which bounds the next, unless that step
+#'   was 0.1 or more (a `vb_tol` above 0.1), when it is taken afresh. It
+#'   should be close to 0 (`Inf` where the step is not finite).
 #' * `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
 #'   [summary.inla_vanilla()] describes.
 #'

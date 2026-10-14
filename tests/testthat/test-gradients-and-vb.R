@@ -1312,6 +1312,46 @@ test_that("a forced fallback agrees with the fixed-point solution", {
   expect_equal(fit_forced$logml, fit_fixed$logml, tolerance = 1e-10)
 })
 
+test_that("the VB step is the step still to go at the VB mean, in posterior SDs", {
+  # The Poisson regression with each coefficient scaled by 100, so that the
+  # posterior SDs are far from 1 and a step left in the parameters' own units
+  # would be off by that factor. The step is checked against the rule's own
+  # fixed-point step, Sigma E[grad], taken here at the VB mean.
+  mod <- poisson_regression_model(2)
+  s <- 100
+  lp_s <- function(theta) mod$logpost(theta / s)
+  gr_s <- function(theta) mod$grad(theta / s) / s
+  step_at_mean <- function(fit) {
+    rule <- vb_nodes(fit$cov)
+    g <- expected_grad(gr_s, fit$mean_vb, rule$nodes, rule$weights)
+    unname(abs(drop(fit$cov %*% g)) / sqrt(diag(fit$cov)))
+  }
+  fit_s <- function(...) {
+    inla_vanilla(lp_s, s * mod$init, grad = gr_s, silent = TRUE, ...)
+  }
+
+  # A vb_tol above the settling level is met by the first step, of more
+  # than 0.1 SDs, which says little about the step still to go: that is
+  # taken afresh, and the correction settles
+  loose <- fit_s(control = list(vb_tol = 0.5))
+  d <- loose$diagnostics$marginals
+  expect_false(loose$diagnostics$vb$fallback)
+  expect_identical(loose$diagnostics$vb$iterations, 1L)
+  expect_gt(max(abs(d$vb_shift_sigma)), 0.1)
+  expect_equal(d$vb_step_sigma, step_at_mean(loose), tolerance = 1e-6)
+  expect_lt(max(d$vb_step_sigma), 0.1)
+  expect_length(loose$warnings, 0)
+
+  # After the fallback, the step where it landed
+  forced <- fit_s(control = list(vb_maxit = 1))
+  expect_true(forced$diagnostics$vb$fallback)
+  expect_equal(
+    forced$diagnostics$marginals$vb_step_sigma,
+    step_at_mean(forced),
+    tolerance = 1e-4
+  )
+})
+
 test_that("without a gradient a forced fallback lands close to the fixed point", {
   # Without a gradient nlminb() minimises the rule's negative expected
   # log-posterior, with the expected gradient by Stein's identity as its
