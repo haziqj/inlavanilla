@@ -32,8 +32,7 @@ specificity estimated from the pattern of results. Koukounari et al. (2021)
 compared three such latent class models for tests of schistosomiasis, fitted
 in JAGS. This article fits all three to one of their data sets with
 `inla_vanilla()`. The infection status sums out of the likelihood, so each
-model has a dozen or so parameters, and the fits take between a twentieth of
-a second and two seconds.
+model has a dozen or so parameters, and each fit takes under a second.
 
 ```{r}
 #| label: packages
@@ -205,13 +204,12 @@ lp_lcre <- function(theta, y, count, gh) {
   b1 <- qnorm(plogis(se, log.p = TRUE), log.p = TRUE) * sqrt(1 + sigma[1]^2)
   b0 <- qnorm(plogis(-sp, log.p = TRUE), log.p = TRUE) * sqrt(1 + sigma[2]^2)
 
-  # log P(y | class) for each pattern, with u integrated out
+  # log P(y | class) for each pattern, with u integrated out: one column of
+  # eta per node, so one matrix product covers every pattern and node
   log_class <- function(b, s) {
-    l <- sapply(seq_along(gh$z), function(q) {
-      eta <- b + s * gh$z[q]
-      log_bern(y, pnorm(eta, log.p = TRUE), pnorm(-eta, log.p = TRUE)) +
-        log(gh$w[q])
-    })
+    eta <- b + s * matrix(gh$z, J, length(gh$z), byrow = TRUE)
+    l <- log_bern(y, pnorm(eta, log.p = TRUE), pnorm(-eta, log.p = TRUE)) +
+      rep(log(gh$w), each = nrow(y))
     l_max <- apply(l, 1, max)
     l_max + log(rowSums(exp(l - l_max)))
   }
