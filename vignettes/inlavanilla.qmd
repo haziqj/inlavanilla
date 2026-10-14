@@ -287,7 +287,8 @@ Laplace one. The VB correction moves the Gaussian's centre most of the way to
 the posterior mean, but a Gaussian cannot follow the long tail. Without a
 gradient it takes the expected gradient from values of `logpost` alone, and
 costs about as much as finding the mode. With a gradient it is more accurate,
-and its cost grows fastest with the number of parameters.
+and as the number of parameters grows, it and the marginals become the
+slowest stages.
 
 ## Derived quantities
 
