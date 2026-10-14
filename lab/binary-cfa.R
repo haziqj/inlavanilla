@@ -13,7 +13,7 @@
 # reference depends on neither the quadrature nor the approximation.
 # Experiment 2 repeats the fit on many simulated data sets and reports bias,
 # RMSE and the coverage of the 95% intervals, skew-normal and Gaussian. Needs
-# rstan. Takes about 15 minutes on 12 cores. Run from the package root:
+# rstan. Took about 15 minutes on 12 cores. Run from the package root:
 #   Rscript lab/binary-cfa.R
 #
 # Results (October 2026, 500 replicates per setting): the 95% intervals cover

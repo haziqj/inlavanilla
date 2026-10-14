@@ -21,8 +21,18 @@
 # to the same simulated data sets and compares the diagnostics, the checks
 # summary() flags and the coverage of the 95% intervals, each fit on its own
 # scale (the loadings map one to one, so theirs are the same estimand). Needs
-# rstan. Run from the package root:
+# rstan. Takes about 30 minutes on 4 cores. Run from the package root:
 #   Rscript lab/binary-cfa-delta.R
+#
+# Results (October 2026, 500 replicates per setting): the delta coordinates
+# give a better-behaved posterior. The Hessian condition number, in SD units,
+# halves (about 9 to 4), the median largest ridge bend falls from 0.2 to 0.6
+# to under 0.03, and the fits flagged by summary() fall from 467, 187 and 417
+# of 500 to 28, 1 and 34, mostly on the mean gap. Against Stan, item 5 of the
+# two-factor model, whose theta fit is 20% too narrow (SD ratios 0.80 and
+# 0.81, quantiles up to 0.73 SDs off), comes out at 0.91 and 0.93 on the theta
+# scale, and within 0.12 SDs on its own. Coverage is the same in both (mean
+# 0.944 to 0.948), and the delta fits are slightly faster.
 #
 ################################################################################
 
