@@ -583,6 +583,7 @@ test_that("diagnostics() prints in INLAvaan's formats", {
   expect_match(fmt("hess_cond"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("unscanned_mass_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("mode_shift_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
+  expect_match(fmt("vb_step_max"), "^[0-9]\\.[0-9]{2}e[-+][0-9]{2}$")
   expect_match(fmt("nmad_max"), "^0\\.[0-9]{4}$")
   expect_identical(fmt("n_heavy_tails"), "0")
   expect_identical(fmt("vb_fallback"), "0")
