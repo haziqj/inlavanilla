@@ -104,3 +104,10 @@
 * `print()` and `summary()` wrap long lines to the console width (the
   `width` option in R Markdown and Quarto), and split a table too wide for
   it into blocks of columns, as R does for a matrix.
+* The VB correction no longer stops with "NA/NaN gradient evaluation" when
+  `logpost` is `-Inf` at some of its nodes, which reach up to 3 posterior SDs
+  from the mode, as near a boundary of the support. Its fallback optimiser
+  now moves away from those nodes. If it finds a VB mean where `logpost` is
+  finite at every node, the fit goes ahead. Otherwise, as for a posterior
+  truncated within reach of the nodes, the fit stops with an error that says
+  so and suggests a reparameterisation or `vb = FALSE`.
