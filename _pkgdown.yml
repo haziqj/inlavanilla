@@ -7,29 +7,42 @@ template:
   # MathJax, as Quarto uses, rather than pkgdown's default MathML
   math-rendering: mathjax
 
+navbar:
+  structure:
+    left: [intro, reference, examples, articles, news]
+  components:
+    # Hand-written, as pkgdown builds only the one articles menu. Keep it in
+    # step with the Examples section below.
+    examples:
+      text: Examples
+      menu:
+      - text: Multilevel models
+        href: articles/multilevel.html
+      - text: Diagnostic classification models
+        href: articles/dcm.html
+      - text: Correlation matrices
+        href: articles/correlation.html
+      - text: Binary factor analysis
+        href: articles/binary-cfa.html
+      - text: Diagnostic tests without a gold standard
+        href: articles/diagnostic-tests.html
+
 articles:
 - title: Get started
   contents:
   - inlavanilla
-- title: Checking a fit
-  navbar: ~
-  contents:
-  - diagnostics
-  - model-comparison
 - title: Examples
-  navbar: ~
   contents:
   - articles/multilevel
   - articles/dcm
   - articles/correlation
   - articles/binary-cfa
   - articles/diagnostic-tests
-- title: Speed and gradients
-  desc: >
-    Faster log-posteriors and exact gradients for larger models. Both
-    articles fit the same structural equation model, with 39 parameters.
+- title: Articles
   navbar: ~
   contents:
+  - diagnostics
+  - model-comparison
   - articles/rcpp
   - articles/rtmb
 
