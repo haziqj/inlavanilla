@@ -1698,12 +1698,37 @@ test_that("print() points to the fit's warnings and to flagged checks", {
   fit$diagnostics$marginals$vb_step_sigma[2] <- NA
   fit$diagnostics$vb <- NULL
   expect_match(capture_output(print(fit)), "\\| Converged in")
-  # Too narrow for one line, the headline takes two
+  # Too narrow for one line, the headline takes two, and wraps further on a
+  # console narrower still
   out <- capture_output(print(fit_ok), width = 50)
   expect_match(
     out,
     "\nLog marginal likelihood: [-0-9.]+\nConverged in [0-9]+ iterations?"
   )
+  fit <- fit_ok
+  fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
+  out <- capture_output(print(fit), width = 30)
+  expect_lte(max(nchar(strsplit(out, "\n")[[1]])), 30)
+  expect_match(unwrap(out), "\nNot converged after [0-9]+ iterations?")
+
+  # summary() opens with the same headline, with the mode check first
+  headline <- function(f) {
+    strsplit(capture_output(print(summary(f))), "\n")[[1]][3]
+  }
+  expect_match(headline(fit_ok), "\\| Converged in [0-9]+ iterations? \\(")
+  fit <- fit_ok
+  fit$diagnostics$marginals$vb_step_sigma[2] <- 0.5
+  expect_match(headline(fit), "\\| Not converged: VB did not settle \\(")
+  fit$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
+  expect_match(headline(fit), "\\| Not converged after [0-9]+ iterations? \\(")
+
+  # In UTF-8 the separator is a middle dot
+  testthat::local_reproducible_output(width = 80, unicode = TRUE)
+  expect_match(
+    capture_output(print(fit_ok)),
+    "Log marginal likelihood: [-0-9.]+ \u00b7 Converged in"
+  )
+  testthat::local_reproducible_output(width = 80, unicode = FALSE)
 
   fit <- fit_ok
   fit$warnings <- c("first", "second")

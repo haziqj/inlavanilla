@@ -884,8 +884,8 @@ cat_headline <- function(logml, digits, flags, iterations, secs) {
   if (cli::ansi_nchar(line) <= out_width()) {
     cli::cat_line(line)
   } else {
-    cli::cat_line(value)
-    cli::cat_line(conv)
+    cat_wrap(value, exdent = 2)
+    cat_wrap(conv, exdent = 2)
   }
 }
 
