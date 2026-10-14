@@ -66,6 +66,52 @@ How the latent variables are handled decides the route:
   exponential against half-normal inefficiency by log marginal likelihood (the
   frontier package fits the half-normal by ML).
 
+### Random effects on the precision (`lab/dhglm-sleepstudy.R`)
+
+- **Source:** Morales-Otero, Gómez-Rubio and Núñez-Antón (2022), "Fitting
+  double hierarchical models with the integrated nested Laplace
+  approximation", *Statistics and Computing*, 32(4), arXiv 2201.07493. Code
+  and data: <https://github.com/becarioprecario/DHGLM-INLA> (folders
+  `sleepstudy`, `sleepstudy_rcoef`, `Gaussian5`, `Poisson`, `NegBin`, each
+  with a JAGS script). The abstract: DHGLMs do not fit within the models INLA
+  can fit. Their workaround, INLA inside adaptive multiple importance sampling
+  over the 18 log-precisions, took 21 rounds of 1,000 INLA fits. A first,
+  vague proposal gave results they discarded. The second was centred at each
+  subject's $\log(1/S_i^2)$, permuted 500 times to pick the start with the
+  highest conditional marginal likelihood. The final effective sample size was
+  2.0.
+- **Model** (their equation 3, reaction time in seconds): $y_{ij} \sim
+  N(\beta_0 + \beta_i\,\text{day}_{ij}, 1/\tau_i)$, $\log\tau_i = \gamma +
+  u_i$, $\beta_i \sim N(0, 1/\tau_\beta)$, $u_i \sim N(0, 1/\tau_u)$, with
+  $\beta_0, \gamma \sim N(0, \text{precision } 0.001)$, $\tau_\beta \sim
+  \text{Gamma}(1, 0.00005)$ and $\tau_u \sim \text{Gamma}(0.01, 0.01)$. The
+  paper's text gives $\text{Gamma}(1, 0.00005)$ for $\tau_u$, but its JAGS and
+  INLA code use $\text{Gamma}(0.01, 0.01)$. The random slopes have mean 0, so
+  they carry the average effect of the days too.
+- **Route:** both random effects inside `logpost`. Given $\tau_i$, subject
+  $i$'s responses are normal with covariance $I/\tau_i + d d^\top/\tau_\beta$,
+  a rank-one update, so $\beta_i$ integrates out in closed form. Then
+  $v_i = \log\tau_i$ integrates out by adaptive Gauss-Hermite (15 nodes,
+  centred at the integrand's mode by Newton steps, scaled by its curvature).
+  A fixed rule fails when $\tau_u$ is small. 4 outer parameters. Subject
+  effects from `sampling(fun = ...)`: $v_i$ from its conditional density on a
+  grid, then $\beta_i$ from its normal.
+- **Data:** `lme4::sleepstudy`, 18 subjects, 10 days each.
+- **Result:** matches Stan (non-centred, all 40 parameters). The 4 outer
+  parameters are within 0.05 SDs in mean and 0.17 in the 95% limits, with
+  SDs within 5%. The 36 subject effects are within 0.03 SDs in mean and 4% in
+  SD. $\tau_u$ on its natural scale: mean 2.59 against Stan's 2.72 (the
+  paper: 2.12 by AMIS, 2.66 by JAGS), SD 1.9 against 3.1, driven by its long
+  right tail (the paper: 0.93 and 2.3). 0.27 s (389 calls) and 5 s for the
+  subject draws. Stan samples this small model in 4.5 s too, so the contrast
+  is with the paper's 21,000 INLA fits. Every check passes, and 41 nodes move
+  `logpost` at the mode by 2e-8.
+- **Next:** the strongest candidate for an article, since the authors are
+  from the INLA community. Add the natural model with a fixed slope,
+  $\beta_0 + \beta_1\,\text{day} + b_i\,\text{day}$, and compare the two by
+  log marginal likelihood. The repo's other examples (`Gaussian5`, `Poisson`,
+  `NegBin`) have JAGS references too.
+
 ### Population pharmacokinetics (`lab/theoph-rtmb.R`)
 
 A modern application: pharmacometrics runs on NONMEM, Monolix and nlmixr2,
@@ -122,23 +168,6 @@ relayed by search agents: read each source before citing it.
 
 ### From GitHub and papers
 
-- **Double hierarchical GLM: random effects on the precision.**
-  Morales-Otero, Gómez-Rubio and Núñez-Antón (2022), arXiv 2201.07493, code
-  and data at <https://github.com/becarioprecario/DHGLM-INLA> (folders
-  `sleepstudy`, `sleepstudy_rcoef`, `Gaussian5`, `Poisson`, `NegBin`, each
-  with a JAGS script and `.bug` file). On `lme4::sleepstudy` (Reaction / 1000):
-  $y_{ij} \sim N(\beta_0 + \delta_j d_{ij}, 1/\tau_j)$, $\log\tau_j = \gamma +
-  u_j$, $\delta_j \sim N(0, 1/\tau_d)$, $u_j \sim N(0, 1/\tau_u)$. The paper
-  says DHGLMs are outside R-INLA's class. The authors' workaround, INLA within
-  adaptive importance sampling over the 18 log-precisions, needed a second
-  proposal and reported an effective sample size of 2.0. Route: given $u_j$,
-  subject $j$'s responses are multivariate normal with covariance
-  $\tau_j^{-1} I + \tau_d^{-1} d d^\top$, so $\delta_j$ integrates out in
-  closed form and $u_j$ by 1-D Gauss-Hermite per subject (or RTMB's Laplace
-  over both). 4 outer parameters. Probably the strongest showcase: authors
-  from the INLA community, public data, a JAGS gold standard in the repo, and
-  a workaround that struggled. (Check the priors: the `.bug` file and the
-  paper differ on $\tau_u$'s.)
 - **Nonlinear mixed model with a Box-Cox effort correction.** inlabru
   Discussion #252, <https://github.com/inlabru-org/inlabru/discussions/252>
   (November 2024). Negative binomial counts, $\log\mu = \text{site}_i +
