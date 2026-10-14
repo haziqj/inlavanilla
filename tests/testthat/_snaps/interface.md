@@ -5,7 +5,8 @@
     Condition
       Error:
       ! `verbose` and `silent` cannot both be `TRUE`.
-      i `verbose = TRUE` prints a full diagnostic of the fit, and `silent = TRUE` prints nothing.
+      i `verbose = TRUE` prints a full diagnostic of the fit, and `silent = TRUE`
+        prints nothing.
 
 # validation errors are informative
 
@@ -32,7 +33,8 @@
       Error:
       ! `logpost` is not finite at `init`.
       x `logpost(init)` returned -Inf.
-      i Start inside the support of the posterior, and check that every parameter is on an unconstrained scale.
+      i Start inside the support of the posterior, and check that every parameter is
+        on an unconstrained scale.
 
 ---
 
@@ -41,7 +43,8 @@
     Condition
       Error:
       ! Unknown `control` entries: "foo" and "ngrid".
-      i Valid entries are "n_grid", "log_threshold", "vb_maxit", "vb_tol", and "nlminb".
+      i Valid entries are "n_grid", "log_threshold", "vb_maxit", "vb_tol", and
+        "nlminb".
 
 # a wrong analytic gradient triggers the mismatch warning
 
@@ -60,7 +63,8 @@
     Condition
       Error:
       ! The Hessian at the posterior mode is not positive definite.
-      i The optimiser may have stopped short of the mode, or the posterior may be improper or not identified.
+      i The optimiser may have stopped short of the mode, or the posterior may be
+        improper or not identified.
       i Optimiser message: <msg>
 
 # verbose output keeps its layout

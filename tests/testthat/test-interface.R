@@ -82,6 +82,19 @@ scrub_output <- function(x) {
   x
 }
 
+# Output is wrapped to 80 columns, with each continuation line indented.
+# unwrap() joins the continuation lines back, so that a test can match a
+# sentence wherever it was wrapped.
+unwrap <- function(x) {
+  gsub("\n {2,}", " ", x)
+}
+
+# Each message of verbose = TRUE is one line of output, so a newline inside
+# one comes from wrapping. Joins the messages into one text, a line each.
+unwrap_msgs <- function(msgs) {
+  paste0(gsub("\n +", " ", sub("\n$", "", msgs)), "\n", collapse = "")
+}
+
 # For the detail lines of verbose = TRUE, which show many more numbers, some
 # at the level of rounding or finite-difference noise: every number with a
 # decimal point or an exponent is scrubbed too (but not the thresholds, after
@@ -90,6 +103,11 @@ scrub_output <- function(x) {
 # of VB steps and whether Anderson acceleration was used), and the runs of
 # spaces that align the numbers in the table of marginals.
 scrub_numbers <- function(x) {
+  # Wrapped detail lines are joined first (their continuation lines are
+  # indented four spaces), because where a line wraps depends on the widths
+  # of its numbers. A test below checks that every line fits in 80 columns.
+  x <- paste(x, collapse = "\n")
+  x <- strsplit(gsub("\n    (?=\\S)", " ", x, perl = TRUE), "\n")[[1]]
   x <- scrub_output(x)
   x <- gsub("nlminb: .*, after", "nlminb: <message>, after", x)
   x <- gsub(
@@ -605,7 +623,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
     "while fitting the skew-normal marginals",
     class = "inlavanilla_error"
   )
-  msg <- conditionMessage(err)
+  msg <- unwrap(conditionMessage(err))
   # The value reported is one where logpost fails
   at <- regmatches(
     msg,
@@ -1120,7 +1138,7 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
     ),
     class = "inlavanilla_diagnostics_warning"
   )
-  text <- cli::ansi_strip(conditionMessage(w))
+  text <- unwrap(cli::ansi_strip(conditionMessage(w)))
   expect_match(
     text,
     "x The gradient at the posterior mode is not zero \\(max \\|grad\\| = [0-9.]+\\): a Newton step"
@@ -1269,7 +1287,7 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_match(msgs[!is_stage], "^(  |i )")
   expect_gt(sum(!is_stage), 15)
 
-  text <- paste(msgs, collapse = "")
+  text <- unwrap_msgs(msgs)
   for (pattern in c(
     "i 2 parameters: intercept and slope",
     "Derivatives by finite differences of logpost",
@@ -1318,12 +1336,9 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_match(text, paste("Done:", fit$counts[["logpost"]], "logpost calls"))
 
   # With a gradient: its check at init and the asymmetry of its Jacobian
-  text <- paste(
-    capture_messages(
-      inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
-    ),
-    collapse = ""
-  )
+  text <- unwrap_msgs(capture_messages(
+    inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
+  ))
   expect_match(
     text,
     "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning > 0.001\\), [0-9]+ logpost calls"
@@ -1362,6 +1377,44 @@ test_that("verbose output keeps its layout", {
   )
 })
 
+test_that("printed output fits in 80 columns, however wide the console", {
+  testthat::local_reproducible_output(width = 200)
+  lines <- function(x) unlist(strsplit(x, "\n"))
+  widest <- function(x) max(cli::ansi_nchar(lines(x)))
+  out <- capture_output(print(fit_reg), width = 200)
+  expect_lte(widest(out), 80)
+  # The rule spans the 80 columns
+  expect_identical(cli::ansi_nchar(lines(out)[1]), 80L)
+  expect_lte(
+    widest(capture_output(print(summary(fit_reg)), width = 200)),
+    80
+  )
+  msgs <- capture_messages(
+    inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
+  )
+  expect_lte(widest(msgs), 80)
+  # The bullets of the fit-time warning are wrapped too
+  w <- expect_warning(
+    suppressMessages(inla_vanilla(
+      lp_pois,
+      3,
+      y = pois_y,
+      a0 = pois_a0,
+      b0 = pois_b0,
+      control = list(nlminb = list(iter.max = 1))
+    )),
+    class = "inlavanilla_diagnostics_warning"
+  )
+  expect_lte(widest(conditionMessage(w)), 80)
+  expect_gt(length(lines(conditionMessage(w))), 10)
+
+  # A narrower console narrows everything
+  expect_lte(
+    widest(capture_output(print(summary(fit_reg)), width = 60)),
+    60
+  )
+})
+
 test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   # The unreached mode of the test above: nlminb() is restarted with the
   # parameters rescaled, the VB correction falls back to nlminb(), and the
@@ -1375,7 +1428,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     control = list(nlminb = list(iter.max = 1)),
     verbose = TRUE
   )))
-  text <- paste(msgs, collapse = "")
+  text <- unwrap_msgs(msgs)
   expect_match(text, "Restarted nlminb with each parameter scaled")
   expect_match(
     text,
@@ -2041,12 +2094,12 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$optim$iterations <- 9L
   below$vb$iterations <- 3L
   flagged <- function(s) {
-    lines <- strsplit(capture_output(print(s), width = 200), "\n")[[1]]
+    lines <- strsplit(unwrap(capture_output(print(s))), "\n")[[1]]
     grep("^! ", lines, value = TRUE)
   }
 
   expect_length(flagged(below), 0)
-  out <- capture_output(print(below), width = 200)
+  out <- unwrap(capture_output(print(below)))
   for (line in c(
     "v Mode found in 9 iterations (Newton step 0.098 SD).",
     "v Hessian condition number 9.8e+07, in SD units.",
@@ -2097,7 +2150,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   fallback$vb$fallback <- TRUE
   expect_length(flagged(fallback), 0)
   expect_match(
-    capture_output(print(fallback), width = 200),
+    unwrap(capture_output(print(fallback))),
     "v VB correction in 3 iterations (via the fallback optimiser): max shift 0.98 SD.",
     fixed = TRUE
   )

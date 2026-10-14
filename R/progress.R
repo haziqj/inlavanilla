@@ -103,7 +103,7 @@ hl <- function(x) {
 # A line of its own, marked with a cyan i.
 progress_info <- function(p, text) {
   if (p$detail) {
-    message(cli::col_cyan(cli::symbol$info), " ", text)
+    message(wrap_detail(paste(cli::col_cyan(cli::symbol$info), text), 0))
   }
 }
 
@@ -112,9 +112,23 @@ progress_info <- function(p, text) {
 progress_detail <- function(p, lines) {
   if (p$detail) {
     for (line in lines) {
-      message("  ", line)
+      message(wrap_detail(line, 2))
     }
   }
+}
+
+# A line indented by `indent` spaces and wrapped to out_width(), with
+# continuation lines indented two spaces more. A line that fits is left as
+# it is, so the aligned rows of a table keep their spacing.
+wrap_detail <- function(line, indent) {
+  w <- out_width()
+  if (cli::ansi_nchar(line) + indent <= w) {
+    return(paste0(strrep(" ", indent), line))
+  }
+  paste(
+    cli::ansi_strwrap(line, width = w, indent = indent, exdent = indent + 2),
+    collapse = "\n"
+  )
 }
 
 grey <- function(...) {
