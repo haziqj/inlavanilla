@@ -14,8 +14,8 @@
       -- INLAvanilla ------------------------------------------------- Laplace + VB --
       
                   Mean     SD   2.5%    50%  97.5%   Mode
-      intercept  0.582  0.276  0.041  0.582  1.124  0.582
-      slope      0.596  0.226  0.153  0.596  1.038  0.596
+      intercept  0.584  0.276  0.042  0.584  1.125  0.584
+      slope      0.595  0.226  0.152  0.595  1.038  0.595
       
       Log marginal likelihood: -16.25
 
@@ -28,20 +28,20 @@
       
       Posterior marginals
                   Mean     SD   2.5%    50%  97.5%   Mode
-      intercept  0.582  0.276  0.041  0.582  1.124  0.582
-      slope      0.596  0.226  0.153  0.596  1.038  0.596
+      intercept  0.584  0.276  0.042  0.584  1.125  0.584
+      slope      0.595  0.226  0.152  0.595  1.038  0.595
       
       Diagnostics
                  VB shift
-      intercept     -0.24
-      slope         0.087
+      intercept     -0.23
+      slope         0.084
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
       v Hessian condition number 3.6, in posterior-SD units.
-      v VB correction in <n> iteration(s): max shift 0.24 posterior SDs.
+      v VB correction in <n> iteration(s): max shift 0.23 posterior SDs.
       i Gaussian marginals: no scans, so no skew-normal checks.
       
-      Log marginal likelihood: -16.248 (Laplace -16.277, VB term 0.029)
+      Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
       <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
 
 ---

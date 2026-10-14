@@ -152,18 +152,18 @@
       
       Diagnostics
                  VB shift  SN - VB  Shape   NMAD   Bend  End mass
-      intercept     -0.24  -0.0027   -1.6   0.01  0.037   0.00078
-      slope         0.087  -0.0069    1.1  0.015   0.14   0.00013
+      intercept     -0.23  -0.0068   -1.6   0.01  0.037   0.00078
+      slope         0.084  -0.0042    1.1  0.015   0.14   0.00013
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
       v Hessian condition number 3.6, in posterior-SD units.
-      v VB correction in <n> iteration(s): max shift 0.24 posterior SDs.
+      v VB correction in <n> iteration(s): max shift 0.23 posterior SDs.
       v Skew-normal fits: max NMAD 0.015.
       ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope`
         (0.14): the marginal may be too narrow.
-      v Skew-normal and VB means agree to within 0.0069 posterior SDs.
+      v Skew-normal and VB means agree to within 0.0068 posterior SDs.
       
-      Log marginal likelihood: -16.248 (Laplace -16.277, VB term 0.029)
+      Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
       <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)
 
 ---

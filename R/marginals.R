@@ -207,8 +207,8 @@ scan_end_mass <- function(sn, mode, sds) {
 # a noise scale does for a regression coefficient at small n), and the
 # marginal comes out too narrow. Returns the larger of the gains. The
 # gradient is the user's, or one-sided differences in the other coordinates
-# only (m - 1 calls per point, reusing the scan's height), with their bias
-# removed by the Laplace curvature as in the VB stage.
+# only (m - 1 calls per point, reusing the scan's height), with their bias,
+# half a step times the curvature, removed with the Laplace curvature.
 scan_bend <- function(j, lp, gr, lap, Vscan, t, f_t) {
   m <- length(lap$mode)
   if (m < 2L) {
