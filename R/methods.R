@@ -889,8 +889,8 @@ cat_headline <- function(logml, digits, flags, iterations, secs) {
   }
 }
 
-# A section heading, as cli's level-two headings look: "── Title ──", and
-# a blank line under it.
+# A section heading, as cli's level-two headings look ("-- Title --", drawn
+# with box-drawing lines), and a blank line under it.
 cat_heading <- function(title) {
   line <- col_vanilla(strrep(cli::symbol$line, 2))
   cli::cat_line(line, " ", cli::style_bold(title), " ", line)
