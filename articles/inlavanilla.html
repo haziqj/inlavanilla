@@ -55,7 +55,7 @@
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
-    <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
+    <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
@@ -132,13 +132,13 @@
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [6ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [9ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [6ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [8ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [16ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [11ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.61 · Converged in 10 iterations (24ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.61 · Converged in 10 iterations (40ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
@@ -152,9 +152,9 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.612 · Converged in 10 iterations (24ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.612 · Converged in 10 iterations (40ms)</span></span>
 <span><span class="co">#&gt; Laplace -11.709 + VB term 0.097</span></span>
-<span><span class="co">#&gt; 263 logpost calls: mode 6ms, VB 10ms, marginals 6ms</span></span>
+<span><span class="co">#&gt; 263 logpost calls: mode 8ms, VB 16ms, marginals 11ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -292,7 +292,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_g</span><span class="op">$</span><span class="va">summary</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 1.813245e-06</span></span>
+<span><span class="co">#&gt; [1] 1.813216e-06</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>finite_differences <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">counts</span>, gradient <span class="op">=</span> <span class="va">fit_g</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                    logpost grad</span></span>
 <span><span class="co">#&gt; finite_differences     263    0</span></span>
@@ -337,7 +337,7 @@
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;              b0      b_wt      b_hp</span></span>
-<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008176</span></span>
+<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008175</span></span>
 <span><span class="co">#&gt; [2,] -1.7688214 -3.819659 1.2958502</span></span>
 <span><span class="co">#&gt; [3,] -0.9887956 -4.875465 1.0419254</span></span></code></pre></div>
 </div>
@@ -427,19 +427,25 @@
 <span><span class="co">#&gt; inlavanilla 0.2546500 0.4104370 0.5794388</span></span>
 <span><span class="co">#&gt; exact       0.2547618 0.4100149 0.5786063</span></span></code></pre></div>
 </div>
-</section><section class="level2"><h2 id="bringing-your-own-compiled-code">Bringing your own compiled code<a class="anchor" aria-label="anchor" href="#bringing-your-own-compiled-code"></a>
+</section><section class="level2"><h2 id="gradients-for-free-and-compiled-code">Gradients for free, and compiled code<a class="anchor" aria-label="anchor" href="#gradients-for-free-and-compiled-code"></a>
 </h2>
-<p>Any R function works as <code>logpost</code> and <code>grad</code>, including compiled code from Rcpp, TMB or RTMB. TMB minimises, so negate its objective and gradient:</p>
+<p><a href="https://github.com/kaskr/RTMB" class="external-link">RTMB</a> gives the exact gradient of a log-posterior written in R, by automatic differentiation, with nothing to derive and no compiler. The log-posterior above needs only RTMB’s versions of its densities:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">TMB</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/TMB/man/MakeADFun.html" class="external-link">MakeADFun</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">parameters</span>, DLL <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span>
-<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
-<span>  <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span>,</span>
-<span>  init <span class="op">=</span> <span class="va">obj</span><span class="op">$</span><span class="va">par</span>,</span>
-<span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">logpost_rtmb</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">X</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">eta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">X</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">theta</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu">RTMB</span><span class="fu">::</span><span class="fu">dbinom</span><span class="op">(</span><span class="va">y</span>, <span class="fl">1</span>, <span class="fu">RTMB</span><span class="fu">::</span><span class="fu">plogis</span><span class="op">(</span><span class="va">eta</span><span class="op">)</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu">RTMB</span><span class="fu">::</span><span class="fu">dnorm</span><span class="op">(</span><span class="va">theta</span>, <span class="fl">0</span>, <span class="fl">2.5</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">RTMB</span><span class="fu">::</span><span class="fu">MakeADFun</span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu">logpost_rtmb</span><span class="op">(</span><span class="va">p</span><span class="op">$</span><span class="va">theta</span>, <span class="va">X</span>, <span class="va">y</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">init</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  silent <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">fit_rtmb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="va">fn</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">obj</span><span class="op">$</span><span class="va">gr</span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>The articles <a href="rcpp.html">Speeding up with Rcpp</a> and <a href="tmb.html">Using TMB</a> work through both routes for a structural equation model with 39 parameters: in C++ with an analytic gradient, and as a TMB template with automatic differentiation.</p>
+<p>Any R function works as <code>logpost</code> and <code>grad</code>, including compiled code from Rcpp or TMB. A TMB template usually returns the negative log-posterior, to be minimised, so negate its <code>obj$fn</code> and <code>obj$gr</code>.</p>
+<p>The articles <a href="rcpp.html">Speeding up with Rcpp</a> and <a href="rtmb.html">Gradients with RTMB</a> work through both routes for a structural equation model with 39 parameters. C++ makes each call about ten times faster than R. A gradient from RTMB makes the fit more accurate, at about the speed of R.</p>
 </section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <p>Jamil, H., &amp; Rue, H. (2026a). <em>Approximate Bayesian inference for structural equation models using integrated nested Laplace approximations</em> (arXiv:2603.25690 [stat.ME]). arXiv. <a href="https://doi.org/10.48550/arXiv.2603.25690" class="external-link uri">https://doi.org/10.48550/arXiv.2603.25690</a></p>

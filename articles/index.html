@@ -32,7 +32,7 @@
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
-    <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
+    <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
@@ -80,13 +80,13 @@
         <dd><p>A one-factor model for binary items, with the factor integrated out by Gauss-Hermite quadrature inside the log-posterior.</p>
       </dd></dl></div>
     <div class="section ">
-      <h3>Compiled code</h3>
-      <div class="section-desc"><p>Faster log-posteriors for larger models. Both articles fit the same structural equation model, with 39 parameters.</p></div>
+      <h3>Speed and gradients</h3>
+      <div class="section-desc"><p>Faster log-posteriors and exact gradients for larger models. Both articles fit the same structural equation model, with 39 parameters.</p></div>
 
       <dl><dt><a href="rcpp.html">Speeding up with Rcpp</a></dt>
         <dd><p>A structural equation model with 39 parameters, its log-posterior written first in R and then in C++ with Rcpp and RcppEigen, with an analytic gradient.</p>
-        </dd><dt><a href="tmb.html">Using TMB</a></dt>
-        <dd><p>The structural equation model of the Rcpp article as a TMB template, with the gradient from automatic differentiation.</p>
+        </dd><dt><a href="rtmb.html">Gradients with RTMB</a></dt>
+        <dd><p>The structural equation model of the Rcpp article written for RTMB, which differentiates R code automatically, and compared with R and C++ for speed and accuracy.</p>
       </dd></dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

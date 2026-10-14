@@ -253,9 +253,13 @@ converged (see
 [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md));
 `grad` is the remedy.
 
-With `grad`, every stage is faster and more accurate. The VB correction
-then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the
-same nodes. Beyond a handful of parameters it and the marginals are the
+With `grad`, every stage is more accurate. The fit is also faster when a
+gradient call costs about as much as a `logpost` call, as a hand-written
+gradient usually does, since it then makes about half as many calls in
+all. A gradient by automatic differentiation (RTMB, TMB) costs about
+two, and the fit takes about as long as without one. The VB correction
+takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
+nodes. Beyond a handful of parameters it and the marginals are the
 slowest stages. `vb = FALSE` skips the VB correction (and its term in
 the log marginal likelihood), and the skew-normal marginals do not
 depend on it; `marginals = "gaussian"` saves the calls of the scans.
@@ -263,10 +267,12 @@ depend on it; `marginals = "gaussian"` saves the calls of the scans.
 A supplied `grad` is checked against finite differences at `init`, and
 its Jacobian at the mode is checked for symmetry, with a warning if
 either check fails. Any R function works for `logpost` and `grad`,
-including compiled code (Rcpp, TMB, RTMB). For a TMB object, which
-minimises, pass `function(x) -obj$fn(x)` and
-`function(x) -as.vector(obj$gr(x))`, with `init = obj$par`; its repeated
-names (one per element of a parameter vector) are numbered, as
+including compiled code (Rcpp, TMB) and RTMB, which differentiates R
+code. An RTMB function can return the log-posterior itself, and its
+`obj$fn` and `obj$gr` are then passed as they are. For a TMB template
+that returns the negative log-posterior, pass `function(x) -obj$fn(x)`
+and `function(x) -as.vector(obj$gr(x))`, with `init = obj$par`; its
+repeated names (one per element of a parameter vector) are numbered, as
 `beta[1]`, `beta[2]`, and so on.
 
 ## Control
@@ -395,13 +401,13 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.24σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [3ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (8ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (14ms)
 #> 
 #>               Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu         5.159  0.327  4.517  5.159  5.800  5.159
@@ -423,11 +429,11 @@ fit <- inla_vanilla(
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [0ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
-#>     (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
+#>     8.8e-08σ (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -435,20 +441,20 @@ fit <- inla_vanilla(
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [0ms]
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
 #>   Largest shift 0.24σ, for log_sigma (warning > 1σ)
 #>   KL term 0.029, giving a log marginal likelihood of -66.38
 #>   18 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [3ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     5.5e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   66 logpost calls
-#> ℹ Done: 147 logpost calls in 18ms
+#> ℹ Done: 147 logpost calls in 31ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

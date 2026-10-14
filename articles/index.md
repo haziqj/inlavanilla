@@ -38,10 +38,10 @@
   A one-factor model for binary items, with the factor integrated out by
   Gauss-Hermite quadrature inside the log-posterior.
 
-### Compiled code
+### Speed and gradients
 
-Faster log-posteriors for larger models. Both articles fit the same
-structural equation model, with 39 parameters.
+Faster log-posteriors and exact gradients for larger models. Both
+articles fit the same structural equation model, with 39 parameters.
 
 - [Speeding up with
   Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md):
@@ -50,7 +50,8 @@ structural equation model, with 39 parameters.
   written first in R and then in C++ with Rcpp and RcppEigen, with an
   analytic gradient.
 
-- [Using TMB](http://haziqj.ml/inlavanilla/articles/tmb.md):
+- [Gradients with RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md):
 
-  The structural equation model of the Rcpp article as a TMB template,
-  with the gradient from automatic differentiation.
+  The structural equation model of the Rcpp article written for RTMB,
+  which differentiates R code automatically, and compared with R and C++
+  for speed and accuracy.

@@ -41,9 +41,11 @@
   whitened coordinates (six with a gradient). On test models it was a
   median 0.015 posterior SDs from exact VB, but up to about 0.1 on
   strongly skewed posteriors, where a gradient gives about 0.03.
-- Two website articles, “Speeding up with Rcpp” and “Using TMB”, fit a
-  structural equation model with 39 parameters from a log-posterior
-  written in R, in C++ with an analytic gradient, and as a TMB template.
+- Two website articles, “Speeding up with Rcpp” and “Gradients with
+  RTMB”, fit a structural equation model with 39 parameters from a
+  log-posterior written in R, in C++ with an analytic gradient, and in R
+  for RTMB, which gives the gradient by automatic differentiation, and
+  compare the routes for speed and accuracy.
 - A website article, “Multilevel models”, fits a linear mixed model with
   the random effects integrated out, and checks its marginals against
   brms.
@@ -68,9 +70,16 @@
   used to give, so code that passed `verbose = FALSE` to keep a fit
   quiet should now pass `silent = TRUE`. The warnings raised during a
   fit are kept in `fit$warnings` whatever the level.
-- Progress bars follow the `cli.progress_show_after` option when it is
-  set (half a second otherwise), so a knitr or Quarto setup chunk can
-  keep them out of a rendered document.
+- While a stage runs, its line is the stage’s sentence with a counter,
+  as in INLAvaan (“Fitting 4/6 skew-normal marginals”), not a bar as
+  wide as the console. After two seconds it ends with the time so far,
+  or the time left where the work is known in advance (the marginals and
+  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)), in the
+  place where the finished line shows the time taken. The lines,
+  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)’s included,
+  follow the `cli.progress_show_after` option when it is set (half a
+  second otherwise), so a knitr or Quarto setup chunk can keep them out
+  of a rendered document.
 - The diagnostics follow INLAvaan’s. Each parameter has the Newton step
   at the mode in posterior SDs (`mode_shift_sigma`), the VB shift on the
   scale of `logpost` (`vb_shift`) and in posterior SDs
