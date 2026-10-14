@@ -26,8 +26,9 @@
   of (m + 1)(2m^2 + 1), so it costs about as much as finding the mode. For the
   39-parameter SEM of the Rcpp article that is 8,200 calls instead of
   487,000. This VB mean is exact when the log-posterior is a polynomial of
-  degree four in whitened coordinates (six with a gradient), and typically
-  about 0.01 posterior SDs from exact VB.
+  degree four in whitened coordinates (six with a gradient). On test models
+  it was a median 0.015 posterior SDs from exact VB, but up to about 0.1 on
+  strongly skewed posteriors, where a gradient gives about 0.03.
 * Two website articles, "Speeding up with Rcpp" and "Using TMB", fit a
   structural equation model with 39 parameters from a log-posterior written
   in R, in C++ with an analytic gradient, and as a TMB template.
