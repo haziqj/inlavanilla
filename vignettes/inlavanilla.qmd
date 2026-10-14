@@ -70,13 +70,8 @@ y <- mtcars$am
 
 With 32 cars and two strong predictors the two classes nearly separate, so
 the likelihood is lopsided: it falls away steeply on one side of the maximum
-and slowly on the other. Maximum likelihood gives large, uncertain
-coefficients:
-
-```{r}
-#| label: glm
-coef(summary(glm(am ~ scale(wt) + scale(hp), binomial, data = mtcars)))
-```
+and slowly on the other. The posterior inherits that skew, which a Gaussian
+approximation misses.
 
 ### Writing the log-posterior
 
