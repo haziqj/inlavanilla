@@ -54,7 +54,9 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' Printed, the summary gives the fit first (the log marginal likelihood
 #' and whether the fit converged, the parts of the log marginal likelihood,
 #' and the calls and time each stage took), then the posterior marginals,
-#' then the diagnostics.
+#' then the diagnostics. Both tables number the parameters, and the posterior
+#' marginals give each one to three significant figures of its posterior SD,
+#' with the decimal points lined up.
 #'
 #' Most of the checks are those of INLAvaan's `diagnostics()`, and
 #' [diagnostics()] returns them under the same names. Jamil and Rue (2026) use

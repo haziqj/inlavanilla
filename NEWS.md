@@ -72,6 +72,11 @@
   formatted as a tibble prints them and the flagged values in red. One line
   gives the largest value of each skew-normal check that passes, and each
   flagged check has a line of its own.
+* The tables of `print()` and `summary()` number their rows, as a tibble
+  does, and line up the decimal points down each column. The posterior
+  marginals still give each parameter to three significant figures of its
+  posterior SD, and a value that rounds to zero no longer prints as
+  "-0.000".
 * `print()` and `summary()` open with the log marginal likelihood and whether
   the fit converged, with the iterations and the time the fit took.
   Converged means that the computation reached its solution: no further
