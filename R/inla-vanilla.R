@@ -70,7 +70,9 @@
 #' parameter, its marginal comes out too narrow, by a factor that vanishes as
 #' O(1/n). Examples are a regression coefficient or a mean when the noise SD
 #' is uncertain. For a normal mean with unknown variance the SD is about 11%
-#' too small at n = 12, 3% at n = 50, and under 1% at n = 200.
+#' too small at n = 12, 3% at n = 50, and under 1% at n = 200. The `bend`
+#' diagnostic of [summary.inla_vanilla()] flags this narrowing where it
+#' predicts about 10% or more.
 #'
 #' A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 #' structural equation model with 39 parameters and n = 75, the data could not
@@ -83,10 +85,11 @@
 #' too high and SDs 10 to 15% too small. INLAvaan's marginals of this model
 #' are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
 #' the same miss in the lower tail of a variance near zero, the boundary
-#' pile-up that a unimodal skew-normal cannot capture. The `bend` diagnostic
-#' of [summary.inla_vanilla()] flagged both, but its size does not say how
-#' far off a marginal is, and the `tails` check, which looks only 4 posterior
-#' SDs either side of the mode (the Laplace SDs), missed them.
+#' pile-up that a unimodal skew-normal cannot capture. No check is aimed at
+#' this. The `bend` diagnostic of [summary.inla_vanilla()] flagged one of the
+#' two (bend 0.44), but the other's bend (0.11) was no larger than that of
+#' marginals within 7% in SD, and the `tails` check, which looks only 4
+#' posterior SDs either side of the mode (the Laplace SDs), missed both.
 #'
 #' @section Gradients:
 #' `grad` is optional. Without it, derivatives come from finite differences

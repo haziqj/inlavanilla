@@ -48,8 +48,8 @@ gr_pois <- function(theta, y, a0, b0) {
 
 # A Poisson regression with fixed data: two correlated (r = -0.56), skewed
 # parameters, so that every diagnostic in summary() is well away from
-# rounding noise (the slope's scan-path bend is flagged, at 0.14). The fit is
-# deterministic. Used for the printed output and the plots.
+# rounding noise (the slope's scan-path bend is 0.14, below its flag level).
+# The fit is deterministic. Used for the printed output and the plots.
 reg_x <- c(-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75)
 reg_y <- c(1, 0, 2, 1, 3, 4, 2, 6)
 lp_reg <- function(theta) {
@@ -1273,11 +1273,10 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
       format(round(fit$logml, 2), nsmall = 2)
     )
   )
-  # The slope's bend is flagged, as in summary(), and nothing else
+  # Nothing is flagged, as in summary()
   rows <- grep("^  (intercept|slope) ", msgs, value = TRUE)
   expect_length(rows, 2)
-  expect_match(rows[[2]], "^  slope .*[0-9]!")
-  expect_no_match(rows[[1]], "!")
+  expect_no_match(rows, "!")
   # The calls of the stages add up to the total
   per_stage <- as.integer(sub(
     "^  ([0-9]+) logpost calls\n$",
@@ -1624,10 +1623,20 @@ test_that("print() points to the fit's warnings and to flagged checks", {
   expect_match(out, "! 8 checks flagged by `summary()`.", fixed = TRUE)
   expect_identical(n_flag_lines(fit), 8L)
 
-  # The small Poisson regression: summary() flags the bend of the slope
-  out <- capture_output(print(fit_reg))
+  # A normal mean with an unknown SD from 12 observations: summary() flags
+  # the bend of the mean alone (4 / 12 nats), and nothing in the small
+  # Poisson regression, whose largest bend is 0.14
+  y12 <- c(9.6, 11.2, 8.1, 10.4, 12.9, 9.9, 7.4, 10.8, 11.6, 9.0, 10.1, 12.2)
+  lp_mean <- function(theta) {
+    sum(dnorm(y12, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE))
+  }
+  fit <- inla_vanilla(lp_mean, c(mu = 10, log_sigma = 0), silent = TRUE)
+  expect_identical(names(which(check_flags(fit_dg(fit), FALSE))), "bend")
+  out <- capture_output(print(fit))
   expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
-  expect_identical(n_flag_lines(fit_reg), 1L)
+  expect_identical(n_flag_lines(fit), 1L)
+  expect_no_match(capture_output(print(fit_reg)), "flagged")
+  expect_identical(n_flag_lines(fit_reg), 0L)
 
   # A heavy-tailed posterior: its warning and its flags
   lp <- function(theta) dt(theta[[1]], 1, log = TRUE)
@@ -1713,7 +1722,8 @@ test_that("print(summary()) fits the console width", {
   }
   expect_gt(sum(grepl("^intercept ", out)), 2)
   # A status line wraps with a hanging indent
-  i <- grep("^! The straight scan", out)
+  i <- grep("^v Mode found", out)
+  expect_length(i, 1)
   expect_match(out[i + 1], "^  [^ ]")
 })
 
@@ -1802,8 +1812,10 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   # skew-normal means 0.0022 and 0.0059 SDs off (Laplace 0.23 and 0.084),
   # the intercept's SD 0.37% too large, and the slope's SD 3.3% too small:
   # the small-n narrowing of the straight scan path, which the bend
-  # diagnostic flags for the slope alone (0.14, against 0.037 for the
-  # intercept). The log marginal likelihood is 0.017 too large.
+  # diagnostic measures for the slope (0.14, against 0.037 for the
+  # intercept). That is below the flag level, and below the 5.3% that the
+  # bend predicts through the normal-mean formula, which overstates the
+  # narrowing in this GLM. The log marginal likelihood is 0.017 too large.
   sds <- sqrt(diag(fit_reg$cov))
   ga <- fit_reg$mode[["intercept"]] + seq(-7, 7, length.out = 201) * sds[[1]]
   gb <- fit_reg$mode[["slope"]] + seq(-7, 7, length.out = 201) * sds[[2]]
@@ -1831,7 +1843,9 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   expect_gt(sd_ratio[["slope"]], 0.94)
   expect_lt(sd_ratio[["slope"]], 1)
   bend <- summary(fit_reg)$diagnostics$bend
-  expect_identical(bend > 0.1, c(FALSE, TRUE))
+  expect_gt(bend[[2]], 3 * bend[[1]])
+  expect_true(all(bend < summary_levels$bend))
+  expect_lt(1 - sd_ratio[["slope"]], 1 - sqrt(1 - 0.75 * bend[[2]]))
   expect_lt(abs(fit_reg$logml - exact_logml), 0.035)
 })
 
@@ -1897,7 +1911,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   # The levels documented in ?summary.inla_vanilla, those of the fit-time
   # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
   # number 1e8, the VB shift 1 SD, NMAD 0.1, the scan-end mass 0.05 and
-  # tails; and, flagged by summary() alone, the bend 0.1 nats and the SN - VB
+  # tails; and, flagged by summary() alone, the bend 0.25 nats and the SN - VB
   # gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
   # nothing may be flagged, and then 2% above it, where each must be, with
   # the warning's sentence where it has one.
@@ -1906,7 +1920,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$optim$hess_cond <- 0.98e8
   below$diagnostics$mode_shift_sigma <- c(0.098, 0.098)
   below$diagnostics$vb_shift_sigma <- c(0.98, -0.98)
-  below$diagnostics$bend <- c(0.098, 0.098)
+  below$diagnostics$bend <- c(0.245, 0.245)
   below$diagnostics$nmad <- c(0.098, 0.098)
   below$diagnostics$scan_end_mass <- c(0.049, 0.049)
   below$diagnostics$sn_vs_vb <- c(0.098, -0.098)
@@ -1937,7 +1951,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   above$optim$hess_cond <- 1.02e8
   above$diagnostics$mode_shift_sigma <- c(0.098, 0.102)
   above$diagnostics$vb_shift_sigma <- c(0.98, -1.02)
-  above$diagnostics$bend <- c(0.098, 0.102)
+  above$diagnostics$bend <- c(0.245, 0.255)
   above$diagnostics$nmad <- c(0.098, 0.102)
   above$diagnostics$scan_end_mass <- c(0.049, 0.051)
   above$diagnostics$sn_vs_vb <- c(0.098, -0.102)
@@ -1951,7 +1965,7 @@ test_that("summary() flags each diagnostic at its documented level", {
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.10).",
       "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 posterior SDs either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
       "! Heavy tails for `slope`: the density is still over 5% of its peak at the ends of the scanned window (4 posterior SDs either side of the mode), and the skew-normal extrapolates beyond it.",
-      "! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope` (0.10): the marginal may be too narrow.",
+      "! The straight scan misses more than 0.25 nats at +-2 posterior SDs for `slope` (0.26): the marginal SD may be about 10% or more too small.",
       "! Skew-normal and VB means differ by more than 0.1 posterior SDs for `slope` (0.10)."
     )
   )
