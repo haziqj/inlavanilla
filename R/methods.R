@@ -707,12 +707,13 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
 # Print a numeric matrix as an aligned table: bold column headers, plain row
 # names. With `scale` (one value per row, such as the posterior SD), each row
 # is printed to `digits` significant figures of its scale, so parameters on
-# different scales each get a sensible number of decimals. Without it, each
-# column is formatted as a tibble prints it (see format_sigfig()), to
-# `digits` significant figures. The cells where `flag` (a logical matrix
-# like `tab`) is TRUE are red. With `rowid`, the rows are numbered in grey
-# before their names, as a tibble numbers its rows. Widths are worked out on
-# the plain strings before any styling.
+# different scales each get a sensible number of decimals (see
+# format_decimals()). Without it, each column is formatted as a tibble prints
+# it (see format_sigfig()), to `digits` significant figures. Either way the
+# decimal points line up. The cells where `flag` (a logical matrix like
+# `tab`) is TRUE are red. With `rowid`, the rows are numbered in grey before
+# their names, as a tibble numbers its rows. Widths are worked out on the
+# plain strings before any styling.
 cat_table <- function(
   tab,
   digits = 3,
@@ -721,23 +722,19 @@ cat_table <- function(
   rowid = FALSE
 ) {
   cells <- styled <- matrix("", nrow(tab), ncol(tab))
-  if (is.null(scale)) {
-    for (j in seq_len(ncol(tab))) {
-      col <- format_sigfig(tab[, j], digits)
-      cells[, j] <- col$plain
-      styled[, j] <- col$styled
+  if (!is.null(scale)) {
+    s <- abs(scale)
+    dec <- ifelse(is.finite(s) & s > 0, digits - 1 - floor(log10(s)), digits)
+    dec <- pmin(dec, 8)
+  }
+  for (j in seq_len(ncol(tab))) {
+    col <- if (is.null(scale)) {
+      format_sigfig(tab[, j], digits)
+    } else {
+      format_decimals(tab[, j], dec)
     }
-  } else {
-    for (i in seq_len(nrow(tab))) {
-      s <- abs(scale[i])
-      dec <- if (is.finite(s) && s > 0) digits - 1 - floor(log10(s)) else digits
-      cells[i, ] <- formatC(
-        tab[i, ],
-        digits = min(max(dec, 0), 8),
-        format = "f"
-      )
-    }
-    styled <- cells
+    cells[, j] <- col$plain
+    styled[, j] <- col$styled
   }
   if (!is.null(flag)) {
     styled[flag] <- cli::col_red(cells[flag])
@@ -850,30 +847,71 @@ format_sigfig <- function(x, sigfig = 3) {
     plain <- formatC(plain_num, width = max(nchar(plain_num)))
     return(list(plain = plain, styled = plain))
   }
-  # Line up the decimal points: integer parts right-aligned, decimals left
+  align_digits(neg, lhs, rhs, sigfig)
+}
+
+# Format a numeric column with each number to its own precision, as cat_table()
+# does for the posterior summaries: `decimals` (one per number) is the place of
+# the last significant digit, 2 for hundredths and -1 for tens. Each number
+# gets that many decimals, or none where `decimals` is negative, and is laid
+# out as format_sigfig() lays out a column: decimal points lined up, leading
+# zeros grey, and the integer digits past the last significant one grey too,
+# though never the first. A number that rounds to zero prints as zero, never
+# "-0.000".
+format_decimals <- function(x, decimals) {
+  n <- length(x)
+  decimals <- rep_len(decimals, n)
+  neg <- lhs <- rhs <- character(n)
+  n_plain <- rep(Inf, n)
+  for (k in seq_len(n)) {
+    if (!is.finite(x[k])) {
+      lhs[k] <- format(x[k])
+      next
+    }
+    dec <- max(decimals[k], 0)
+    r <- round(x[k], dec)
+    if (r < 0) {
+      neg[k] <- "-"
+    }
+    parts <- strsplit(formatC(abs(r), format = "f", digits = dec), ".", TRUE)
+    lhs[k] <- parts[[1]][1]
+    rhs[k] <- if (dec > 0) paste0(".", parts[[1]][2]) else ""
+    if (decimals[k] < 0) {
+      n_plain[k] <- max(nchar(lhs[k]) + decimals[k], 1)
+    }
+  }
+  align_digits(neg, lhs, rhs, n_plain)
+}
+
+# Lay out a column of numbers split into sign, integer digits and decimals
+# (with their point), as pillar does: the decimal points line up, with the
+# integer parts right-aligned and the decimals left-aligned. Returns the plain
+# cells, padded to one width, and the same cells styled: grey for "0.00"
+# before the first significant digit of a number below 1 (a zero stays
+# plain), and for the integer digits past the first `n_plain` (one value, or
+# one per number).
+align_digits <- function(neg, lhs, rhs, n_plain) {
+  n <- length(lhs)
+  n_plain <- rep_len(n_plain, n)
   int <- paste0(neg, lhs)
-  int_w <- max(nchar(int))
-  dec_w <- max(nchar(rhs))
-  pad_l <- strrep(" ", int_w - nchar(int))
-  pad_r <- strrep(" ", dec_w - nchar(rhs))
+  pad_l <- strrep(" ", max(nchar(int)) - nchar(int))
+  pad_r <- strrep(" ", max(nchar(rhs)) - nchar(rhs))
   plain <- paste0(pad_l, int, rhs, pad_r)
-  # Grey: "0.00" before the first significant digit of a number below 1, and
-  # the integer digits past `sigfig`
   grey <- cli::col_grey
   styled <- character(n)
   for (k in seq_len(n)) {
-    if (lhs[k] == "0" && nzchar(rhs[k])) {
+    if (lhs[k] == "0" && grepl("[1-9]", rhs[k])) {
       lead <- regmatches(rhs[k], regexpr("^\\.0*", rhs[k]))
       body <- paste0(
         neg[k],
         grey(paste0("0", lead)),
         substring(rhs[k], nchar(lead) + 1)
       )
-    } else if (grepl("^[0-9]+$", lhs[k]) && nchar(lhs[k]) > sigfig) {
+    } else if (grepl("^[0-9]+$", lhs[k]) && nchar(lhs[k]) > n_plain[k]) {
       body <- paste0(
         neg[k],
-        substring(lhs[k], 1, sigfig),
-        grey(substring(lhs[k], sigfig + 1)),
+        substring(lhs[k], 1, n_plain[k]),
+        grey(substring(lhs[k], n_plain[k] + 1)),
         rhs[k]
       )
     } else {

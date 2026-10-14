@@ -1887,7 +1887,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
 test_that("print() rounds each row to three significant figures of its SD", {
   # Two independent Gaussians on very different scales: N(100, 0.002^2) and
   # N(1000, 300^2). Each row gets the decimals its own SD needs, so the
-  # first shows five decimals and the second none.
+  # first shows five decimals and the second none, and the decimal points
+  # line up down each column.
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
   lp <- function(theta) {
     dnorm(theta[[1]], 100, 0.002, log = TRUE) +
@@ -1917,6 +1918,33 @@ test_that("print() rounds each row to three significant figures of its SD", {
     row_b,
     c("2", "b", "1000", "300", "412", "1000", "1588", "1000")
   )
+  # Each decimal point of row a sits just after the last digit of row b
+  points_a <- gregexpr(".", line_a, fixed = TRUE)[[1]]
+  ends_b <- gregexpr("[0-9]+", line_b)[[1]]
+  ends_b <- (ends_b + attr(ends_b, "match.length"))[-1]
+  expect_identical(as.integer(points_a), as.integer(ends_b))
+})
+
+test_that("the posterior table lines up decimal points", {
+  # Each number to the decimals of its row, laid out as the diagnostics
+  # table is: integer parts right-aligned, decimals left-aligned
+  cells <- function(x, dec) format_decimals(x, dec)$plain
+  expect_identical(
+    cells(c(102.35, 0.0012, -12345), c(4, 6, -1)),
+    c("   102.3500  ", "     0.001200", "-12345       ")
+  )
+  # A number that rounds to zero has no sign
+  expect_identical(cells(c(-1e-9, 1), 3), c("0.000", "1.000"))
+  expect_identical(cells(c(NA, Inf, 2), 1), c(" NA  ", "Inf  ", "  2.0"))
+
+  # Leading zeros are grey, except in a zero, and so are the integer digits
+  # past the last significant one, though never the first
+  local_reproducible_output(crayon = TRUE)
+  styled <- format_decimals(c(0.0012, 0, -12345, 5), c(4, 3, -1, -1))$styled
+  expect_match(styled[1], cli::col_grey("0.00"), fixed = TRUE)
+  expect_false(cli::ansi_has_any(styled[2]))
+  expect_match(styled[3], paste0("-1234", cli::col_grey("5")), fixed = TRUE)
+  expect_false(cli::ansi_has_any(styled[4]))
 })
 
 test_that("tables number their rows in grey, as a tibble does", {
