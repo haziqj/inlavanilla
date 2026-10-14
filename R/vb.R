@@ -278,13 +278,23 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     )
     shift <- as.numeric(L %*% nl$par)
     iter <- nl$iterations
+    # Where the fallback landed: the fixed-point step there, the Newton step
+    # for the stationarity condition. One more sweep, on this path only.
+    step <- step_at(shift)
   }
+  # The step still to go at the VB mean, per parameter in posterior SDs, as
+  # the Newton step at the mode is for the mode: the last fixed-point step,
+  # which was below vb_tol (and the next is smaller still), or the step where
+  # the fallback landed. A step that is not finite is Inf.
+  step_sigma <- abs(step) / sds
+  step_sigma[!is.finite(step_sigma)] <- Inf
 
   names(shift) <- names(mode)
   list(
     shift = shift,
     iterations = iter,
     fallback = fallback,
+    step_sigma = stats::setNames(step_sigma, names(mode)),
     history = list(
       steps = steps,
       accelerated = accelerated,

@@ -1713,6 +1713,10 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
       f
     },
+    vb_step = function(f) {
+      f$diagnostics$marginals$vb_step_sigma[2] <- 0.4
+      f
+    },
     hess_cond = function(f) {
       f$diagnostics$optim$hess_cond <- 1e9
       f
@@ -1760,8 +1764,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     fit <- f(fit)
   }
   out <- capture_output(print(fit))
-  expect_match(out, "! 8 checks flagged by `summary()`.", fixed = TRUE)
-  expect_identical(n_flag_lines(fit), 8L)
+  expect_match(out, "! 9 checks flagged by `summary()`.", fixed = TRUE)
+  expect_identical(n_flag_lines(fit), 9L)
 
   # A normal mean with an unknown SD from 12 observations: summary() flags
   # the ridge bend of the mean alone (4 / 12 nats), and nothing in the small
@@ -1928,6 +1932,7 @@ test_that("summary() returns the table and the diagnostics", {
       "nmad",
       "alpha",
       "unscanned_mass",
+      "vb_step_sigma",
       "mean_gap",
       "gamma1",
       "tails",
@@ -2087,9 +2092,10 @@ test_that("the diagnostics table formats numbers as a tibble prints them", {
 
 test_that("summary() flags each diagnostic at its documented level", {
   # The levels documented in ?summary.inla_vanilla, those of the fit-time
-  # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
-  # number 1e8, the VB shift 1 SD, NMAD 0.1, the unscanned mass 0.05 and
-  # tails; and, flagged by summary() alone, the ridge bend 0.25 nats and the
+  # warning: the Newton step at the mode 0.1 SDs, the step still to go at
+  # the VB mean 0.1 SDs, the Hessian condition number 1e8, the VB shift 1
+  # SD, NMAD 0.1, the unscanned mass 0.05 and tails; and, flagged by
+  # summary() alone, the ridge bend 0.25 nats and the
   # mean gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
   # nothing may be flagged, and then 2% above it, where each must be, with
   # the warning's sentence where it has one.
@@ -2102,6 +2108,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$diagnostics$nmad <- c(0.098, 0.098)
   below$diagnostics$unscanned_mass <- c(0.049, 0.049)
   below$diagnostics$mean_gap <- c(0.098, -0.098)
+  below$diagnostics$vb_step_sigma <- c(0.098, 0.098)
   below$diagnostics$tails <- c(TRUE, TRUE)
   below$vb$fallback <- FALSE
   # Fixed, so the lines do not depend on the optimiser's path
@@ -2118,7 +2125,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   for (line in c(
     "v Mode found in 9 iterations (Newton step 0.098 SD).",
     "v Hessian condition number 9.8e+07, in SD units.",
-    "v VB correction in 3 iterations: max shift 0.98 SD.",
+    "v VB correction settled in 3 iterations: max shift 0.98 SD.",
     "v Skew-normal fits: max NMAD 0.098, unscanned mass 0.049, ridge bend 0.24, mean gap 0.098 SD."
   )) {
     expect_match(out, line, fixed = TRUE)
@@ -2132,12 +2139,14 @@ test_that("summary() flags each diagnostic at its documented level", {
   above$diagnostics$nmad <- c(0.098, 0.102)
   above$diagnostics$unscanned_mass <- c(0.049, 0.051)
   above$diagnostics$mean_gap <- c(0.098, -0.102)
+  above$diagnostics$vb_step_sigma <- c(0.098, 0.102)
   above$diagnostics$tails <- c(TRUE, FALSE)
   expect_identical(
     flagged(above),
     c(
       "! Mode search stopped short (\"relative convergence (4)\"): Newton step > 0.1 SD for `slope` (0.10).",
       "! The Hessian at the mode is near-singular (condition number = 1.02e+08); some parameters may be weakly identified.",
+      "! VB correction did not settle in 3 iterations: step > 0.1 SD for `slope` (0.10).",
       "! VB correction in 3 iterations: shift > 1 SD for `slope` (1.02).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.10).",
       "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 SD either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
@@ -2166,12 +2175,12 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_length(flagged(fallback), 0)
   expect_match(
     unwrap(capture_output(print(fallback))),
-    "v VB correction in 3 iterations (via the fallback optimiser): max shift 0.98 SD.",
+    "v VB correction settled in 3 iterations (via the fallback optimiser): max shift 0.98 SD.",
     fixed = TRUE
   )
 
   # A value that is not finite is flagged, not an error
-  for (col in c("mode_shift_sigma", "nmad", "ridge_bend")) {
+  for (col in c("mode_shift_sigma", "vb_step_sigma", "nmad", "ridge_bend")) {
     odd <- below
     odd$diagnostics[[col]][1] <- NaN
     expect_length(flagged(odd), 1)

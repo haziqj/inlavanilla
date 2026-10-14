@@ -62,8 +62,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 #' gap between the skew-normal and VB means as an internal check (Section
 #' 5.1). The mode shift, the Hessian condition number and the unscanned mass
-#' come from INLAvaan's `diagnostics()`, not from the paper. `tails` and
-#' `ridge_bend` are inlavanilla's own.
+#' come from INLAvaan's `diagnostics()`, not from the paper. `vb_step_sigma`,
+#' `tails` and `ridge_bend` are inlavanilla's own.
 #'
 #' A posterior SD here is the Laplace SD at the mode,
 #' \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -75,7 +75,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   parameter. It is flagged above 0.1, whatever the return code of
 #'   [stats::nlminb()], whose message is then shown: without a gradient
 #'   `nlminb()` can report failure at an accurate mode, and success short of
-#'   one.
+#'   one. With the VB check below, it is what makes the fit converged.
 #' * **Hessian.** `hess_cond`, the condition number of the Hessian at the
 #'   mode with each parameter in posterior-SD units (the eigenvalue ratio of
 #'   the posterior correlation matrix). It is flagged above \eqn{10^8}: some
@@ -92,7 +92,12 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   not flagged. When the fixed-point iteration hands over to the fallback
 #'   optimiser, the VB line says so, but, as in INLAvaan, that is not
 #'   flagged: it is a route of the solver, not a sign of a poor
-#'   approximation.
+#'   approximation. Where the solver lands is checked, as the mode is:
+#'   `vb_step_sigma` is the step still to go at the VB mean, in posterior
+#'   SDs (the fixed-point step there, which is the Newton step of the VB
+#'   stationarity condition). It is flagged above 0.1, the level of the mode
+#'   check, as a correction that did not settle. That check is inlavanilla's
+#'   own.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and
 #'   the scanned density, relative to its peak (Jamil & Rue, 2026, Section
 #'   4.4), flagged above 0.1. `alpha` is the shape of the fitted skew-normal
@@ -145,10 +150,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' one warning at the end of the fit, of class
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
 #' mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
-#' are those of INLAvaan's fit-time warning; the heavy-tails check is
-#' inlavanilla's own, as are the ridge bend and mean gap flags. Every level
-#' is a package default, chosen so that a healthy fit stays silent, and not
-#' a calibrated cut-off: a tripped check is a prompt to look again, and
+#' are those of INLAvaan's fit-time warning; the VB and heavy-tails checks
+#' are inlavanilla's own, as are the ridge bend and mean gap flags. Every
+#' level is a package default, chosen so that a healthy fit stays silent, and
+#' not a calibrated cut-off: a tripped check is a prompt to look again, and
 #' silence is not a certificate of accuracy. In the simulations of Jamil and
 #' Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
 #' and the paper reports a calibration of the expected error against them in
@@ -341,13 +346,37 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
 
   if (has_vb) {
     how <- if (isTRUE(x$vb$fallback)) " (via the fallback optimiser)" else ""
-    if (!flags[["vb"]]) {
+    # Whether it settled, the VB half of converged, then the size of the
+    # shift: a line for each that is flagged, or one line when neither is
+    if (flags[["vb_step"]]) {
+      listed <- flagged_list(
+        env,
+        "vbstep",
+        dg,
+        "vb_step_sigma",
+        warn_levels$vb_step,
+        Inf
+      )
+      cat_status(
+        "warn",
+        paste0(
+          "VB correction did not settle in {x$vb$iterations} ",
+          "iteration{?s}{how}: step > ",
+          with_sd(warn_levels$vb_step),
+          " for ",
+          listed,
+          "."
+        ),
+        .envir = env
+      )
+    }
+    if (!flags[["vb"]] && !flags[["vb_step"]]) {
       max_shift <- with_sd(glob[["vb_shift_max"]])
       cat_status(
         "ok",
-        "VB correction in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
+        "VB correction settled in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
       )
-    } else {
+    } else if (flags[["vb"]]) {
       listed <- flagged_list(
         env,
         "vbs",
@@ -888,6 +917,7 @@ check_flags <- function(dg, gaussian) {
   pf <- param_flags(dg, gaussian)
   c(
     mode = any(pf[, "mode_shift_sigma"]),
+    vb_step = any(pf[, "vb_step_sigma"]),
     hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
     vb = any(pf[, "vb_shift_sigma"]),
     nmad = any(pf[, "nmad"]),
@@ -906,6 +936,7 @@ param_flags <- function(dg, gaussian) {
   vb <- isTRUE(dg$global[["vb_applied"]] == 1)
   cbind(
     mode_shift_sigma = off_level(p$mode_shift_sigma, warn_levels$mode_shift),
+    vb_step_sigma = vb & off_level(p$vb_step_sigma, warn_levels$vb_step),
     vb_shift_sigma = vb &
       off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift),
     nmad = sn & off_level(p$nmad, warn_levels$nmad),

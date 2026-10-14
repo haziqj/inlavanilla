@@ -81,8 +81,8 @@ the iterations of the VB correction, whether it fell back to
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb = FALSE}. \code{marginals}
 is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
 \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
-\code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with \code{NA} for the
-checks the fit did not run.
+\code{vb_step_sigma}, \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with
+\code{NA} for the checks the fit did not run.
 \item \code{scan}: the scans the skew-normals were fitted to, for
 \code{plot(fit, type = "sn_fit")}: the grid \code{z} in posterior SDs from the
 mode, the log-posterior at each point (\code{logpost}, a column per
@@ -228,7 +228,9 @@ vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on.
 \item \code{log_threshold}: grid points whose log-posterior falls more than this
 below the maximum are ignored in the skew-normal fit (default \code{-6}).
 \item \code{vb_maxit}, \code{vb_tol}: iteration limit (default \code{25}) and convergence
-tolerance in posterior SDs (default \code{1e-3}) for the VB correction.
+tolerance in posterior SDs (default \code{1e-3}) for the VB correction's
+fixed-point iteration. If it has not converged after \code{vb_maxit} steps,
+\code{\link[stats:nlminb]{stats::nlminb()}} takes over.
 \item \code{nlminb}: a list of \code{\link[stats:nlminb]{stats::nlminb()}} controls for the mode search.
 \code{iter.max} and \code{eval.max} default to \code{1000} and \code{2000}, and \code{trace = 1}
 prints its iterations.
@@ -266,8 +268,9 @@ identified, and the condition number of the Hessian in posterior-SD
 units; and the Laplace log marginal likelihood.
 \item The VB correction: the largest step, in posterior SDs, at each
 fixed-point iteration, whether Anderson acceleration or the fallback
-optimiser was used, the largest shift, and the term it adds to the log
-marginal likelihood.
+optimiser was used (and, after the fallback, the step still to go where
+it landed), the largest shift, and the term it adds to the log marginal
+likelihood.
 \item The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 volume correction \code{gamma1} of each parameter, with the values that
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags marked.

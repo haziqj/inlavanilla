@@ -126,7 +126,9 @@
 #' * `log_threshold`: grid points whose log-posterior falls more than this
 #'   below the maximum are ignored in the skew-normal fit (default `-6`).
 #' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
-#'   tolerance in posterior SDs (default `1e-3`) for the VB correction.
+#'   tolerance in posterior SDs (default `1e-3`) for the VB correction's
+#'   fixed-point iteration. If it has not converged after `vb_maxit` steps,
+#'   [stats::nlminb()] takes over.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
 #'   `iter.max` and `eval.max` default to `1000` and `2000`, and `trace = 1`
 #'   prints its iterations.
@@ -160,8 +162,9 @@
 #'   units; and the Laplace log marginal likelihood.
 #' * The VB correction: the largest step, in posterior SDs, at each
 #'   fixed-point iteration, whether Anderson acceleration or the fallback
-#'   optimiser was used, the largest shift, and the term it adds to the log
-#'   marginal likelihood.
+#'   optimiser was used (and, after the fallback, the step still to go where
+#'   it landed), the largest shift, and the term it adds to the log marginal
+#'   likelihood.
 #' * The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
 #'   volume correction `gamma1` of each parameter, with the values that
 #'   [summary.inla_vanilla()] flags marked.
@@ -234,8 +237,8 @@
 #'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
 #'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
-#'     `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with `NA` for the
-#'     checks the fit did not run.
+#'     `vb_step_sigma`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with
+#'     `NA` for the checks the fit did not run.
 #'   * `scan`: the scans the skew-normals were fitted to, for
 #'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
 #'     mode, the log-posterior at each point (`logpost`, a column per
@@ -525,17 +528,19 @@ vanilla_fit <- function(
       vb_correct(lp, gr, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
     )
     # The fallback is a route of the solver, reported but not marked, as in
-    # INLAvaan
+    # INLAvaan. A correction that did not settle is marked.
     vb_max <- max(abs(vbc$shift) / sds)
+    settled <- !any(off_level(vbc$step_sigma, warn_levels$vb_step))
     progress_done(
       prog,
       paste0(
         "VB mean correction, max shift ",
         hl(paste0(format(signif(vb_max, 2)), sd_unit())),
-        if (vbc$fallback) " (fallback optimiser)" else ""
+        if (vbc$fallback) " (fallback optimiser)" else "",
+        if (!settled) ", not settled" else ""
       ),
       elapsed() - t0,
-      ok = is.finite(vb_max) && vb_max <= warn_levels$vb_shift
+      ok = settled && is.finite(vb_max) && vb_max <= warn_levels$vb_shift
     )
     if (prog$detail) {
       report_vb(prog, vbc, sds, lap$logml, calls_since())
@@ -631,6 +636,7 @@ vanilla_fit <- function(
       nmad = sn[, "nmad"],
       alpha = if (skew) sn[, "alpha"] else na,
       unscanned_mass = sn[, "unscanned_mass"],
+      vb_step_sigma = if (vb) vbc$step_sigma else na,
       mean_gap = if (vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),

@@ -1097,12 +1097,24 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
   # The VB diagnostics did not run, so they are NA, as in INLAvaan's
   # diagnostics(); the mean gap needs a VB mean too
   d <- fit$diagnostics$marginals
-  for (col in c("kld", "vb_shift", "vb_shift_sigma", "mean_gap")) {
+  for (col in c(
+    "kld",
+    "vb_shift",
+    "vb_shift_sigma",
+    "vb_step_sigma",
+    "mean_gap"
+  )) {
     expect_identical(d[[col]], c(NA_real_, NA_real_))
   }
   g <- diagnostics(fit)
   expect_identical(g[["vb_applied"]], 0)
-  for (nm in c("vb_shift_max", "vb_kld_global", "kld_max", "vb_fallback")) {
+  for (nm in c(
+    "vb_shift_max",
+    "vb_kld_global",
+    "kld_max",
+    "vb_fallback",
+    "vb_step_max"
+  )) {
     expect_identical(g[[nm]], NA_real_)
   }
 })
@@ -1281,6 +1293,17 @@ test_that("a forced fallback agrees with the fixed-point solution", {
     max_sd_diff(fit_forced$mean_vb, fit_fixed$mean_vb, sds),
     2e-7 # observed 6.1e-8
   )
+  # Both settled: the fixed point's last step was below vb_tol, and the step
+  # where the fallback landed is as small as its distance from the fixed
+  # point
+  expect_lt(max(fit_fixed$diagnostics$marginals$vb_step_sigma), 1e-10)
+  expect_lt(max(fit_forced$diagnostics$marginals$vb_step_sigma), 2e-7)
+  dg <- diagnostics_internal(
+    fit_forced$diagnostics$optim,
+    fit_forced$diagnostics$vb,
+    fit_forced$diagnostics$marginals
+  )
+  expect_false(check_flags(dg, gaussian = FALSE)[["vb_step"]])
   expect_lt(
     max(abs(rule_stationarity(mod$grad, fit_forced$mean_vb, fit_forced$cov))),
     2e-7 # observed 6.4e-8
@@ -1313,6 +1336,14 @@ test_that("without a gradient a forced fallback lands close to the fixed point",
   expect_lt(
     max_sd_diff(fit_forced$mean_vb, fit_fixed$mean_vb, sds),
     1.5e-3 # observed 4.5e-4
+  )
+  # The step where the fallback landed measures that distance: one more
+  # fixed-point step would close most of it, far below the 0.1 SD level
+  step <- fit_forced$diagnostics$marginals$vb_step_sigma
+  expect_lt(max(step), 1.5e-3)
+  expect_gt(
+    max(step),
+    0.2 * max_sd_diff(fit_forced$mean_vb, fit_fixed$mean_vb, sds)
   )
   # and as close to exact VB as the iteration is (both observed 4e-3 SDs)
   ref <- vb_reference(mod$grad, fit_fixed$mode, fit_fixed$cov)

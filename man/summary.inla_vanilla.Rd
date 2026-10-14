@@ -35,8 +35,8 @@ Most of the checks are those of INLAvaan's \code{diagnostics()}, and
 the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 gap between the skew-normal and VB means as an internal check (Section
 5.1). The mode shift, the Hessian condition number and the unscanned mass
-come from INLAvaan's \code{diagnostics()}, not from the paper. \code{tails} and
-\code{ridge_bend} are inlavanilla's own.
+come from INLAvaan's \code{diagnostics()}, not from the paper. \code{vb_step_sigma},
+\code{tails} and \code{ridge_bend} are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -49,7 +49,7 @@ SDs: how far one step of Newton's method would still move each
 parameter. It is flagged above 0.1, whatever the return code of
 \code{\link[stats:nlminb]{stats::nlminb()}}, whose message is then shown: without a gradient
 \code{nlminb()} can report failure at an accurate mode, and success short of
-one.
+one. With the VB check below, it is what makes the fit converged.
 \item \strong{Hessian.} \code{hess_cond}, the condition number of the Hessian at the
 mode with each parameter in posterior-SD units (the eigenvalue ratio of
 the posterior correlation matrix). It is flagged above \eqn{10^8}: some
@@ -66,7 +66,12 @@ its VB-shifted copy, is \code{vb_shift_sigma^2 / 2}, as in INLAvaan; it is
 not flagged. When the fixed-point iteration hands over to the fallback
 optimiser, the VB line says so, but, as in INLAvaan, that is not
 flagged: it is a route of the solver, not a sign of a poor
-approximation.
+approximation. Where the solver lands is checked, as the mode is:
+\code{vb_step_sigma} is the step still to go at the VB mean, in posterior
+SDs (the fixed-point step there, which is the Newton step of the VB
+stationarity condition). It is flagged above 0.1, the level of the mode
+check, as a correction that did not settle. That check is inlavanilla's
+own.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and
 the scanned density, relative to its peak (Jamil & Rue, 2026, Section
 4.4), flagged above 0.1. \code{alpha} is the shape of the fitted skew-normal
@@ -120,10 +125,10 @@ Every check flagged here but the ridge bend and the mean gap also raises
 one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
 mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
-are those of INLAvaan's fit-time warning; the heavy-tails check is
-inlavanilla's own, as are the ridge bend and mean gap flags. Every level
-is a package default, chosen so that a healthy fit stays silent, and not
-a calibrated cut-off: a tripped check is a prompt to look again, and
+are those of INLAvaan's fit-time warning; the VB and heavy-tails checks
+are inlavanilla's own, as are the ridge bend and mean gap flags. Every
+level is a package default, chosen so that a healthy fit stays silent, and
+not a calibrated cut-off: a tripped check is a prompt to look again, and
 silence is not a certificate of accuracy. In the simulations of Jamil and
 Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
 and the paper reports a calibration of the expected error against them in
