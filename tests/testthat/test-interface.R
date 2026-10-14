@@ -1420,17 +1420,17 @@ test_that("verbose = TRUE marks each value that summary() flags, and only those"
   ))
   expect_match(
     paste(msgs, collapse = ""),
-    "Hessian condition number [0-9.e+]+!, in posterior-SD units"
+    "Hessian condition number [0-9.e+]+!, in SD units"
   )
 
-  # A healthy fit: no marks except the bend of the slope, which summary()
-  # also flags
+  # A healthy fit: no marks. The slope's ridge bend, 0.14, is below its
+  # level.
   msgs <- capture_messages(inla_vanilla(lp_reg, init_reg, verbose = TRUE))
   text <- paste(msgs, collapse = "")
-  expect_match(text, "Hessian condition number [0-9.]+, in posterior-SD")
+  expect_match(text, "Hessian condition number [0-9.]+, in SD units")
   expect_match(text, "Largest shift -?[0-9.]+ SD, for intercept")
   marked <- regmatches(text, gregexpr("[^ \n]+!", text))[[1]]
-  expect_identical(marked, "0.14!")
+  expect_identical(marked, character())
 })
 
 test_that("silent = TRUE prints nothing at all", {
