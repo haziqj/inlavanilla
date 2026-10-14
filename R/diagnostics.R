@@ -285,12 +285,22 @@ diagnostic_problems <- function(dg, gaussian) {
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
     if (check == "vb_step") {
+      # What the unsettled VB mean moves: not skew-normal marginals, which
+      # are scanned around the mode, but Gaussian ones, which are centred on
+      # it
       out <- c(
         out,
-        i = paste0(
-          "The skew-normal marginals do not depend on it; ",
-          "{.code vb = FALSE} leaves it out."
-        )
+        i = if (gaussian) {
+          paste0(
+            "The Gaussian marginals are centred on the VB mean; ",
+            "{.code vb = FALSE} centres them at the mode."
+          )
+        } else {
+          paste0(
+            "The skew-normal marginals do not depend on it; ",
+            "{.code vb = FALSE} leaves it out."
+          )
+        }
       )
     }
     if (check == "mode") {

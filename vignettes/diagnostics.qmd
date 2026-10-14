@@ -137,7 +137,10 @@ which is the Newton step of the condition the VB mean solves. Above 0.1, the
 level of the mode check, the correction has not settled and the fit has not
 converged. The VB mean is then off, and with it the VB term of the log
 marginal likelihood and the expansions of `loo()` and `waic()`. The
-skew-normal marginals do not depend on it, and `vb = FALSE` leaves it out.
+skew-normal marginals do not depend on it, since they are scanned around the
+mode, and `vb = FALSE` leaves it out. Gaussian marginals
+(`marginals = "gaussian"`) are centred on it, and `vb = FALSE` centres them
+at the mode instead.
 
 The skew-normal mean and the VB mean both estimate the posterior mean, by
 different routes. Both recover the leading, $O(n^{-1})$ shift from the mode
