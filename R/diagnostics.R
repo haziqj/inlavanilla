@@ -10,7 +10,7 @@
 # nlminb() is left out: without a gradient nlminb() reports false
 # convergence at accurate modes. The VB fallback is recorded only, as in
 # INLAvaan. summary() flags every warned check at the same level, and also
-# the ridge bend and the SN-VB gap, which never warn. A check that did
+# the ridge bend and the mean gap, which never warn. A check that did
 # not run (VB with vb = FALSE, the scans with Gaussian marginals) is NA and
 # never flagged; one that ran and gave a value that is not finite is.
 warn_levels <- list(
@@ -23,7 +23,7 @@ warn_levels <- list(
 # The ridge bend level is a marginal SD about 10% too small,
 # 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
 # (lab/bend-threshold.md).
-summary_levels <- list(ridge_bend = 0.25, sn_vs_vb = 0.1)
+summary_levels <- list(ridge_bend = 0.25, mean_gap = 0.1)
 
 # TRUE where `x` is above `level` or not finite.
 off_level <- function(x, level) {
@@ -69,7 +69,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     scan_end_mass_max = max_na(d$scan_end_mass),
     # inlavanilla's own
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
-    sn_vs_vb_max = max_na(abs(d$sn_vs_vb)),
+    mean_gap_max = max_na(abs(d$mean_gap)),
     ridge_bend_max = max_na(d$ridge_bend),
     n_heavy_tails = if (all(is.na(d$tails))) {
       NA_real_
@@ -92,7 +92,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     alpha = d$alpha,
     scan_end_mass = d$scan_end_mass,
     # inlavanilla's own
-    sn_vs_vb = d$sn_vs_vb,
+    mean_gap = d$mean_gap,
     gamma1 = d$gamma1,
     tails = d$tails,
     ridge_bend = d$ridge_bend,
@@ -142,7 +142,7 @@ list_template <- function(env, key, names, values = NULL, n = 3L) {
 # template (see list_template()).
 flagged_list <- function(env, key, dg, column, level, n) {
   x <- dg$param[[column]]
-  if (column %in% c("vb_shift_sigma", "sn_vs_vb")) {
+  if (column %in% c("vb_shift_sigma", "mean_gap")) {
     x <- abs(x)
   }
   bad <- which(off_level(x, level))
@@ -235,11 +235,11 @@ problem_text <- function(check, dg, env, n = 3L) {
       ),
       ": the marginal SD may be about 10% or more too small."
     ),
-    sn_vs_vb = paste0(
+    mean_gap = paste0(
       "Skew-normal and VB means differ by more than ",
-      summary_levels$sn_vs_vb,
+      summary_levels$mean_gap,
       " posterior SDs for ",
-      flagged_list(env, "gap", dg, "sn_vs_vb", summary_levels$sn_vs_vb, n),
+      flagged_list(env, "gap", dg, "mean_gap", summary_levels$mean_gap, n),
       "."
     )
   )
@@ -311,7 +311,7 @@ warn_diagnostics <- function(dg, gaussian) {
 #'
 #' Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 #' (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-#' (`sn_vs_vb`) as an internal check (Section 5.1). The mode shift, the
+#' (`mean_gap`) as an internal check (Section 5.1). The mode shift, the
 #' Hessian condition number and the scan-end mass come from INLAvaan's
 #' `diagnostics()`, not from the paper. `tails` and `ridge_bend` are
 #' inlavanilla's own.
@@ -358,7 +358,7 @@ warn_diagnostics <- function(dg, gaussian) {
 #'   fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 #'   but flags nothing: the fallback is a route of the solver, not a measure
 #'   of the approximation.
-#' * `sn_vs_vb_max`: the largest absolute `sn_vs_vb`.
+#' * `mean_gap_max`: the largest absolute `mean_gap`.
 #' * `ridge_bend_max`: the largest `ridge_bend`.
 #' * `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
 #'
@@ -387,7 +387,7 @@ warn_diagnostics <- function(dg, gaussian) {
 #' * `scan_end_mass`: the mass the fitted skew-normal puts beyond the
 #'   scanned window.
 #'
-#' and then inlavanilla's own: `sn_vs_vb`, `gamma1`, `tails` and `ridge_bend`.
+#' and then inlavanilla's own: `mean_gap`, `gamma1`, `tails` and `ridge_bend`.
 #'
 #' Some of INLAvaan's diagnostics are left out. `nsamp` counts posterior
 #' draws, which [sampling()] makes on demand rather than during the fit.

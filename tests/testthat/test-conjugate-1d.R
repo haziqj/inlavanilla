@@ -438,7 +438,7 @@ expect_exact_gaussian <- function(fit, model, mode_tol, laplace_tol = 1e-10) {
   # error in the mode. Observed VB mean error up to 6e-12 SDs.
   expect_lt(abs(diag[1, "vb_shift_sigma"]), mode_tol)
   expect_lt(abs(err$mean_vb), laplace_tol)
-  expect_lt(abs(diag[1, "sn_vs_vb"]), 1e-8)
+  expect_lt(abs(diag[1, "mean_gap"]), 1e-8)
   # Laplace is exact for a Gaussian, and the VB term is 0.5 shift^2
   expect_lt(abs(err$logml), laplace_tol)
 }
@@ -566,7 +566,7 @@ test_that("without the VB correction the log marginal likelihood is the Laplace 
   expect_identical(fit$logml, fit$logml_laplace)
   expect_equal(fit$mean_vb, fit$mode)
   # No VB correction, so no VB diagnostics, as in INLAvaan's diagnostics()
-  vb_cols <- c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")
+  vb_cols <- c("kld", "vb_shift", "vb_shift_sigma", "mean_gap")
   expect_true(all(is.na(summary(fit)$diagnostics[vb_cols])))
   # The skew-normal scan is centred at the mode, so the VB correction does not
   # move the marginals
@@ -810,7 +810,7 @@ test_that("a skewed gamma-Poisson posterior is recovered on the log scale", {
     expect_lt(abs(err$mean_vb), 0.02)
     expect_lt(abs(err$mean_vb), abs(err$mean_laplace))
     # The skew-normal and VB means agree (observed gap 0.005 SDs)
-    expect_lt(abs(summary(fit)$diagnostics[1, "sn_vs_vb"]), 0.015)
+    expect_lt(abs(summary(fit)$diagnostics[1, "mean_gap"]), 0.015)
 
     # Log marginal likelihood: observed error 0.0083 with the VB term (which
     # overshoots), -0.017 for plain Laplace

@@ -37,7 +37,7 @@ flagged.
 
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
-(\code{sn_vs_vb}) as an internal check (Section 5.1). The mode shift, the
+(\code{mean_gap}) as an internal check (Section 5.1). The mode shift, the
 Hessian condition number and the scan-end mass come from INLAvaan's
 \code{diagnostics()}, not from the paper. \code{tails} and \code{ridge_bend} are
 inlavanilla's own.
@@ -87,7 +87,7 @@ and then inlavanilla's own:
 fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 but flags nothing: the fallback is a route of the solver, not a measure
 of the approximation.
-\item \code{sn_vs_vb_max}: the largest absolute \code{sn_vs_vb}.
+\item \code{mean_gap_max}: the largest absolute \code{mean_gap}.
 \item \code{ridge_bend_max}: the largest \code{ridge_bend}.
 \item \code{n_heavy_tails}: the number of parameters whose \code{tails} is \code{FALSE}.
 }
@@ -119,7 +119,7 @@ the mode, on the scale of \code{logpost}.
 scanned window.
 }
 
-and then inlavanilla's own: \code{sn_vs_vb}, \code{gamma1}, \code{tails} and \code{ridge_bend}.
+and then inlavanilla's own: \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}.
 
 Some of INLAvaan's diagnostics are left out. \code{nsamp} counts posterior
 draws, which \code{\link[=sampling]{sampling()}} makes on demand rather than during the fit.

@@ -1095,9 +1095,9 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
   expect_null(fit$diagnostics$vb)
   expect_null(summary(fit)$vb)
   # The VB diagnostics did not run, so they are NA, as in INLAvaan's
-  # diagnostics(); the SN-VB gap needs a VB mean too
+  # diagnostics(); the mean gap needs a VB mean too
   d <- fit$diagnostics$marginals
-  for (col in c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")) {
+  for (col in c("kld", "vb_shift", "vb_shift_sigma", "mean_gap")) {
     expect_identical(d[[col]], c(NA_real_, NA_real_))
   }
   g <- diagnostics(fit)
@@ -1142,7 +1142,7 @@ test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
   expect_equal(g[["kld_max"]], max(d$kld))
   expect_equal(g[["vb_shift_max"]], max(abs(d$vb_shift_sigma)))
   expect_equal(
-    fit_vb$diagnostics$marginals$sn_vs_vb,
+    fit_vb$diagnostics$marginals$mean_gap,
     unname((fit_vb$summary[, "Mean"] - fit_vb$mean_vb) / sds),
     tolerance = 1e-12
   )

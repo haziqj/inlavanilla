@@ -234,7 +234,7 @@
 #'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
 #'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `scan_end_mass`,
-#'     `sn_vs_vb`, `gamma1`, `tails` and `ridge_bend`, with `NA` for the
+#'     `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with `NA` for the
 #'     checks the fit did not run.
 #'   * `scan`: the scans the skew-normals were fitted to, for
 #'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
@@ -631,7 +631,7 @@ vanilla_fit <- function(
       nmad = sn[, "nmad"],
       alpha = if (skew) sn[, "alpha"] else na,
       scan_end_mass = sn[, "scan_end_mass"],
-      sn_vs_vb = if (vb && skew) (mom$mean - mean_vb) / sds else na,
+      mean_gap = if (vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
       ridge_bend = sn[, "ridge_bend"],
