@@ -455,12 +455,20 @@ diagnostics <- function(object, ...) {
 diagnostics.default <- function(object, ...) {
   # INLAvaan's diagnostics() is an S4 generic: pass its fits on to it when it
   # is loaded, so that attaching inlavanilla after INLAvaan does not break it
-  if (isS4(object) && isNamespaceLoaded("INLAvaan")) {
-    return(getExportedValue("INLAvaan", "diagnostics")(object, ...))
+  inlavaan <- if (isS4(object)) inlavaan_diagnostics()
+  if (!is.null(inlavaan)) {
+    return(inlavaan(object, ...))
   }
   abort(
     "There is no {.fn diagnostics} method for {.obj_type_friendly {object}}."
   )
+}
+
+# INLAvaan's diagnostics() generic when INLAvaan is loaded, or NULL.
+inlavaan_diagnostics <- function() {
+  if (isNamespaceLoaded("INLAvaan")) {
+    getExportedValue("INLAvaan", "diagnostics")
+  }
 }
 
 #' @rdname diagnostics

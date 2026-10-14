@@ -1024,6 +1024,9 @@ test_that("a one-parameter model works end to end", {
   expect_match(out, "theta[1]", fixed = TRUE)
   out <- capture_output(print(summary(fit)))
   expect_match(out, "theta[1]", fixed = TRUE)
+  # No Hessian condition number with one parameter: it is always 1
+  expect_no_match(out, "Hessian condition")
+  expect_match(capture_output(print(summary(fit_reg))), "Hessian condition")
   # No ridge bend with one parameter
   expect_identical(summary(fit)$diagnostics$ridge_bend, 0)
 
@@ -1131,6 +1134,37 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
     fixed = TRUE
   )
   expect_match(msgs, "! Stopped near the posterior mode", all = FALSE)
+  # The VB correction moves the mean by more than 1 SD, so its stage line is
+  # marked too; that it fell back to nlminb() is only reported
+  expect_match(
+    msgs,
+    "! VB mean correction, max shift [0-9.]+ SD \\(fallback optimiser\\)",
+    all = FALSE
+  )
+})
+
+test_that("a VB fallback with a small shift leaves the stage line unmarked", {
+  # One fixed-point iteration is not enough, so the VB correction falls back
+  # to nlminb(); its shift, 0.13 posterior SDs, is healthy. As in INLAvaan,
+  # the fallback is a route of the solver, not a sign of trouble.
+  msgs <- capture_messages(
+    fit <- inla_vanilla(
+      lp_pois,
+      0.3,
+      y = pois_y,
+      a0 = pois_a0,
+      b0 = pois_b0,
+      control = list(vb_maxit = 1)
+    )
+  )
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_identical(fit$warnings, character())
+  expect_match(
+    msgs,
+    "v VB mean correction, max shift [0-9.]+ SD \\(fallback optimiser\\)",
+    all = FALSE
+  )
+  expect_no_match(paste(msgs, collapse = ""), "! VB mean correction")
 })
 
 test_that("nlminb's false convergence at an exact mode gives no warning", {
@@ -1352,9 +1386,51 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     "\n *Fell back to nlminb, as a step was over 1 posterior SD"
   )
   expect_no_match(text, "! Fell back")
+  # The VB shift and the scan-end mass are marked where they are shown
+  expect_match(
+    text,
+    "Largest shift -?[0-9.]+ SD!, for theta\\[1\\] \\(warning above 1 SD\\)"
+  )
+  expect_match(text, "heavy! +0\\.9[0-9]*! +")
   expect_match(text, "heavy!")
   # the unreached mode and what it leads to, in one diagnostics warning
   expect_match(text, "Done: .*, with 1 warning\n")
+})
+
+test_that("verbose = TRUE marks each value that summary() flags, and only those", {
+  # A Cauchy posterior: NMAD above 0.1 and heavy tails, a small VB shift
+  msgs <- capture_messages(suppressWarnings(inla_vanilla(
+    function(theta) dt(theta[[1]], 1, log = TRUE),
+    c(theta = 0.1),
+    verbose = TRUE
+  )))
+  text <- paste(msgs, collapse = "")
+  expect_match(text, "\n +theta +-?[0-9.]+ +0\\.[0-9]+! +[0-9.e-]+ +heavy! ")
+  expect_match(text, "Largest shift [0-9.e-]+ SD, for theta")
+
+  # Only a + b is identified: the Hessian condition number, 2e10, is marked
+  y <- qnorm(ppoints(100))
+  lp <- function(theta) {
+    sum(dnorm(y, theta[[1]] + theta[[2]], 1, log = TRUE)) +
+      sum(dnorm(theta, 0, 1e4, log = TRUE))
+  }
+  gr <- function(theta) sum(y - theta[[1]] - theta[[2]]) - theta / 1e8
+  msgs <- capture_messages(suppressWarnings(
+    inla_vanilla(lp, c(a = 0, b = 0), grad = gr, verbose = TRUE)
+  ))
+  expect_match(
+    paste(msgs, collapse = ""),
+    "Hessian condition number [0-9.e+]+!, in posterior-SD units"
+  )
+
+  # A healthy fit: no marks except the bend of the slope, which summary()
+  # also flags
+  msgs <- capture_messages(inla_vanilla(lp_reg, init_reg, verbose = TRUE))
+  text <- paste(msgs, collapse = "")
+  expect_match(text, "Hessian condition number [0-9.]+, in posterior-SD")
+  expect_match(text, "Largest shift -?[0-9.]+ SD, for intercept")
+  marked <- regmatches(text, gregexpr("[^ \n]+!", text))[[1]]
+  expect_identical(marked, "0.14!")
 })
 
 test_that("silent = TRUE prints nothing at all", {
@@ -1633,6 +1709,12 @@ test_that("print() points to the fit's warnings and to flagged checks", {
   expect_identical(n_flag_lines(fit), 1L)
   expect_no_match(capture_output(print(fit_reg)), "flagged")
   expect_identical(n_flag_lines(fit_reg), 0L)
+  expect_identical(n_counted(fit_reg_novb), 0L)
+  expect_identical(n_flag_lines(fit_reg_novb), 0L)
+  # Gaussian marginals have no scans, so nothing to flag here
+  fit_n <- inla_vanilla(lp_reg, init_reg, marginals = "gaussian", silent = TRUE)
+  expect_identical(n_counted(fit_n), 0L)
+  expect_identical(n_flag_lines(fit_n), 0L)
 
   # A heavy-tailed posterior: its warning and its flags
   lp <- function(theta) dt(theta[[1]], 1, log = TRUE)
@@ -2306,6 +2388,27 @@ test_that("plot(type = \"sn_fit\") draws each skew-normal fit against its scan",
   # The same in base-10 logs
   lines <- curves(record_plot(plot(fit_reg, pars = 2, type = "sn_fit_log")))
   expect_equal(lines[[2]]$y, unname(log10(exp(y - max(y)))))
+
+  # A scan that leaves the support: logpost is -Inf at its lowest points,
+  # which are left out of both plots rather than drawn at zero height
+  lp <- function(theta) {
+    a <- theta[["a"]]
+    if (a < -1.5) {
+      return(-Inf)
+    }
+    dnorm(a, 1, 1, log = TRUE) +
+      dnorm(theta[["b"]], 0.5 * a, sqrt(0.75), log = TRUE)
+  }
+  fit_cut <- inla_vanilla(lp, c(a = 0.3, b = -0.2), silent = TRUE)
+  raw <- fit_cut$scan$logpost[, "a"]
+  expect_gt(sum(!is.finite(raw)), 0)
+  for (type in c("sn_fit", "sn_fit_log")) {
+    lines <- curves(record_plot(plot(fit_cut, pars = "a", type = type)))
+    for (k in 1:2) {
+      expect_identical(lines[[k]]$x, fit_cut$scan$z[is.finite(raw)])
+      expect_true(all(is.finite(lines[[k]]$y)), label = paste(type, k))
+    }
+  }
 
   # Both parameters, and the type checked as inla_vanilla() checks its
   # choices
