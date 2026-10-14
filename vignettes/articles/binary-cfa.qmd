@@ -69,13 +69,14 @@ Simulated answers of 500 people to six items:
 
 ```{r}
 #| label: data
+n <- 500
 lambda <- c(0.5, 0.6, 0.7, 0.8, 0.85, 0.55)
 tau <- c(-0.9, -0.4, 0, 0.2, 0.45, 1)
 set.seed(1)
-eta <- rnorm(500)
+eta <- rnorm(n)
 y_star <- outer(eta, lambda) +
-  rnorm(500 * 6) * rep(sqrt(1 - lambda^2), each = 500)
-y <- 1 * (y_star > rep(tau, each = 500))
+  rnorm(n * 6) * rep(sqrt(1 - lambda^2), each = n)
+y <- 1 * (y_star > rep(tau, each = n))
 ```
 
 The likelihood depends on the data only through the counts of the distinct
@@ -167,7 +168,7 @@ round(cbind(true = c(lambda, tau), q), 3)
 
 Ten of the twelve intervals cover the true values. The two misses come from
 the simulated data, not from the approximation. Item 6, for one, got
-`r sum(y[, 6])` ones where `r round(500 * pnorm(-1))` were expected, and the
+`r sum(y[, 6])` ones where `r round(n * pnorm(-1))` were expected, and the
 thresholds follow the data: each posterior median is close to
 $-\Phi^{-1}$ of the item's proportion of ones.
 
