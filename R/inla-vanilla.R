@@ -402,15 +402,20 @@ vanilla_fit <- function(
   has_grad <- !is.null(grad_x)
 
   # The engine calls these wrappers, which name the parameters, count the
-  # calls and tick the progress bar. The spinner counts logpost and grad
-  # calls together, so stages driven by grad tick too.
+  # calls and tick the progress bar. The spinner counts the stage's logpost
+  # and grad calls together, from `stage_calls()`, so stages driven by grad
+  # tick too.
   n_lp <- 0L
   n_gr <- 0L
+  n_base <- 0L
+  stage_calls <- function() {
+    n_base <<- n_lp + n_gr
+  }
   last_x <- init
   tick <- function() {
     n <- n_lp + n_gr
     if (prog$calls && n %% 16L == 0L) {
-      progress_tick(prog, set = n)
+      progress_tick(prog, set = n - n_base)
     }
   }
   lp <- function(x) {
@@ -478,6 +483,7 @@ vanilla_fit <- function(
 
   # 1a. Joint Gaussian -------------------------------------------------------
   t0 <- elapsed()
+  stage_calls()
   progress_start(prog, "Finding the posterior mode, {cli::pb_current} calls")
   lap <- with_context(
     "finding the posterior mode",
@@ -531,6 +537,7 @@ vanilla_fit <- function(
   t0 <- elapsed()
   vbc <- NULL
   if (vb) {
+    stage_calls()
     progress_start(
       prog,
       "Applying the VB mean correction, {cli::pb_current} calls"
