@@ -44,7 +44,7 @@ healthy <- data.frame(
   sn_vs_vb = c(0.01, 0.02),
   gamma1 = c(0, 0),
   tails = c(TRUE, TRUE),
-  bend = c(0.01, 0.02),
+  ridge_bend = c(0.01, 0.02),
   row.names = c("a", "b")
 )
 
@@ -252,7 +252,7 @@ test_that("a value that is not finite is flagged; a check that did not run is no
 
   # Gaussian marginals: no scans, so only the mode, Hessian and VB checks
   d <- healthy
-  d[c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "bend")] <- NA
+  d[c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "ridge_bend")] <- NA
   d$sn_vs_vb <- NA_real_
   expect_length(problems(d, gaussian = TRUE), 0)
   d$vb_shift_sigma[1] <- 3
@@ -377,7 +377,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "scan_end_mass_max",
       "vb_fallback",
       "sn_vs_vb_max",
-      "bend_max",
+      "ridge_bend_max",
       "n_heavy_tails"
     )
   )
@@ -401,7 +401,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "sn_vs_vb",
       "gamma1",
       "tails",
-      "bend"
+      "ridge_bend"
     )
   )
   expect_identical(p$names, names(init_reg))
@@ -427,7 +427,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
   expect_identical(g[["kld_mean"]], mean(d$kld))
   expect_identical(g[["nmad_max"]], max(d$nmad))
   expect_identical(g[["scan_end_mass_max"]], max(d$scan_end_mass))
-  expect_identical(g[["bend_max"]], max(d$bend))
+  expect_identical(g[["ridge_bend_max"]], max(d$ridge_bend))
   expect_identical(g[["n_heavy_tails"]], 0)
   expect_equal(p$grad, unname(grad))
   for (col in setdiff(names(p), c("names", "grad", "grad_abs", "grad_rel"))) {

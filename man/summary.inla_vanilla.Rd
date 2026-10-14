@@ -32,7 +32,7 @@ the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 gap between the skew-normal and VB means as an internal check (Section
 5.1). The mode shift, the Hessian condition number and the scan-end mass
 come from INLAvaan's \code{diagnostics()}, not from the paper. \code{tails} and
-\code{bend} are inlavanilla's own.
+\code{ridge_bend} are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -83,22 +83,23 @@ It is flagged above 0.05.
 \item \strong{Tails.} \code{tails} is \code{FALSE} (and flagged) when the density at an end
 of the scan is still over 5\% of its peak: the Laplace SD badly
 understates a heavy tail there, and the skew-normal extrapolates it.
-\item \strong{Scan path.} Each parameter is scanned along the conditional mode path
-of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a straight line
-that is a first-order approximation to a possibly curved ridge (Section
-3.2.1). \code{bend} is the log-density, in nats, that the straight scan
-misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
-towards the conditional mode of the other parameters. A large value
-means the other parameters' conditional mode bends away from the line,
-as a poorly determined noise scale does for a regression coefficient at
-small n, and the marginal comes out too narrow. For a normal mean with
-an unknown SD, a bend \eqn{b} makes the marginal SD too small by
+\item \strong{Ridge bend.} Each parameter is scanned along the conditional mode
+path (CMP) of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a
+straight line that is a first-order approximation to a possibly curved
+ridge of high posterior density (Section 3.2.1). \code{ridge_bend} is the
+log-density, in nats, that the straight scan misses at \eqn{\pm 2}
+posterior SDs: the gain from one Newton step towards the conditional
+mode of the other parameters. A large value means the ridge bends away
+from the CMP, as it does for a regression coefficient when the noise
+scale is poorly determined at small n, and the marginal comes out too
+narrow. For a normal mean with an unknown SD, a ridge bend \eqn{b} makes
+the marginal SD too small by
 \eqn{1 - \sqrt{1 - 3b/4}}{1 - sqrt(1 - 3b/4)}, about \eqn{3b/8}. In
 other models this is a rough guide: on test models it was mostly within
 a factor of 1.5 of the true shortfall, above it in logistic and Poisson
-regressions and below it in a nonlinear regression. \code{bend} is flagged
-above 0.25, a shortfall of 10\% by that formula (see the Accuracy section
-of \code{\link[=inla_vanilla]{inla_vanilla()}}).
+regressions and below it in a nonlinear regression. \code{ridge_bend} is
+flagged above 0.25, a shortfall of 10\% by that formula (see the Accuracy
+section of \code{\link[=inla_vanilla]{inla_vanilla()}}).
 \item \strong{Skew-normal and VB means.} \code{sn_vs_vb}, the gap between the
 skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 target the posterior mean, so they should agree closely (to
@@ -113,7 +114,7 @@ one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
 mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
 are those of INLAvaan's fit-time warning; the heavy-tails check is
-inlavanilla's own, as are the scan-path and SN-VB flags. Every level is a
+inlavanilla's own, as are the ridge bend and SN-VB flags. Every level is a
 package default, chosen so that a healthy fit stays silent, and not a
 calibrated cut-off: a tripped check is a prompt to look again, and
 silence is not a certificate of accuracy. In the simulations of Jamil and

@@ -4,6 +4,9 @@ Date: 2026-10-13, with the cross-model check of 2026-10-14. Reproduce the
 calculations with `Rscript lab/bend-threshold.R` and
 `Rscript lab/bend-calibration.R` from the package root.
 
+The diagnostic was renamed `ridge_bend` on 2026-10-14, after this note was
+written. The note keeps its old name, `bend`. The scripts use the new one.
+
 ## Decision (2026-10-14)
 
 `summary()` flags `bend` above **0.25 nats**, up from 0.1. The level comes

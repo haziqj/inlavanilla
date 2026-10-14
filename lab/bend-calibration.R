@@ -53,7 +53,7 @@ predicted_shortfall <- function(bend) {
 # parameter j.
 compare <- function(case, fit, mean_sd_cover) {
   s <- summary(fit, probs = c(0.025, 0.975))
-  bend <- s$diagnostics$bend
+  bend <- s$diagnostics$ridge_bend
   rows <- lapply(seq_along(fit$mode), function(j) {
     e <- mean_sd_cover(j, s$table[j, "2.5%"], s$table[j, "97.5%"])
     data.frame(
@@ -242,13 +242,13 @@ num <- vapply(out, is.numeric, logical(1))
 out[num] <- lapply(out[num], signif, 3)
 small <- out$case != "PolDem SEM"
 cat("Small models, by bend:\n")
-print(out[small, ][order(out$bend[small]), ], row.names = FALSE)
+print(out[small, ][order(out$ridge_bend[small]), ], row.names = FALSE)
 cat("\nPolDem SEM, by bend:\n")
-print(out[!small, -1][order(out$bend[!small]), ], row.names = FALSE)
+print(out[!small, -1][order(out$ridge_bend[!small]), ], row.names = FALSE)
 
 # How each level sorts the parameters, by actual SD shortfall
 for (level in c(0.1, 0.25)) {
-  flagged <- out$bend > level
+  flagged <- out$ridge_bend > level
   cat(
     "\nLevel ",
     level,

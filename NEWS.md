@@ -58,8 +58,8 @@
   VB shift above 1 SD, and a Hessian condition number above 1e8; heavy tails
   are inlavanilla's own check. Like INLAvaan, the fit only records the VB
   fallback. `summary()` flags the same checks at the same levels, and also
-  a scan-path bend above 0.25 nats, where the marginal SD may be about 10%
-  too small, and the gap between the skew-normal and VB means; its
+  a ridge bend above 0.25 nats, where the marginal SD may be about 10% too
+  small, and the gap between the skew-normal and VB means; its
   lines list every flagged parameter, worst first, with its value. Healthy
   fits stay silent. A new vignette, "Diagnostics", explains every check,
   with citations of Jamil and Rue (2026a).

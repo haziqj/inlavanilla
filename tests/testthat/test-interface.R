@@ -48,7 +48,7 @@ gr_pois <- function(theta, y, a0, b0) {
 
 # A Poisson regression with fixed data: two correlated (r = -0.56), skewed
 # parameters, so that every diagnostic in summary() is well away from
-# rounding noise (the slope's scan-path bend is 0.14, below its flag level).
+# rounding noise (the slope's ridge bend is 0.14, below its flag level).
 # The fit is deterministic. Used for the printed output and the plots.
 reg_x <- c(-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75)
 reg_y <- c(1, 0, 2, 1, 3, 4, 2, 6)
@@ -1028,8 +1028,8 @@ test_that("a one-parameter model works end to end", {
   expect_match(out, "theta[1]", fixed = TRUE)
   out <- capture_output(print(summary(fit)))
   expect_match(out, "theta[1]", fixed = TRUE)
-  # No scan-path bend with one parameter
-  expect_identical(summary(fit)$diagnostics$bend, 0)
+  # No ridge bend with one parameter
+  expect_identical(summary(fit)$diagnostics$ridge_bend, 0)
 
   calls <- record_plot(plot(fit))
   expect_true("theta[1]" %in% plot_strings(calls))
@@ -1252,7 +1252,7 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
     "Fixed-point steps, largest over the parameters \\(SD\\): ",
     "KL term [0-9.e-]+, giving a log marginal likelihood of -?[0-9.]+",
     "Largest shift -0.2[0-9]* SD, for intercept",
-    "Shape +NMAD +Bend +Tails +End mass +gamma1",
+    "Shape +NMAD +Ridge bend +Tails +End mass +gamma1",
     "marks what summary\\(\\) flags",
     "i Done: [0-9]+ logpost calls in [0-9.]+m?s"
   )) {
@@ -1593,8 +1593,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$tails[2] <- FALSE
       f
     },
-    bend = function(f) {
-      f$diagnostics$marginals$bend[1] <- 0.5
+    ridge_bend = function(f) {
+      f$diagnostics$marginals$ridge_bend[1] <- 0.5
       f
     },
     sn_vs_vb = function(f) {
@@ -1612,7 +1612,7 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     expect_identical(n_counted(fit), 1L, label = check)
     expect_identical(n_flag_lines(fit), 1L, label = check)
   }
-  out <- capture_output(print(trip$bend(fit_ok)))
+  out <- capture_output(print(trip$ridge_bend(fit_ok)))
   expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
   expect_no_match(out, "warning")
   fit <- fit_ok
@@ -1624,14 +1624,14 @@ test_that("print() points to the fit's warnings and to flagged checks", {
   expect_identical(n_flag_lines(fit), 8L)
 
   # A normal mean with an unknown SD from 12 observations: summary() flags
-  # the bend of the mean alone (4 / 12 nats), and nothing in the small
-  # Poisson regression, whose largest bend is 0.14
+  # the ridge bend of the mean alone (4 / 12 nats), and nothing in the small
+  # Poisson regression, whose largest ridge bend is 0.14
   y12 <- c(9.6, 11.2, 8.1, 10.4, 12.9, 9.9, 7.4, 10.8, 11.6, 9.0, 10.1, 12.2)
   lp_mean <- function(theta) {
     sum(dnorm(y12, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE))
   }
   fit <- inla_vanilla(lp_mean, c(mu = 10, log_sigma = 0), silent = TRUE)
-  expect_identical(names(which(check_flags(fit_dg(fit), FALSE))), "bend")
+  expect_identical(names(which(check_flags(fit_dg(fit), FALSE))), "ridge_bend")
   out <- capture_output(print(fit))
   expect_match(out, "! 1 check flagged by `summary()`.", fixed = TRUE)
   expect_identical(n_flag_lines(fit), 1L)
@@ -1785,7 +1785,7 @@ test_that("summary() returns the table and the diagnostics", {
       "sn_vs_vb",
       "gamma1",
       "tails",
-      "bend"
+      "ridge_bend"
     )
   )
   expect_identical(rownames(s$diagnostics), names(init_reg))
@@ -1811,10 +1811,10 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   # freeze is right, against a 201 x 201 grid over +-7 Laplace SDs. Observed:
   # skew-normal means 0.0022 and 0.0059 SDs off (Laplace 0.23 and 0.084),
   # the intercept's SD 0.37% too large, and the slope's SD 3.3% too small:
-  # the small-n narrowing of the straight scan path, which the bend
-  # diagnostic measures for the slope (0.14, against 0.037 for the
-  # intercept). That is below the flag level, and below the 5.3% that the
-  # bend predicts through the normal-mean formula, which overstates the
+  # the small-n narrowing of the straight scan path, which the ridge
+  # bend measures for the slope (0.14, against 0.037 for the intercept).
+  # That is below the flag level, and below the 5.3% that the ridge bend
+  # predicts through the normal-mean formula, which overstates the
   # narrowing in this GLM. The log marginal likelihood is 0.017 too large.
   sds <- sqrt(diag(fit_reg$cov))
   ga <- fit_reg$mode[["intercept"]] + seq(-7, 7, length.out = 201) * sds[[1]]
@@ -1842,9 +1842,9 @@ test_that("the printed model's summary agrees with 2D quadrature", {
   expect_lt(abs(sd_ratio[["intercept"]] - 1), 0.01)
   expect_gt(sd_ratio[["slope"]], 0.94)
   expect_lt(sd_ratio[["slope"]], 1)
-  bend <- summary(fit_reg)$diagnostics$bend
+  bend <- summary(fit_reg)$diagnostics$ridge_bend
   expect_gt(bend[[2]], 3 * bend[[1]])
-  expect_true(all(bend < summary_levels$bend))
+  expect_true(all(bend < summary_levels$ridge_bend))
   expect_lt(1 - sd_ratio[["slope"]], 1 - sqrt(1 - 0.75 * bend[[2]]))
   expect_lt(abs(fit_reg$logml - exact_logml), 0.035)
 })
@@ -1911,8 +1911,8 @@ test_that("summary() flags each diagnostic at its documented level", {
   # The levels documented in ?summary.inla_vanilla, those of the fit-time
   # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
   # number 1e8, the VB shift 1 SD, NMAD 0.1, the scan-end mass 0.05 and
-  # tails; and, flagged by summary() alone, the bend 0.25 nats and the SN - VB
-  # gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
+  # tails; and, flagged by summary() alone, the ridge bend 0.25 nats and the
+  # SN - VB gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
   # nothing may be flagged, and then 2% above it, where each must be, with
   # the warning's sentence where it has one.
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
@@ -1920,7 +1920,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$optim$hess_cond <- 0.98e8
   below$diagnostics$mode_shift_sigma <- c(0.098, 0.098)
   below$diagnostics$vb_shift_sigma <- c(0.98, -0.98)
-  below$diagnostics$bend <- c(0.245, 0.245)
+  below$diagnostics$ridge_bend <- c(0.245, 0.245)
   below$diagnostics$nmad <- c(0.098, 0.098)
   below$diagnostics$scan_end_mass <- c(0.049, 0.049)
   below$diagnostics$sn_vs_vb <- c(0.098, -0.098)
@@ -1951,7 +1951,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   above$optim$hess_cond <- 1.02e8
   above$diagnostics$mode_shift_sigma <- c(0.098, 0.102)
   above$diagnostics$vb_shift_sigma <- c(0.98, -1.02)
-  above$diagnostics$bend <- c(0.245, 0.255)
+  above$diagnostics$ridge_bend <- c(0.245, 0.255)
   above$diagnostics$nmad <- c(0.098, 0.102)
   above$diagnostics$scan_end_mass <- c(0.049, 0.051)
   above$diagnostics$sn_vs_vb <- c(0.098, -0.102)
@@ -1994,7 +1994,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   )
 
   # A value that is not finite is flagged, not an error
-  for (col in c("mode_shift_sigma", "nmad", "bend")) {
+  for (col in c("mode_shift_sigma", "nmad", "ridge_bend")) {
     odd <- below
     odd$diagnostics[[col]][1] <- NaN
     expect_length(flagged(odd), 1)

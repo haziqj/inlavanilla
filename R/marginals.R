@@ -114,7 +114,7 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
     8,
     dimnames = list(
       names(mode),
-      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "bend", "logC")
+      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "ridge_bend", "logC")
     )
   )
   heights <- matrix(
@@ -123,7 +123,7 @@ fit_marginals <- function(lp, gr, lap, ctrl, tick = function() NULL) {
     m,
     dimnames = list(NULL, names(mode))
   )
-  # Scan points for the bend check (see scan_bend())
+  # Scan points for the ridge bend (see scan_bend())
   i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
 
   for (j in seq_len(m)) {

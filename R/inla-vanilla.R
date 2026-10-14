@@ -70,9 +70,9 @@
 #' parameter, its marginal comes out too narrow, by a factor that vanishes as
 #' O(1/n). Examples are a regression coefficient or a mean when the noise SD
 #' is uncertain. For a normal mean with unknown variance the SD is about 11%
-#' too small at n = 12, 3% at n = 50, and under 1% at n = 200. The `bend`
-#' diagnostic of [summary.inla_vanilla()] flags this narrowing where it
-#' predicts about 10% or more.
+#' too small at n = 12, 3% at n = 50, and under 1% at n = 200. The
+#' `ridge_bend` diagnostic of [summary.inla_vanilla()] flags this narrowing
+#' where it predicts about 10% or more.
 #'
 #' A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 #' structural equation model with 39 parameters and n = 75, the data could not
@@ -86,10 +86,10 @@
 #' are the same as inlavanilla's: Jamil and Rue (2026a, Section 4.4) find
 #' the same miss in the lower tail of a variance near zero, the boundary
 #' pile-up that a unimodal skew-normal cannot capture. No check is aimed at
-#' this. The `bend` diagnostic of [summary.inla_vanilla()] flagged one of the
-#' two (bend 0.44), but the other's bend (0.11) was no larger than that of
-#' marginals within 7% in SD, and the `tails` check, which looks only 4
-#' posterior SDs either side of the mode (the Laplace SDs), missed both.
+#' this. The `ridge_bend` diagnostic of [summary.inla_vanilla()] flagged one
+#' of the two (0.44), but the other's ridge bend (0.11) was no larger than
+#' that of marginals within 7% in SD, and the `tails` check, which looks only
+#' 4 posterior SDs either side of the mode (the Laplace SDs), missed both.
 #'
 #' @section Gradients:
 #' `grad` is optional. Without it, derivatives come from finite differences
@@ -162,8 +162,8 @@
 #'   fixed-point iteration, whether Anderson acceleration or the fallback
 #'   optimiser was used, the largest shift, and the term it adds to the log
 #'   marginal likelihood.
-#' * The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
-#'   correction `gamma1` of each parameter, with the values that
+#' * The marginals: the shape, NMAD, ridge bend, tails, scan-end mass and
+#'   volume correction `gamma1` of each parameter, with the values that
 #'   [summary.inla_vanilla()] flags marked.
 #' * The calls of `logpost` and `grad` in each stage, and in all, with the
 #'   total time.
@@ -234,8 +234,8 @@
 #'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
 #'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `scan_end_mass`,
-#'     `sn_vs_vb`, `gamma1`, `tails` and `bend`, with `NA` for the checks the
-#'     fit did not run.
+#'     `sn_vs_vb`, `gamma1`, `tails` and `ridge_bend`, with `NA` for the
+#'     checks the fit did not run.
 #'   * `scan`: the scans the skew-normals were fitted to, for
 #'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
 #'     mode, the log-posterior at each point (`logpost`, a column per
@@ -585,7 +585,7 @@ vanilla_fit <- function(
       gamma1 = na,
       nmad = na,
       tails = na,
-      bend = na,
+      ridge_bend = na,
       logC = na,
       scan_end_mass = na
     )
@@ -634,7 +634,7 @@ vanilla_fit <- function(
       sn_vs_vb = if (vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
-      bend = sn[, "bend"],
+      ridge_bend = sn[, "ridge_bend"],
       row.names = parnames
     )
   )
