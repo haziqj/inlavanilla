@@ -1272,6 +1272,50 @@ test_that("progress bars follow the user's cli.progress_show_after", {
   expect_null(seen)
 })
 
+test_that("a running stage shows its sentence and the time, not a cli bar", {
+  # The clock: nothing in the first two seconds or outside a bar (where cli
+  # gives ""), then the time so far for a stage without a total and the time
+  # left for one with, once cli can estimate it
+  left <- as.difftime(12.2, units = "secs")
+  expect_identical(progress_clock(1.5, 6, left), "")
+  expect_identical(progress_clock("", "", ""), "")
+  expect_identical(progress_clock(3.4, NA, NA), " [3s]")
+  expect_identical(progress_clock(3.4, 6, left), " [~12s left]")
+  expect_identical(progress_clock(3.4, 6, NA), "")
+  expect_identical(format_clock(0.2), "1s")
+  expect_identical(format_clock(119.6), "2m 0s")
+
+  # The format of every line, for the fit's three stages and for LOO: a
+  # cli bar would stretch the line to the width of the console
+  formats <- NULL
+  create_bar <- cli::cli_progress_bar
+  local_mocked_bindings(
+    cli_progress_bar = function(...) {
+      formats <<- c(formats, list(...)$format)
+      create_bar(...)
+    },
+    .package = "cli"
+  )
+  fit <- suppressMessages(inla_vanilla(lp_reg, init_reg))
+  loglik <- function(theta) {
+    dpois(
+      reg_y,
+      exp(theta[["intercept"]] + theta[["slope"]] * reg_x),
+      log = TRUE
+    )
+  }
+  loo(fit, loglik)
+  expect_length(formats, 4)
+  lines <- c(
+    "Finding the posterior mode, {cli::pb_current} calls",
+    "Applying the VB mean correction, {cli::pb_current} calls",
+    paste0("Fitting ", pb_item, " skew-normal marginals"),
+    "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls"
+  )
+  expect_true(all(mapply(grepl, lines, formats, fixed = TRUE)))
+  expect_false(any(grepl("pb_bar", formats, fixed = TRUE)))
+})
+
 test_that("verbose = TRUE adds detail lines under the stage lines", {
   stage_text <- function(x) sub(" \\[[0-9.]+m?s\\]\\s*$", "", x)
   default <- stage_text(capture_messages(inla_vanilla(lp_reg, init_reg)))

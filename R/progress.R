@@ -1,7 +1,7 @@
 # Progress reporting, at three levels: `silent = TRUE` shows nothing, the
 # default shows one line per stage, and `verbose = TRUE` adds indented grey
-# detail lines under each one. Each stage gets a cli spinner or progress bar,
-# which appears only when the stage runs for longer than the user's
+# detail lines under each one. Each stage gets a cli spinner line, which
+# appears only when the stage runs for longer than the user's
 # `cli.progress_show_after` seconds, or half a second when that option is
 # unset (cli's own default is 2), and ends with one coloured line. The lines
 # are built directly from cli's styles rather than through its glue-based
@@ -21,11 +21,16 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p
 }
 
-# Start a stage. With `total`, a bar over that many items; without, a spinner
-# that counts log-posterior calls. The delay is set while the bar is created
-# (cli reads it then) and the option is restored afterwards. A user's own
-# setting is kept, so a knitr or Quarto setup chunk can keep bars, which
-# cannot redraw in place there, out of the document.
+# Start a stage. `msg` is the line shown while it runs, a cli format string
+# that counts with `{cli::pb_current}` or `pb_item`. It is the stage's
+# sentence, about as wide as the line that ends it, never a cli bar, which
+# stretches to the width of the console, and progress_clock() ends it with the
+# time, where the line that ends it puts the time taken. With `total`, the
+# stage has that many items; without, the log-posterior wrapper ticks it with
+# the number of calls. The delay is set while the bar is created (cli reads it
+# then) and the option is restored afterwards. A user's own setting is kept,
+# so a knitr or Quarto setup chunk can keep bars, which cannot redraw in place
+# there, out of the document.
 progress_start <- function(p, msg, total = NA) {
   if (!p$show) {
     return(invisible(p))
@@ -34,28 +39,52 @@ progress_start <- function(p, msg, total = NA) {
     cli.progress_show_after = getOption("cli.progress_show_after", 0.5)
   )
   on.exit(options(old))
-  fmt <- if (is.na(total)) {
-    paste0(
-      "{cli::pb_spin} ",
-      msg,
-      " {cli::col_grey(paste(cli::pb_current, 'calls'))}"
-    )
-  } else {
-    paste0(
-      "{cli::pb_spin} ",
-      msg,
-      " {cli::pb_bar} {cli::pb_current}/{cli::pb_total}",
-      " {cli::col_grey(cli::pb_eta_str)}"
-    )
-  }
   p$id <- cli::cli_progress_bar(
-    format = fmt,
+    format = paste0(
+      "{cli::pb_spin} ",
+      msg,
+      "{progress_clock(cli::pb_elapsed_raw, cli::pb_total, cli::pb_eta_raw)}"
+    ),
     total = total,
     clear = TRUE,
     .envir = p$frame
   )
   p$calls <- is.na(total)
   invisible(p)
+}
+
+# The item being worked on, "4/6", counted from 1 as in INLAvaan
+pb_item <- "{min(cli::pb_current + 1, cli::pb_total)}/{cli::pb_total}"
+
+# The grey bracket that ends a running stage's line, where progress_done()
+# puts the time the stage took: the time left for a stage with a known total,
+# once cli can estimate it, and the time so far for one without. It appears
+# after two seconds, when the estimate has settled, in whole seconds so that
+# it does not flicker. cli gives "" for its variables outside a bar.
+progress_clock <- function(secs, total, left) {
+  if (!is.numeric(secs) || secs < 2) {
+    return("")
+  }
+  if (is.na(total)) {
+    return(paste0(" ", grey("[", format_clock(secs), "]")))
+  }
+  if (inherits(left, "difftime")) {
+    left <- as.numeric(left, units = "secs")
+  }
+  if (!is.numeric(left) || !is.finite(left)) {
+    return("")
+  }
+  paste0(" ", grey("[~", format_clock(left), " left]"))
+}
+
+# Whole seconds, at least one: "3s", "1m 5s"
+format_clock <- function(s) {
+  s <- max(1, round(s))
+  if (s < 60) {
+    paste0(s, "s")
+  } else {
+    paste0(s %/% 60, "m ", s %% 60, "s")
+  }
 }
 
 progress_tick <- function(p, set = NULL) {
@@ -68,17 +97,23 @@ progress_tick <- function(p, set = NULL) {
   }
 }
 
+# End a stage's line without one of its own.
+progress_close <- function(p) {
+  if (!is.null(p$id)) {
+    cli::cli_progress_done(id = p$id, .envir = p$frame)
+  }
+  p$id <- NULL
+  p$calls <- FALSE
+  invisible(p)
+}
+
 # End a stage with a tick (or a yellow ! when `ok` is FALSE), `text`, and the
 # time it took.
 progress_done <- function(p, text, secs, ok = TRUE) {
   if (!p$show) {
     return(invisible(p))
   }
-  if (!is.null(p$id)) {
-    cli::cli_progress_done(id = p$id, .envir = p$frame)
-  }
-  p$id <- NULL
-  p$calls <- FALSE
+  progress_close(p)
   message(
     if (ok) cli::col_green(cli::symbol$tick) else cli::col_yellow("!"),
     " ",

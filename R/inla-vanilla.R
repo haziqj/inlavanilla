@@ -478,7 +478,7 @@ vanilla_fit <- function(
 
   # 1a. Joint Gaussian -------------------------------------------------------
   t0 <- elapsed()
-  progress_start(prog, "Finding the posterior mode")
+  progress_start(prog, "Finding the posterior mode, {cli::pb_current} calls")
   lap <- with_context(
     "finding the posterior mode",
     laplace_fit(lp, gr, init, ctrl)
@@ -531,7 +531,10 @@ vanilla_fit <- function(
   t0 <- elapsed()
   vbc <- NULL
   if (vb) {
-    progress_start(prog, "Applying the VB mean correction")
+    progress_start(
+      prog,
+      "Applying the VB mean correction, {cli::pb_current} calls"
+    )
     vbc <- with_context(
       "applying the VB mean correction",
       vb_correct(lp, gr, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
@@ -566,7 +569,16 @@ vanilla_fit <- function(
   # Gaussian's own, N(mean_vb_j, Sigma_jj), a skew-normal with shape 0.
   t0 <- elapsed()
   if (marginals == "skewnormal") {
-    progress_start(prog, "Fitting skew-normal marginals", total = m)
+    progress_start(
+      prog,
+      paste0(
+        "Fitting ",
+        pb_item,
+        " skew-normal marginal",
+        if (m == 1L) "" else "s"
+      ),
+      total = m
+    )
     mar <- with_context(
       "fitting the skew-normal marginals",
       fit_marginals(lp, gr, lap, ctrl, tick = function() progress_tick(prog))

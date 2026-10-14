@@ -261,22 +261,18 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     }
   }
 
-  pb <- NULL
-  if (!silent) {
-    pb <- cli::cli_progress_bar(
-      "Differentiating loglik",
-      total = n_calls,
-      clear = TRUE
-    )
-  }
+  prog <- progress_new(!silent)
+  progress_start(
+    prog,
+    "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls",
+    total = n_calls
+  )
   at <- function(u) {
     x <- theta + drop(L %*% u)
     names(x) <- parnames
     last_x <<- x
     calls <<- calls + 1L
-    if (!is.null(pb)) {
-      cli::cli_progress_update(id = pb)
-    }
+    progress_tick(prog)
     v <- withCallingHandlers(
       tryCatch(loglik(x), error = function(e) {
         where <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
@@ -360,9 +356,7 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
       }
     }
   }
-  if (!is.null(pb)) {
-    cli::cli_progress_done(id = pb)
-  }
+  progress_close(prog)
 
   # s' Omega s in whitened coordinates
   quad1 <- rowSums(S^2)
