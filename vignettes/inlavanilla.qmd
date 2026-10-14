@@ -380,12 +380,20 @@ log-likelihood as one term per observation and use `loo()`: see
 
 ## Constrained parameters
 
-The approximation works on an unconstrained scale: each parameter must be
-free to take any real value. Reparameterise anything constrained, such as a
-standard deviation as its log, a probability as its logit, or a correlation
-as its Fisher $z$. The parameterisation also matters for accuracy, since each
-parameter's skew-normal lives on the scale you choose, and scales on which
-the posterior is closer to Gaussian work better.
+The approximation works on an unconstrained scale[^unconstrained], where each
+parameter is free to take any real value. Reparameterise anything
+constrained, such as a standard deviation as its log, a probability as its
+logit, or a correlation as its Fisher $z$. The parameterisation also matters
+for accuracy, since each parameter's skew-normal lives on the scale you
+choose, and scales on which the posterior is closer to Gaussian work better.
+
+[^unconstrained]: In practice, it is enough for the posterior to sit well
+    away from any boundary. Apart from the search for the mode, the fit
+    evaluates `logpost` only within about 4 posterior SDs of the mode (the
+    width of the skew-normal scans), so a variance can stay on its natural
+    scale if its posterior is far from zero. The optimiser may still stray
+    onto illegal values on its way to the mode, so have `logpost` return
+    `-Inf` there: it then steps back instead of raising warnings or errors.
 
 `logpost` is then the log density of the parameters you pass. A prior stated
 on the natural scale needs the log-Jacobian of the transformation. For the
@@ -436,6 +444,11 @@ fit <- inla_vanilla(
   grad = function(theta) -as.vector(obj$gr(theta))
 )
 ```
+
+The articles [Speeding up with Rcpp](rcpp.html) and [Using TMB](tmb.html)
+work through both routes for a structural equation model with 39
+parameters: in C++ with an analytic gradient, and as a TMB template with
+automatic differentiation.
 
 ## References
 
