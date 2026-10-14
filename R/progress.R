@@ -177,7 +177,7 @@ report_start <- function(p, init, lp_init, grad_check, calls) {
       ),
       if (grad_check > 1e-3) flag() else "",
       grey(
-        " (warning above 0.001), ",
+        " (warning > 0.001), ",
         format_calls(calls[[1]], calls[[2]])
       )
     )
@@ -240,7 +240,7 @@ report_mode <- function(p, lap, calls) {
       } else {
         ""
       },
-      grey(" (warning above ", with_sd(warn_levels$mode_shift), ")")
+      grey(" (warning > ", with_sd(warn_levels$mode_shift), ")")
     )
   )
   hs <- lap$hessian
@@ -258,7 +258,7 @@ report_mode <- function(p, lap, calls) {
         paste0(
           grey("Jacobian asymmetry ", fmt_num(lap$asymmetry)),
           if (lap$asymmetry > 1e-3) flag() else "",
-          grey(" (warning above 0.001)")
+          grey(" (warning > 0.001)")
         )
       )
     } else {
@@ -302,7 +302,7 @@ report_mode <- function(p, lap, calls) {
         grey("Hessian condition number ", fmt_num(lap$hess_cond)),
         if (off_level(lap$hess_cond, warn_levels$hess_cond)) flag() else "",
         grey(
-          ", in SD units (warning above ",
+          ", in SD units (warning > ",
           fmt_num(warn_levels$hess_cond),
           ")"
         )
@@ -369,7 +369,7 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
       grey(
         ", for ",
         names(vbc$shift)[j],
-        " (warning above ",
+        " (warning > ",
         with_sd(warn_levels$vb_shift),
         ")"
       )
@@ -451,11 +451,11 @@ report_marginals <- function(p, sn, calls) {
       paste0(
         flag(),
         grey(
-          " marks what summary() flags: NMAD above ",
+          " marks what summary() flags: NMAD > ",
           warn_levels$nmad,
-          ", ridge bend above ",
+          ", ridge bend > ",
           summary_levels$ridge_bend,
-          ", heavy tails, unscanned mass above ",
+          ", heavy tails, unscanned mass > ",
           warn_levels$unscanned_mass
         )
       ),

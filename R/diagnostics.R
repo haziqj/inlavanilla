@@ -227,7 +227,7 @@ problem_text <- function(check, dg, env, n = 3L) {
       )
     },
     ridge_bend = paste0(
-      "Ridge bend above ",
+      "Ridge bend > ",
       summary_levels$ridge_bend,
       " for ",
       flagged_list(
@@ -238,10 +238,10 @@ problem_text <- function(check, dg, env, n = 3L) {
         summary_levels$ridge_bend,
         n
       ),
-      ": the marginal SD may be about 10% or more too small."
+      ": the marginal SD may be >10% too small."
     ),
     mean_gap = paste0(
-      "Mean gap above ",
+      "Mean gap > ",
       with_sd(summary_levels$mean_gap),
       " for ",
       flagged_list(env, "gap", dg, "mean_gap", summary_levels$mean_gap, n),
