@@ -84,7 +84,8 @@ fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
 ```
 
-Every check passes. The marginal is mildly skewed (shape about -1.4), the
+Every check passes. The marginal is mildly skewed (its skew-normal shape
+`alpha`, in `diagnostics(fit_pois, type = "param")`, is about -1.4), the
 skew-normal matches the scan to within 1% of its peak (NMAD), and its mean
 agrees with the VB-corrected mean.
 
