@@ -438,26 +438,38 @@ rbind(
 )
 ```
 
-## Bringing your own compiled code
+## Gradients for free, and compiled code
 
-Any R function works as `logpost` and `grad`, including compiled code from
-Rcpp, TMB or RTMB. TMB minimises, so negate its objective and gradient:
+[RTMB](https://github.com/kaskr/RTMB) gives the exact gradient of a
+log-posterior written in R, by automatic differentiation, with nothing to
+derive and no compiler. The log-posterior above needs only RTMB's versions
+of its densities:
 
 ```{r}
-#| label: tmb
+#| label: rtmb
 #| eval: false
-obj <- TMB::MakeADFun(data, parameters, DLL = "model")
-fit <- inla_vanilla(
-  function(theta) -obj$fn(theta),
-  init = obj$par,
-  grad = function(theta) -as.vector(obj$gr(theta))
+logpost_rtmb <- function(theta, X, y) {
+  eta <- as.numeric(X %*% theta)
+  sum(RTMB::dbinom(y, 1, RTMB::plogis(eta), log = TRUE)) +
+    sum(RTMB::dnorm(theta, 0, 2.5, log = TRUE))
+}
+obj <- RTMB::MakeADFun(
+  function(p) logpost_rtmb(p$theta, X, y),
+  list(theta = unname(init)),
+  silent = TRUE
 )
+fit_rtmb <- inla_vanilla(obj$fn, init, grad = obj$gr)
 ```
 
-The articles [Speeding up with Rcpp](rcpp.html) and [Using TMB](tmb.html)
-work through both routes for a structural equation model with 39
-parameters: in C++ with an analytic gradient, and as a TMB template with
-automatic differentiation.
+Any R function works as `logpost` and `grad`, including compiled code from
+Rcpp or TMB. A TMB template usually returns the negative log-posterior, to
+be minimised, so negate its `obj$fn` and `obj$gr`.
+
+The articles [Speeding up with Rcpp](rcpp.html) and
+[Gradients with RTMB](rtmb.html) work through both routes for a structural
+equation model with 39 parameters. C++ makes each call about ten times
+faster than R. A gradient from RTMB makes the fit more accurate, at about
+the speed of R.
 
 ## References
 

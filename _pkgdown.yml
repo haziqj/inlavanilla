@@ -23,11 +23,14 @@ articles:
   - articles/dcm
   - articles/correlation
   - articles/binary-cfa
-- title: Compiled code
+- title: Speed and gradients
   desc: >
-    Faster log-posteriors for larger models. Both articles fit the same
-    structural equation model, with 39 parameters.
+    Faster log-posteriors and exact gradients for larger models. Both
+    articles fit the same structural equation model, with 39 parameters.
   navbar: ~
   contents:
   - articles/rcpp
-  - articles/tmb
+  - articles/rtmb
+
+redirects:
+- ["articles/tmb.html", "articles/rtmb.html"]

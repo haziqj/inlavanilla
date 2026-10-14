@@ -37,9 +37,9 @@ This article does both for a structural equation model (SEM) with 39
 parameters. We write the log-posterior in plain R first, then in C++ with
 [Rcpp](https://www.rcpp.org/) and
 [RcppEigen](https://cran.r-project.org/package=RcppEigen), and then add an
-analytic gradient in C++. The article [Using TMB](tmb.html) fits the same
-model with a TMB template, which computes the gradient by automatic
-differentiation.
+analytic gradient in C++. The article [Gradients with RTMB](rtmb.html)
+writes the same model in R for RTMB, which computes the gradient by
+automatic differentiation, and compares the routes for speed and accuracy.
 
 ```{r}
 #| label: packages

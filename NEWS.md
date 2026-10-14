@@ -29,9 +29,11 @@
   degree four in whitened coordinates (six with a gradient). On test models
   it was a median 0.015 posterior SDs from exact VB, but up to about 0.1 on
   strongly skewed posteriors, where a gradient gives about 0.03.
-* Two website articles, "Speeding up with Rcpp" and "Using TMB", fit a
-  structural equation model with 39 parameters from a log-posterior written
-  in R, in C++ with an analytic gradient, and as a TMB template.
+* Two website articles, "Speeding up with Rcpp" and "Gradients with RTMB",
+  fit a structural equation model with 39 parameters from a log-posterior
+  written in R, in C++ with an analytic gradient, and in R for RTMB, which
+  gives the gradient by automatic differentiation, and compare the routes
+  for speed and accuracy.
 * A website article, "Multilevel models", fits a linear mixed model with the
   random effects integrated out, and checks its marginals against brms.
 * A website article, "Diagnostic classification models", fits the DINA model
