@@ -121,8 +121,6 @@ summary(fit)
 * **VB shift** is how far the VB mean correction moved each mean from the
   mode, in posterior SDs. The weight coefficient moves by nearly half an SD:
   the posterior is far from symmetric.
-* **Shape** is the skew-normal's shape parameter $\alpha$; zero means
-  symmetric.
 * **NMAD** measures how well the skew-normal fits the scanned log-posterior
   (the largest gap relative to the peak); small is good.
 * **Mean gap** compares the skew-normal mean with the VB-corrected mean, in

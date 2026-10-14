@@ -65,10 +65,12 @@ flagged: it is a route of the solver, not a sign of a poor
 approximation.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and
 the scanned density, relative to its peak (Jamil & Rue, 2026, Section
-4.4), flagged above 0.1. \code{alpha} (the Shape column) is the shape of the
-fitted skew-normal marginal, on the unconstrained scale: zero is a
-Gaussian marginal, and the sign gives the direction of the skew. It is
-not flagged.
+4.4), flagged above 0.1. \code{alpha} is the shape of the fitted skew-normal
+marginal, on the unconstrained scale: zero is a Gaussian marginal, and
+the sign gives the direction of the skew. It describes the marginal
+rather than checking it, so it is not in the printed table: it is in
+\code{summary(fit)$diagnostics} and \code{\link[=diagnostics]{diagnostics()}}, and \code{fit$sn} holds it
+with the other skew-normal parameters.
 \item \strong{Volume correction.} \code{gamma1}, the slope added to the scanned
 log-heights, per posterior SD along the scan, for the changing volume of
 the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
