@@ -11,7 +11,10 @@
 # (e) the VB shift against a reference VB solution computed here by tensor
 #     Gauss-Hermite quadrature (nodes by the Golub-Welsch method);
 # (f) vb = FALSE against vb = TRUE;
-# (g) the nlminb() fallback of vb_correct().
+# (g) the nlminb() fallback of vb_correct();
+# (h) a supplied Hessian: fits agree with those from the gradient alone,
+#     gamma1_hess() agrees with gamma1_grad() and the exact slope, and
+#     nlminb() reaches a badly scaled mode without a restart.
 #
 # The reference VB solution solves E_q[grad log p(mu + L z)] = 0 for mu, with
 # z ~ N(0, I) and L L' = fit$cov held fixed, as the package does. Location
@@ -1599,4 +1602,168 @@ test_that("an oversized step is cut, and a fallback that stops short is rerun", 
   expect_true(fit$diagnostics$vb$fallback)
   expect_gt(fit$diagnostics$marginals$vb_step_sigma, 0.1)
   expect_no_match(text, "rerun")
+})
+
+# (h) A supplied Hessian ------------------------------------------------------
+
+test_that("fits with a Hessian agree with fits from the gradient alone", {
+  # The Hessian route differs only in the derivatives it takes: nlminb()'s
+  # Newton steps, the Hessian at the mode and the volume correction. The
+  # gradient route takes them by central differences of the gradient, to
+  # about 1e-8 relative, and nlminb() stops it 1e-6 SDs short of the mode
+  # (normal model), so the fits differ by those errors.
+  tol <- list(
+    # observed: normal model, then Poisson regression
+    mode = 5e-6, # 1.4e-6 and 1.8e-7 SDs
+    cov = 1.5e-6, # 4.4e-7 and 4.6e-8
+    xi = 1.5e-5, # 5.2e-6 and 2.2e-8 SDs
+    omega = 4e-6, # 1.3e-6 and 2.2e-8
+    alpha = 2e-5, # 7.1e-6 and 7.7e-8
+    summary = 1.5e-6, # 4.9e-7 and 4.2e-8 SDs
+    logml = 2e-8, # 5.7e-9 and 3.1e-10
+    logml_laplace = 3e-7, # 1.0e-7 and 2.6e-9
+    mean_vb = 4e-7 # 1.3e-7 and 1.1e-8 SDs
+  )
+  for (mod in list(normal_model(), poisson_regression_model(3))) {
+    m <- length(mod$init)
+    fit_grad <- inla_vanilla(
+      mod$logpost,
+      mod$init,
+      grad = mod$grad,
+      silent = TRUE
+    )
+    fit_hess <- inla_vanilla(
+      mod$logpost,
+      mod$init,
+      grad = mod$grad,
+      hess = mod$hessian,
+      silent = TRUE
+    )
+    expect_identical(fit_hess$warnings, character())
+    d <- fit_discrepancy(fit_hess, fit_grad)
+    for (k in names(tol)) {
+      expect_lt(d[[k]], tol[[k]])
+    }
+    expect_lt(
+      max(abs(
+        fit_hess$diagnostics$marginals$gamma1 -
+          fit_grad$diagnostics$marginals$gamma1
+      )),
+      5e-8 # observed 7.5e-9 and 1.4e-8
+    )
+    # One Hessian per marginal, one at the mode and some in nlminb(). The
+    # volume correction no longer takes 2m + 2 gradient calls per marginal,
+    # and the mode search and the check of the Hessian change the count by a
+    # few more.
+    expect_gt(fit_hess$counts[["hess"]], m + 1)
+    expect_identical(fit_grad$counts[["hess"]], 0L)
+    expect_lt(
+      fit_hess$counts[["grad"]],
+      fit_grad$counts[["grad"]] - m * (2 * m + 2) + 8
+    )
+
+    # The Laplace approximation alone: only the mode stage uses the Hessian
+    fit_grad <- inla_vanilla(
+      mod$logpost,
+      mod$init,
+      grad = mod$grad,
+      vb = FALSE,
+      marginals = "gaussian",
+      silent = TRUE
+    )
+    fit_hess <- inla_vanilla(
+      mod$logpost,
+      mod$init,
+      grad = mod$grad,
+      hess = mod$hessian,
+      vb = FALSE,
+      marginals = "gaussian",
+      silent = TRUE
+    )
+    sds <- sqrt(diag(fit_grad$cov))
+    expect_lt(
+      max(abs(fit_hess$cov - fit_grad$cov) / outer(sds, sds)),
+      1.5e-6 # observed 4.4e-7 and 4.6e-8
+    )
+  }
+})
+
+test_that("gamma1_hess() agrees with gamma1_grad() and with the exact slope", {
+  mod <- poisson_regression_model(3)
+  lap <- laplace_fit(
+    mod$logpost,
+    mod$grad,
+    mod$init,
+    vanilla_control(list()),
+    he = mod$hessian
+  )
+  m <- length(lap$mode)
+  sds <- sqrt(diag(lap$Sigma))
+  v_scan <- sweep(lap$Sigma, 2, sds, "/")
+  # The reference of the test of gamma1_grad() and gamma1_lp() above
+  log_vol <- function(j, t) {
+    H <- -mod$hessian(lap$mode + t * v_scan[, j])
+    -0.5 * determinant(H[-j, -j, drop = FALSE])$modulus[[1]]
+  }
+  g_hess <- g_hess_half <- g_grad <- g_ref <- numeric(m)
+  for (j in seq_len(m)) {
+    g_hess[j] <- gamma1_hess(j, mod$hessian, lap$mode, v_scan, lap$Sigma)
+    g_hess_half[j] <- gamma1_hess(
+      j,
+      mod$hessian,
+      lap$mode,
+      v_scan,
+      lap$Sigma,
+      d_outer = 0.005
+    )
+    g_grad[j] <- gamma1_grad(j, mod$grad, lap$mode, v_scan, lap$L)
+    g_ref[j] <- (log_vol(j, 1e-4) - log_vol(j, -1e-4)) / 2e-4
+  }
+  expect_gt(max(abs(g_ref)), 0.1)
+  expect_lt(max(abs(g_hess - g_grad)), 5e-9) # observed 1.1e-9
+  # The O(d_outer) error of the forward difference and nothing else: halving
+  # d_outer halves it (observed ratios 1.9996 to 2.001), and the Richardson
+  # extrapolation leaves 1.2e-7 against values up to 0.17
+  expect_lt(max(abs((g_hess - g_ref) / (g_hess_half - g_ref) - 2)), 0.01)
+  expect_lt(max(abs(2 * g_hess_half - g_hess - g_ref)), 4e-7)
+
+  # For an exactly Gaussian log-posterior it vanishes
+  mod <- gaussian_model()
+  he <- function(x) -mod$precision
+  lap <- laplace_fit(
+    mod$logpost,
+    mod$grad,
+    mod$init,
+    vanilla_control(list()),
+    he = he
+  )
+  sds <- sqrt(diag(lap$Sigma))
+  v_scan <- sweep(lap$Sigma, 2, sds, "/")
+  for (j in 1:3) {
+    expect_lt(
+      abs(gamma1_hess(j, he, lap$mode, v_scan, lap$Sigma)),
+      1e-12 # observed 4.4e-14
+    )
+  }
+})
+
+test_that("with a Hessian, nlminb() reaches a badly scaled mode without a restart", {
+  # A correlated Gaussian with posterior SDs from 1e-6 to 1e4, started one
+  # unit off in every coordinate: millions of SDs for the first. With the
+  # gradient alone nlminb() stops short (whitened gradient 0.012) and the
+  # restart rescues it. With the Hessian its Newton steps land on the mode in
+  # one run.
+  s <- 10^c(-6, -3, 0, 2, 4)
+  P <- diag(1 / s) %*% solve(0.6^abs(outer(1:5, 1:5, "-"))) %*% diag(1 / s)
+  mu <- 10^c(-5, -2, 1, 3, 5)
+  lp <- function(x) -0.5 * drop(crossprod(x - mu, P %*% (x - mu)))
+  gr <- function(x) -drop(P %*% (x - mu))
+  init <- stats::setNames(mu + 1, paste0("x", 1:5))
+  ctrl <- vanilla_control(list())
+  lap_grad <- laplace_fit(lp, gr, init, ctrl)
+  lap_hess <- laplace_fit(lp, gr, init, ctrl, he = function(x) -P)
+  expect_false(is.null(lap_grad$restart))
+  expect_null(lap_hess$restart)
+  expect_lt(max(abs(lap_hess$mode - mu) / s), 1e-10) # observed 0
+  expect_lt(lap_hess$hess_error, 1e-6)
 })

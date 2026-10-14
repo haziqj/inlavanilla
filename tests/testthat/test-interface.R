@@ -45,6 +45,9 @@ gr_pois <- function(theta, y, a0, b0) {
   lambda <- exp(theta[[1]])
   sum(y) - length(y) * lambda + a0 - b0 * lambda
 }
+hess_pois <- function(theta, y, a0, b0) {
+  -(length(y) + b0) * exp(theta[[1]])
+}
 
 # A Poisson regression with fixed data: two correlated (r = -0.56), skewed
 # parameters, so that every diagnostic in summary() is well away from
@@ -63,6 +66,11 @@ gr_reg <- function(theta) {
   eta <- theta[["intercept"]] + theta[["slope"]] * reg_x
   res <- reg_y - exp(eta)
   c(sum(res), sum(reg_x * res)) - theta / 4
+}
+hess_reg <- function(theta) {
+  mu <- exp(theta[["intercept"]] + theta[["slope"]] * reg_x)
+  h12 <- -sum(reg_x * mu)
+  matrix(c(-sum(mu), h12, h12, -sum(reg_x^2 * mu)), 2) - diag(2) / 4
 }
 
 fit_reg <- inla_vanilla(lp_reg, init_reg, silent = TRUE)
@@ -228,6 +236,30 @@ test_that("logpost and grad must be functions", {
   )
 })
 
+test_that("hess must be a function, and needs grad", {
+  expect_error(
+    inla_vanilla(
+      lp_gauss,
+      c(a = 0),
+      grad = gr_gauss,
+      hess = "h",
+      silent = TRUE
+    ),
+    "`hess` must be a function, not a string",
+    class = "inlavanilla_error"
+  )
+  expect_error(
+    inla_vanilla(
+      lp_gauss,
+      c(a = 0),
+      hess = function(theta) -diag(1),
+      silent = TRUE
+    ),
+    "`hess` needs `grad`",
+    class = "inlavanilla_error"
+  )
+})
+
 test_that("init must be a non-empty, finite numeric vector", {
   for (bad in list("a", numeric(0), list(a = 1))) {
     expect_error(
@@ -347,6 +379,55 @@ test_that("grad must return a finite vector of the right length at init", {
       class = "inlavanilla_error"
     )
   }
+})
+
+test_that("hess must return a finite m x m matrix at init", {
+  init <- c(a = 0.5, b = 0.5)
+  for (he in list(
+    function(theta) -1,
+    function(theta) -diag(3),
+    function(theta) -(1:4),
+    function(theta) "a"
+  )) {
+    expect_error(
+      inla_vanilla(lp_gauss, init, grad = gr_gauss, hess = he, silent = TRUE),
+      "`hess` must return a numeric 2 x 2 matrix",
+      class = "inlavanilla_error"
+    )
+  }
+  err <- expect_error(
+    inla_vanilla(
+      lp_gauss,
+      init,
+      grad = gr_gauss,
+      hess = function(theta) -diag(3),
+      silent = TRUE
+    ),
+    class = "inlavanilla_error"
+  )
+  expect_match(conditionMessage(err), "with dimensions 3 x 3")
+  expect_error(
+    inla_vanilla(
+      lp_gauss,
+      init,
+      grad = gr_gauss,
+      hess = function(theta) matrix(NA_real_, 2, 2),
+      silent = TRUE
+    ),
+    "`hess` is not finite at `init`",
+    class = "inlavanilla_error"
+  )
+  expect_error(
+    inla_vanilla(
+      lp_gauss,
+      init,
+      grad = gr_gauss,
+      hess = function(theta) stop("bad data"),
+      silent = TRUE
+    ),
+    "while evaluating hess at init",
+    class = "inlavanilla_error"
+  )
 })
 
 test_that("vb, verbose and silent must be a single TRUE or FALSE", {
@@ -504,7 +585,10 @@ test_that("control entries reach the stages they tune", {
       silent = TRUE
     )$counts
   }
-  expect_identical(counts(41) - counts(21), c(logpost = 40L, grad = 0L))
+  expect_identical(
+    counts(41) - counts(21),
+    c(logpost = 40L, grad = 0L, hess = 0L)
+  )
 
   # vb_tol and vb_maxit: the VB correction of the skewed gamma-Poisson
   # posterior takes 3 fixed-point iterations at the default tolerance.
@@ -785,6 +869,52 @@ test_that("a correct analytic gradient passes the checks silently", {
   expect_equal(unname(fit$mode), c(1, 1), tolerance = 1e-8)
 })
 
+test_that("a wrong Hessian is caught at the mode, and a right one passes", {
+  # Right except for the off-diagonal entries (the posterior correlation is
+  # -0.56), and right only in its upper triangle. Neither stops the fit, but
+  # the covariance from them is wrong.
+  hess_diag <- function(theta) diag(diag(hess_reg(theta)))
+  hess_upper <- function(theta) {
+    H <- hess_reg(theta)
+    H[lower.tri(H)] <- 0
+    H
+  }
+  for (he in list(hess_diag, hess_upper)) {
+    fit <- inla_vanilla(
+      lp_reg,
+      init_reg,
+      grad = gr_reg,
+      hess = he,
+      silent = TRUE
+    )
+    expect_match(
+      fit$warnings,
+      "`hess` does not look like the Hessian of `logpost`",
+      all = FALSE
+    )
+  }
+  # A right one passes, as does a 1 x 1 Hessian given as a number
+  fit <- inla_vanilla(
+    lp_reg,
+    init_reg,
+    grad = gr_reg,
+    hess = hess_reg,
+    silent = TRUE
+  )
+  expect_identical(fit$warnings, character())
+  fit <- inla_vanilla(
+    lp_pois,
+    0.3,
+    grad = gr_pois,
+    hess = hess_pois,
+    y = pois_y,
+    a0 = pois_a0,
+    b0 = pois_b0,
+    silent = TRUE
+  )
+  expect_identical(fit$warnings, character())
+})
+
 # (c) Names, `...`, non-finite regions, one parameter -------------------------
 
 test_that("unnamed init gets the names theta[1], theta[2], ...", {
@@ -885,6 +1015,25 @@ test_that("arguments in ... reach logpost and grad", {
     "while evaluating logpost at init",
     class = "inlavanilla_error"
   )
+})
+
+test_that("arguments in ... reach hess, which comes after grad as in nlminb()", {
+  # The mode of log(lambda) is log(A / B) and the Laplace variance 1 / A,
+  # exactly. The Hessian here is a number, a 1 x 1 Hessian. Observed: both
+  # within 2e-12, relative.
+  fit <- inla_vanilla(
+    lp_pois,
+    0.3,
+    gr_pois,
+    hess_pois,
+    y = pois_y,
+    a0 = pois_a0,
+    b0 = pois_b0,
+    silent = TRUE
+  )
+  expect_equal(fit$mode[[1]], log(pois_A / pois_B), tolerance = 1e-10)
+  expect_equal(fit$cov[[1]], 1 / pois_A, tolerance = 1e-10)
+  expect_gt(fit$counts[["hess"]], 1)
 })
 
 test_that("data arguments named like vb, verbose or control reach logpost", {
@@ -1398,6 +1547,32 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_match(text, "Hessian by central differences of grad: 4 calls")
   expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning > 0.001\\)")
   expect_match(text, "Done: [0-9]+ logpost and [0-9]+ grad calls")
+
+  # With a Hessian: where it comes from, and its check against the gradient
+  text <- unwrap_msgs(capture_messages(
+    fit <- inla_vanilla(
+      lp_reg,
+      init_reg,
+      grad = gr_reg,
+      hess = hess_reg,
+      verbose = TRUE
+    )
+  ))
+  expect_match(text, "Hessian from hess, checked at the mode")
+  expect_match(text, "Hessian from hess: 1 call")
+  expect_match(
+    text,
+    "Discrepancy from central differences of grad [0-9.e-]+ \\(warning > 0.001\\), 4 grad calls"
+  )
+  expect_no_match(text, "Jacobian asymmetry")
+  expect_match(
+    text,
+    paste0(
+      "Done: [0-9]+ logpost, [0-9]+ grad and ",
+      fit$counts[["hess"]],
+      " hess calls"
+    )
+  )
 
   # Without VB or scans, it says so
   msgs <- capture_messages(inla_vanilla(

@@ -1,28 +1,31 @@
 # Stage 1a: the joint Gaussian (Laplace) approximation N(mode, Sigma) with
 # Sigma = H(mode)^-1, and the Laplace estimate of the log marginal likelihood.
 #
-# `lp` and `gr` are the wrapped log-posterior and gradient (`gr` is NULL when
-# the user gave no gradient). Returns the mode, the log-posterior there, the
-# upper Cholesky factor R of the precision (R'R = H), the covariance Sigma,
-# a whitening factor L (L L' = Sigma), the optimiser output, the gradient of
-# the log-posterior at the mode with the checks built on it, the condition
-# number of the Hessian in posterior-SD units, and the Laplace log marginal
-# likelihood. For verbose output it also says how the Hessian was taken
-# (`hessian`) and whether nlminb() was restarted (`restart`, NULL when it was
-# not).
-laplace_fit <- function(lp, gr, init, ctrl) {
+# `lp`, `gr` and `he` are the wrapped log-posterior, gradient and Hessian
+# (`gr` and `he` are NULL when the user gave none). With `he`, nlminb() takes
+# Newton steps with it, and the Hessian at the mode is the user's. Returns
+# the mode, the log-posterior there, the upper Cholesky factor R of the
+# precision (R'R = H), the covariance Sigma, a whitening factor L
+# (L L' = Sigma), the optimiser output, the gradient of the log-posterior at
+# the mode with the checks built on it, the condition number of the Hessian
+# in posterior-SD units, and the Laplace log marginal likelihood. For verbose
+# output it also says how the Hessian was taken (`hessian`) and whether
+# nlminb() was restarted (`restart`, NULL when it was not).
+laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
   ob <- function(x) {
     v <- lp(x)
     if (is.finite(v)) -v else Inf
   }
   gro <- if (is.null(gr)) NULL else function(x) -gr(x)
+  heo <- if (is.null(he)) NULL else function(x) -he(x)
   opt <- stats::nlminb(
     start = unname(init),
     objective = ob,
     gradient = gro,
+    hessian = heo,
     control = ctrl$nlminb
   )
-  cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init))
+  cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), he)
 
   # nlminb() works on the raw parameters, and its convergence tests assume
   # they are on a unit scale. Far from that (posterior SDs of 1e4, or 1e-6)
@@ -36,6 +39,7 @@ laplace_fit <- function(lp, gr, init, ctrl) {
       start = opt$par,
       objective = ob,
       gradient = gro,
+      hessian = heo,
       scale = scale,
       control = ctrl$nlminb
     )
@@ -46,7 +50,7 @@ laplace_fit <- function(lp, gr, init, ctrl) {
     )
     if (restart$kept) {
       opt <- opt2
-      cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init))
+      cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), he)
     }
   }
 
@@ -89,25 +93,41 @@ laplace_fit <- function(lp, gr, init, ctrl) {
 }
 
 # Hessian, its Cholesky factor, the covariance and the whitened gradient at
-# `mode`. Finite-difference steps are set per coordinate from fd_scales(), so
-# they suit each parameter's own scale: central differences of the gradient
-# at 1e-4 of that scale, or, without a gradient, second differences of the
-# log-posterior at a hundredth of it. R is NULL when the Hessian is not
-# positive definite. `hessian` records the method and its calls, those of
-# fd_scales() counted apart.
-laplace_at <- function(lp, gr, mode, lp_max, parnames) {
+# `mode`. With `he` the Hessian is the user's, checked against the gradient
+# by hess_discrepancy(). Otherwise finite-difference steps are set per
+# coordinate from fd_scales(), so they suit each parameter's own scale:
+# central differences of the gradient at 1e-4 of that scale, or, without a
+# gradient, second differences of the log-posterior at a hundredth of it. R
+# is NULL when the Hessian is not positive definite. `hessian` records the
+# method and its calls, those of fd_scales() counted apart.
+laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
   m <- length(mode)
   mode <- stats::setNames(mode, parnames)
-  scales <- fd_scales(lp, mode, lp_max)
-  H <- if (is.null(gr)) {
-    -fd_hessian(lp, mode, h = 0.01 * scales, f0 = lp_max)
+  if (is.null(he)) {
+    scales <- fd_scales(lp, mode, lp_max)
+    H <- if (is.null(gr)) {
+      -fd_hessian(lp, mode, h = 0.01 * scales, f0 = lp_max)
+    } else {
+      -fd_jacobian(gr, mode, h = 1e-4 * scales)
+    }
   } else {
-    -fd_jacobian(gr, mode, h = 1e-4 * scales)
+    H <- -he(mode)
+    # The curvature scales, which only rescale a restart of nlminb(), from
+    # the Hessian's own diagonal where it allows
+    d <- diag(H)
+    scales <- if (all(is.finite(d) & d > 0)) {
+      structure(1 / sqrt(d), ok = rep(TRUE, m), calls = 0L)
+    } else {
+      fd_scales(lp, mode, lp_max)
+    }
   }
-  # A Hessian is symmetric; a Jacobian of the user's gradient that is not
-  # (relative to the curvatures) means the gradient is wrong.
+  # A Hessian is symmetric. A Jacobian of the user's gradient that is not
+  # (relative to the curvatures) means the gradient is wrong. A user Hessian
+  # is checked against the gradient instead, by hess_discrepancy().
   d <- sqrt(abs(diag(H)))
-  asymmetry <- if (all(is.finite(H)) && all(d > 0)) {
+  asymmetry <- if (!is.null(he)) {
+    NA_real_
+  } else if (all(is.finite(H)) && all(d > 0)) {
     max(abs(H - t(H)) / outer(d, d))
   } else {
     0
@@ -122,11 +142,25 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
     R = R,
     scales = scales,
     asymmetry = asymmetry,
+    hess_error = NA_real_,
     grad_mode = Inf,
     hessian = list(
-      by = if (is.null(gr)) "logpost" else "grad",
-      calls = if (is.null(gr)) m^2 + m else 2 * m,
-      step_calls = attr(scales, "calls")
+      by = if (!is.null(he)) {
+        "hess"
+      } else if (is.null(gr)) {
+        "logpost"
+      } else {
+        "grad"
+      },
+      calls = if (!is.null(he)) {
+        1L
+      } else if (is.null(gr)) {
+        m^2 + m
+      } else {
+        2 * m
+      },
+      step_calls = attr(scales, "calls"),
+      check_calls = 0L
     )
   )
   if (is.null(R)) {
@@ -135,6 +169,10 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
   out$L <- backsolve(R, diag(m)) # upper triangular, L L' = H^-1
   out$Sigma <- chol2inv(R)
   dimnames(out$Sigma) <- list(parnames, parnames)
+  if (!is.null(he)) {
+    out$hess_error <- hess_discrepancy(gr, mode, out$L)
+    out$hessian$check_calls <- attr(out$hess_error, "calls")
+  }
   # The gradient of the log-posterior at the mode, and two measures of how
   # far a Newton step would still move the mode. `grad_mode`, the largest
   # whitened component, decides the restart in laplace_fit().
@@ -154,6 +192,25 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames) {
     parnames
   )
   out
+}
+
+# How far a user Hessian is from central differences of the gradient at the
+# mode, in whitened coordinates, where the Hessian is the identity: the
+# largest error in L'(-J)L w, for J the Jacobian of the gradient along L w,
+# over two fixed unit directions w (all ones, and alternating signs). It
+# costs 4 gradient calls whatever m, against 2m for a check of each column,
+# and a wrong Hessian passes only if its error happens to vanish along both
+# directions. Not finite when the gradient is not finite there.
+hess_discrepancy <- function(gr, mode, L, h = 1e-4) {
+  m <- length(mode)
+  W <- unique(cbind(rep(1, m), rep_len(c(1, -1), m)), MARGIN = 2) / sqrt(m)
+  err <- 0
+  for (k in seq_len(ncol(W))) {
+    u <- drop(L %*% W[, k])
+    jl <- (gr(mode + h * u) - gr(mode - h * u)) / (2 * h)
+    err <- max(err, abs(drop(crossprod(L, -jl)) - W[, k]))
+  }
+  structure(err, calls = 2L * ncol(W))
 }
 
 # A curvature scale for each coordinate: roughly the conditional posterior SD
