@@ -7,32 +7,49 @@ approximates a posterior in stages, and each stage can fail in its own
 way. The mode search can stop short. The Gaussian can be a poor centre,
 so the VB correction moves far. A skew-normal can fail to match the
 shape of a marginal. And each marginal is fitted to a scan of only \\\pm
-4\\ Laplace SDs around the mode, so whatever lies beyond is
-extrapolated.
+4\\ posterior SDs around the mode, so whatever lies beyond is
+extrapolated. A posterior SD in these checks is the Laplace SD at the
+mode, \\\sqrt{\Sigma\_{jj}}\\, as in INLAvaan; it is not the SD column
+of the summary table, which is the skew-normal’s.
 
 Each stage is checked as it runs, at almost no cost: the checks reuse
 what the fit has already computed.
 [`summary()`](https://rdrr.io/r/base/summary.html) reports every check
-and flags the values that look off. The clearest problems also raise one
-warning at the end of the fit. Printing the fit ends with a line
-counting its warnings and one counting the flagged checks, each shown
-only when there are any, so even a fit run with `silent = TRUE` shows
-that something needs a look.
+and flags the values that look off, and
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+returns them as numbers. Most problems also raise one warning at the end
+of the fit. Printing the fit ends with a line counting its warnings and
+one counting the flagged checks, each shown only when there are any, so
+even a fit run with `silent = TRUE` shows that something needs a look.
 
-| Check | In `fit$diagnostics` | Flagged by [`summary()`](https://rdrr.io/r/base/summary.html) | Fit-time warning |
-|----|----|----|----|
-| Mode | `optim$grad_mode` | above 0.01 SDs | its own warning |
-| VB correction | `marginals$vb_shift`, `vb$fallback` | above 1 SD, or fallback | the same |
-| Skew-normal and VB means | `marginals$sn_vs_vb` | above 0.1 SDs | no |
-| Skew-normal fit | `marginals$nmad` | above 0.05 | above 0.1 |
-| Scan path | `marginals$bend` | above 0.1 nats | no |
-| Tails | `marginals$tails` | heavy | heavy |
-| Scan-end mass | `marginals$scan_end_mass` | above 0.05 | above 0.05 |
+| Check | In `diagnostics(fit, type = "param")` | Flagged by [`summary()`](https://rdrr.io/r/base/summary.html) | Fit-time warning | From |
+|----|----|----|----|----|
+| Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
+| Hessian | `hess_cond` (in `diagnostics(fit)`) | above \\10^8\\ | the same | INLAvaan |
+| VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
+| Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
+| Scan-end mass | `scan_end_mass` | above 0.05 | the same | INLAvaan |
+| Tails | `tails` | heavy | the same | inlavanilla |
+| Scan path | `bend` | above 0.1 nats | no | inlavanilla |
+| Skew-normal and VB means | `sn_vs_vb` | above 0.1 SDs | no | inlavanilla |
 
-The levels of the fit-time warning match INLAvaan’s. They are set so
-that a healthy fit stays silent, and the flags in
-[`summary()`](https://rdrr.io/r/base/summary.html) are more sensitive: a
-flag is a prompt to look again, not a verdict.
+Most of these are the checks of INLAvaan’s
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+under the same names. Jamil and Rue (2026) use the VB shift and NMAD as
+fit diagnostics, and the gap between the skew-normal and VB means as an
+internal check; the mode shift, the Hessian condition number and the
+scan-end mass come from INLAvaan’s
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+not from the paper. The levels of those five checks are INLAvaan’s, and
+the fit-time warning uses its words. The tails check is inlavanilla’s
+own, and so are the scan-path and SN-VB checks, which only
+[`summary()`](https://rdrr.io/r/base/summary.html) flags. Every level is
+a package default, chosen so that a healthy fit stays silent, and not a
+calibrated cut-off: a tripped check is a prompt to look again, and
+silence is not a certificate of accuracy. In the simulations of Jamil
+and Rue (2026, Section 4.4), the VB shift and NMAD track the loss of
+accuracy, and the paper reports a calibration of the expected error
+against them in its Supplementary Material.
 
 ## A healthy fit
 
@@ -54,51 +71,69 @@ summary(fit_pois)
 #> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
 #> 
 #> Posterior marginals
-#>            Mean     SD   2.5%    25%    50%    75%  97.5%   Mode
-#> log_rate  0.595  0.263  0.047  0.426  0.607  0.776  1.078  0.631
+#>            Mean     SD   2.5%    50%  97.5%   Mode
+#> log_rate  0.595  0.263  0.047  0.607  1.078  0.631
 #> 
 #> Diagnostics
-#>           VB shift   SN - VB  Shape    NMAD  Bend
-#> log_rate     -0.13  -0.00077   -1.4  0.0066     0
+#>           VB shift   SN - VB  Shape    NMAD  Bend  End mass
+#> log_rate     -0.13  -0.00077   -1.4  0.0066     0   0.00038
 #> 
-#> ✔ Mode found in 7 iterations (gradient 9.8e-08 SDs).
-#> ✔ VB correction in 3 iterations: max shift 0.13 SDs.
+#> ✔ Mode found in 7 iterations (Newton step 9.8e-08 posterior SDs).
+#> ✔ VB correction in 3 iterations: max shift 0.13 posterior SDs.
 #> ✔ Skew-normal fits: max NMAD 0.0066.
-#> ✔ Skew-normal and VB means agree to within 7.7e-04 SDs.
+#> ✔ Skew-normal and VB means agree to within 7.7e-04 posterior SDs.
 #> 
 #> Log marginal likelihood: -12.354 (Laplace -12.362, VB term 0.0083)
-#> 78 logpost calls in 9ms (mode 3ms, VB 1ms, marginals 3ms)
+#> 78 logpost calls in 17ms (mode 6ms, VB 1ms, marginals 5ms)
 ```
 
 Every check passes. The marginal is mildly skewed (shape about -1.4),
 the skew-normal matches the scan to within 1% of its peak (NMAD), and
 its mean agrees with the VB-corrected mean.
 
-## The mode and the VB correction
+## The mode, the Hessian and the VB correction
 
-The mode is accepted when the gradient there, in posterior SDs, is below
-0.01: a Newton step would move it by less than a hundredth of an SD. The
-optimiser’s own return code is not used, because without a gradient it
+The mode is checked by the Newton step there, in posterior SDs
+(`mode_shift_sigma`): how far one step of Newton’s method would still
+move each parameter. It is flagged above 0.1, INLAvaan’s level, whatever
+the optimiser’s return code, because without a gradient the optimiser
 can report failure at an accurate mode, and success short of one. When
-the mode is off, the fit warns, and suggests what to change.
+the mode is off, the warning says so first, and suggests what to change.
 
-The VB correction recentres the Gaussian at a better estimate of the
-posterior mean. `vb_shift` is how far it moved each mean from the mode,
-in posterior SDs. A shift of a few tenths is normal for a skewed
-posterior; a shift above 1 SD, or a fixed-point iteration that fails and
-falls back to the optimiser, means that the posterior is far from the
-Laplace Gaussian.
+`hess_cond` is the condition number of the Hessian at the mode, with
+each parameter in posterior-SD units: the ratio of the largest to the
+smallest eigenvalue of the posterior correlation matrix. Above \\10^8\\
+some combination of the parameters is weakly identified. INLAvaan takes
+the condition number on the raw scale of the parameters, where a mere
+change of units can make it large; inlavanilla allows posterior SDs from
+\\10^{-6}\\ to \\10^4\\, so it measures it in posterior SDs instead.
+
+The VB correction recentres the Gaussian at the shift that minimises its
+Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026,
+Section 3.1). `vb_shift_sigma` is how far it moved each mean from the
+mode, in posterior SDs. `vb_shift` is the same shift on the scale of
+`logpost`, and `kld`, half the square of `vb_shift_sigma`, is the
+Kullback-Leibler divergence of each shifted marginal from the unshifted
+one. A shift of a few tenths is normal for a skewed posterior; a shift
+above 1 SD means that the posterior is far from the Laplace Gaussian.
+When the fixed-point iteration hands over to the optimiser,
+`fit$diagnostics$vb` records it, and
+[`summary()`](https://rdrr.io/r/base/summary.html) and the verbose
+output report it, but, as in INLAvaan, it is not flagged: it is a route
+of the solver, not a sign of a poor approximation.
 
 The skew-normal mean and the VB mean both estimate the posterior mean,
-by different routes, so they should agree closely. `sn_vs_vb` is their
-gap in posterior SDs, and a gap above 0.1 is flagged.
+by different routes, so they should agree closely (Jamil & Rue, 2026,
+Proposition 3.4); a gap signals higher-order effects or numerical error
+(Section 5.1). `sn_vs_vb` is their gap in posterior SDs, and a gap above
+0.1 is flagged.
 
 ## The skew-normal fit
 
 `nmad` is the largest gap between the fitted skew-normal and the scanned
-log-posterior, on the density scale and relative to the peak. A
-skew-normal has one mode and one direction of skew, so it cannot follow
-a marginal with two bumps:
+log-posterior, on the density scale and relative to the peak (Jamil &
+Rue, 2026, Section 4.4). A skew-normal has one mode and one direction of
+skew, so it cannot follow a marginal with two bumps:
 
 ``` r
 
@@ -106,23 +141,70 @@ logpost_mix <- function(theta) {
   log(0.7 * dnorm(theta[[1]], 0, 1) + 0.3 * dnorm(theta[[1]], 3, 1))
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
-#> ✔ Found the posterior mode in 4 iterations [3ms]
-#> ✔ VB mean correction, max shift 0.4σ [7ms]
-#> ✔ Fitted 1 skew-normal marginal [2ms]
-#> Warning: The approximation may be poor for some parameters.
-#> ✖ Heavy tails for theta: the density is still over 5% of its peak at the ends
-#>   of the scan, 4 Laplace SDs out, and the skew-normal extrapolates beyond them.
-#> ✖ Poor skew-normal fit for theta: largest NMAD 0.2, above 0.1.
-#> ✖ The skew-normal for theta puts up to 0.091 of its mass beyond the scanned
-#>   window (above 0.05), so its outer quantiles are extrapolated.
-#> ℹ See `summary()` of the fit for every diagnostic, and `vignette("diagnostics",
-#>   package = "inlavanilla")` for what they mean.
+#> ✔ Found the posterior mode in 4 iterations [5ms]
+#> ✔ VB mean correction, max shift 0.4σ [14ms]
+#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> Warning: Fit diagnostics flagged 3 potential issues:
+#> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
+#>   `theta` (0.20).
+#> ✖ The fitted marginal puts more than 0.05 of its mass beyond the scanned window
+#>   (4 posterior SDs either side of the mode) for `theta` (0.09); its credible
+#>   limits rely on extrapolation.
+#> ✖ Heavy tails for `theta`: the density is still over 5% of its peak at the ends
+#>   of the scanned window (4 posterior SDs either side of the mode), and the
+#>   skew-normal extrapolates beyond it.
+#> ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;
+#>   `vignette("diagnostics", package = "inlavanilla")` explains each check.
 ```
 
 The fit ends with one warning that lists every problem. The second bump
-puts mass far beyond what the Laplace SD expects, so the tails are
-heavy, the skew-normal fits the scan poorly, and it stretches its own
-tail out of the scanned window to cover the bump.
+puts mass far beyond what the Laplace SD expects, so the skew-normal
+fits the scan poorly, it stretches its own tail out of the scanned
+window to cover the bump, and the tails are heavy.
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+gives the numbers behind the warning, for the whole fit and for each
+parameter:
+
+``` r
+
+diagnostics(fit_mix)
+#>              npar         converged        iterations          grad_inf 
+#>                 1                 1                 4          1.99e-08 
+#>      grad_inf_rel           grad_l2    mode_shift_max         hess_cond 
+#>          4.74e-08          1.99e-08          2.04e-08          1.00e+00 
+#>        vb_applied      vb_shift_max     vb_kld_global           kld_max 
+#>                 1            0.3959            0.0784            0.0784 
+#>          kld_mean          nmad_max         nmad_mean scan_end_mass_max 
+#>            0.0784            0.1963            0.1963          9.13e-02 
+#>       vb_fallback      sn_vs_vb_max          bend_max     n_heavy_tails 
+#>                 0            0.7589            0.0000                 1
+diagnostics(fit_mix, type = "param")
+#>   names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift vb_shift_sigma
+#> 1 theta    0        0        0                0 0.0784    0.405         0.3959
+#>     nmad alpha scan_end_mass sn_vs_vb gamma1 tails bend
+#> 1 0.1963 4.546        0.0913   0.7589      0 FALSE    0
+```
+
+`plot(type = "sn_fit")` shows the fit against the scan it was fitted to,
+as INLAvaan’s plot of the same name does: on the scan coordinate, in
+posterior SDs from the mode, the log-posterior along the scan (“Raw”),
+the same with the volume correction added (“Corrected”), and the fitted
+skew-normal. NMAD is the largest gap between the last two.
+`type = "sn_fit_log"` draws the same on a log scale.
+
+``` r
+
+plot(fit_mix, type = "sn_fit")
+```
+
+![The scanned log-posterior of the mixture, as a density scaled to a
+peak of 1, with its second bump to the right, and the fitted
+skew-normal, a single skewed bump that runs below the main peak and
+above the dip between the
+two.](diagnostics_files/figure-html/mixture-sn-fit-1.png)
+
+Against the exact density, the skew-normal covers both modes but follows
+neither:
 
 ``` r
 
@@ -156,10 +238,13 @@ neither.](diagnostics_files/figure-html/mixture-plot-1.png)
 
 Each marginal is scanned along a straight line through the mode, the
 path on which the Laplace Gaussian puts the other parameters at their
-conditional mode given this one. When the true conditional mode bends
-away from the line, the scan misses log-density, and the marginal comes
-out too narrow. `bend` is the log-density, in nats, that one Newton step
-in the other parameters would recover at \\\pm 2\\ SDs.
+conditional mode given this one (Jamil & Rue, 2026, Lemma 3.1). The
+straight line is a first-order approximation to a possibly curved ridge
+(Section 3.2.1). When the true conditional mode bends away from the
+line, the scan misses log-density, and the marginal comes out too
+narrow. `bend`, inlavanilla’s own check, is the log-density, in nats,
+that one Newton step in the other parameters would recover at \\\pm 2\\
+posterior SDs.
 
 This happens when a parameter’s spread depends on another parameter that
 the data pin down poorly. A normal mean with an unknown SD, from 12
@@ -218,13 +303,14 @@ different things:
   peak, that is, when the density there is over 5% of its peak. A
   Gaussian is 8 nats down at \\\pm 4\\ SDs.
 - `scan_end_mass` is the mass the **fitted skew-normal** puts beyond the
-  window, where it is extrapolated (as INLAvaan’s `diagnostics()`
+  window, where it is extrapolated (as INLAvaan’s
+  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
   reports it). A Gaussian marginal gives \\2\Phi(-4) = 6.3 \times
   10^{-5}\\; the larger it is, the more of the marginal is extrapolated.
 
 Neither one can see the mass the true posterior has beyond the window.
 The figure shows three one-parameter posteriors whose exact densities
-are known. The x axis is in Laplace SDs from the mode, so the scanned
+are known. The x axis is in posterior SDs from the mode, so the scanned
 window is always \\-4\\ to \\4\\ (the grey band).
 
 ![Three columns, one posterior each. Top row: the log density with the
@@ -242,9 +328,10 @@ nats below the peak. In the bottom row, the orange shading is
 `scan_end_mass` and the grey shading is the exact posterior’s mass
 beyond the window.
 
-1.  **Well behaved.** The scan ends are about 8 nats down, as for a
-    Gaussian, and neither the fit nor the posterior has much mass
-    outside. Both checks are rightly quiet.
+1.  **Well behaved.** The scan ends are 5.8 and 11.6 nats down, either
+    side of a Gaussian’s 8, as the Poisson log rate is a little skewed,
+    and neither the fit nor the posterior has much mass outside. Both
+    checks are rightly quiet.
 2.  **Heavy inside the window.** A Cauchy posterior is still high at the
     ends of the scan, so `tails` fires, and the fit warns.
     `scan_end_mass` stays under 0.05: the skew-normal has Gaussian
@@ -260,8 +347,10 @@ beyond the window.
 
 The third case is the known limit of a skew-normal at a boundary: no
 check that reads only the scanned window can see a tail that starts
-beyond it. In the structural equation model of the [Rcpp
-article](http://haziqj.ml/inlavanilla/articles/rcpp.md), two log
+beyond it. Jamil and Rue (2026, Section 4.4) find the same miss in the
+lower tail of a variance near zero, the boundary pile-up that a unimodal
+skew-normal cannot capture. In the structural equation model of the
+[Rcpp article](http://haziqj.ml/inlavanilla/articles/rcpp.md), two log
 residual variances behave like this, more strongly. Their skew-normal
 marginals are too narrow on the log scale, although on the variance
 scale the error is much smaller. INLAvaan gives the same marginals
@@ -271,9 +360,11 @@ there.
 
 The fit-time warning is a condition of class
 `inlavanilla_diagnostics_warning`, which is also an
-`inlavanilla_warning`. With `silent = TRUE` nothing is printed, and
-every warning raised during the fit is kept in `fit$warnings` as plain
-text, which suits simulations:
+`inlavanilla_warning`. Its headline counts the problems, as INLAvaan’s
+does, and it names at most three parameters for each;
+[`summary()`](https://rdrr.io/r/base/summary.html) lists them all. With
+`silent = TRUE` nothing is printed, and every warning raised during the
+fit is kept in `fit$warnings` as plain text, which suits simulations:
 
 ``` r
 
@@ -281,11 +372,11 @@ fit_mix_quiet <- inla_vanilla(logpost_mix, c(theta = -0.2), silent = TRUE)
 length(fit_mix_quiet$warnings)
 #> [1] 1
 cat(fit_mix_quiet$warnings)
-#> The approximation may be poor for some parameters.
-#> ✖ Heavy tails for theta: the density is still over 5% of its peak at the ends of the scan, 4 Laplace SDs out, and the skew-normal extrapolates beyond them.
-#> ✖ Poor skew-normal fit for theta: largest NMAD 0.2, above 0.1.
-#> ✖ The skew-normal for theta puts up to 0.091 of its mass beyond the scanned window (above 0.05), so its outer quantiles are extrapolated.
-#> ℹ See `summary()` of the fit for every diagnostic, and `vignette("diagnostics", package = "inlavanilla")` for what they mean.
+#> Fit diagnostics flagged 3 potential issues:
+#> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `theta` (0.20).
+#> ✖ The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 posterior SDs either side of the mode) for `theta` (0.09); its credible limits rely on extrapolation.
+#> ✖ Heavy tails for `theta`: the density is still over 5% of its peak at the ends of the scanned window (4 posterior SDs either side of the mode), and the skew-normal extrapolates beyond it.
+#> ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`; `vignette("diagnostics", package = "inlavanilla")` explains each check.
 ```
 
 To handle the warning in code, catch its class:
@@ -299,9 +390,9 @@ fit <- withCallingHandlers(
     invokeRestart("muffleWarning")
   }
 )
-#> ✔ Found the posterior mode in 4 iterations [0ms]
-#> ✔ VB mean correction, max shift 0.4σ [0ms]
-#> ✔ Fitted 1 skew-normal marginal [2ms]
+#> ✔ Found the posterior mode in 4 iterations [1ms]
+#> ✔ VB mean correction, max shift 0.4σ [1ms]
+#> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Check this fit.
 ```
 
@@ -310,5 +401,12 @@ fit <- withCallingHandlers(
 When you pass `grad`, it is compared with finite differences of
 `logpost` at `init`, per posterior SD, and its Jacobian at the mode is
 checked for symmetry, as the Hessian of a function must be. Either
-failure gives a warning, because a wrong gradient gives a wrong mode and
-wrong marginals.
+failure gives a warning of its own, because a wrong gradient gives a
+wrong mode and wrong marginals.
+
+## References
+
+Jamil, H., & Rue, H. (2026). *Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>

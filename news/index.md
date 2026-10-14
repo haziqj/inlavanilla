@@ -43,15 +43,40 @@
 - Progress bars follow the `cli.progress_show_after` option when it is
   set (half a second otherwise), so a knitr or Quarto setup chunk can
   keep them out of a rendered document.
-- The marginal diagnostics include `scan_end_mass`, the mass each fitted
-  skew-normal puts outside the scanned window, as in INLAvaan’s
-  `diagnostics()`; [`summary()`](https://rdrr.io/r/base/summary.html)
-  flags it above 0.05.
-- A fit whose marginals are clearly off now ends with one warning, of
-  class `inlavanilla_diagnostics_warning`: heavy tails, an NMAD above
-  0.1, a scan-end mass above 0.05, a VB shift above 1 SD or the VB
-  fallback, at INLAvaan’s levels. Healthy fits stay silent. A new
-  vignette, “Diagnostics”, explains every check.
+- The diagnostics follow INLAvaan’s. Each parameter has the Newton step
+  at the mode in posterior SDs (`mode_shift_sigma`), the VB shift on the
+  scale of `logpost` (`vb_shift`) and in posterior SDs
+  (`vb_shift_sigma`), with the Kullback-Leibler divergence of each
+  shifted marginal (`kld`), and `scan_end_mass`, the mass each fitted
+  skew-normal puts outside the scanned window; the VB columns are `NA`
+  when `vb = FALSE`. The fit also records the condition number of the
+  Hessian in posterior-SD units (`hess_cond`).
+  [`summary()`](https://rdrr.io/r/base/summary.html) and
+  `verbose = TRUE` show the scan-end mass.
+- A fit whose checks look off ends with one warning, of class
+  `inlavanilla_diagnostics_warning`, headed “Fit diagnostics flagged N
+  potential issues”, in INLAvaan’s words and at its levels: a Newton
+  step at the mode above 0.1 posterior SDs (whatever
+  [`nlminb()`](https://rdrr.io/r/stats/nlminb.html)’s return code, with
+  its message and a hint), an NMAD above 0.1, a scan-end mass above
+  0.05, a VB shift above 1 SD, and a Hessian condition number above 1e8;
+  heavy tails are inlavanilla’s own check. Like INLAvaan, the fit only
+  records the VB fallback.
+  [`summary()`](https://rdrr.io/r/base/summary.html) flags the same
+  checks at the same levels, and also the scan-path bend and the gap
+  between the skew-normal and VB means; its lines list every flagged
+  parameter, worst first, with its value (names only for the heavy-tails
+  check, which is yes or no). Healthy fits stay silent. A new vignette,
+  “Diagnostics”, explains every check, with citations of Jamil and Rue
+  (2026).
+- `diagnostics(fit)` and `diagnostics(fit, type = "param")` return the
+  checks as numbers, with the names, order and print formats of
+  INLAvaan’s
+  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+  followed by inlavanilla’s own. `plot(fit, type = "sn_fit")` and
+  `type = "sn_fit_log"` draw each skew-normal fit against the scan it
+  was fitted to, as INLAvaan’s plot does, from the scans the fit now
+  keeps in `fit$scan`.
 - The check of a user `grad` also compares it with finite differences
   one curvature scale from `init`, so a gradient that is wrong by a
   constant factor is caught even when `init` is at the mode.
@@ -63,3 +88,13 @@
   ends with a line when the fit raised warnings and one when
   [`summary()`](https://rdrr.io/r/base/summary.html) flags any check, so
   a fit run with `silent = TRUE` does not look clean when it is not.
+- [`summary()`](https://rdrr.io/r/base/summary.html) reports the 2.5%,
+  50% and 97.5% quantiles by default, as R-INLA does, instead of adding
+  the quartiles, so its table fits in 80 columns and matches
+  [`print()`](https://rdrr.io/r/base/print.html). Pass `probs` for
+  others.
+- [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) wrap long lines to
+  the console width (the `width` option in R Markdown and Quarto), and
+  split a table too wide for it into blocks of columns, as R does for a
+  matrix.

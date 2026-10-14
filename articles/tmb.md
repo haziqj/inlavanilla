@@ -278,9 +278,9 @@ fit <- inla_vanilla(
   init,
   grad = function(theta) -as.vector(obj$gr(theta))
 )
-#> ✔ Found the posterior mode in 90 iterations [28ms]
-#> ✔ VB mean correction, max shift 0.43σ [1.2s]
-#> ✔ Fitted 39 skew-normal marginals [367ms]
+#> ✔ Found the posterior mode in 91 iterations [54ms]
+#> ✔ VB mean correction, max shift 0.43σ [2.1s]
+#> ✔ Fitted 39 skew-normal marginals [683ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -299,13 +299,13 @@ time_per_call <- function(f, n) {
 }
 fit$counts
 #> logpost    grad 
-#>    1539   15540
+#>    1537   15541
 c(
   fn = time_per_call(function() obj$fn(init), n = 2000),
   gr = time_per_call(function() obj$gr(init), n = 1000)
 )
-#>   fn   gr 
-#> 32.5 84.0
+#>    fn    gr 
+#>  59.5 146.0
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for
@@ -350,7 +350,7 @@ fit
 #> logv_y1            0.685   0.246   0.181   0.692   1.146   0.708
 #> logv_y2            2.065   0.178   1.719   2.063   2.418   2.060
 #> logv_y3            1.655   0.196   1.277   1.653   2.044   1.649
-#> logv_y4            1.207   0.231   0.733   1.214   1.641   1.229
+#> logv_y4            1.207   0.231   0.732   1.214   1.641   1.229
 #> logv_y5            0.902   0.211   0.487   0.903   1.314   0.904
 #> logv_y6            1.643   0.181   1.290   1.642   2.001   1.640
 #> logv_y7            1.320   0.209   0.909   1.320   1.727   1.321
@@ -442,7 +442,8 @@ loo_sem
 #> p_loo         38.6   3.0
 #> looic       3177.7  40.9
 #> 
-#> ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit 35.
+#> ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit
+#>   35.
 ```
 
 INLAvaan’s [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) uses

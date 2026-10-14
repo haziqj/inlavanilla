@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>INLA-Style Skew-Normal Marginals for Any Log-Posterior • inlavanilla</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" sizes="any" href="favicon.ico">
+<link rel="manifest" href="site.webmanifest">
 <!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
   window.MathJax = {
     chtml: {
@@ -19,6 +24,7 @@
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="INLA-Style Skew-Normal Marginals for Any Log-Posterior">
 <meta name="description" content="Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the INLAvaan package (Jamil &amp; Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) &lt;doi:10.48550/arXiv.2609.00670&gt;.">
 <meta property="og:description" content="Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the INLAvaan package (Jamil &amp; Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) &lt;doi:10.48550/arXiv.2609.00670&gt;.">
+<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -65,8 +71,10 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="inlavanilla">inlavanilla<a class="anchor" aria-label="anchor" href="#inlavanilla"></a>
-</h1></div>
+<div class="page-header">
+<img src="logo.png" class="logo" alt=""><h1 id="inlavanilla-">inlavanilla <a class="anchor" aria-label="anchor" href="#inlavanilla-"></a>
+</h1>
+</div>
 <!-- badges: start -->
 
 <blockquote>

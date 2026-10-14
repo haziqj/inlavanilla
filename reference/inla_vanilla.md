@@ -1,8 +1,9 @@
 # INLA-style posterior approximation for any log-posterior
 
 Approximates the posterior of a parameter vector from its log density
-alone, using the approximation pipeline of INLAvaan with no latent field
-and nothing model-specific. The pipeline has four stages:
+alone, using the approximation pipeline of INLAvaan (Jamil & Rue, 2026a,
+2026b) with no latent field and nothing model-specific. The pipeline has
+four stages:
 
 1.  **Joint Gaussian (Laplace).** The posterior mode \\\vartheta^\*\\
     and the inverse Hessian \\\Omega\\ there give a Gaussian
@@ -118,9 +119,10 @@ inla_vanilla(
 An object of class `inla_vanilla`, with methods for
 [`print()`](https://rdrr.io/r/base/print.html),
 [`summary()`](https://rdrr.io/r/base/summary.html),
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md). It
-is a list holding, among other things:
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html),
+[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) and
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md).
+It is a list holding, among other things:
 
 - `summary`: the posterior summary table (mean, SD, quantiles, mode).
 
@@ -133,7 +135,31 @@ is a list holding, among other things:
 
 - `vb`, `marginals`, `verbose`, `silent`: the settings the fit used.
 
-- `logml`: the log marginal likelihood.
+- `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
+  part.
+
+- `diagnostics`: the checks of each stage, which
+  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  returns under INLAvaan's names and
+  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  explains. `optim` holds the return code, message and iterations of
+  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), the gradient
+  of minus the log-posterior at the mode (`grad`), the whitened gradient
+  there (`grad_mode`), and the condition number of the Hessian in
+  posterior-SD units (`hess_cond`). `vb` holds the iterations of the VB
+  correction, whether it fell back to
+  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) (`fallback`),
+  and the Kullback-Leibler divergence of the shift (`kld_global`); it is
+  `NULL` when `vb = FALSE`. `marginals` is a data frame with a row per
+  parameter: `mode_shift_sigma`, `kld`, `vb_shift`, `vb_shift_sigma`,
+  `nmad`, `alpha`, `scan_end_mass`, `sn_vs_vb`, `gamma1`, `tails` and
+  `bend`, with `NA` for the checks the fit did not run.
+
+- `scan`: the scans the skew-normals were fitted to, for
+  `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
+  mode, the log-posterior at each point (`logpost`, a column per
+  parameter), and the log scale factor `logC` of each fit on that grid.
+  It is `NULL` for Gaussian marginals.
 
 - `warnings`: the messages of the warnings raised during the fit, as a
   character vector of plain text, each message once (empty when there
@@ -195,11 +221,14 @@ half as wide as the posterior, with the 2.5% quantile about 2 posterior
 SDs too high; the other 37 were within 7% in SD. On the variance scale,
 where the tail near zero is compressed, the two were much closer: means
 0.2 posterior SDs too high and SDs 10 to 15% too small. INLAvaan's
-marginals of this model are the same as inlavanilla's. The `bend`
-diagnostic of
+marginals of this model are the same as inlavanilla's: Jamil and Rue
+(2026a, Section 4.4) find the same miss in the lower tail of a variance
+near zero, the boundary pile-up that a unimodal skew-normal cannot
+capture. The `bend` diagnostic of
 [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 flagged both, but its size does not say how far off a marginal is, and
-the `tails` check, which looks only 4 Laplace SDs out, missed them.
+the `tails` check, which looks only 4 posterior SDs either side of the
+mode (the Laplace SDs), missed them.
 
 ## Gradients
 
@@ -250,8 +279,13 @@ took, and shows a progress bar while it runs for longer than half a
 second, or than the option `cli.progress_show_after` when it is set. In
 knitr or Quarto documents, where a bar cannot redraw in place, a larger
 `cli.progress_show_after` in the setup chunk keeps bars out of the
-output. Warnings, such as a mode that was not reached or a gradient that
-does not match `logpost`, are signalled as usual.
+output. Warnings, such as a gradient that does not match `logpost`, are
+signalled as usual. A fit whose checks look off, such as a mode that was
+not reached, ends with one warning that lists them, as INLAvaan's does
+(see
+[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+and
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)).
 
 `verbose = TRUE` adds a full diagnostic of the fit, in grey lines under
 each stage. It reports what the fit computes anyway, with no further
@@ -263,20 +297,23 @@ calls of `logpost` or `grad`:
 
 - The mode: the message, iterations and evaluations of
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), and whether
-  it was restarted with the parameters rescaled; the log-posterior and
-  the whitened gradient at the mode; how the Hessian was taken (and, for
-  a supplied `grad`, the asymmetry of its Jacobian); the largest
-  posterior correlation and the smallest eigenvalue of the correlation
-  matrix, which is near zero when some combination of the parameters is
-  poorly identified; and the Laplace log marginal likelihood.
+  it was restarted with the parameters rescaled; the log-posterior at
+  the mode, the whitened gradient there (which decides the restart) and
+  the largest Newton step in posterior SDs (which the fit-time warning
+  checks); how the Hessian was taken (and, for a supplied `grad`, the
+  asymmetry of its Jacobian); the largest posterior correlation and the
+  smallest eigenvalue of the correlation matrix, which is near zero when
+  some combination of the parameters is poorly identified, and the
+  condition number of the Hessian in posterior-SD units; and the Laplace
+  log marginal likelihood.
 
 - The VB correction: the largest step, in posterior SDs, at each
   fixed-point iteration, whether Anderson acceleration or the fallback
   optimiser was used, the largest shift, and the term it adds to the log
   marginal likelihood.
 
-- The marginals: the shape, NMAD, bend, tails and volume correction
-  `gamma1` of each parameter, with the values that
+- The marginals: the shape, NMAD, bend, tails, scan-end mass and volume
+  correction `gamma1` of each parameter, with the values that
   [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   flags marked.
 
@@ -316,6 +353,8 @@ INLA-based approximate Bayesian structural equation modelling*
 [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) for
 posterior draws and derived quantities,
 [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+and
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
 for diagnostics.
 
 ## Examples
@@ -338,7 +377,7 @@ logpost <- function(theta, y) {
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
 #> ✔ Found the posterior mode in 10 iterations [3ms]
 #> ✔ VB mean correction, max shift 0.24σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
@@ -365,26 +404,27 @@ fit <- inla_vanilla(
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [0ms]
+#> ✔ Found the posterior mode in 10 iterations [1ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26 gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 9e-08σ (warning above 0.01σ)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step 8.8e-08σ (warning above 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu, log_sigma), smallest eigenvalue 1
+#>   Hessian condition number 1, in posterior-SD units (warning above 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [1ms]
+#> ✔ VB mean correction, max shift 0.24σ [2ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0081, 2.4e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
-#>   Largest shift 0.24σ, for log_sigma
+#>   Largest shift 0.24σ, for log_sigma (warning above 1σ)
 #>   KL term 0.03, giving a log marginal likelihood of -66.38
 #>   81 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [4ms]
-#>              Shape     NMAD     Bend  Tails    gamma1
-#>   mu         -0.25  4.2e-05     0.13!    ok  -0.00014
-#>   log_sigma   1.32   0.0076  5.5e-06     ok      0.13
-#>   ! marks what summary() flags: NMAD above 0.05, bend above 0.1, heavy tails
+#> ✔ Fitted 2 skew-normal marginals [6ms]
+#>              Shape     NMAD     Bend  Tails  End mass    gamma1
+#>   mu         -0.25  4.2e-05     0.13!    ok   6.4e-05  -0.00014
+#>   log_sigma   1.32   0.0076  5.5e-06     ok   0.00057      0.13
+#>   ! marks what summary() flags: NMAD above 0.1, bend above 0.1, heavy tails, scan-end mass above 0.05
 #>   66 logpost calls
-#> ℹ Done: 210 logpost calls in 11ms
+#> ℹ Done: 210 logpost calls in 21ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

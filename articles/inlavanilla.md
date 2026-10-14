@@ -85,9 +85,9 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.43σ [10ms]
-#> ✔ Fitted 3 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 10 iterations [8ms]
+#> ✔ VB mean correction, max shift 0.43σ [18ms]
+#> ✔ Fitted 3 skew-normal marginals [10ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──
 #> 
@@ -110,8 +110,8 @@ diagnostic of each step, and `silent = TRUE` prints nothing at all, as
 in a simulation; the warnings it would have shown are kept in
 `fit$warnings`. The fits below use `silent = TRUE`.
 
-[`summary()`](https://rdrr.io/r/base/summary.html) adds the quartiles
-and diagnostics for each stage:
+[`summary()`](https://rdrr.io/r/base/summary.html) adds diagnostics for
+each stage:
 
 ``` r
 
@@ -119,25 +119,27 @@ summary(fit)
 #> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
 #> 
 #> Posterior marginals
-#>         Mean     SD    2.5%     25%     50%     75%  97.5%    Mode
-#> b0    -1.104  0.615  -2.398  -1.497  -1.072  -0.678  0.017  -1.008
-#> b_wt   -5.12   1.35   -8.00   -5.97   -5.03   -4.18  -2.72   -4.85
-#> b_hp   1.564  0.704   0.306   1.073   1.518   2.008  3.069   1.423
+#>         Mean     SD    2.5%     50%  97.5%    Mode
+#> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
+#> b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85
+#> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
 #> 
 #> Diagnostics
-#>       VB shift  SN - VB  Shape    NMAD   Bend
-#> b0       -0.13   0.0084   -1.5  0.0091   0.14
-#> b_wt     -0.43   -0.057   -1.7   0.017   0.05
-#> b_hp      0.26    0.076    1.7  0.0049  0.024
+#>       VB shift  SN - VB  Shape    NMAD   Bend  End mass
+#> b0       -0.13   0.0084   -1.5  0.0091   0.14   0.00041
+#> b_wt     -0.43   -0.057   -1.7   0.017   0.05    0.0022
+#> b_hp      0.26    0.076    1.7  0.0049  0.024    0.0018
 #> 
-#> ✔ Mode found in 10 iterations (gradient 2.2e-07 SDs).
-#> ✔ VB correction in 4 iterations: max shift 0.43 SDs.
-#> ! The straight scan misses up to 0.14 nats at +-2 SDs for b0: the marginal may be too narrow.
+#> ✔ Mode found in 10 iterations (Newton step 1.4e-07 posterior SDs).
+#> ✔ Hessian condition number 4.4, in posterior-SD units.
+#> ✔ VB correction in 4 iterations: max shift 0.43 posterior SDs.
 #> ✔ Skew-normal fits: max NMAD 0.017.
-#> ✔ Skew-normal and VB means agree to within 0.076 SDs.
+#> ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `b0`
+#>   (0.14): the marginal may be too narrow.
+#> ✔ Skew-normal and VB means agree to within 0.076 posterior SDs.
 #> 
 #> Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)
-#> 511 logpost calls in 24ms (mode 4ms, VB 11ms, marginals 6ms)
+#> 511 logpost calls in 42ms (mode 8ms, VB 19ms, marginals 11ms)
 ```
 
 - **VB shift** is how far the VB mean correction moved each mean from
@@ -155,6 +157,16 @@ summary(fit)
   because it runs along a straight line while the other parameters’
   conditional mode bends away from it. Above 0.1 it is flagged, as here
   for the intercept: its marginal may be a little too narrow.
+- **End mass** is the mass each skew-normal puts beyond the scanned
+  window, 4 posterior SDs either side of the mode, where it is
+  extrapolated. It is flagged above 0.05.
+
+`diagnostics(fit)` returns the same checks as numbers, under the names
+that INLAvaan’s
+[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+uses, and
+[`vignette("diagnostics", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/diagnostics.md)
+explains each one.
 
 ### Seeing the skew
 
@@ -277,7 +289,7 @@ grad <- function(theta, X, y) {
 }
 fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
-#> [1] 1.813245e-06
+#> [1] 1.813216e-06
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 #>                    logpost grad
 #> finite_differences     511    0
@@ -345,7 +357,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008176
+#> [1,] -0.7657929 -5.309342 0.3008175
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```

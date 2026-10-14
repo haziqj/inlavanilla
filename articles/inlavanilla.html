@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Get started with inlavanilla • inlavanilla</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
 <!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
   window.MathJax = {
     chtml: {
@@ -19,6 +24,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="inlavanilla_files/libs/quarto-html/popper.min.js"></script><script src="inlavanilla_files/libs/quarto-html/tippy.umd.min.js"></script><link href="inlavanilla_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="inlavanilla_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Get started with inlavanilla">
+<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -65,8 +71,7 @@
 </nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Get started with inlavanilla</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Get started with inlavanilla</h1>
 
 
 
@@ -131,9 +136,9 @@
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [4ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [10ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [6ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [8ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [18ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [10ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -146,32 +151,34 @@
 <span><span class="co">#&gt; ! 1 check flagged by `summary()`.</span></span></code></pre></div>
 </div>
 <p>The header names the approximation: skew-normal marginals, with the VB mean correction. The table summarises each parameter’s skew-normal marginal: the mean, standard deviation, quantiles and mode. The last line says that <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags one of its checks; we come to it below. Each step of the fit reports as it finishes, with the time it took. <code>verbose = TRUE</code> adds a full diagnostic of each step, and <code>silent = TRUE</code> prints nothing at all, as in a simulation; the warnings it would have shown are kept in <code>fit$warnings</code>. The fits below use <code>silent = TRUE</code>.</p>
-<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds the quartiles and diagnostics for each stage:</p>
+<p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds diagnostics for each stage:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Posterior marginals</span></span>
-<span><span class="co">#&gt;         Mean     SD    2.5%     25%     50%     75%  97.5%    Mode</span></span>
-<span><span class="co">#&gt; b0    -1.104  0.615  -2.398  -1.497  -1.072  -0.678  0.017  -1.008</span></span>
-<span><span class="co">#&gt; b_wt   -5.12   1.35   -8.00   -5.97   -5.03   -4.18  -2.72   -4.85</span></span>
-<span><span class="co">#&gt; b_hp   1.564  0.704   0.306   1.073   1.518   2.008  3.069   1.423</span></span>
+<span><span class="co">#&gt;         Mean     SD    2.5%     50%  97.5%    Mode</span></span>
+<span><span class="co">#&gt; b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008</span></span>
+<span><span class="co">#&gt; b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85</span></span>
+<span><span class="co">#&gt; b_hp   1.564  0.704   0.306   1.518  3.069   1.423</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Diagnostics</span></span>
-<span><span class="co">#&gt;       VB shift  SN - VB  Shape    NMAD   Bend</span></span>
-<span><span class="co">#&gt; b0       -0.13   0.0084   -1.5  0.0091   0.14</span></span>
-<span><span class="co">#&gt; b_wt     -0.43   -0.057   -1.7   0.017   0.05</span></span>
-<span><span class="co">#&gt; b_hp      0.26    0.076    1.7  0.0049  0.024</span></span>
+<span><span class="co">#&gt;       VB shift  SN - VB  Shape    NMAD   Bend  End mass</span></span>
+<span><span class="co">#&gt; b0       -0.13   0.0084   -1.5  0.0091   0.14   0.00041</span></span>
+<span><span class="co">#&gt; b_wt     -0.43   -0.057   -1.7   0.017   0.05    0.0022</span></span>
+<span><span class="co">#&gt; b_hp      0.26    0.076    1.7  0.0049  0.024    0.0018</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ✔ Mode found in 10 iterations (gradient 2.2e-07 SDs).</span></span>
-<span><span class="co">#&gt; ✔ VB correction in 4 iterations: max shift 0.43 SDs.</span></span>
-<span><span class="co">#&gt; ! The straight scan misses up to 0.14 nats at +-2 SDs for b0: the marginal may be too narrow.</span></span>
+<span><span class="co">#&gt; ✔ Mode found in 10 iterations (Newton step 1.4e-07 posterior SDs).</span></span>
+<span><span class="co">#&gt; ✔ Hessian condition number 4.4, in posterior-SD units.</span></span>
+<span><span class="co">#&gt; ✔ VB correction in 4 iterations: max shift 0.43 posterior SDs.</span></span>
 <span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.017.</span></span>
-<span><span class="co">#&gt; ✔ Skew-normal and VB means agree to within 0.076 SDs.</span></span>
+<span><span class="co">#&gt; ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `b0`</span></span>
+<span><span class="co">#&gt;   (0.14): the marginal may be too narrow.</span></span>
+<span><span class="co">#&gt; ✔ Skew-normal and VB means agree to within 0.076 posterior SDs.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -11.615 (Laplace -11.709, VB term 0.094)</span></span>
-<span><span class="co">#&gt; 511 logpost calls in 24ms (mode 4ms, VB 11ms, marginals 6ms)</span></span></code></pre></div>
+<span><span class="co">#&gt; 511 logpost calls in 42ms (mode 8ms, VB 19ms, marginals 11ms)</span></span></code></pre></div>
 </div>
 <ul>
 <li>
@@ -184,7 +191,11 @@
 <strong>SN - VB</strong> compares the skew-normal mean with the VB-corrected mean, in posterior SDs. Both estimate the posterior mean, so they should agree; a large gap means the posterior is far from Gaussian and either may be off.</li>
 <li>
 <strong>Bend</strong> is the log-density, in nats, that each scan misses 2 SDs out, because it runs along a straight line while the other parameters’ conditional mode bends away from it. Above 0.1 it is flagged, as here for the intercept: its marginal may be a little too narrow.</li>
-</ul></section><section class="level3"><h3 id="seeing-the-skew">Seeing the skew<a class="anchor" aria-label="anchor" href="#seeing-the-skew"></a>
+<li>
+<strong>End mass</strong> is the mass each skew-normal puts beyond the scanned window, 4 posterior SDs either side of the mode, where it is extrapolated. It is flagged above 0.05.</li>
+</ul>
+<p><code>diagnostics(fit)</code> returns the same checks as numbers, under the names that INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code> uses, and <code><a href="../articles/diagnostics.html">vignette("diagnostics", package = "inlavanilla")</a></code> explains each one.</p>
+</section><section class="level3"><h3 id="seeing-the-skew">Seeing the skew<a class="anchor" aria-label="anchor" href="#seeing-the-skew"></a>
 </h3>
 <p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> draws each skew-normal marginal (solid), with the Laplace Gaussian (dashed) for comparison:</p>
 <div class="cell" data-layout-align="center">
@@ -277,7 +288,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_g</span><span class="op">$</span><span class="va">summary</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 1.813245e-06</span></span>
+<span><span class="co">#&gt; [1] 1.813216e-06</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>finite_differences <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">counts</span>, gradient <span class="op">=</span> <span class="va">fit_g</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                    logpost grad</span></span>
 <span><span class="co">#&gt; finite_differences     511    0</span></span>
@@ -322,7 +333,7 @@
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;              b0      b_wt      b_hp</span></span>
-<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008176</span></span>
+<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008175</span></span>
 <span><span class="co">#&gt; [2,] -1.7688214 -3.819659 1.2958502</span></span>
 <span><span class="co">#&gt; [3,] -0.9887956 -4.875465 1.0419254</span></span></code></pre></div>
 </div>

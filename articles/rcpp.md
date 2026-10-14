@@ -271,7 +271,7 @@ time_per_call <- function(f, n) {
 }
 us_r <- time_per_call(function() logpost_r(init, Y), n = 1000)
 us_r
-#> [1] 50
+#> [1] 108
 ```
 
 With `vb = FALSE`,
@@ -282,14 +282,14 @@ skew-normal marginals:
 ``` r
 
 fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = FALSE)
-#> ✔ Found the posterior mode in 80 iterations [396ms]
-#> ✔ Fitted 39 skew-normal marginals [521ms]
+#> ✔ Found the posterior mode in 83 iterations [841ms]
+#> ✔ Fitted 39 skew-normal marginals [997ms]
 fit_r$counts
 #> logpost    grad 
-#>   14055       0
+#>   14295       0
 ```
 
-These two stages take 14,055 calls. The VB correction would add far
+These two stages take 14,295 calls. The VB correction would add far
 more: it evaluates the gradient at \\2m^2 + 1 = 3{,}043\\ points per
 sweep, and without `grad` each gradient costs \\m + 1 = 40\\ calls, over
 a few sweeps. We come back to the cost of a full fit below.
@@ -499,7 +499,7 @@ vapply(points, function(th) logpost_cpp(th, Y) - logpost_r(th, Y), 0)
 #> [1] -4.547474e-13  0.000000e+00  0.000000e+00 -2.273737e-13  0.000000e+00
 #> [6] -4.547474e-13
 max(abs(loglik_cpp(theta_inlavaan, Y) - loglik_r(theta_inlavaan, Y)))
-#> [1] 7.105427e-15
+#> [1] 3.552714e-15
 ```
 
 The gradient should match central differences of the R log-posterior, up
@@ -525,7 +525,7 @@ vapply(
   },
   0
 )
-#> [1] 1.461419e-08 2.310907e-08 9.214642e-09 7.379461e-09 5.716762e-09
+#> [1] 1.461419e-08 1.625418e-08 9.214642e-09 7.379461e-09 3.295428e-09
 #> [6] 6.734287e-09
 ```
 
@@ -539,10 +539,10 @@ us_cpp <- time_per_call(function() logpost_cpp(init, Y), n = 10000)
 us_grad <- time_per_call(function() grad_cpp(init, Y), n = 10000)
 c(R = us_r, `C++` = us_cpp, `C++ gradient` = us_grad)
 #>            R          C++ C++ gradient 
-#>         50.0          5.0          6.7
+#>        108.0          9.0         11.7
 ```
 
-The C++ log-posterior is about 10 times faster than the R one, and the
+The C++ log-posterior is about 12 times faster than the R one, and the
 analytic gradient costs about the same as one log-posterior, where
 finite differences need 40.
 
@@ -551,21 +551,21 @@ Now the full fit, with the VB correction, first without a gradient:
 ``` r
 
 fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
-#> ✔ Found the posterior mode in 82 iterations [54ms]
-#> ✔ VB mean correction, max shift 0.43σ [3.8s]
-#> ✔ Fitted 39 skew-normal marginals [132ms]
+#> ✔ Found the posterior mode in 79 iterations [96ms]
+#> ✔ VB mean correction, max shift 0.43σ [7.0s]
+#> ✔ Fitted 39 skew-normal marginals [235ms]
 ```
 
-It took 501,117 calls, nearly all in the VB correction. In R, at 50
-microseconds a call, these would take about 25 seconds. With the
+It took 500,872 calls, nearly all in the VB correction. In R, at 108
+microseconds a call, these would take about 54 seconds. With the
 gradient:
 
 ``` r
 
 fit <- inla_vanilla(logpost_cpp, init, grad = grad_cpp, Y = Y)
-#> ✔ Found the posterior mode in 89 iterations [6ms]
-#> ✔ VB mean correction, max shift 0.43σ [147ms]
-#> ✔ Fitted 39 skew-normal marginals [97ms]
+#> ✔ Found the posterior mode in 91 iterations [10ms]
+#> ✔ VB mean correction, max shift 0.43σ [252ms]
+#> ✔ Fitted 39 skew-normal marginals [181ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -578,9 +578,9 @@ neither does. The calls and times (in seconds) of the three fits:
 fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 #>                  logpost  grad laplace   vb marginals total
-#> R, no VB           14055     0    0.40 0.00      0.52  0.92
-#> C++               501117     0    0.05 3.84      0.13  4.02
-#> C++ and gradient    1535 15539    0.01 0.15      0.10  0.26
+#> R, no VB           14295     0    0.84 0.00      1.00  1.84
+#> C++               500872     0    0.10 7.00      0.23  7.33
+#> C++ and gradient    1537 15541    0.01 0.25      0.18  0.45
 ```
 
 The three fits agree. The skew-normal marginals do not depend on the VB
@@ -595,7 +595,7 @@ c(
   `C++` = max(abs(fit_cpp$summary - fit$summary) / sds)
 )
 #>            R          C++ 
-#> 4.488435e-05 2.977629e-05
+#> 5.689665e-05 4.961973e-05
 ```
 
 ## Results
@@ -606,97 +606,102 @@ summary(fit)
 #> ── INLAvanilla summary ───────────────────────────────────── Skew-normal + VB ──
 #> 
 #> Posterior marginals
-#>                     Mean      SD    2.5%     25%     50%     75%   97.5%    Mode
-#> nu_x1             5.0538  0.0846  4.8880  4.9967  5.0538  5.1108  5.2195  5.0538
-#> nu_x2              4.791   0.174   4.450   4.673   4.791   4.908   5.132   4.791
-#> nu_x3              3.557   0.162   3.239   3.447   3.557   3.666   3.874   3.557
-#> nu_y1              5.461   0.299   4.875   5.259   5.461   5.663   6.048   5.461
-#> nu_y2              4.252   0.438   3.394   3.957   4.252   4.547   5.110   4.252
-#> nu_y3              6.559   0.394   5.787   6.293   6.559   6.824   7.331   6.559
-#> nu_y4              4.448   0.380   3.704   4.192   4.448   4.704   5.192   4.448
-#> nu_y5              5.133   0.306   4.534   4.927   5.133   5.339   5.732   5.133
-#> nu_y6              2.974   0.392   2.206   2.710   2.974   3.238   3.742   2.974
-#> nu_y7              6.192   0.365   5.477   5.946   6.192   6.438   6.907   6.192
-#> nu_y8              4.039   0.375   3.303   3.786   4.039   4.292   4.775   4.039
-#> lam_x2             2.219   0.147   1.952   2.117   2.212   2.314   2.530   2.196
-#> lam_x3             1.840   0.155   1.550   1.734   1.835   1.941   2.157   1.825
-#> a                  1.211   0.145   0.944   1.111   1.204   1.304   1.512   1.191
-#> b                  1.189   0.122   0.965   1.105   1.183   1.267   1.443   1.172
-#> c                  1.276   0.128   1.045   1.187   1.269   1.358   1.548   1.253
-#> beta_dem60_ind60   1.468   0.391   0.717   1.202   1.463   1.729   2.252   1.451
-#> beta_dem65_ind60   0.587   0.242   0.120   0.423   0.585   0.749   1.068   0.580
-#> beta_dem65_dem60  0.8679  0.0770  0.7216  0.8153  0.8662  0.9186  1.0238  0.8627
-#> logv_ind60        -0.794   0.192  -1.166  -0.925  -0.796  -0.666  -0.412  -0.800
-#> logv_dem60         1.359   0.227   0.909   1.208   1.361   1.513   1.797   1.366
-#> logv_dem65        -1.598   0.861  -3.598  -2.109  -1.460  -0.959  -0.302  -1.097
-#> logv_x1           -2.438   0.238  -2.926  -2.594  -2.431  -2.274  -1.989  -2.416
-#> logv_x2           -2.165   0.566  -3.461  -2.504  -2.086  -1.752  -1.271  -1.896
-#> logv_x3           -0.695   0.194  -1.072  -0.827  -0.697  -0.565  -0.310  -0.700
-#> logv_y1            0.685   0.246   0.181   0.524   0.692   0.853   1.146   0.708
-#> logv_y2            2.065   0.178   1.719   1.944   2.063   2.184   2.418   2.060
-#> logv_y3            1.655   0.196   1.277   1.522   1.653   1.785   2.044   1.649
-#> logv_y4            1.207   0.231   0.733   1.056   1.214   1.365   1.641   1.229
-#> logv_y5            0.902   0.211   0.487   0.760   0.903   1.045   1.314   0.904
-#> logv_y6            1.643   0.181   1.290   1.520   1.642   1.765   2.001   1.640
-#> logv_y7            1.320   0.209   0.909   1.179   1.320   1.460   1.727   1.321
-#> logv_y8            1.226   0.215   0.792   1.083   1.230   1.372   1.636   1.238
-#> z_y1_y5            0.290   0.154  -0.021   0.188   0.293   0.395   0.582   0.300
-#> z_y2_y4            0.283   0.123   0.041   0.200   0.283   0.366   0.524   0.283
-#> z_y2_y6            0.361   0.108   0.153   0.288   0.360   0.433   0.577   0.358
-#> z_y3_y7            0.184   0.136  -0.085   0.093   0.185   0.277   0.449   0.187
-#> z_y4_y8            0.108   0.133  -0.158   0.019   0.109   0.198   0.365   0.112
-#> z_y6_y8            0.328   0.123   0.086   0.245   0.328   0.411   0.569   0.329
+#>                     Mean      SD    2.5%     50%   97.5%    Mode
+#> nu_x1             5.0538  0.0846  4.8880  5.0538  5.2195  5.0538
+#> nu_x2              4.791   0.174   4.450   4.791   5.132   4.791
+#> nu_x3              3.557   0.162   3.239   3.557   3.874   3.557
+#> nu_y1              5.461   0.299   4.875   5.461   6.048   5.461
+#> nu_y2              4.252   0.438   3.394   4.252   5.110   4.252
+#> nu_y3              6.559   0.394   5.787   6.559   7.331   6.559
+#> nu_y4              4.448   0.380   3.704   4.448   5.192   4.448
+#> nu_y5              5.133   0.306   4.534   5.133   5.732   5.133
+#> nu_y6              2.974   0.392   2.206   2.974   3.742   2.974
+#> nu_y7              6.192   0.365   5.477   6.192   6.907   6.192
+#> nu_y8              4.039   0.375   3.303   4.039   4.775   4.039
+#> lam_x2             2.219   0.147   1.952   2.212   2.530   2.196
+#> lam_x3             1.840   0.155   1.550   1.835   2.157   1.825
+#> a                  1.211   0.145   0.944   1.204   1.512   1.191
+#> b                  1.189   0.122   0.965   1.183   1.443   1.172
+#> c                  1.276   0.128   1.045   1.269   1.548   1.253
+#> beta_dem60_ind60   1.468   0.391   0.717   1.463   2.252   1.451
+#> beta_dem65_ind60   0.587   0.242   0.120   0.585   1.068   0.580
+#> beta_dem65_dem60  0.8679  0.0770  0.7216  0.8662  1.0238  0.8627
+#> logv_ind60        -0.794   0.192  -1.166  -0.796  -0.412  -0.800
+#> logv_dem60         1.359   0.227   0.909   1.361   1.797   1.366
+#> logv_dem65        -1.598   0.861  -3.598  -1.460  -0.302  -1.097
+#> logv_x1           -2.438   0.238  -2.926  -2.431  -1.989  -2.416
+#> logv_x2           -2.165   0.566  -3.461  -2.086  -1.271  -1.896
+#> logv_x3           -0.695   0.194  -1.072  -0.697  -0.310  -0.700
+#> logv_y1            0.685   0.246   0.181   0.692   1.146   0.708
+#> logv_y2            2.065   0.178   1.719   2.063   2.418   2.060
+#> logv_y3            1.655   0.196   1.277   1.653   2.044   1.649
+#> logv_y4            1.207   0.231   0.732   1.214   1.641   1.229
+#> logv_y5            0.902   0.211   0.487   0.903   1.314   0.904
+#> logv_y6            1.643   0.181   1.290   1.642   2.001   1.640
+#> logv_y7            1.320   0.209   0.909   1.320   1.727   1.321
+#> logv_y8            1.226   0.215   0.792   1.230   1.636   1.238
+#> z_y1_y5            0.290   0.154  -0.021   0.293   0.582   0.300
+#> z_y2_y4            0.283   0.123   0.041   0.283   0.524   0.283
+#> z_y2_y6            0.361   0.108   0.153   0.360   0.577   0.358
+#> z_y3_y7            0.184   0.136  -0.085   0.185   0.449   0.187
+#> z_y4_y8            0.108   0.133  -0.158   0.109   0.365   0.112
+#> z_y6_y8            0.328   0.123   0.086   0.328   0.569   0.329
 #> 
 #> Diagnostics
-#>                   VB shift   SN - VB  Shape     NMAD   Bend
-#> nu_x1             -7.6e-05  -0.00036  -0.14  4.2e-06  0.054
-#> nu_x2             -0.00021  -0.00039  -0.14  4.4e-06  0.054
-#> nu_x3             -0.00017  -0.00036  -0.13  3.9e-06  0.054
-#> nu_y1             -0.00042  -0.00032  -0.15  6.8e-06   0.05
-#> nu_y2              -0.0005  -0.00031  -0.14  4.7e-06  0.042
-#> nu_y3              -0.0005  -0.00033  -0.15  5.9e-06  0.047
-#> nu_y4             -0.00055  -0.00037  -0.15  6.5e-06  0.047
-#> nu_y5             -0.00041  -0.00029  -0.15  6.3e-06  0.049
-#> nu_y6             -0.00051  -0.00033  -0.15  6.5e-06  0.051
-#> nu_y7             -0.00051  -0.00031  -0.15  6.4e-06  0.046
-#> nu_y8             -0.00057  -0.00034  -0.15  6.6e-06  0.048
-#> lam_x2                0.33     0.047    1.5   0.0067  0.043
-#> lam_x3                0.18   -0.0032    1.1   0.0043  0.079
-#> a                     0.16     0.012    1.4   0.0043  0.079
-#> b                     0.12    0.0087    1.4   0.0048   0.11
-#> c                     0.22     0.017    1.6   0.0069  0.081
-#> beta_dem60_ind60    0.0019   -0.0049   0.82   0.0019  0.082
-#> beta_dem65_ind60    -0.074    -0.011   0.69  0.00038  0.075
-#> beta_dem65_dem60      0.12     0.014   0.98   0.0038  0.042
-#> logv_ind60          -0.037   -0.0022   0.69    0.003  0.038
-#> logv_dem60          0.0017   -0.0072  -0.69   0.0022  0.059
-#> logv_dem65           -0.43       0.2   -4.2    0.045   0.44
-#> logv_x1               0.26     0.044   -1.1    0.006   0.14
-#> logv_x2               -0.3     0.031   -3.3    0.033   0.11
-#> logv_x3               0.29     0.036   0.65    0.003  0.015
-#> logv_y1               0.29     0.011   -1.1   0.0085  0.033
-#> logv_y2               0.28   0.00062   0.63  0.00018  0.017
-#> logv_y3               0.32     0.012   0.71  0.00072  0.018
-#> logv_y4               0.18   0.00025   -1.1   0.0074  0.041
-#> logv_y5               0.31    0.0093  -0.45    0.005  0.028
-#> logv_y6                0.3    0.0032   0.52   0.0014  0.024
-#> logv_y7                0.3    0.0084  -0.42   0.0057  0.018
-#> logv_y8               0.21    0.0037  -0.92   0.0051  0.034
-#> z_y1_y5             0.0079    -0.012  -0.97   0.0026   0.05
-#> z_y2_y4             -0.074    0.0031  -0.25    0.007  0.094
-#> z_y2_y6             -0.062    0.0097   0.74    0.012   0.12
-#> z_y3_y7              0.051   -0.0042  -0.58   0.0055  0.061
-#> z_y4_y8             -0.094   -0.0018  -0.74   0.0041   0.13
-#> z_y6_y8             -0.085    0.0053  -0.35   0.0053   0.08
+#>                   VB shift   SN - VB  Shape     NMAD   Bend  End mass
+#> nu_x1             -0.00014  -0.00036  -0.14  4.1e-06  0.054   6.3e-05
+#> nu_x2             -0.00025   -0.0004  -0.14  4.4e-06  0.054   6.3e-05
+#> nu_x3             -0.00022  -0.00036  -0.13  3.9e-06  0.054   6.3e-05
+#> nu_y1              -0.0004  -0.00032  -0.15  6.9e-06   0.05   6.3e-05
+#> nu_y2             -0.00049  -0.00032  -0.14  4.7e-06  0.042   6.3e-05
+#> nu_y3              -0.0005  -0.00033  -0.15  5.9e-06  0.047   6.3e-05
+#> nu_y4             -0.00057  -0.00037  -0.15  6.5e-06  0.047   6.3e-05
+#> nu_y5             -0.00038  -0.00029  -0.15  6.4e-06  0.049   6.3e-05
+#> nu_y6             -0.00051  -0.00033  -0.15  6.5e-06  0.051   6.3e-05
+#> nu_y7             -0.00051  -0.00031  -0.15  6.5e-06  0.046   6.3e-05
+#> nu_y8             -0.00057  -0.00034  -0.15  6.6e-06  0.048   6.3e-05
+#> lam_x2                0.33     0.047    1.5   0.0067  0.043    0.0014
+#> lam_x3                0.18   -0.0032    1.1   0.0043  0.079   0.00032
+#> a                     0.16     0.012    1.4   0.0043  0.079   0.00048
+#> b                     0.12    0.0087    1.4   0.0048   0.11   0.00042
+#> c                     0.22     0.017    1.6   0.0069  0.081    0.0009
+#> beta_dem60_ind60    0.0019   -0.0049   0.82   0.0019  0.082   9.3e-05
+#> beta_dem65_ind60    -0.074    -0.011   0.69  0.00038  0.075   7.1e-05
+#> beta_dem65_dem60      0.12     0.014   0.98   0.0038  0.042   0.00024
+#> logv_ind60          -0.037   -0.0022   0.69    0.003  0.038   6.9e-05
+#> logv_dem60          0.0018   -0.0072  -0.69   0.0022  0.059   7.8e-05
+#> logv_dem65           -0.43       0.2   -4.2    0.045   0.44    0.0019
+#> logv_x1               0.26     0.044   -1.1    0.006   0.14   7.2e-05
+#> logv_x2               -0.3     0.031   -3.3    0.033   0.11    0.0031
+#> logv_x3               0.29     0.036   0.65    0.003  0.015   0.00023
+#> logv_y1               0.29     0.011   -1.1   0.0085  0.033   8.1e-05
+#> logv_y2               0.28   0.00062   0.63  0.00018  0.017   0.00018
+#> logv_y3               0.32     0.012   0.71  0.00072  0.018   0.00025
+#> logv_y4               0.18   0.00025   -1.1   0.0074  0.041   0.00011
+#> logv_y5               0.31    0.0093  -0.45    0.005  0.028   0.00013
+#> logv_y6                0.3    0.0032   0.52   0.0014  0.024   0.00016
+#> logv_y7                0.3    0.0084  -0.42   0.0057  0.018   0.00013
+#> logv_y8               0.21    0.0037  -0.92   0.0051  0.034   8.4e-05
+#> z_y1_y5             0.0079    -0.012  -0.97   0.0026   0.05   0.00013
+#> z_y2_y4             -0.074    0.0031  -0.25    0.007  0.094   5.2e-05
+#> z_y2_y6             -0.062    0.0097   0.74    0.012   0.12   5.1e-05
+#> z_y3_y7              0.051   -0.0042  -0.58   0.0055  0.061   5.7e-05
+#> z_y4_y8             -0.094   -0.0018  -0.74   0.0041   0.13    0.0001
+#> z_y6_y8             -0.085    0.0053  -0.35   0.0053   0.08   5.8e-05
 #> 
-#> ✔ Mode found in 89 iterations (gradient 8.3e-05 SDs).
-#> ✔ VB correction in 4 iterations: max shift 0.43 SDs.
-#> ! The straight scan misses up to 0.44 nats at +-2 SDs for b, logv_dem65, logv_x1, logv_x2, z_y2_y6, and z_y4_y8: the marginal may be too narrow.
+#> ✔ Mode found in 91 iterations (Newton step 7e-05 posterior SDs).
+#> ✔ Hessian condition number 65, in posterior-SD units.
+#> ✔ VB correction in 4 iterations: max shift 0.43 posterior SDs.
 #> ✔ Skew-normal fits: max NMAD 0.045.
-#> ! Skew-normal and VB means differ by up to 0.2 SDs, for logv_dem65.
+#> ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for
+#>   `logv_dem65` (0.44), `logv_x1` (0.14), `z_y4_y8` (0.13), `z_y2_y6` (0.12),
+#>   `logv_x2` (0.11), `b` (0.11): the marginal may be too narrow.
+#> ! Skew-normal and VB means differ by more than 0.1 posterior SDs for
+#>   `logv_dem65` (0.20).
 #> 
 #> Log marginal likelihood: -1686.847 (Laplace -1687.471, VB term 0.62)
-#> 1535 logpost and 15539 grad calls in 256ms (mode 6ms, VB 148ms, marginals 98ms)
+#> 1537 logpost and 15541 grad calls in 452ms (mode 10ms, VB 253ms, marginals
+#> 181ms)
 ```
 
 The intercepts are close to symmetric, and the loadings and regressions
@@ -784,7 +789,7 @@ c(
   cov = max(abs(int$Sigma_theta[at, at] - fit$cov)) / max(abs(fit$cov))
 )
 #>         mode          cov 
-#> 9.982413e-05 1.559542e-04
+#> 0.0001075805 0.0001090538
 ```
 
 Both agree to a few parts in \\10^{4}\\, the precision of the two
@@ -818,7 +823,7 @@ round(
 #> beta_dem65_dem60         0.8679     0.8679       0.0770   0.0770
 #> logv_dem65              -1.5981    -1.5980       0.8610   0.8610
 max(abs(sn_mean - fit$summary[, "Mean"]) / fit$summary[, "SD"])
-#> [1] 6.996214e-05
+#> [1] 7.160016e-05
 ```
 
 Over all 39 parameters, the means differ by at most about \\10^{-4}\\

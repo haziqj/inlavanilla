@@ -6,6 +6,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Using TMB • inlavanilla</title>
+<!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
+<link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+<link rel="icon" sizes="any" href="../favicon.ico">
+<link rel="manifest" href="../site.webmanifest">
 <!-- mathjax math --><script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script><script>
   window.MathJax = {
     chtml: {
@@ -19,6 +24,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="tmb_files/libs/quarto-html/popper.min.js"></script><script src="tmb_files/libs/quarto-html/tippy.umd.min.js"></script><link href="tmb_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="tmb_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Using TMB">
+<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -65,8 +71,7 @@
 </nav><div class="container template-quarto">
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-
-      <h1>Using TMB</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Using TMB</h1>
 
 
 
@@ -359,9 +364,9 @@
 <span>  <span class="va">init</span>,</span>
 <span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 90 iterations [28ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [1.2s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [367ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 91 iterations [54ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [2.1s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [683ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> checks the gradient against finite differences at <code>init</code>, and would warn if it disagreed. The calls, and the time per call in microseconds:</p>
 <div class="cell" data-layout-align="center">
@@ -376,13 +381,13 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit</span><span class="op">$</span><span class="va">counts</span></span>
 <span><span class="co">#&gt; logpost    grad </span></span>
-<span><span class="co">#&gt;    1539   15540</span></span>
+<span><span class="co">#&gt;    1537   15541</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  fn <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span>,</span>
 <span>  gr <span class="op">=</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;   fn   gr </span></span>
-<span><span class="co">#&gt; 32.5 84.0</span></span></code></pre></div>
+<span><span class="co">#&gt;    fn    gr </span></span>
+<span><span class="co">#&gt;  59.5 146.0</span></span></code></pre></div>
 </div>
 <p>A gradient costs a few evaluations of the objective, against 40 for finite differences. Without it, the VB correction alone would take over 120,000 evaluations per sweep. A hand-written gradient, as in the Rcpp article, can be faster still, but it has to be derived and checked; TMB’s needs neither.</p>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
@@ -421,7 +426,7 @@
 <span><span class="co">#&gt; logv_y1            0.685   0.246   0.181   0.692   1.146   0.708</span></span>
 <span><span class="co">#&gt; logv_y2            2.065   0.178   1.719   2.063   2.418   2.060</span></span>
 <span><span class="co">#&gt; logv_y3            1.655   0.196   1.277   1.653   2.044   1.649</span></span>
-<span><span class="co">#&gt; logv_y4            1.207   0.231   0.733   1.214   1.641   1.229</span></span>
+<span><span class="co">#&gt; logv_y4            1.207   0.231   0.732   1.214   1.641   1.229</span></span>
 <span><span class="co">#&gt; logv_y5            0.902   0.211   0.487   0.903   1.314   0.904</span></span>
 <span><span class="co">#&gt; logv_y6            1.643   0.181   1.290   1.642   2.001   1.640</span></span>
 <span><span class="co">#&gt; logv_y7            1.320   0.209   0.909   1.320   1.727   1.321</span></span>
@@ -493,7 +498,8 @@
 <span><span class="co">#&gt; p_loo         38.6   3.0</span></span>
 <span><span class="co">#&gt; looic       3177.7  40.9</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit 35.</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.25, for unit</span></span>
+<span><span class="co">#&gt;   35.</span></span></code></pre></div>
 </div>
 <p>INLAvaan’s <code><a href="../reference/loo.html">loo()</a></code> uses the same deterministic expansion (Alhyari et al., 2026), with its own per-case log-likelihoods:</p>
 <div class="cell" data-layout-align="center">
