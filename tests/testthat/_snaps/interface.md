@@ -88,8 +88,8 @@
       v Fitted 2 skew-normal marginals [<time>]
                    Shape NMAD Bend Tails End mass gamma1
         intercept # # # ok # #
-        slope # # #! ok # #
-        ! marks what summary() flags: NMAD above 0.1, bend above 0.1, heavy tails, scan-end mass above 0.05
+        slope # # # ok # #
+        ! marks what summary() flags: NMAD above 0.1, bend above 0.25, heavy tails, scan-end mass above 0.05
         <n> logpost calls
       i Done: <n> logpost calls in <time>
 
@@ -119,8 +119,8 @@
       v Fitted 2 skew-normal marginals [<time>]
                    Shape NMAD Bend Tails End mass gamma1
         intercept # # # ok # #
-        slope # # #! ok # #
-        ! marks what summary() flags: NMAD above 0.1, bend above 0.1, heavy tails, scan-end mass above 0.05
+        slope # # # ok # #
+        ! marks what summary() flags: NMAD above 0.1, bend above 0.25, heavy tails, scan-end mass above 0.05
         <n> logpost and <n> grad calls
       i Done: <n> logpost and <n> grad calls in <time>
 
@@ -136,7 +136,6 @@
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Log marginal likelihood: -16.25
-      ! 1 check flagged by `summary()`.
 
 # print(summary()) shows marginals, diagnostics and the evidence
 
@@ -159,8 +158,6 @@
       v Hessian condition number 3.6, in posterior-SD units.
       v VB correction in <n> iteration(s): max shift 0.23 posterior SDs.
       v Skew-normal fits: max NMAD 0.015.
-      ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope`
-        (0.14): the marginal may be too narrow.
       v Skew-normal and VB means agree to within 0.0068 posterior SDs.
       
       Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
@@ -187,8 +184,6 @@
       v Hessian condition number 3.6, in posterior-SD units.
       i No VB correction (vb = FALSE).
       v Skew-normal fits: max NMAD 0.015.
-      ! The straight scan misses more than 0.1 nats at +-2 posterior SDs for `slope`
-        (0.14): the marginal may be too narrow.
       
       Log marginal likelihood: -16.277
       <n> logpost calls in <time> (mode <time>, VB <time>, marginals <time>)

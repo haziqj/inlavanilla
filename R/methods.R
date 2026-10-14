@@ -99,12 +99,17 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   that is a first-order approximation to a possibly curved ridge (Section
 #'   3.2.1). `bend` is the log-density, in nats, that the straight scan
 #'   misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
-#'   towards the conditional mode of the other parameters. It is flagged
-#'   above 0.1. A large value means the other parameters' conditional mode
-#'   bends away from the line, as a poorly determined noise scale does for a
-#'   regression coefficient at small n, and the marginal comes out too
-#'   narrow, by roughly 0.35 to 0.5 times `bend` in relative SD (see the
-#'   Accuracy section of [inla_vanilla()]).
+#'   towards the conditional mode of the other parameters. A large value
+#'   means the other parameters' conditional mode bends away from the line,
+#'   as a poorly determined noise scale does for a regression coefficient at
+#'   small n, and the marginal comes out too narrow. For a normal mean with
+#'   an unknown SD, a bend \eqn{b} makes the marginal SD too small by
+#'   \eqn{1 - \sqrt{1 - 3b/4}}{1 - sqrt(1 - 3b/4)}, about \eqn{3b/8}. In
+#'   other models this is a rough guide: on test models it was mostly within
+#'   a factor of 1.5 of the true shortfall, above it in logistic and Poisson
+#'   regressions and below it in a nonlinear regression. `bend` is flagged
+#'   above 0.25, a shortfall of 10% by that formula (see the Accuracy section
+#'   of [inla_vanilla()]).
 #' * **Skew-normal and VB means.** `sn_vs_vb`, the gap between the
 #'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 #'   target the posterior mean, so they should agree closely (to

@@ -20,7 +20,9 @@ warn_levels <- list(
   vb_shift = 1,
   hess_cond = 1e8
 )
-summary_levels <- list(bend = 0.1, sn_vs_vb = 0.1)
+# The bend level is a marginal SD about 10% too small, 1 - sqrt(1 - 3 b / 4),
+# in the normal mean with an unknown SD (lab/bend-threshold.md).
+summary_levels <- list(bend = 0.25, sn_vs_vb = 0.1)
 
 # TRUE where `x` is above `level` or not finite.
 off_level <- function(x, level) {
@@ -223,7 +225,7 @@ problem_text <- function(check, dg, env, n = 3L) {
       summary_levels$bend,
       " nats at +-2 posterior SDs for ",
       flagged_list(env, "bend", dg, "bend", summary_levels$bend, n),
-      ": the marginal may be too narrow."
+      ": the marginal SD may be about 10% or more too small."
     ),
     sn_vs_vb = paste0(
       "Skew-normal and VB means differ by more than ",
