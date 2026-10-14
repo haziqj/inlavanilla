@@ -26,7 +26,7 @@ whether it is worth building properly.
 How the latent variables are handled decides the route:
 
 1. **Closed form or a sum** inside `logpost` (the stochastic frontier below,
-   occupancy models, the DCM article).
+   occupancy models, the CDM article).
 2. **Quadrature** inside `logpost`, for one or two dimensions per unit (the
    binary factor article).
 3. **Parameters**, when there are few of them (but see the Theoph finding:

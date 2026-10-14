@@ -1,21 +1,20 @@
 ################################################################################
 #
-# Precomputes the Stan reference for the article "Diagnostic classification
-# models" (vignettes/articles/dcm.qmd), so that the site build needs no Stan.
-# Fits the DINA model to the ECPE data (edmdata) with the latent classes summed
-# out, the same model and priors as the article's logpost: uniform guessing and
-# slipping probabilities, and a Dirichlet(1) prior on the eight class
-# proportions. Saves each parameter's posterior summary, on the natural scale,
-# and kernel density estimates of the class proportions to
-# vignettes/articles/dcm-stan.rds. Takes a few minutes. Run from the package
-# root:
-#   Rscript lab/dcm-article.R
+# Precomputes the Stan reference for the article "Cognitive diagnostic models"
+# (vignettes/articles/cdm.qmd), so that the site build needs no Stan. Fits the
+# DINA model to the ECPE data (edmdata) with the latent classes summed out, the
+# same model and priors as the article's logpost: uniform guessing and slipping
+# probabilities, and a Dirichlet(1) prior on the eight class proportions. Saves
+# each parameter's posterior summary, on the natural scale, and kernel density
+# estimates of the class proportions to vignettes/articles/cdm-stan.rds. Takes a
+# few minutes. Run from the package root:
+#   Rscript lab/cdm-article.R
 #
 ################################################################################
 
 ## ----- Configuration ----------------------------------------------------------
 
-out_file <- "vignettes/articles/dcm-stan.rds"
+out_file <- "vignettes/articles/cdm-stan.rds"
 probs <- c(0.025, 0.5, 0.975)
 
 data(items_ecpe, qmatrix_ecpe, package = "edmdata")

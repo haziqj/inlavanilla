@@ -18,8 +18,8 @@ navbar:
       menu:
       - text: Multilevel models
         href: articles/multilevel.html
-      - text: Diagnostic classification models
-        href: articles/dcm.html
+      - text: Cognitive diagnostic models
+        href: articles/cdm.html
       - text: Correlation matrices
         href: articles/correlation.html
       - text: Binary factor analysis
@@ -34,7 +34,7 @@ articles:
 - title: Examples
   contents:
   - articles/multilevel
-  - articles/dcm
+  - articles/cdm
   - articles/correlation
   - articles/binary-cfa
   - articles/diagnostic-tests
@@ -48,3 +48,4 @@ articles:
 
 redirects:
 - ["articles/tmb.html", "articles/rtmb.html"]
+- ["articles/dcm.html", "articles/cdm.html"]

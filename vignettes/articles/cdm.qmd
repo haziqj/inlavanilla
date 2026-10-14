@@ -1,5 +1,5 @@
 ---
-title: "Diagnostic classification models"
+title: "Cognitive diagnostic models"
 description: >
   A DINA model for binary items, with the latent classes summed out, checked
   against Stan.
@@ -25,12 +25,13 @@ options(
 )
 ```
 
-A diagnostic classification model (DCM) sorts examinees by which of a few
-skills, or *attributes*, they have mastered. Each examinee belongs to one of
-$2^K$ latent classes, one for each pattern of mastery of $K$ attributes. The
-latent variable is discrete, so it sums out of the likelihood exactly: the
-log-posterior of the item parameters and the class proportions has a closed
-form, and `inla_vanilla()` can take it as it is.
+A cognitive diagnostic model (CDM), also called a diagnostic classification
+model, sorts examinees by which of a few skills, or *attributes*, they have
+mastered. Each examinee belongs to one of $2^K$ latent classes, one for each
+pattern of mastery of $K$ attributes. The latent variable is discrete, so it
+sums out of the likelihood exactly: the log-posterior of the item parameters
+and the class proportions has a closed form, and `inla_vanilla()` can take
+it as it is.
 
 This article fits the DINA model to a language test, and compares the
 posterior marginals with those of Stan.
@@ -157,12 +158,12 @@ The fit takes about 40 seconds, most of it in the 70,000 or so calls of
 Stan samples the same model, with the classes summed out in the same way and
 the same priors. Its 10,000 draws took about two minutes, after compiling
 the model, and were summarised ahead of time
-(`lab/dcm-article.R` in the package source), so this page does not need Stan
+(`lab/cdm-article.R` in the package source), so this page does not need Stan
 to build.
 
 ```{r}
 #| label: reference
-ref <- readRDS("dcm-stan.rds")
+ref <- readRDS("cdm-stan.rds")
 ref[c("rhat", "divergences")]
 ```
 

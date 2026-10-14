@@ -12,6 +12,8 @@
 * The website article "Gradients with RTMB" is now "Gradients and Hessians
   with RTMB". It passes RTMB's Hessian too, and shows where the fit uses it,
   the time it saves and the more precise mode it finds.
+* The website article "Diagnostic classification models" is now "Cognitive
+  diagnostic models".
 
 # inlavanilla 0.1.0
 
