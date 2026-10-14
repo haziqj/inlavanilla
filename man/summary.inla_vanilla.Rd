@@ -4,7 +4,7 @@
 \alias{summary.inla_vanilla}
 \title{Summarise an INLAvanilla fit}
 \usage{
-\method{summary}{inla_vanilla}(object, probs = c(0.025, 0.25, 0.5, 0.75, 0.975), ...)
+\method{summary}{inla_vanilla}(object, probs = c(0.025, 0.5, 0.975), ...)
 }
 \arguments{
 \item{object}{An object of class \code{inla_vanilla}.}
@@ -26,61 +26,118 @@ scale of \code{logpost}, together with diagnostics of each stage of the
 approximation.
 }
 \details{
-The diagnostics, and the levels at which they are flagged, are:
+Most of the checks are those of INLAvaan's \code{diagnostics()}, and
+\code{\link[=diagnostics]{diagnostics()}} returns them under the same names. Jamil and Rue (2026) use
+the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
+gap between the skew-normal and VB means as an internal check (Section
+5.1). The mode shift, the Hessian condition number and the scan-end mass
+come from INLAvaan's \code{diagnostics()}, not from the paper. \code{tails} and
+\code{bend} are inlavanilla's own.
+
+A posterior SD here is the Laplace SD at the mode,
+\eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
+\code{diagnostics()}; it is not the SD column of the table, which is the
+skew-normal's. The diagnostics, with the level at which each is flagged
+where it is, are:
 \itemize{
-\item \strong{Mode.} The largest gradient at the mode in whitened units: how far, in
-posterior SDs, a Newton step would still move it. The mode is accepted
-when this is below 0.01, whatever the return code of \code{\link[stats:nlminb]{stats::nlminb()}},
-whose message is shown otherwise.
-\item \strong{VB correction.} The shift of each mean from the mode, in posterior
-SDs (\code{vb_shift}). It is flagged when it exceeds 1 SD, or when the
-fixed-point iteration failed and the fallback optimiser ran: both mean
-the posterior is far from the Laplace Gaussian.
-\item \strong{Tails.} Each parameter is scanned over \eqn{\pm 4} Laplace SDs.
-\code{tails} is \code{FALSE} (and flagged) when the density at an end of the scan
-is still over 5\% of its peak: the Laplace SD badly understates a heavy
-tail there, and the skew-normal extrapolates it.
-\item \strong{Scan path.} \code{bend} is the log-density, in nats, that the straight
-scan misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
-towards the conditional mode of the other parameters. It is flagged above
-0.1. A large value means the other parameters' conditional mode bends away
-from the line, as a poorly determined noise scale does for a regression
-coefficient at small n, and the marginal comes out too narrow, by roughly
-0.35 to 0.5 times \code{bend} in relative SD (see the Accuracy section of
-\code{\link[=inla_vanilla]{inla_vanilla()}}).
-\item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and the
-scanned density relative to its peak (flagged above 0.05), and
-\code{sn_vs_vb}, the gap between the
-skew-normal mean and the VB-corrected mean in posterior SDs. Both means
-target the posterior mean, so they should agree closely (to
-\eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4). A gap above
-0.1 SDs is flagged: the posterior is far from Gaussian along that
-parameter, and either approximation may be off.
+\item \strong{Mode.} \code{mode_shift_sigma}, the Newton step at the mode in posterior
+SDs: how far one step of Newton's method would still move each
+parameter. It is flagged above 0.1, whatever the return code of
+\code{\link[stats:nlminb]{stats::nlminb()}}, whose message is then shown: without a gradient
+\code{nlminb()} can report failure at an accurate mode, and success short of
+one.
+\item \strong{Hessian.} \code{hess_cond}, the condition number of the Hessian at the
+mode with each parameter in posterior-SD units (the eigenvalue ratio of
+the posterior correlation matrix). It is flagged above \eqn{10^8}: some
+combination of the parameters is then weakly identified. Its line is
+shown when there is more than one parameter.
+\item \strong{VB correction.} \code{vb_shift_sigma}, the shift of each mean from the
+mode in posterior SDs (\code{vb_shift} is the same shift on the scale of
+\code{logpost}). The VB correction is the shift of the Laplace Gaussian that
+minimises its Kullback-Leibler divergence from the posterior, and a
+large shift is a sign of a posterior far from that Gaussian (Jamil &
+Rue, 2026, Section 3.1). It is flagged above 1 SD. \code{kld}, the
+Kullback-Leibler divergence between each Laplace Gaussian marginal and
+its VB-shifted copy, is \code{vb_shift_sigma^2 / 2}, as in INLAvaan; it is
+not flagged. When the fixed-point iteration hands over to the fallback
+optimiser, the VB line says so, but, as in INLAvaan, that is not
+flagged: it is a route of the solver, not a sign of a poor
+approximation.
+\item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and
+the scanned density, relative to its peak (Jamil & Rue, 2026, Section
+4.4), flagged above 0.1. \code{alpha} (the Shape column) is the shape of the
+fitted skew-normal marginal, on the unconstrained scale: zero is a
+Gaussian marginal, and the sign gives the direction of the skew. It is
+not flagged.
+\item \strong{Volume correction.} \code{gamma1}, the slope added to the scanned
+log-heights, per posterior SD along the scan, for the changing volume of
+the other parameters (Jamil & Rue, 2026, Corollary 3.3). It is in
+\code{summary(fit)$diagnostics} and in the verbose output of the fit, not in
+the printed table, and it is not flagged.
 \item \strong{Scan-end mass.} \code{scan_end_mass}, the mass each fitted skew-normal
-puts outside the scanned window (the mode \eqn{\pm 4} Laplace SDs),
-where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
+puts outside the scanned window (4 posterior SDs either side of the
+mode), where the marginal is extrapolated, as INLAvaan's \code{diagnostics()}
 reports it. A Gaussian marginal gives \eqn{2\Phi(-4) = 6.3 \times
   10^{-5}}; the larger it is, the more of the marginal is extrapolated.
 It is flagged above 0.05.
+\item \strong{Tails.} \code{tails} is \code{FALSE} (and flagged) when the density at an end
+of the scan is still over 5\% of its peak: the Laplace SD badly
+understates a heavy tail there, and the skew-normal extrapolates it.
+\item \strong{Scan path.} Each parameter is scanned along the conditional mode path
+of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a straight line
+that is a first-order approximation to a possibly curved ridge (Section
+3.2.1). \code{bend} is the log-density, in nats, that the straight scan
+misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
+towards the conditional mode of the other parameters. It is flagged
+above 0.1. A large value means the other parameters' conditional mode
+bends away from the line, as a poorly determined noise scale does for a
+regression coefficient at small n, and the marginal comes out too
+narrow, by roughly 0.35 to 0.5 times \code{bend} in relative SD (see the
+Accuracy section of \code{\link[=inla_vanilla]{inla_vanilla()}}).
+\item \strong{Skew-normal and VB means.} \code{sn_vs_vb}, the gap between the
+skew-normal mean and the VB-corrected mean in posterior SDs. Both means
+target the posterior mean, so they should agree closely (to
+\eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4), and a gap signals
+higher-order effects or numerical error (Section 5.1). A gap above 0.1
+SDs is flagged: the posterior is far from Gaussian along that
+parameter, and either approximation may be off.
 }
 
-Some problems also raise one warning at the end of the fit, of class
-\code{inlavanilla_diagnostics_warning}: heavy tails, an NMAD above 0.1, a
-scan-end mass above 0.05, a VB shift above 1 SD or the VB fallback. These
-levels match INLAvaan's fit-time warning; the flags here are more
-sensitive. With \code{silent = TRUE} the warning is only recorded in
-\code{fit$warnings}. Printing the fit ends with a line for its warnings and one
-counting the checks flagged here, each shown only when there are any.
+Every check flagged here but the scan path and the SN-VB gap also raises
+one warning at the end of the fit, of class
+\code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
+mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
+are those of INLAvaan's fit-time warning; the heavy-tails check is
+inlavanilla's own, as are the scan-path and SN-VB flags. Every level is a
+package default, chosen so that a healthy fit stays silent, and not a
+calibrated cut-off: a tripped check is a prompt to look again, and
+silence is not a certificate of accuracy. In the simulations of Jamil and
+Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
+and the paper reports a calibration of the expected error against them in
+its Supplementary Material.
+
+The status lines list every flagged parameter, worst first, with its
+value (the heavy-tails line, a yes/no check, lists names only, in
+parameter order); the warning lists at most three, as INLAvaan's does. With
+\code{silent = TRUE} the warning is only recorded in \code{fit$warnings}. Printing
+the fit ends with a line for its warnings and one counting the checks
+flagged here, each shown only when there are any.
 \code{vignette("diagnostics", package = "inlavanilla")} explains every check
 with examples.
 
-With \code{vb = FALSE} there is no VB mean, and the VB columns are left out.
-With \code{marginals = "gaussian"} there are no scans, so only the VB shift is
-reported.
+With \code{vb = FALSE} there is no VB mean: the VB columns of
+\code{summary(fit)$diagnostics} are \code{NA}, as INLAvaan's \code{diagnostics()} leaves
+them, and are left out of the table. With \code{marginals = "gaussian"} there
+are no scans, so the scan columns are \code{NA} and only the VB shift is shown.
 }
 \references{
 Jamil, H., & Rue, H. (2026). \emph{Approximate Bayesian inference for
 structural equation models using integrated nested Laplace
 approximations} (arXiv:2603.25690 [stat.ME]). arXiv.
 \url{https://doi.org/10.48550/arXiv.2603.25690}
+}
+\seealso{
+\code{\link[=diagnostics]{diagnostics()}} for the diagnostics as numbers, under INLAvaan's
+names, and \code{\link[=plot.inla_vanilla]{plot.inla_vanilla()}} with \code{type = "sn_fit"} for the
+skew-normal fits.
 }

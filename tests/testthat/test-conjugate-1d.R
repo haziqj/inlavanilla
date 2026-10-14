@@ -436,7 +436,7 @@ expect_exact_gaussian <- function(fit, model, mode_tol, laplace_tol = 1e-10) {
 
   # The VB mean is the exact mean, so the shift only undoes the optimiser's
   # error in the mode. Observed VB mean error up to 6e-12 SDs.
-  expect_lt(abs(diag[1, "vb_shift"]), mode_tol)
+  expect_lt(abs(diag[1, "vb_shift_sigma"]), mode_tol)
   expect_lt(abs(err$mean_vb), laplace_tol)
   expect_lt(abs(diag[1, "sn_vs_vb"]), 1e-8)
   # Laplace is exact for a Gaussian, and the VB term is 0.5 shift^2
@@ -527,9 +527,10 @@ test_that("a Gaussian posterior in dollars is recovered exactly with an analytic
   # Fails (package bug): nlminb() starts from an identity Hessian, so its first
   # step is the raw gradient, 1.5e-4 dollars against a posterior SD of 2.9e4,
   # and it stops at once with "X-convergence (3)". inla_vanilla() reports
-  # success with no warning, although the whitened gradient at the "mode"
-  # (diagnostics$optim$grad_mode) is 4.3 SDs. The scan is then centred 4.3
-  # SDs from the mode, and the summary quantiles are off by 2 SDs.
+  # success with no warning, although the Newton step at the "mode"
+  # (diagnostics$marginals$mode_shift_sigma) is 4.3 SDs. The scan is then
+  # centred 4.3 SDs from the mode, and the summary quantiles are off by 2
+  # SDs.
   fit <- inla_vanilla(
     house_prices$logpost,
     init = c(mu = 2e5),
@@ -564,7 +565,9 @@ test_that("without the VB correction the log marginal likelihood is the Laplace 
   )
   expect_identical(fit$logml, fit$logml_laplace)
   expect_equal(fit$mean_vb, fit$mode)
-  expect_true(all(summary(fit)$diagnostics$vb_shift == 0))
+  # No VB correction, so no VB diagnostics, as in INLAvaan's diagnostics()
+  vb_cols <- c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")
+  expect_true(all(is.na(summary(fit)$diagnostics[vb_cols])))
   # The skew-normal scan is centred at the mode, so the VB correction does not
   # move the marginals
   fit_vb <- inla_vanilla(
