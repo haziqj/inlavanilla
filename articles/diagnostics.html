@@ -53,6 +53,7 @@
     <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
     <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
+    <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -199,7 +200,7 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0082</span></span>
-<span><span class="co">#&gt; 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms</span></span>
+<span><span class="co">#&gt; 66 logpost calls: mode 7ms, VB 2ms, marginals 5ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -235,7 +236,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [4ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [15ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>

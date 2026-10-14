@@ -280,7 +280,7 @@ fit <- inla_vanilla(
 )
 #> ✔ Found the posterior mode in 91 iterations [54ms]
 #> ✔ VB mean correction, max shift 0.43σ [1.2s]
-#> ✔ Fitted 39 skew-normal marginals [701ms]
+#> ✔ Fitted 39 skew-normal marginals [705ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -304,8 +304,8 @@ c(
   fn = time_per_call(function() obj$fn(init), n = 2000),
   gr = time_per_call(function() obj$gr(init), n = 1000)
 )
-#>  fn  gr 
-#>  59 147
+#>    fn    gr 
+#>  58.5 146.0
 ```
 
 A gradient costs a few evaluations of the objective, against 40 for

@@ -53,6 +53,7 @@
     <li><a class="dropdown-item" href="../articles/multilevel.html">Multilevel models</a></li>
     <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
+    <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/tmb.html">Using TMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -165,8 +166,8 @@ P(y_{ij} = 1 \mid c)^{y_{ij}} \{1 - P(y_{ij} = 1 \mid c)\}^{1 - y_{ij}}.
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, y <span class="op">=</span> <span class="va">y</span>, eta <span class="op">=</span> <span class="va">eta</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 186 iterations [36.1s]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [52.1s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [27.2s]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [49.1s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [28.0s]</span></span></code></pre></div>
 </div>
 <p>Draws give the parameters on the probability scale, and the share of examinees who have mastered each attribute, <span class="math inline">\(\sum_c \pi_c \alpha_{ck}\)</span>:</p>
 <div class="cell" data-layout-align="center">

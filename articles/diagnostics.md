@@ -80,7 +80,7 @@ summary(fit_pois)
 #> 
 #> Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)
 #> Laplace -12.362 + VB term 0.0082
-#> 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms
+#> 66 logpost calls: mode 7ms, VB 2ms, marginals 5ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -186,7 +186,7 @@ logpost_mix <- function(theta) {
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.39σ [14ms]
+#> ✔ VB mean correction, max shift 0.39σ [15ms]
 #> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for

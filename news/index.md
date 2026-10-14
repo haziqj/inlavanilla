@@ -55,6 +55,10 @@
   partial correlations on the atanh scale, fits it to the Holzinger and
   Swineford tests, checks the marginals against Stan, and gives the
   reliability of each scale from draws.
+- A website article, “Binary factor analysis”, fits a one-factor model
+  for binary items in the delta parameterisation, with the factor
+  integrated out by Gauss-Hermite quadrature over the counts of the
+  response patterns.
 - Three output levels: by default each stage prints one line;
   `verbose = TRUE` adds a full diagnostic of each stage (the optimiser’s
   report, how the Hessian was taken, the posterior correlations, the VB

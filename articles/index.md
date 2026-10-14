@@ -32,6 +32,12 @@
   written in terms of canonical partial correlations, checked against
   Stan.
 
+- [Binary factor
+  analysis](http://haziqj.ml/inlavanilla/articles/binary-cfa.md):
+
+  A one-factor model for binary items, with the factor integrated out by
+  Gauss-Hermite quadrature inside the log-posterior.
+
 ### Compiled code
 
 Faster log-posteriors for larger models. Both articles fit the same

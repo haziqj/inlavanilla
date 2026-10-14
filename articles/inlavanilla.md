@@ -76,13 +76,13 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [7ms]
+#> ✔ Found the posterior mode in 10 iterations [8ms]
 #> ✔ VB mean correction, max shift 0.44σ [16ms]
 #> ✔ Fitted 3 skew-normal marginals [10ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.61 · Converged in 10 iterations (39ms)
+#> Log marginal likelihood: -11.61 · Converged in 10 iterations (40ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -111,9 +111,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.612 · Converged in 10 iterations (39ms)
+#> Log marginal likelihood: -11.612 · Converged in 10 iterations (40ms)
 #> Laplace -11.709 + VB term 0.097
-#> 263 logpost calls: mode 7ms, VB 16ms, marginals 10ms
+#> 263 logpost calls: mode 8ms, VB 16ms, marginals 11ms
 #> 
 #> ── Posterior marginals ──
 #> 
