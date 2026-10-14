@@ -326,7 +326,7 @@ fit
 
 This agrees with the Rcpp article's fit, which uses the same log-posterior,
 to within about $10^{-4}$ posterior SDs. The two checks flagged by
-`summary()` are the scan-path bend and the gap between the skew-normal and
+`summary()` are the ridge bend and the gap between the skew-normal and
 VB means, both for `logv_dem65`; the [Rcpp article](rcpp.html) discusses
 them.
 

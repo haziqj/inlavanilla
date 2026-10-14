@@ -128,12 +128,12 @@ summary(fit)
 * **SN - VB** compares the skew-normal mean with the VB-corrected mean, in
   posterior SDs. Both estimate the posterior mean, so they should agree; a
   large gap means the posterior is far from Gaussian and either may be off.
-* **Bend** is the log-density, in nats, that each scan misses 2 SDs out,
-  because it runs along a straight line while the other parameters'
-  conditional mode bends away from it. Above 0.25 it is flagged: the
-  marginal SD may then be about 10% too small. The intercept's bend is
-  below that, and its marginal is only a little narrow, as the check
-  against the exact posterior below shows.
+* **Ridge bend** is the log-density, in nats, that each scan misses 2 SDs
+  out, because it runs along a straight line, the conditional mode path,
+  while the ridge of high density bends away from it. Above 0.25 it is
+  flagged: the marginal SD may then be about 10% too small. The
+  intercept's ridge bend is below that, and its marginal is only a little
+  narrow, as the check against the exact posterior below shows.
 * **End mass** is the mass each skew-normal puts beyond the scanned window,
   4 posterior SDs either side of the mode, where it is extrapolated. It is
   flagged above 0.05.
@@ -215,9 +215,9 @@ par(op)
 ```
 
 The skew-normal intervals track the exact ones closely. The intercept's is a
-little narrow, by about 5%, as its bend suggested. The Laplace intervals are
-symmetric about the mode, so they cut the long tails short and miss values on
-the far side.
+little narrow, by about 5%, as its ridge bend suggested. The Laplace intervals
+are symmetric about the mode, so they cut the long tails short and miss
+values on the far side.
 
 The grid also gives the exact log marginal likelihood:
 

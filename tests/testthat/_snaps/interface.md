@@ -86,10 +86,10 @@
         KL term #, giving a log marginal likelihood of #
         <n> logpost calls
       v Fitted 2 skew-normal marginals [<time>]
-                   Shape NMAD Bend Tails End mass gamma1
+                   Shape NMAD Ridge bend Tails End mass gamma1
         intercept # # # ok # #
         slope # # # ok # #
-        ! marks what summary() flags: NMAD above 0.1, bend above 0.25, heavy tails, scan-end mass above 0.05
+        ! marks what summary() flags: NMAD above 0.1, ridge bend above 0.25, heavy tails, scan-end mass above 0.05
         <n> logpost calls
       i Done: <n> logpost calls in <time>
 
@@ -117,10 +117,10 @@
         KL term #, giving a log marginal likelihood of #
         <n> grad calls
       v Fitted 2 skew-normal marginals [<time>]
-                   Shape NMAD Bend Tails End mass gamma1
+                   Shape NMAD Ridge bend Tails End mass gamma1
         intercept # # # ok # #
         slope # # # ok # #
-        ! marks what summary() flags: NMAD above 0.1, bend above 0.25, heavy tails, scan-end mass above 0.05
+        ! marks what summary() flags: NMAD above 0.1, ridge bend above 0.25, heavy tails, scan-end mass above 0.05
         <n> logpost and <n> grad calls
       i Done: <n> logpost and <n> grad calls in <time>
 
@@ -150,9 +150,9 @@
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Diagnostics
-                 VB shift  SN - VB  Shape   NMAD   Bend  End mass
-      intercept     -0.23  -0.0068   -1.6   0.01  0.037   0.00078
-      slope         0.084  -0.0042    1.1  0.015   0.14   0.00013
+                 VB shift  SN - VB  Shape   NMAD  Ridge bend  End mass
+      intercept     -0.23  -0.0068   -1.6   0.01       0.037   0.00078
+      slope         0.084  -0.0042    1.1  0.015        0.14   0.00013
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
       v Hessian condition number 3.6, in posterior-SD units.
@@ -176,9 +176,9 @@
       slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       Diagnostics
-                 Shape   NMAD   Bend  End mass
-      intercept   -1.6   0.01  0.037   0.00078
-      slope        1.1  0.015   0.14   0.00013
+                 Shape   NMAD  Ridge bend  End mass
+      intercept   -1.6   0.01       0.037   0.00078
+      slope        1.1  0.015        0.14   0.00013
       
       v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
       v Hessian condition number 3.6, in posterior-SD units.

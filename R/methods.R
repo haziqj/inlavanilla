@@ -44,7 +44,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' gap between the skew-normal and VB means as an internal check (Section
 #' 5.1). The mode shift, the Hessian condition number and the scan-end mass
 #' come from INLAvaan's `diagnostics()`, not from the paper. `tails` and
-#' `bend` are inlavanilla's own.
+#' `ridge_bend` are inlavanilla's own.
 #'
 #' A posterior SD here is the Laplace SD at the mode,
 #' \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -94,22 +94,23 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' * **Tails.** `tails` is `FALSE` (and flagged) when the density at an end
 #'   of the scan is still over 5% of its peak: the Laplace SD badly
 #'   understates a heavy tail there, and the skew-normal extrapolates it.
-#' * **Scan path.** Each parameter is scanned along the conditional mode path
-#'   of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a straight line
-#'   that is a first-order approximation to a possibly curved ridge (Section
-#'   3.2.1). `bend` is the log-density, in nats, that the straight scan
-#'   misses at \eqn{\pm 2} posterior SDs: the gain from one Newton step
-#'   towards the conditional mode of the other parameters. A large value
-#'   means the other parameters' conditional mode bends away from the line,
-#'   as a poorly determined noise scale does for a regression coefficient at
-#'   small n, and the marginal comes out too narrow. For a normal mean with
-#'   an unknown SD, a bend \eqn{b} makes the marginal SD too small by
+#' * **Ridge bend.** Each parameter is scanned along the conditional mode
+#'   path (CMP) of the Laplace Gaussian (Jamil & Rue, 2026, Lemma 3.1), a
+#'   straight line that is a first-order approximation to a possibly curved
+#'   ridge of high posterior density (Section 3.2.1). `ridge_bend` is the
+#'   log-density, in nats, that the straight scan misses at \eqn{\pm 2}
+#'   posterior SDs: the gain from one Newton step towards the conditional
+#'   mode of the other parameters. A large value means the ridge bends away
+#'   from the CMP, as it does for a regression coefficient when the noise
+#'   scale is poorly determined at small n, and the marginal comes out too
+#'   narrow. For a normal mean with an unknown SD, a ridge bend \eqn{b} makes
+#'   the marginal SD too small by
 #'   \eqn{1 - \sqrt{1 - 3b/4}}{1 - sqrt(1 - 3b/4)}, about \eqn{3b/8}. In
 #'   other models this is a rough guide: on test models it was mostly within
 #'   a factor of 1.5 of the true shortfall, above it in logistic and Poisson
-#'   regressions and below it in a nonlinear regression. `bend` is flagged
-#'   above 0.25, a shortfall of 10% by that formula (see the Accuracy section
-#'   of [inla_vanilla()]).
+#'   regressions and below it in a nonlinear regression. `ridge_bend` is
+#'   flagged above 0.25, a shortfall of 10% by that formula (see the Accuracy
+#'   section of [inla_vanilla()]).
 #' * **Skew-normal and VB means.** `sn_vs_vb`, the gap between the
 #'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
 #'   target the posterior mean, so they should agree closely (to
@@ -123,7 +124,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
 #' mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
 #' are those of INLAvaan's fit-time warning; the heavy-tails check is
-#' inlavanilla's own, as are the scan-path and SN-VB flags. Every level is a
+#' inlavanilla's own, as are the ridge bend and SN-VB flags. Every level is a
 #' package default, chosen so that a healthy fit stays silent, and not a
 #' calibrated cut-off: a tripped check is a prompt to look again, and
 #' silence is not a certificate of accuracy. In the simulations of Jamil and
@@ -212,10 +213,10 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     "sn_vs_vb",
     "alpha",
     "nmad",
-    "bend",
+    "ridge_bend",
     "scan_end_mass"
   )
-  heads <- c("VB shift", "SN - VB", "Shape", "NMAD", "Bend", "End mass")
+  heads <- c("VB shift", "SN - VB", "Shape", "NMAD", "Ridge bend", "End mass")
   keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)) &
     (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
   if (any(keep)) {
@@ -322,7 +323,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       max_nmad <- glob[["nmad_max"]]
       cat_status("ok", "Skew-normal fits: max NMAD {fmt_num(max_nmad)}.")
     }
-    for (check in c("scan_end_mass", "tails", "bend")) {
+    for (check in c("scan_end_mass", "tails", "ridge_bend")) {
       if (flags[[check]]) {
         flagged_line(check)
       }
@@ -729,11 +730,11 @@ method_label <- function(gaussian, vb) {
 
 # The checks that summary() flags, each TRUE when flagged: the mode, the
 # Hessian condition number, the VB shift, and, for skew-normal marginals,
-# NMAD, the scan-end mass, the tails, the scan-path bend and the SN-VB gap.
+# NMAD, the scan-end mass, the tails, the ridge bend and the SN-VB gap.
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
-# warning (warn_levels), which raises every one of these but the bend and
-# the SN-VB gap (summary_levels). A check that did not run is not flagged;
-# a value that is not finite is. print() counts the flags, and summary()
+# warning (warn_levels), which raises every one of these but the ridge bend
+# and the SN-VB gap (summary_levels). A check that did not run is not
+# flagged; a value that is not finite is. print() counts the flags, and summary()
 # prints one "!" line for each.
 check_flags <- function(dg, gaussian) {
   p <- dg$param
@@ -747,7 +748,7 @@ check_flags <- function(dg, gaussian) {
     scan_end_mass = sn &&
       any(off_level(p$scan_end_mass, warn_levels$scan_end_mass)),
     tails = sn && !all(p$tails %in% TRUE),
-    bend = sn && any(off_level(p$bend, summary_levels$bend)),
+    ridge_bend = sn && any(off_level(p$ridge_bend, summary_levels$ridge_bend)),
     sn_vs_vb = sn &&
       vb &&
       any(off_level(abs(p$sn_vs_vb), summary_levels$sn_vs_vb))

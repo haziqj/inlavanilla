@@ -47,7 +47,7 @@ that something needs a look.
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
 | Scan-end mass | `scan_end_mass` | above 0.05 | the same | INLAvaan |
 | Tails | `tails` | heavy | the same | inlavanilla |
-| Scan path | `bend` | above 0.25 nats | no | inlavanilla |
+| Ridge bend | `ridge_bend` | above 0.25 nats | no | inlavanilla |
 | Skew-normal and VB means | `sn_vs_vb` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan's `diagnostics()`, under the same
@@ -56,13 +56,14 @@ and the gap between the skew-normal and VB means as an internal check; the
 mode shift, the Hessian condition number and the scan-end mass come from
 INLAvaan's `diagnostics()`, not from the paper. The levels of those five
 checks are INLAvaan's, and the fit-time warning uses its words. The tails
-check is inlavanilla's own, and so are the scan-path and SN-VB checks, which
-only `summary()` flags. Every level is a package default, chosen so that a
-healthy fit stays silent, and not a calibrated cut-off: a tripped check is a
-prompt to look again, and silence is not a certificate of accuracy. In the
-simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD track
-the loss of accuracy, and the paper reports a calibration of the expected
-error against them in its Supplementary Material.
+check is inlavanilla's own, and so are the ridge bend and SN-VB checks,
+which only `summary()` flags. Every level is a package default, chosen so
+that a healthy fit stays silent, and not a calibrated cut-off: a tripped
+check is a prompt to look again, and silence is not a certificate of
+accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB
+shift and NMAD track the loss of accuracy, and the paper reports a
+calibration of the expected error against them in its Supplementary
+Material.
 
 ## A healthy fit
 
@@ -191,23 +192,24 @@ legend(
 )
 ```
 
-## The scan path
+## Ridge bend
 
-Each marginal is scanned along a straight line through the mode, the path
-on which the Laplace Gaussian puts the other parameters at their conditional
-mode given this one (Jamil & Rue, 2026, Lemma 3.1). The straight line is a
-first-order approximation to a possibly curved ridge (Section 3.2.1). When
-the true conditional mode bends away from the line, the scan misses
-log-density, and the marginal comes out too narrow. `bend`, inlavanilla's
-own check, is the log-density, in nats, that one Newton step in the other
-parameters would recover at $\pm 2$ posterior SDs.
+Each marginal is scanned along a straight line through the mode, the
+conditional mode path (CMP) on which the Laplace Gaussian puts the other
+parameters at their conditional mode given this one (Jamil & Rue, 2026,
+Lemma 3.1). The straight line is a first-order approximation to a possibly
+curved ridge of high posterior density (Section 3.2.1). When the ridge bends
+away from the CMP, the scan misses log-density, and the marginal comes out
+too narrow. The ridge bend, `ridge_bend`, inlavanilla's own check, is the
+log-density, in nats, that one Newton step in the other parameters would
+recover at $\pm 2$ posterior SDs.
 
 This happens when a parameter's spread depends on another parameter that the
 data pin down poorly. A normal mean with an unknown SD, from 12
 observations, is the textbook case:
 
 ```{r}
-#| label: bend
+#| label: ridge-bend
 set.seed(4)
 y12 <- rnorm(12, 10, 2)
 logpost_norm <- function(theta, y) {
@@ -218,14 +220,14 @@ logpost_norm <- function(theta, y) {
 fit_norm <- inla_vanilla(
   logpost_norm, c(mu = 9, log_sigma = 0.5), y = y12, silent = TRUE
 )
-signif(fit_norm$diagnostics$marginals[, c("nmad", "bend")], 2)
+signif(fit_norm$diagnostics$marginals[, c("nmad", "ridge_bend")], 2)
 ```
 
-`summary()` flags the bend for `mu`. The exact marginal SD of `mu`, from a
-grid, shows how much narrower the skew-normal is:
+`summary()` flags the ridge bend of `mu`. The exact marginal SD of `mu`,
+from a grid, shows how much narrower the skew-normal is:
 
 ```{r}
-#| label: bend-exact
+#| label: ridge-bend-exact
 grid <- expand.grid(
   mu = seq(7, 15, length.out = 401),
   log_sigma = seq(-1, 2.5, length.out = 401)
@@ -240,15 +242,16 @@ sds
 
 The skew-normal SD of `mu` is `r round(100 * (1 - sds[[2]] / sds[[1]]))`% too
 small here. The gap shrinks as $1/n$: for a normal mean with an unknown SD it
-is about 3% at 50 observations and under 1% at 200. For this model the bend
-$b$ gives the gap: the SD is too small by $1 - \sqrt{1 - 3b/4}$, roughly
-$3b/8$, and $b$ is close to $4/n$. From its bend of
-`r round(fit_norm$diagnostics$marginals["mu", "bend"], 2)`, the formula gives
-`r round(100 * (1 - sqrt(1 - 0.75 * fit_norm$diagnostics$marginals["mu", "bend"])))`%.
-`summary()` flags a bend above 0.25, where the formula gives 10%. In other
-models it is a rough guide to how much: on test models it was mostly within
-a factor of 1.5 of the true gap, and it overstated the narrowing in logistic
-and Poisson regressions.
+is about 3% at 50 observations and under 1% at 200. For this model the ridge
+bend $b$ gives the gap: the SD is too small by $1 - \sqrt{1 - 3b/4}$, roughly
+$3b/8$, and $b$ is close to $4/n$. From its ridge bend of
+`r round(fit_norm$diagnostics$marginals["mu", "ridge_bend"], 2)`, the
+formula gives
+`r round(100 * (1 - sqrt(1 - 0.75 * fit_norm$diagnostics$marginals["mu", "ridge_bend"])))`%.
+`summary()` flags a ridge bend above 0.25, where the formula gives 10%. In
+other models it is a rough guide to how much: on test models it was mostly
+within a factor of 1.5 of the true gap, and it overstated the narrowing in
+logistic and Poisson regressions.
 
 ## Tails and scan-end mass
 

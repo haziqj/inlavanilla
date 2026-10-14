@@ -619,7 +619,7 @@ out a variance near zero, so on the log scale the posterior has a long
 exponential left tail, held back only by the prior, and a skew-normal cannot
 follow it. On the variance scale, where the tail near zero is compressed, the
 error is much smaller: the posterior means of the two variances are 0.2
-posterior SDs too high. No check flags `logv_x2`: its scan path bends less,
+posterior SDs too high. No check flags `logv_x2`: its ridge bends less,
 and none of the checks is aimed at a tail like this. The other 37 marginals
 agree with MCMC to within 7% in SD.
 

@@ -87,6 +87,6 @@ cmp <- data.frame(
   mean_err = (sn[, "Mean"] - sm$mean) / sm$sd,
   q025_err = (sn[, "2.5%"] - sm$`2.5%`) / sm$sd,
   q975_err = (sn[, "97.5%"] - sm$`97.5%`) / sm$sd,
-  bend = fit$diagnostics$marginals[sm$variable, "bend"]
+  bend = fit$diagnostics$marginals[sm$variable, "ridge_bend"]
 )
 print(cmp[order(cmp$sd_ratio), ], digits = 3, row.names = FALSE)

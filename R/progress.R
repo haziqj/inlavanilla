@@ -392,7 +392,7 @@ report_marginals <- function(p, sn, calls) {
   cols <- list(
     Shape = formatC(sn[, "alpha"], digits = 2, format = "f"),
     NMAD = formatC(sn[, "nmad"], digits = 2, format = "g"),
-    Bend = formatC(sn[, "bend"], digits = 2, format = "g"),
+    `Ridge bend` = formatC(sn[, "ridge_bend"], digits = 2, format = "g"),
     Tails = ifelse(sn[, "tails"] == 1, "ok", "heavy"),
     `End mass` = formatC(sn[, "scan_end_mass"], digits = 2, format = "g"),
     gamma1 = formatC(sn[, "gamma1"], digits = 2, format = "g")
@@ -401,7 +401,7 @@ report_marginals <- function(p, sn, calls) {
   flags <- list(
     Shape = none,
     NMAD = off_level(sn[, "nmad"], warn_levels$nmad),
-    Bend = off_level(sn[, "bend"], summary_levels$bend),
+    `Ridge bend` = off_level(sn[, "ridge_bend"], summary_levels$ridge_bend),
     Tails = !sn[, "tails"] %in% 1,
     `End mass` = off_level(sn[, "scan_end_mass"], warn_levels$scan_end_mass),
     gamma1 = none
@@ -453,8 +453,8 @@ report_marginals <- function(p, sn, calls) {
         grey(
           " marks what summary() flags: NMAD above ",
           warn_levels$nmad,
-          ", bend above ",
-          summary_levels$bend,
+          ", ridge bend above ",
+          summary_levels$ridge_bend,
           ", heavy tails, scan-end mass above ",
           warn_levels$scan_end_mass
         )
