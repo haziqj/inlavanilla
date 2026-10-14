@@ -68,10 +68,12 @@ pop_names <- c("b_ke", "b_ka", "b_cl", "log_sd_ka", "log_sd_cl", "log_sigma")
 
 ## ----- Log joint density -----------------------------------------------------
 
+# An Exponential(1) prior on an SD s = exp(l), on the log scale, with the
+# Jacobian
+log_prior_sd <- function(l) l - exp(l)
+
 # A function of the parameter list, for RTMB. The concentration is SSfol()'s
-# Dose ke ka / Cl (exp(-ke t) - exp(-ka t)) / (ka - ke). An Exponential(1)
-# prior on an SD s = exp(l) gives l - exp(l) on the log scale, with the
-# Jacobian.
+# Dose ke ka / Cl (exp(-ke t) - exp(-ka t)) / (ka - ke).
 log_joint <- function(p) {
   ke <- exp(p$b_ke)
   ka <- exp(p$b_ka + p$u_ka)[id]
@@ -83,12 +85,9 @@ log_joint <- function(p) {
     RTMB::dnorm(p$b_ke, 0, 10, log = TRUE) +
     RTMB::dnorm(p$b_ka, 0, 10, log = TRUE) +
     RTMB::dnorm(p$b_cl, 0, 10, log = TRUE) +
-    p$log_sd_ka -
-    exp(p$log_sd_ka) +
-    p$log_sd_cl -
-    exp(p$log_sd_cl) +
-    p$log_sigma -
-    exp(p$log_sigma)
+    log_prior_sd(p$log_sd_ka) +
+    log_prior_sd(p$log_sd_cl) +
+    log_prior_sd(p$log_sigma)
 }
 
 par0 <- list(
