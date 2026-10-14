@@ -356,11 +356,11 @@ us <- rbind(
 )
 round(us, 1)
 #>             R  RTMB C++
-#> logpost  57.6  48.2 5.6
-#> gradient   NA 106.4 7.0
+#> logpost  73.7 123.4 7.5
+#> gradient   NA 266.9 9.2
 ```
 
-Replaying the tape takes 0.8 times as long as a call of `logpost_r()`,
+Replaying the tape takes 1.7 times as long as a call of `logpost_r()`,
 and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++
 is 10 times faster than R, and the hand-written gradient costs as much
 as 1.2 calls of its log-posterior. The four fits:
@@ -382,17 +382,17 @@ fits <- list(
 seconds <- vapply(fits, function(f) f$timing[["total"]], 0)
 cbind(t(sapply(fits, function(f) f$counts)), seconds = round(seconds, 2))
 #>                  logpost grad seconds
-#> R                  22255    0    1.57
-#> RTMB                1530 9928    1.25
-#> C++                22437    0    0.32
-#> C++ and gradient    1535 9931    0.21
+#> R                  22255    0    1.99
+#> RTMB                1530 9928    3.05
+#> C++                22437    0    0.42
+#> C++ and gradient    1535 9931    0.26
 ```
 
 Without a gradient the fit calls `logpost` 22,255 times. With one it
 calls `logpost` 1,530 times and the gradient 9,928 times. Both counts
 grow with the square of the number of parameters, so a gradient saves
 time only when it costs less than 2.1 calls of `logpost`. RTMB’s costs
-about that, and its fit takes 0.8 times as long as R’s. The speed comes
+about that, and its fit takes 1.5 times as long as R’s. The speed comes
 from C++, and a hand-written gradient in C++ is the fastest of all.
 
 ## Accuracy

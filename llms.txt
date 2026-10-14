@@ -190,6 +190,13 @@ INLA-based approximate Bayesian structural equation modelling*
   A one-factor model for binary items, with the factor integrated out by
   Gauss-Hermite quadrature inside the log-posterior.
 
+- [Diagnostic tests without a gold
+  standard](http://haziqj.ml/inlavanilla/articles/diagnostic-tests.md):
+
+  Three latent class models for five schistosomiasis tests in Ghana,
+  with the infection status summed out and a random effect integrated by
+  quadrature.
+
 ### Speed and gradients
 
 Faster log-posteriors and exact gradients for larger models. Both

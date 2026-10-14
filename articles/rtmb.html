@@ -54,6 +54,7 @@
     <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -396,10 +397,10 @@
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">us</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="co">#&gt;             R  RTMB C++</span></span>
-<span><span class="co">#&gt; logpost  57.6  48.2 5.6</span></span>
-<span><span class="co">#&gt; gradient   NA 106.4 7.0</span></span></code></pre></div>
+<span><span class="co">#&gt; logpost  73.7 123.4 7.5</span></span>
+<span><span class="co">#&gt; gradient   NA 266.9 9.2</span></span></code></pre></div>
 </div>
-<p>Replaying the tape takes 0.8 times as long as a call of <code>logpost_r()</code>, and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++ is 10 times faster than R, and the hand-written gradient costs as much as 1.2 calls of its log-posterior. The four fits:</p>
+<p>Replaying the tape takes 1.7 times as long as a call of <code>logpost_r()</code>, and RTMB’s gradient costs as much as 2.2 calls of its log-posterior. C++ is 10 times faster than R, and the hand-written gradient costs as much as 1.2 calls of its log-posterior. The four fits:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -417,12 +418,12 @@
 <span><span class="va">seconds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">timing</span><span class="op">[[</span><span class="st">"total"</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span><span class="op">)</span>, seconds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">seconds</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  logpost grad seconds</span></span>
-<span><span class="co">#&gt; R                  22255    0    1.57</span></span>
-<span><span class="co">#&gt; RTMB                1530 9928    1.25</span></span>
-<span><span class="co">#&gt; C++                22437    0    0.32</span></span>
-<span><span class="co">#&gt; C++ and gradient    1535 9931    0.21</span></span></code></pre></div>
+<span><span class="co">#&gt; R                  22255    0    1.99</span></span>
+<span><span class="co">#&gt; RTMB                1530 9928    3.05</span></span>
+<span><span class="co">#&gt; C++                22437    0    0.42</span></span>
+<span><span class="co">#&gt; C++ and gradient    1535 9931    0.26</span></span></code></pre></div>
 </div>
-<p>Without a gradient the fit calls <code>logpost</code> 22,255 times. With one it calls <code>logpost</code> 1,530 times and the gradient 9,928 times. Both counts grow with the square of the number of parameters, so a gradient saves time only when it costs less than 2.1 calls of <code>logpost</code>. RTMB’s costs about that, and its fit takes 0.8 times as long as R’s. The speed comes from C++, and a hand-written gradient in C++ is the fastest of all.</p>
+<p>Without a gradient the fit calls <code>logpost</code> 22,255 times. With one it calls <code>logpost</code> 1,530 times and the gradient 9,928 times. Both counts grow with the square of the number of parameters, so a gradient saves time only when it costs less than 2.1 calls of <code>logpost</code>. RTMB’s costs about that, and its fit takes 1.5 times as long as R’s. The speed comes from C++, and a hand-written gradient in C++ is the fastest of all.</p>
 </section><section class="level2"><h2 id="accuracy">Accuracy<a class="anchor" aria-label="anchor" href="#accuracy"></a>
 </h2>
 <p>Each fit against the one with the hand-written gradient: the skew-normal marginals (means, SDs and quantiles) and the VB mean in posterior SDs, and the log marginal likelihood in nats.</p>

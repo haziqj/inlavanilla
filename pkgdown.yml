@@ -5,13 +5,14 @@ articles:
   articles/binary-cfa: binary-cfa.html
   articles/correlation: correlation.html
   articles/dcm: dcm.html
+  articles/diagnostic-tests: diagnostic-tests.html
   diagnostics: diagnostics.html
   inlavanilla: inlavanilla.html
   model-comparison: model-comparison.html
   articles/multilevel: multilevel.html
   articles/rcpp: rcpp.html
   articles/rtmb: rtmb.html
-last_built: 2026-10-14T14:44Z
+last_built: 2026-10-14T17:03Z
 urls:
   reference: http://haziqj.ml/inlavanilla/reference
   article: http://haziqj.ml/inlavanilla/articles

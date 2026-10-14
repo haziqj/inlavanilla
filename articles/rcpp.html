@@ -54,6 +54,7 @@
     <li><a class="dropdown-item" href="../articles/dcm.html">Diagnostic classification models</a></li>
     <li><a class="dropdown-item" href="../articles/correlation.html">Correlation matrices</a></li>
     <li><a class="dropdown-item" href="../articles/binary-cfa.html">Binary factor analysis</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostic-tests.html">Diagnostic tests without a gold standard</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -326,14 +327,14 @@
 <span><span class="op">}</span></span>
 <span><span class="va">us_r</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">init</span>, <span class="va">Y</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="va">us_r</span></span>
-<span><span class="co">#&gt; [1] 54</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 68</span></span></code></pre></div>
 </div>
 <p>With <code>vb = FALSE</code>, <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> skips the VB correction and runs only the mode search and the skew-normal marginals:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_r</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span>, vb <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 80 iterations [424ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [549ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 80 iterations [537ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [674ms]</span></span>
 <span><span class="va">fit_r</span><span class="op">$</span><span class="va">counts</span></span>
 <span><span class="co">#&gt; logpost    grad </span></span>
 <span><span class="co">#&gt;   14055       0</span></span></code></pre></div>
@@ -546,24 +547,24 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="va">us_grad</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">grad_cpp</span><span class="op">(</span><span class="va">init</span>, <span class="va">Y</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>R <span class="op">=</span> <span class="va">us_r</span>, `C++` <span class="op">=</span> <span class="va">us_cpp</span>, `C++ gradient` <span class="op">=</span> <span class="va">us_grad</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            R          C++ C++ gradient </span></span>
-<span><span class="co">#&gt;         54.0          5.4          6.9</span></span></code></pre></div>
+<span><span class="co">#&gt;         68.0          7.3          9.0</span></span></code></pre></div>
 </div>
-<p>The C++ log-posterior is about 10 times faster than the R one, and the analytic gradient costs about the same as one log-posterior, where finite differences need 40.</p>
+<p>The C++ log-posterior is about 9 times faster than the R one, and the analytic gradient costs about the same as one log-posterior, where finite differences need 40.</p>
 <p>Now the full fit, with the VB correction, first without a gradient:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_cpp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 82 iterations [57ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [103ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [173ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 82 iterations [76ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [137ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [209ms]</span></span></code></pre></div>
 </div>
-<p>It took 22,437 calls. In R, at 54 microseconds a call, these would take about 1.2 seconds. With the gradient:</p>
+<p>It took 22,437 calls. In R, at 68 microseconds a call, these would take about 1.5 seconds. With the gradient:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad_cpp</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 89 iterations [6ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [112ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [142ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 89 iterations [8ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.43σ [122ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [133ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> checks the gradient against finite differences at <code>init</code>, and its Jacobian at the mode for symmetry, and warns if either check fails. Here neither does. The calls and times (in seconds) of the three fits:</p>
 <div class="cell" data-layout-align="center">
@@ -571,9 +572,9 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>`R, no VB` <span class="op">=</span> <span class="va">fit_r</span>, `C++` <span class="op">=</span> <span class="va">fit_cpp</span>, `C++ and gradient` <span class="op">=</span> <span class="va">fit</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">counts</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">timing</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  logpost grad laplace   vb marginals total</span></span>
-<span><span class="co">#&gt; R, no VB           14055    0    0.42 0.00      0.55  0.98</span></span>
-<span><span class="co">#&gt; C++                22437    0    0.06 0.10      0.17  0.34</span></span>
-<span><span class="co">#&gt; C++ and gradient    1535 9931    0.01 0.11      0.14  0.26</span></span></code></pre></div>
+<span><span class="co">#&gt; R, no VB           14055    0    0.54 0.00      0.67  1.22</span></span>
+<span><span class="co">#&gt; C++                22437    0    0.08 0.14      0.21  0.43</span></span>
+<span><span class="co">#&gt; C++ and gradient    1535 9931    0.01 0.12      0.13  0.27</span></span></code></pre></div>
 </div>
 <p>The VB correction takes the same nodes either way: the gradient at <span class="math inline">\((m + 1)(m + 2) + 1 = 1{,}641\)</span> points per sweep, or <code>logpost</code> at all but the centre. The gradient buys accuracy there: its VB mean is exact when the log-posterior is a polynomial of degree six, against degree four from <code>logpost</code> alone.</p>
 <p>The three fits agree. The skew-normal marginals do not depend on the VB correction, so even <code>fit_r</code> gives the same table. The largest difference in a posterior mean or quantile, in posterior SDs:</p>
@@ -594,9 +595,9 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1686.850 · Converged in 89 iterations (265ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1686.850 · Converged in 89 iterations (269ms)</span></span>
 <span><span class="co">#&gt; Laplace -1687.471 + VB term 0.62</span></span>
-<span><span class="co">#&gt; 1535 logpost and 9931 grad calls: mode 6ms, VB 112ms, marginals 142ms</span></span>
+<span><span class="co">#&gt; 1535 logpost and 9931 grad calls: mode 8ms, VB 122ms, marginals 133ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>

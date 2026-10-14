@@ -61,6 +61,13 @@
   for binary items in the delta parameterisation, with the factor
   integrated out by Gauss-Hermite quadrature over the counts of the
   response patterns.
+- A website article, “Diagnostic tests without a gold standard”, fits
+  the three latent class models of Koukounari et al. (2021) to five
+  schistosomiasis tests: conditional independence, a person-level random
+  effect integrated out by Gauss-Hermite quadrature, and a finite
+  mixture with always-positive and always-negative groups. It compares
+  their estimates with the published ones, and the models by their log
+  marginal likelihoods.
 - Three output levels: by default each stage prints one line;
   `verbose = TRUE` adds a full diagnostic of each stage (the optimiser’s
   report, how the Hessian was taken, the posterior correlations, the VB
