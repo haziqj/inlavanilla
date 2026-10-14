@@ -461,9 +461,15 @@ obj <- RTMB::MakeADFun(
 fit_rtmb <- inla_vanilla(obj$fn, init, grad = obj$gr)
 ```
 
-Any R function works as `logpost` and `grad`, including compiled code from
-Rcpp or TMB. A TMB template usually returns the negative log-posterior, to
-be minimised, so negate its `obj$fn` and `obj$gr`.
+RTMB gives the Hessian too, as `obj$he`, and `inla_vanilla()` takes it as
+`hess`, after `grad`, as `nlminb()` does:
+`inla_vanilla(obj$fn, init, grad = obj$gr, hess = obj$he)`. The fit is the
+same, but its mode is found more precisely and it takes a little less time.
+
+Any R function works as `logpost`, `grad` and `hess`, including compiled
+code from Rcpp or TMB. A TMB template usually returns the negative
+log-posterior, to be minimised, so negate its `obj$fn`, `obj$gr` and
+`obj$he`.
 
 The articles [Speeding up with Rcpp](rcpp.html) and
 [Gradients with RTMB](rtmb.html) work through both routes for a structural

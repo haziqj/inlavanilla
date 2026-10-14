@@ -463,6 +463,79 @@ carries over to everything built on the VB mean: the log marginal
 likelihood, `loo()` and `waic()`, and the Gaussian marginals of
 `marginals = "gaussian"`.
 
+## The Hessian
+
+RTMB gives the Hessian as well. `obj$he` replays the tape for the exact
+matrix of second derivatives, and `inla_vanilla()` takes it as `hess`, after
+`grad`, as `nlminb()` does. A *Hessian tape* records the computation of the
+Hessian itself, once, and is a little faster to replay. The three fits with
+RTMB's gradient, in seconds per stage:
+
+```{r}
+#| label: hessian
+tape <- RTMB::MakeTape(function(theta) logpost_rtmb(theta, Y), unname(init))
+hess_tape <- tape$jacfun()$jacfun()
+fits_hess <- list(
+  gradient = fits$RTMB,
+  `obj$he` = inla_vanilla(
+    obj$fn,
+    init,
+    grad = obj$gr,
+    hess = obj$he,
+    silent = TRUE
+  ),
+  `Hessian tape` = inla_vanilla(
+    obj$fn,
+    init,
+    grad = obj$gr,
+    hess = hess_tape,
+    silent = TRUE
+  )
+)
+t(sapply(fits_hess, function(f) round(f$timing, 2)))
+```
+
+```{r}
+#| label: hessian-numbers
+#| include: false
+tm <- sapply(fits_hess, function(f) f$timing)
+marg_speedup <- tm[["marginals", "gradient"]] /
+  tm[["marginals", "Hessian tape"]]
+saved <- 1 - tm[["total", "Hessian tape"]] / tm[["total", "gradient"]]
+```
+
+The Hessian is used in three places. `nlminb()` takes Newton steps to the
+mode, the Hessian at the mode is RTMB's rather than central differences of
+the gradient, and the volume correction of each skew-normal marginal takes
+one Hessian instead of 2m + 2 = 80 gradients. The marginals stage is
+`r round(marg_speedup, 1)` times as fast. A Hessian costs about as much
+as m gradients, and the VB correction, the slowest stage, uses none, so the
+whole fit takes `r round(100 * saved)`% less time.
+
+The fit itself is the same. Against the fit from the gradient alone, the
+largest difference in the marginals, in posterior SDs, and the whitened
+gradient where `nlminb()` stopped:
+
+```{r}
+#| label: hessian-accuracy
+sds_rtmb <- fits$RTMB$summary[, "SD"]
+signif(
+  t(sapply(fits_hess, function(f) {
+    c(
+      marginals = max(abs(f$summary - fits$RTMB$summary) / sds_rtmb),
+      whitened_gradient = f$diagnostics$optim$grad_mode
+    )
+  })),
+  1
+)
+```
+
+The small differences come from the mode. With the gradient alone,
+`nlminb()` stops when its steps become small, short of the mode by about a
+ten-thousandth of a posterior SD, and its Newton steps with the Hessian go
+on to within a millionth. With random effects integrated out, TMB gives no
+Hessian.
+
 ## Choosing a route
 
 In order of the work they take, with the first two about equal:
