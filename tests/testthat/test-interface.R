@@ -1415,6 +1415,43 @@ test_that("printed output fits in 80 columns, however wide the console", {
   )
 })
 
+test_that("a VB correction that does not settle is flagged from end to end", {
+  # Without a gradient the fallback minimises the rule's mean of logpost with
+  # Stein's identity as its gradient. On a log-posterior of degree six the
+  # two disagree, and nlminb() stops short. Observed: a step of 0.14 SDs
+  # still to go.
+  lp_x6 <- function(theta) -theta[[1]]^6 - 0.5 * theta[[1]]^2 + theta[[1]]
+  w <- expect_warning(
+    msgs <- capture_messages(fit <- inla_vanilla(lp_x6, c(t = 0.3))),
+    class = "inlavanilla_diagnostics_warning"
+  )
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_gt(fit$diagnostics$marginals$vb_step_sigma, 0.1)
+  expect_match(
+    unwrap(cli::ansi_strip(conditionMessage(w))),
+    "x The VB correction did not settle: one more step would move `t` by"
+  )
+  expect_match(fit$warnings, "The VB correction did not settle")
+  # The stage line is marked, and says so
+  expect_match(
+    msgs,
+    "^! VB mean correction, max shift .*, not settled",
+    all = FALSE
+  )
+  expect_match(
+    capture_output(print(fit)),
+    "\\| Not converged: VB did not settle \\("
+  )
+  # The verbose report marks the step where the fallback landed
+  text <- unwrap_msgs(capture_messages(suppressWarnings(
+    inla_vanilla(lp_x6, c(t = 0.3), verbose = TRUE)
+  )))
+  expect_match(
+    text,
+    "One more step would move a mean by [0-9.]+ SD! \\(warning > 0.1 SD\\)"
+  )
+})
+
 test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
   # The unreached mode of the test above: nlminb() is restarted with the
   # parameters rescaled, the VB correction falls back to nlminb(), and the
@@ -1438,6 +1475,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     text,
     "\n *Fell back to nlminb, as a step was over 1 posterior SD"
   )
+  expect_match(text, "\n *One more step would move a mean by [0-9.e-]+ SD")
   expect_no_match(text, "! Fell back")
   # The VB shift and the scan-end mass are marked where they are shown
   expect_match(
@@ -2214,6 +2252,20 @@ test_that("summary() flags each diagnostic at its documented level", {
       "! VB correction in 3 iterations: shift > 1 SD for `intercept` (1.50), `slope` (1.20).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.25), `intercept` (0.12)."
     )
+  )
+
+  # The VB step alone, after the fallback: its own line, which names the
+  # fallback, and no line saying the correction settled
+  unsettled <- below
+  unsettled$vb$fallback <- TRUE
+  unsettled$diagnostics$vb_step_sigma <- c(0.098, 0.3)
+  expect_identical(
+    flagged(unsettled),
+    "! VB correction did not settle in 3 iterations (via the fallback optimiser): step > 0.1 SD for `slope` (0.30)."
+  )
+  expect_no_match(
+    unwrap(capture_output(print(unsettled))),
+    "VB correction settled"
   )
 
   # The fallback optimiser is reported but not flagged, as in INLAvaan
