@@ -555,6 +555,7 @@ print.inla_vanilla_waic <- function(x, digits = 1, ...) {
 
 print_taylor_header <- function(x, title, digits) {
   cli::cat_rule(
+    width = out_width(),
     left = cli::style_bold(title),
     right = cli::col_grey(nrow(x$pointwise), " units"),
     line_col = "cyan"

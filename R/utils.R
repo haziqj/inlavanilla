@@ -91,6 +91,13 @@ elapsed <- function() {
   proc.time()[["elapsed"]]
 }
 
+# The width of everything the package prints: the console's, but never more
+# than 80 columns. cli::console_width() follows options(width) in knitr, so a
+# document can set a narrower width for its output.
+out_width <- function() {
+  min(cli::console_width(), 80L)
+}
+
 # Errors and warnings, formatted by cli but raised with base R. cli_abort()
 # and cli_warn() go through rlang, which cli only suggests, so they could
 # fail where rlang is not installed. Conditions carry the class
@@ -103,6 +110,8 @@ abort <- function(
   call = NULL,
   .envir = parent.frame()
 ) {
+  old <- options(cli.condition_width = out_width())
+  on.exit(options(old))
   msg <- cli::format_error(message, .envir = .envir)
   if (!is.null(parent)) {
     msg <- paste0(msg, "\nCaused by error: ", conditionMessage(parent))
@@ -113,10 +122,13 @@ abort <- function(
   ))
 }
 
-# A warning also carries its message as plain text, with no colours and no
-# line wrapping, for the record of warnings in a fit (see warning_text()).
+# A warning is wrapped to out_width(), like the rest of the output. It also
+# carries its message as plain text, with no colours and no line wrapping,
+# for the record of warnings in a fit (see warning_text()).
 warn <- function(message, class = NULL, .envir = parent.frame()) {
   force(.envir)
+  old <- options(cli.condition_width = out_width())
+  on.exit(options(old))
   warning(structure(
     class = c(class, "inlavanilla_warning", "warning", "condition"),
     list(

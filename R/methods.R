@@ -1,6 +1,7 @@
 #' @export
 print.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
+    width = out_width(),
     left = cli::style_bold("INLAvanilla"),
     right = cli::col_grey(method_label(is_gaussian(x), isTRUE(x$vb))),
     line_col = "cyan"
@@ -201,6 +202,7 @@ summary.inla_vanilla <- function(
 #' @export
 print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
+    width = out_width(),
     left = cli::style_bold("INLAvanilla summary"),
     right = cli::col_grey(method_label(is_gaussian(x), !is.null(x$vb))),
     line_col = "cyan"
@@ -697,7 +699,7 @@ cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
   }
   # Split the columns into blocks that fit the console width, as print() does
   # for a wide matrix
-  avail <- cli::console_width() - rw
+  avail <- out_width() - rw
   block <- integer(length(widths))
   b <- 1L
   used <- 0
@@ -826,10 +828,10 @@ cat_status <- function(type, msg, .envir = parent.frame()) {
   cat_wrap(paste(sym, cli::format_inline(msg, .envir = .envir)), exdent = 2)
 }
 
-# Write a line wrapped to the console width, with continuation lines indented
-# by `exdent` spaces. cli::console_width() follows options(width) in knitr.
+# Write a line wrapped to out_width(), with continuation lines indented by
+# `exdent` spaces.
 cat_wrap <- function(text, exdent = 0) {
-  cli::cat_line(cli::ansi_strwrap(text, exdent = exdent))
+  cli::cat_line(cli::ansi_strwrap(text, width = out_width(), exdent = exdent))
 }
 
 # Whether a fit has Gaussian marginals (marginals = "gaussian").
