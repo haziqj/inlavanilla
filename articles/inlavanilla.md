@@ -86,17 +86,17 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
 #> ✔ Found the posterior mode in 10 iterations [8ms]
-#> ✔ VB mean correction, max shift 0.44σ [18ms]
+#> ✔ VB mean correction, max shift 0.44σ [16ms]
 #> ✔ Fitted 3 skew-normal marginals [11ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.61 · Converged in 10 iterations (43ms)
+#> Log marginal likelihood: -11.61 · Converged in 10 iterations (42ms)
 #> 
-#>         Mean     SD    2.5%     50%  97.5%    Mode
-#> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
-#> b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85
-#> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
+#>           Mean     SD    2.5%     50%   97.5%    Mode
+#> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
+#> 2 b_wt  -5.12   1.35   -8.00   -5.03   -2.72   -4.85 
+#> 3 b_hp   1.564  0.704   0.306   1.518   3.069   1.423
 ```
 
 The header names the approximation: skew-normal marginals, with the VB
@@ -120,23 +120,23 @@ each stage:
 summary(fit)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -11.612 · Converged in 10 iterations (43ms)
+#> Log marginal likelihood: -11.612 · Converged in 10 iterations (42ms)
 #> Laplace -11.709 + VB term 0.097
-#> 263 logpost calls: mode 8ms, VB 18ms, marginals 12ms
+#> 263 logpost calls: mode 8ms, VB 17ms, marginals 12ms
 #> 
 #> ── Posterior marginals ──
 #> 
-#>         Mean     SD    2.5%     50%  97.5%    Mode
-#> b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008
-#> b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85
-#> b_hp   1.564  0.704   0.306   1.518  3.069   1.423
+#>           Mean     SD    2.5%     50%   97.5%    Mode
+#> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
+#> 2 b_wt  -5.12   1.35   -8.00   -5.03   -2.72   -4.85 
+#> 3 b_hp   1.564  0.704   0.306   1.518   3.069   1.423
 #> 
 #> ── Diagnostics ──
 #> 
-#>       VB shift    NMAD  Unscanned  Ridge bend  Mean gap
-#> b0       -0.13  0.0091    0.00041       0.14     0.0048
-#> b_wt     -0.44  0.017     0.0022        0.050   -0.052 
-#> b_hp      0.28  0.0049    0.0018        0.024    0.057 
+#>         VB shift    NMAD  Unscanned  Ridge bend  Mean gap
+#> 1 b0       -0.13  0.0091    0.00041       0.14     0.0048
+#> 2 b_wt     -0.44  0.017     0.0022        0.050   -0.052 
+#> 3 b_hp      0.28  0.0049    0.0018        0.024    0.057 
 #> 
 #> ✔ Mode found in 10 iterations (Newton step 1.4e-07σ).
 #> ✔ Hessian condition number 4.4, in SD units.
@@ -500,9 +500,6 @@ rbind(
 #> inlavanilla 0.2546500 0.4104370 0.5794388
 #> exact       0.2547618 0.4100149 0.5786063
 ```
-
-Leaving the Jacobian out would target a different posterior, not a worse
-approximation of this one, and nothing downstream could detect it.
 
 ## Bringing your own compiled code
 

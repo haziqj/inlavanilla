@@ -137,17 +137,17 @@
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [8ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [18ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [16ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [11ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.61 · Converged in 10 iterations (43ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.61 · Converged in 10 iterations (42ms)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;         Mean     SD    2.5%     50%  97.5%    Mode</span></span>
-<span><span class="co">#&gt; b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008</span></span>
-<span><span class="co">#&gt; b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85</span></span>
-<span><span class="co">#&gt; b_hp   1.564  0.704   0.306   1.518  3.069   1.423</span></span></code></pre></div>
+<span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
+<span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
+<span><span class="co">#&gt; 2 b_wt  -5.12   1.35   -8.00   -5.03   -2.72   -4.85 </span></span>
+<span><span class="co">#&gt; 3 b_hp   1.564  0.704   0.306   1.518   3.069   1.423</span></span></code></pre></div>
 </div>
 <p>The header names the approximation: skew-normal marginals, with the VB mean correction. The line under it gives the log marginal likelihood and whether the fit converged: whether the mode search and the VB correction both reached their solutions. The table summarises each parameter’s skew-normal marginal: the mean, standard deviation, quantiles and mode. Had the fit raised a warning, or <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flagged one of its checks, a line below the table would say so. Each step of the fit reports as it finishes, with the time it took. <code>verbose = TRUE</code> adds a full diagnostic of each step, and <code>silent = TRUE</code> prints nothing at all, as in a simulation; the warnings it would have shown are kept in <code>fit$warnings</code>. The fits below use <code>silent = TRUE</code>.</p>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds diagnostics for each stage:</p>
@@ -156,23 +156,23 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.612 · Converged in 10 iterations (43ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.612 · Converged in 10 iterations (42ms)</span></span>
 <span><span class="co">#&gt; Laplace -11.709 + VB term 0.097</span></span>
-<span><span class="co">#&gt; 263 logpost calls: mode 8ms, VB 18ms, marginals 12ms</span></span>
+<span><span class="co">#&gt; 263 logpost calls: mode 8ms, VB 17ms, marginals 12ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;         Mean     SD    2.5%     50%  97.5%    Mode</span></span>
-<span><span class="co">#&gt; b0    -1.104  0.615  -2.398  -1.072  0.017  -1.008</span></span>
-<span><span class="co">#&gt; b_wt   -5.12   1.35   -8.00   -5.03  -2.72   -4.85</span></span>
-<span><span class="co">#&gt; b_hp   1.564  0.704   0.306   1.518  3.069   1.423</span></span>
+<span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
+<span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
+<span><span class="co">#&gt; 2 b_wt  -5.12   1.35   -8.00   -5.03   -2.72   -4.85 </span></span>
+<span><span class="co">#&gt; 3 b_hp   1.564  0.704   0.306   1.518   3.069   1.423</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Diagnostics ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;       VB shift    NMAD  Unscanned  Ridge bend  Mean gap</span></span>
-<span><span class="co">#&gt; b0       -0.13  0.0091    0.00041       0.14     0.0048</span></span>
-<span><span class="co">#&gt; b_wt     -0.44  0.017     0.0022        0.050   -0.052 </span></span>
-<span><span class="co">#&gt; b_hp      0.28  0.0049    0.0018        0.024    0.057 </span></span>
+<span><span class="co">#&gt;         VB shift    NMAD  Unscanned  Ridge bend  Mean gap</span></span>
+<span><span class="co">#&gt; 1 b0       -0.13  0.0091    0.00041       0.14     0.0048</span></span>
+<span><span class="co">#&gt; 2 b_wt     -0.44  0.017     0.0022        0.050   -0.052 </span></span>
+<span><span class="co">#&gt; 3 b_hp      0.28  0.0049    0.0018        0.024    0.057 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 10 iterations (Newton step 1.4e-07σ).</span></span>
 <span><span class="co">#&gt; ✔ Hessian condition number 4.4, in SD units.</span></span>
@@ -431,7 +431,6 @@
 <span><span class="co">#&gt; inlavanilla 0.2546500 0.4104370 0.5794388</span></span>
 <span><span class="co">#&gt; exact       0.2547618 0.4100149 0.5786063</span></span></code></pre></div>
 </div>
-<p>Leaving the Jacobian out would target a different posterior, not a worse approximation of this one, and nothing downstream could detect it.</p>
 </section><section class="level2"><h2 id="bringing-your-own-compiled-code">Bringing your own compiled code<a class="anchor" aria-label="anchor" href="#bringing-your-own-compiled-code"></a>
 </h2>
 <p>Any R function works as <code>logpost</code> and <code>grad</code>, including compiled code from Rcpp, TMB or RTMB. TMB minimises, so negate its objective and gradient:</p>

@@ -80,17 +80,17 @@ summary(fit_pois)
 #> 
 #> Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)
 #> Laplace -12.362 + VB term 0.0082
-#> 66 logpost calls: mode 6ms, VB 2ms, marginals 6ms
+#> 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms
 #> 
 #> ── Posterior marginals ──
 #> 
-#>            Mean     SD   2.5%    50%  97.5%   Mode
-#> log_rate  0.595  0.263  0.047  0.607  1.078  0.631
+#>              Mean     SD   2.5%    50%  97.5%   Mode
+#> 1 log_rate  0.595  0.263  0.047  0.607  1.078  0.631
 #> 
 #> ── Diagnostics ──
 #> 
-#>           VB shift    NMAD  Unscanned  Ridge bend  Mean gap
-#> log_rate     -0.13  0.0066    0.00038           0   -0.0016
+#>             VB shift    NMAD  Unscanned  Ridge bend  Mean gap
+#> 1 log_rate     -0.13  0.0066    0.00038           0   -0.0016
 #> 
 #> ✔ Mode found in 7 iterations (Newton step 9.8e-08σ).
 #> ✔ VB correction settled in 3 iterations: max shift 0.13σ.
@@ -150,6 +150,20 @@ solver but the VB mean itself: from `logpost` values alone it is exact
 only for a log-posterior of degree four, and on a strongly skewed
 posterior it can be about 0.1 SDs out. Supplying `grad` is the fix.
 
+With a gradient the fallback takes one more step of its own. If it lands
+short of settled, it is run once more from where it landed, much as the
+mode search reruns its optimiser when the gradient at the mode is not
+yet small. This can happen when the optimiser starts where a node fails:
+the lowest node around the mode sits on a boundary of the support, say,
+so its first value is a failure, and it then reports convergence too
+early. The rerun costs nothing when the first run settles, and one more
+run of the optimiser when it does not. It is not a check, so
+[`summary()`](https://rdrr.io/r/base/summary.html) does not mention it,
+but `verbose = TRUE` reports it: “Fell back to nlminb, as …, rerun once
+from where it landed”. Without a gradient no rerun is made, since its
+optimiser is steered by the same estimate of the expected gradient and
+cannot settle any closer.
+
 The skew-normal mean and the VB mean both estimate the posterior mean,
 by different routes. Both recover the leading, \\O(n^{-1})\\ shift from
 the mode to the mean, so they agree to \\O(n^{-2})\\ (Jamil & Rue, 2026,
@@ -173,7 +187,7 @@ logpost_mix <- function(theta) {
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [5ms]
 #> ✔ VB mean correction, max shift 0.39σ [14ms]
-#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> ✔ Fitted 1 skew-normal marginal [4ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
 #>   `theta` (0.20).
@@ -444,7 +458,7 @@ fit <- withCallingHandlers(
 )
 #> ✔ Found the posterior mode in 4 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.39σ [1ms]
-#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> ✔ Fitted 1 skew-normal marginal [4ms]
 #> Check this fit.
 ```
 

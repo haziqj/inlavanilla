@@ -327,8 +327,8 @@ calls of `logpost` or `grad`:
 - The VB correction: the largest step, in posterior SDs, at each
   fixed-point iteration, whether Anderson acceleration or the fallback
   optimiser was used (and, after the fallback, the step still to go
-  where it landed), the largest shift, and the term it adds to the log
-  marginal likelihood.
+  where it landed, and whether it was rerun from there), the largest
+  shift, and the term it adds to the log marginal likelihood.
 
 - The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
   volume correction `gamma1` of each parameter, with the values that
@@ -394,16 +394,16 @@ logpost <- function(theta, y) {
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
 #> ✔ Found the posterior mode in 10 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
 #> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (13ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (15ms)
 #> 
-#>             Mean     SD   2.5%    50%  97.5%   Mode
-#> mu         5.159  0.327  4.517  5.159  5.800  5.159
-#> log_sigma  0.616  0.129  0.377  0.610  0.885  0.599
+#>               Mean     SD   2.5%    50%  97.5%   Mode
+#> 1 mu         5.159  0.327  4.517  5.159  5.800  5.159
+#> 2 log_sigma  0.616  0.129  0.377  0.610  0.885  0.599
 
 # The posterior of sigma itself, through the draws
 sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
@@ -421,7 +421,7 @@ fit <- inla_vanilla(
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ Found the posterior mode in 10 iterations [1ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
 #>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
@@ -433,7 +433,7 @@ fit <- inla_vanilla(
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [1ms]
+#> ✔ VB mean correction, max shift 0.24σ [2ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
 #>   Largest shift 0.24σ, for log_sigma (warning > 1σ)
@@ -446,7 +446,7 @@ fit <- inla_vanilla(
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   66 logpost calls
-#> ℹ Done: 147 logpost calls in 26ms
+#> ℹ Done: 147 logpost calls in 28ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

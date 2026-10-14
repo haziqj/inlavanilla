@@ -129,7 +129,7 @@
 <span><span class="va">init_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="va">init_pois</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [15ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.025σ [18ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.025σ [17ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [25ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/loo.html">loo()</a></code> takes the fit, <code>loglik</code>, and the same data:</p>
@@ -274,7 +274,7 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>refits <span class="op">=</span> <span class="va">time_refit</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span>, loo <span class="op">=</span> <span class="va">time_loo</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt; refits    loo </span></span>
-<span><span class="co">#&gt;  4.746  0.005</span></span>
+<span><span class="co">#&gt;  4.749  0.004</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>refits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">elpd_refit</span><span class="op">)</span>, loo <span class="op">=</span> <span class="va">loo_nb</span><span class="op">$</span><span class="va">estimates</span><span class="op">[</span><span class="st">"elpd_loo"</span>, <span class="st">"Estimate"</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    refits       loo </span></span>
 <span><span class="co">#&gt; -202.6061 -202.1721</span></span></code></pre></div>

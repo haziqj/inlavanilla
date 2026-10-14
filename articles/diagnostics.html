@@ -196,17 +196,17 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0082</span></span>
-<span><span class="co">#&gt; 66 logpost calls: mode 6ms, VB 2ms, marginals 6ms</span></span>
+<span><span class="co">#&gt; 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;            Mean     SD   2.5%    50%  97.5%   Mode</span></span>
-<span><span class="co">#&gt; log_rate  0.595  0.263  0.047  0.607  1.078  0.631</span></span>
+<span><span class="co">#&gt;              Mean     SD   2.5%    50%  97.5%   Mode</span></span>
+<span><span class="co">#&gt; 1 log_rate  0.595  0.263  0.047  0.607  1.078  0.631</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Diagnostics ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;           VB shift    NMAD  Unscanned  Ridge bend  Mean gap</span></span>
-<span><span class="co">#&gt; log_rate     -0.13  0.0066    0.00038           0   -0.0016</span></span>
+<span><span class="co">#&gt;             VB shift    NMAD  Unscanned  Ridge bend  Mean gap</span></span>
+<span><span class="co">#&gt; 1 log_rate     -0.13  0.0066    0.00038           0   -0.0016</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 7 iterations (Newton step 9.8e-08σ).</span></span>
 <span><span class="co">#&gt; ✔ VB correction settled in 3 iterations: max shift 0.13σ.</span></span>
@@ -220,6 +220,7 @@
 <p><code>hess_cond</code> is the condition number of the Hessian at the mode, with each parameter in posterior-SD units: the ratio of the largest to the smallest eigenvalue of the posterior correlation matrix. Above <span class="math inline">\(10^8\)</span> some combination of the parameters is weakly identified. INLAvaan takes the condition number on the raw scale of the parameters, where a mere change of units can make it large; inlavanilla allows posterior SDs from <span class="math inline">\(10^{-6}\)</span> to <span class="math inline">\(10^4\)</span>, so it measures it in posterior SDs instead.</p>
 <p>The VB correction recentres the Gaussian at the shift that minimises its Kullback-Leibler divergence from the posterior (Jamil &amp; Rue, 2026, Section 3.1). <code>vb_shift_sigma</code> is how far it moved each mean from the mode, in posterior SDs. <code>vb_shift</code> is the same shift on the scale of <code>logpost</code>, and <code>kld</code>, half the square of <code>vb_shift_sigma</code>, is the Kullback-Leibler divergence of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift above 1 SD means that the posterior is far from the Laplace Gaussian. When the fixed-point iteration hands over to the optimiser, <code>fit$diagnostics$vb</code> records it, and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and the verbose output report it, but, as in INLAvaan, it is not flagged: it is a route of the solver, not a sign of a poor approximation.</p>
 <p>Where the solver lands is checked as the mode is. <code>vb_step_sigma</code> is the step still to go at the VB mean, in posterior SDs: the fixed-point step there, which is the Newton step of the condition the VB mean solves. Above 0.1, the level of the mode check, the correction has not settled and the fit has not converged. The VB mean is then off, and with it the VB term of the log marginal likelihood and the expansions of <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code>. The skew-normal marginals do not depend on it, since they are scanned around the mode, and <code>vb = FALSE</code> leaves it out. Gaussian marginals (<code>marginals = "gaussian"</code>) are centred on it, and <code>vb = FALSE</code> centres them at the mode instead. Without a gradient, the usual cause is not the solver but the VB mean itself: from <code>logpost</code> values alone it is exact only for a log-posterior of degree four, and on a strongly skewed posterior it can be about 0.1 SDs out. Supplying <code>grad</code> is the fix.</p>
+<p>With a gradient the fallback takes one more step of its own. If it lands short of settled, it is run once more from where it landed, much as the mode search reruns its optimiser when the gradient at the mode is not yet small. This can happen when the optimiser starts where a node fails: the lowest node around the mode sits on a boundary of the support, say, so its first value is a failure, and it then reports convergence too early. The rerun costs nothing when the first run settles, and one more run of the optimiser when it does not. It is not a check, so <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> does not mention it, but <code>verbose = TRUE</code> reports it: “Fell back to nlminb, as …, rerun once from where it landed”. Without a gradient no rerun is made, since its optimiser is steered by the same estimate of the expected gradient and cannot settle any closer.</p>
 <p>The skew-normal mean and the VB mean both estimate the posterior mean, by different routes. Both recover the leading, <span class="math inline">\(O(n^{-1})\)</span> shift from the mode to the mean, so they agree to <span class="math inline">\(O(n^{-2})\)</span> (Jamil &amp; Rue, 2026, Proposition 3.4). <code>mean_gap</code> is their gap in posterior SDs. A gap signals that the higher-order terms of that expansion about the mode matter, or numerical error (Section 5.1), and a gap above 0.1 is flagged.</p>
 </section><section class="level2"><h2 id="the-skew-normal-fit">The skew-normal fit<a class="anchor" aria-label="anchor" href="#the-skew-normal-fit"></a>
 </h2>
@@ -232,7 +233,7 @@
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [5ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [14ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
 <span><span class="co">#&gt;   `theta` (0.20).</span></span>
@@ -412,7 +413,7 @@
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [1ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [1ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checks-on-a-supplied-gradient">Checks on a supplied gradient<a class="anchor" aria-label="anchor" href="#checks-on-a-supplied-gradient"></a>

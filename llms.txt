@@ -68,14 +68,14 @@ logpost <- function(theta, y, n) {
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 #> ✔ Found the posterior mode in 6 iterations [3ms]
 #> ✔ VB mean correction, max shift 0.17σ [28ms]
-#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (53ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (55ms)
 #> 
-#>            Mean     SD    2.5%     50%   97.5%    Mode
-#> logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494
+#>              Mean     SD    2.5%     50%   97.5%    Mode
+#> 1 logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494
 ```
 
 The summary is on the logit scale.

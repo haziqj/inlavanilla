@@ -246,15 +246,15 @@ widely applicable information criterion in singular learning theory.
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">0</span>, b <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
 <span class="r-in"><span><span class="fu">loo</span><span class="op">(</span><span class="va">fit</span>, <span class="va">loglik</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">Leave-one-out cross-validation</span> <span style="color: #D7875F;">───────────────────────────────</span> <span style="color: #555555;">9 units</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           <span style="font-weight: bold;">Estimate</span>  <span style="font-weight: bold;"> SE</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> elpd_loo     -19.2  0.8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> p_loo          0.6  0.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> elpd_loo     -19.2  <span style="color: #555555;">0.</span>8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p_loo          <span style="color: #555555;">0.</span>6  <span style="color: #555555;">0.</span>2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> looic         38.3  1.6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Second-order expansion for every unit. Largest leverage k = 0.49, for</span>
@@ -263,8 +263,8 @@ widely applicable information criterion in singular learning theory.
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">WAIC</span> <span style="color: #D7875F;">─────────────────────────────────────────────────────────</span> <span style="color: #555555;">9 units</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>            <span style="font-weight: bold;">Estimate</span>  <span style="font-weight: bold;"> SE</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> elpd_waic     -19.1  0.8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> p_waic          0.6  0.1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> elpd_waic     -19.1  <span style="color: #555555;">0.</span>8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> p_waic          <span style="color: #555555;">0.</span>6  <span style="color: #555555;">0.</span>1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> waic           38.3  1.6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Second-order expansion for every unit.</span>

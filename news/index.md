@@ -91,6 +91,12 @@
   prints them and the flagged values in red. One line gives the largest
   value of each skew-normal check that passes, and each flagged check
   has a line of its own.
+- The tables of [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) number their rows,
+  as a tibble does, and line up the decimal points down each column. The
+  posterior marginals still give each parameter to three significant
+  figures of its posterior SD, and a value that rounds to zero no longer
+  prints as “-0.000”.
 - [`print()`](https://rdrr.io/r/base/print.html) and
   [`summary()`](https://rdrr.io/r/base/summary.html) open with the log
   marginal likelihood and whether the fit converged, with the iterations
@@ -142,3 +148,9 @@
   Otherwise, as for a posterior truncated within reach of the nodes, the
   fit stops with an error that says so and suggests a reparameterisation
   or `vb = FALSE`.
+- With a gradient, a VB fallback that lands short of settled is rerun
+  once from where it landed. That happens when the optimiser starts
+  where a node fails, and it then reported convergence well short of the
+  VB mean: 0.29 posterior SDs on a one-parameter posterior with a
+  boundary. Fits whose fallback settles are unchanged, and
+  `verbose = TRUE` reports the rerun.
