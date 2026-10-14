@@ -7,10 +7,31 @@ favicon_dir <- "pkgdown/favicon"
 
 stopifnot(file.exists(source_logo))
 dir.create(dirname(package_logo), recursive = TRUE, showWarnings = FALSE)
-stopifnot(file.copy(source_logo, package_logo, overwrite = TRUE))
 dir.create(favicon_dir, recursive = TRUE, showWarnings = FALSE)
 
-logo <- magick::image_read(package_logo)
+# Ignore faint stray pixels outside the hex when trimming the generated canvas.
+# Keep the high-resolution artwork for favicon exports; only the package copy
+# uses the standard usethis 240 x 278 canvas (displayed at 120 x 139).
+logo <- magick::image_trim(magick::image_read(source_logo), fuzz = 10)
+package_image <- magick::image_extent(
+  magick::image_resize(logo, "240x278"),
+  "240x278",
+  gravity = "center",
+  color = "none"
+)
+magick::image_write(package_image, package_logo, format = "png")
+
+# Browser icons need square canvases, with the hex fitted without stretching.
+square_icon <- function(size) {
+  geometry <- paste0(size, "x", size)
+  magick::image_extent(
+    magick::image_resize(logo, geometry),
+    geometry,
+    gravity = "center",
+    color = "none"
+  )
+}
+
 sizes <- c(
   "favicon-96x96.png" = 96,
   "apple-touch-icon.png" = 180,
@@ -18,25 +39,20 @@ sizes <- c(
   "web-app-manifest-512x512.png" = 512
 )
 for (filename in names(sizes)) {
-  icon <- magick::image_resize(
-    logo,
-    paste0(sizes[[filename]], "x", sizes[[filename]])
-  )
+  icon <- square_icon(sizes[[filename]])
   magick::image_write(icon, file.path(favicon_dir, filename), format = "png")
 }
 
 ico <- do.call(
   c,
-  lapply(c(16, 32, 48), function(size) {
-    magick::image_resize(logo, paste0(size, "x", size))
-  })
+  lapply(c(16, 32, 48), square_icon)
 )
 magick::image_write(ico, file.path(favicon_dir, "favicon.ico"), format = "ico")
 
 # pkgdown also links favicon.svg. Embed the PNG to preserve the photographic
 # artwork; this is an SVG container, not a vector tracing.
 png <- magick::image_write(
-  magick::image_resize(logo, "512x512"),
+  square_icon(512),
   format = "png"
 )
 writeLines(
