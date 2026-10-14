@@ -40,14 +40,21 @@ table, which is the skew-normal's.
 Each stage is checked as it runs, at almost no cost: the checks reuse what the
 fit has already computed. `summary()` reports every check and flags the
 values that look off, and `diagnostics()` returns them as numbers. Most
-problems also raise one warning at the end of the fit. Printing the fit ends
-with a line counting its warnings and one counting the flagged checks, each
-shown only when there are any, so even a fit run with `silent = TRUE` shows
-that something needs a look.
+problems also raise one warning at the end of the fit. Printing the fit opens
+with the log marginal likelihood and whether the fit converged, and ends with
+a line counting its warnings and one counting the flagged checks, each shown
+only when there are any, so even a fit run with `silent = TRUE` shows that
+something needs a look.
+
+Two of the checks say whether the computation reached its solution: the mode
+check and the VB check. When both pass, the fit has converged. The others
+judge how well the approximation fits the posterior, which a converged fit
+can still do badly.
 
 | Check | In `diagnostics(fit, type = "param")` | Flagged by `summary()` | Fit-time warning | From |
 |---|---|---|---|---|
 | Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
+| VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
 | Hessian | `hess_cond` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
@@ -61,9 +68,9 @@ names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics,
 and the gap between the skew-normal and VB means as an internal check; the
 mode shift, the Hessian condition number and the unscanned mass come from
 INLAvaan's `diagnostics()`, not from the paper. The levels of those five
-checks are INLAvaan's, and the fit-time warning uses its words. The tails
-check is inlavanilla's own, and so are the ridge bend and mean gap checks,
-which only `summary()` flags. Every level is a package default, chosen so
+checks are INLAvaan's, and the fit-time warning uses its words. The VB and
+tails checks are inlavanilla's own, and so are the ridge bend and mean gap
+checks, which only `summary()` flags. Every level is a package default, chosen so
 that a healthy fit stays silent, and not a calibrated cut-off: a tripped
 check is a prompt to look again, and silence is not a certificate of
 accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB
@@ -117,12 +124,20 @@ Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026, Section
 3.1). `vb_shift_sigma` is how far it moved each mean from the mode, in
 posterior SDs. `vb_shift` is the same shift on the scale of `logpost`, and
 `kld`, half the square of `vb_shift_sigma`, is the Kullback-Leibler divergence
-of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift
-above 1 SD means that the posterior is far from the Laplace Gaussian. When
-the fixed-point iteration hands over to the optimiser, `fit$diagnostics$vb`
-records it, and `summary()` and the verbose output report it, but, as in
-INLAvaan, it is not flagged: it is a route of the solver, not a sign of a
-poor approximation.
+of each shifted marginal from the unshifted one. A shift of a few tenths is
+normal for a skewed posterior; a shift above 1 SD means that the posterior is
+far from the Laplace Gaussian. When the fixed-point iteration hands over to
+the optimiser, `fit$diagnostics$vb` records it, and `summary()` and the
+verbose output report it, but, as in INLAvaan, it is not flagged: it is a
+route of the solver, not a sign of a poor approximation.
+
+Where the solver lands is checked as the mode is. `vb_step_sigma` is the step
+still to go at the VB mean, in posterior SDs: the fixed-point step there,
+which is the Newton step of the condition the VB mean solves. Above 0.1, the
+level of the mode check, the correction has not settled and the fit has not
+converged. The VB mean is then off, and with it the VB term of the log
+marginal likelihood and the expansions of `loo()` and `waic()`. The
+skew-normal marginals do not depend on it, and `vb = FALSE` leaves it out.
 
 The skew-normal mean and the VB mean both estimate the posterior mean, by
 different routes. Both recover the leading, $O(n^{-1})$ shift from the mode

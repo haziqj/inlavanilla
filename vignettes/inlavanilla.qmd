@@ -108,10 +108,12 @@ fit
 ```
 
 The header names the approximation: skew-normal marginals, with the VB mean
-correction. The table summarises each parameter's skew-normal marginal: the
-mean, standard deviation, quantiles and mode, and the last line gives the
-log marginal likelihood. Had the fit raised a warning, or `summary()`
-flagged one of its checks, a line below it would say so. Each step of the
+correction. The line under it gives the log marginal likelihood and whether
+the fit converged: whether the mode search and the VB correction both
+reached their solutions. The table summarises each parameter's skew-normal
+marginal: the mean, standard deviation, quantiles and mode. Had the fit
+raised a warning, or `summary()` flagged one of its checks, a line below the
+table would say so. Each step of the
 fit reports as it finishes, with the time it took. `verbose = TRUE` adds a
 full diagnostic of each step, and `silent = TRUE` prints nothing at all, as
 in a simulation; the warnings it would have shown are kept in `fit$warnings`.
