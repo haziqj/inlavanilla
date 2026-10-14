@@ -6,7 +6,9 @@
 # Gauss-Hermite rule on each principal axis (2m + 1 nodes, INLAvaan's
 # experimental option), INLAvaan's 64 and 128 Owen-scrambled Sobol points,
 # and the fully symmetric degree-5 rule (2m^2 + 1 nodes) adopted by
-# inlavanilla.
+# inlavanilla. In October 2026 the package moved to the degree-5 rule built on
+# a regular simplex ((m + 1)(m + 2) + 1 nodes), which vb_nodes() now returns;
+# it is the last column (see lab/vb-simplex-benchmark.R).
 #
 # Run from the package root with INLAVAAN set to a checkout of INLAvaan (for
 # its stored Sobol table):
@@ -17,6 +19,24 @@ load(file.path(Sys.getenv("INLAVAAN", "../INLAvaan"), "R", "sysdata.rda"))
 
 ns <- asNamespace("inlavanilla")
 pkg_nodes <- get("vb_nodes", ns)
+
+# The fully symmetric degree-5 rule on the principal axes, 2m^2 + 1 nodes,
+# which vb_nodes() returned before October 2026
+deg5_nodes <- function(Sigma) {
+  m <- ncol(Sigma)
+  e <- eigen(Sigma, symmetric = TRUE)
+  At <- t(sqrt(3) * sweep(e$vectors, 2, sqrt(pmax(e$values, 0)), "*"))
+  nodes <- rbind(0, At, -At)
+  weights <- c(1 + (m^2 - 7 * m) / 18, rep((4 - m) / 18, 2 * m))
+  if (m > 1) {
+    pairs <- utils::combn(m, 2)
+    Ai <- At[pairs[1, ], , drop = FALSE]
+    Aj <- At[pairs[2, ], , drop = FALSE]
+    nodes <- rbind(nodes, Ai + Aj, Ai - Aj, -Ai + Aj, -Ai - Aj)
+    weights <- c(weights, rep(1 / 36, 4 * ncol(pairs)))
+  }
+  list(nodes = nodes, weights = weights)
+}
 
 # Three-point Gauss-Hermite rule on each principal axis (INLAvaan's
 # vb_nodes_gauss_hermite())
@@ -209,7 +229,8 @@ for (nm in names(models)) {
   gh <- run_rule(gh_nodes, lp, gr, lap)
   sob <- run_rule(sobol_nodes(64L), lp, gr, lap)
   sob16 <- run_rule(sobol_nodes(128L), lp, gr, lap)
-  d5 <- run_rule(pkg_nodes, lp, gr, lap)
+  d5 <- run_rule(deg5_nodes, lp, gr, lap)
+  sx <- run_rule(pkg_nodes, lp, gr, lap)
   err <- function(r) max(abs(r$shift - ref$shift) / sds)
   res[[nm]] <- data.frame(
     model = nm,
@@ -221,7 +242,9 @@ for (nm in names(models)) {
     err_deg5 = err(d5),
     ngrad_deg5 = d5$ngrad,
     ngrad_gh = gh$ngrad,
-    ngrad_sobol64 = sob$ngrad
+    ngrad_sobol64 = sob$ngrad,
+    err_simplex = err(sx),
+    ngrad_simplex = sx$ngrad
   )
 }
 out <- do.call(rbind, res)
