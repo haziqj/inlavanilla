@@ -41,7 +41,7 @@ healthy <- data.frame(
   nmad = c(0.01, 0.02),
   alpha = c(0.5, -0.3),
   scan_end_mass = c(1e-3, 2e-3),
-  sn_vs_vb = c(0.01, 0.02),
+  mean_gap = c(0.01, 0.02),
   gamma1 = c(0, 0),
   tails = c(TRUE, TRUE),
   ridge_bend = c(0.01, 0.02),
@@ -177,7 +177,7 @@ test_that("the VB fallback is recorded, not warned about, as in INLAvaan", {
   expect_length(bullets, 1)
   expect_match(bullets, "The VB correction shifted")
   # No VB correction, no VB check
-  d[c("kld", "vb_shift", "vb_shift_sigma", "sn_vs_vb")] <- NA_real_
+  d[c("kld", "vb_shift", "vb_shift_sigma", "mean_gap")] <- NA_real_
   expect_length(problems(d, vb = NULL), 0)
 })
 
@@ -253,7 +253,7 @@ test_that("a value that is not finite is flagged; a check that did not run is no
   # Gaussian marginals: no scans, so only the mode, Hessian and VB checks
   d <- healthy
   d[c("nmad", "alpha", "scan_end_mass", "gamma1", "tails", "ridge_bend")] <- NA
-  d$sn_vs_vb <- NA_real_
+  d$mean_gap <- NA_real_
   expect_length(problems(d, gaussian = TRUE), 0)
   d$vb_shift_sigma[1] <- 3
   expect_length(problems(d, gaussian = TRUE), 1)
@@ -376,7 +376,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "nmad_mean",
       "scan_end_mass_max",
       "vb_fallback",
-      "sn_vs_vb_max",
+      "mean_gap_max",
       "ridge_bend_max",
       "n_heavy_tails"
     )
@@ -398,7 +398,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "nmad",
       "alpha",
       "scan_end_mass",
-      "sn_vs_vb",
+      "mean_gap",
       "gamma1",
       "tails",
       "ridge_bend"

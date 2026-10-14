@@ -48,7 +48,7 @@ that something needs a look.
 | Scan-end mass | `scan_end_mass` | above 0.05 | the same | INLAvaan |
 | Tails | `tails` | heavy | the same | inlavanilla |
 | Ridge bend | `ridge_bend` | above 0.25 nats | no | inlavanilla |
-| Skew-normal and VB means | `sn_vs_vb` | above 0.1 SDs | no | inlavanilla |
+| Mean gap | `mean_gap` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan's `diagnostics()`, under the same
 names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics,
@@ -56,7 +56,7 @@ and the gap between the skew-normal and VB means as an internal check; the
 mode shift, the Hessian condition number and the scan-end mass come from
 INLAvaan's `diagnostics()`, not from the paper. The levels of those five
 checks are INLAvaan's, and the fit-time warning uses its words. The tails
-check is inlavanilla's own, and so are the ridge bend and SN-VB checks,
+check is inlavanilla's own, and so are the ridge bend and mean gap checks,
 which only `summary()` flags. Every level is a package default, chosen so
 that a healthy fit stays silent, and not a calibrated cut-off: a tripped
 check is a prompt to look again, and silence is not a certificate of
@@ -118,10 +118,11 @@ INLAvaan, it is not flagged: it is a route of the solver, not a sign of a
 poor approximation.
 
 The skew-normal mean and the VB mean both estimate the posterior mean, by
-different routes, so they should agree closely (Jamil & Rue, 2026,
-Proposition 3.4); a gap signals higher-order effects or numerical error
-(Section 5.1). `sn_vs_vb` is their gap in posterior SDs, and a gap above 0.1
-is flagged.
+different routes. Both recover the leading, $O(n^{-1})$ shift from the mode
+to the mean, so they agree to $O(n^{-2})$ (Jamil & Rue, 2026, Proposition
+3.4). `mean_gap` is their gap in posterior SDs. A gap signals that the
+higher-order terms of that expansion about the mode matter, or numerical
+error (Section 5.1), and a gap above 0.1 is flagged.
 
 ## The skew-normal fit
 

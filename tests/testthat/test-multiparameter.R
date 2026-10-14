@@ -985,7 +985,7 @@ expect_same_marginals <- function(fit1, fit2, tol_laplace, tol_sn) {
   d1 <- summary(fit1)$diagnostics
   d2 <- summary(fit2)$diagnostics[pars, ]
   expect_lt(max(abs(d2$vb_shift_sigma - d1$vb_shift_sigma)), tol_laplace)
-  expect_lt(max(abs(d2$sn_vs_vb - d1$sn_vs_vb)), tol_sn)
+  expect_lt(max(abs(d2$mean_gap - d1$mean_gap)), tol_sn)
 }
 
 test_that("permuting the parameters permutes the marginals (finite differences)", {

@@ -125,7 +125,7 @@ summary(fit)
   symmetric.
 * **NMAD** measures how well the skew-normal fits the scanned log-posterior
   (the largest gap relative to the peak); small is good.
-* **SN - VB** compares the skew-normal mean with the VB-corrected mean, in
+* **Mean gap** compares the skew-normal mean with the VB-corrected mean, in
   posterior SDs. Both estimate the posterior mean, so they should agree; a
   large gap means the posterior is far from Gaussian and either may be off.
 * **Ridge bend** is the log-density, in nats, that each scan misses 2 SDs

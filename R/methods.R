@@ -111,22 +111,23 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   regressions and below it in a nonlinear regression. `ridge_bend` is
 #'   flagged above 0.25, a shortfall of 10% by that formula (see the Accuracy
 #'   section of [inla_vanilla()]).
-#' * **Skew-normal and VB means.** `sn_vs_vb`, the gap between the
-#'   skew-normal mean and the VB-corrected mean in posterior SDs. Both means
-#'   target the posterior mean, so they should agree closely (to
-#'   \eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4), and a gap signals
-#'   higher-order effects or numerical error (Section 5.1). A gap above 0.1
-#'   SDs is flagged: the posterior is far from Gaussian along that
-#'   parameter, and either approximation may be off.
+#' * **Mean gap.** `mean_gap`, the gap between the skew-normal mean and the
+#'   VB-corrected mean, in posterior SDs. Both recover the leading,
+#'   \eqn{O(n^{-1})} shift from the mode to the posterior mean, so they
+#'   agree to \eqn{O(n^{-2})} (Jamil & Rue, 2026, Proposition 3.4). A gap
+#'   signals that the higher-order terms of that expansion about the mode
+#'   matter, or numerical error (Section 5.1). A gap above 0.1 SDs is
+#'   flagged: the posterior is far from Gaussian along that parameter, and
+#'   either approximation may be off.
 #'
-#' Every check flagged here but the scan path and the SN-VB gap also raises
+#' Every check flagged here but the ridge bend and the mean gap also raises
 #' one warning at the end of the fit, of class
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
 #' mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
 #' are those of INLAvaan's fit-time warning; the heavy-tails check is
-#' inlavanilla's own, as are the ridge bend and SN-VB flags. Every level is a
-#' package default, chosen so that a healthy fit stays silent, and not a
-#' calibrated cut-off: a tripped check is a prompt to look again, and
+#' inlavanilla's own, as are the ridge bend and mean gap flags. Every level
+#' is a package default, chosen so that a healthy fit stays silent, and not
+#' a calibrated cut-off: a tripped check is a prompt to look again, and
 #' silence is not a certificate of accuracy. In the simulations of Jamil and
 #' Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
 #' and the paper reports a calibration of the expected error against them in
@@ -210,13 +211,13 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   has_vb <- !is.null(x$vb)
   cols <- c(
     "vb_shift_sigma",
-    "sn_vs_vb",
+    "mean_gap",
     "alpha",
     "nmad",
     "ridge_bend",
     "scan_end_mass"
   )
-  heads <- c("VB shift", "SN - VB", "Shape", "NMAD", "Ridge bend", "End mass")
+  heads <- c("VB shift", "Mean gap", "Shape", "NMAD", "Ridge bend", "End mass")
   keep <- (has_vb | c(FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)) &
     (!gaussian | c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
   if (any(keep)) {
@@ -329,10 +330,10 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       }
     }
     if (has_vb) {
-      if (flags[["sn_vs_vb"]]) {
-        flagged_line("sn_vs_vb")
+      if (flags[["mean_gap"]]) {
+        flagged_line("mean_gap")
       } else {
-        max_gap <- glob[["sn_vs_vb_max"]]
+        max_gap <- glob[["mean_gap_max"]]
         cat_status(
           "ok",
           "Skew-normal and VB means agree to within {fmt_num(max_gap)} posterior SDs."
@@ -730,10 +731,10 @@ method_label <- function(gaussian, vb) {
 
 # The checks that summary() flags, each TRUE when flagged: the mode, the
 # Hessian condition number, the VB shift, and, for skew-normal marginals,
-# NMAD, the scan-end mass, the tails, the ridge bend and the SN-VB gap.
+# NMAD, the scan-end mass, the tails, the ridge bend and the mean gap.
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
 # warning (warn_levels), which raises every one of these but the ridge bend
-# and the SN-VB gap (summary_levels). A check that did not run is not
+# and the mean gap (summary_levels). A check that did not run is not
 # flagged; a value that is not finite is. print() counts the flags, and summary()
 # prints one "!" line for each.
 check_flags <- function(dg, gaussian) {
@@ -749,9 +750,9 @@ check_flags <- function(dg, gaussian) {
       any(off_level(p$scan_end_mass, warn_levels$scan_end_mass)),
     tails = sn && !all(p$tails %in% TRUE),
     ridge_bend = sn && any(off_level(p$ridge_bend, summary_levels$ridge_bend)),
-    sn_vs_vb = sn &&
+    mean_gap = sn &&
       vb &&
-      any(off_level(abs(p$sn_vs_vb), summary_levels$sn_vs_vb))
+      any(off_level(abs(p$mean_gap), summary_levels$mean_gap))
   )
 }
 

@@ -81,7 +81,7 @@ the iterations of the VB correction, whether it fell back to
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb = FALSE}. \code{marginals}
 is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
 \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{scan_end_mass},
-\code{sn_vs_vb}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with \code{NA} for the
+\code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with \code{NA} for the
 checks the fit did not run.
 \item \code{scan}: the scans the skew-normals were fitted to, for
 \code{plot(fit, type = "sn_fit")}: the grid \code{z} in posterior SDs from the

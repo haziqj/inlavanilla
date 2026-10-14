@@ -100,23 +100,24 @@ a factor of 1.5 of the true shortfall, above it in logistic and Poisson
 regressions and below it in a nonlinear regression. \code{ridge_bend} is
 flagged above 0.25, a shortfall of 10\% by that formula (see the Accuracy
 section of \code{\link[=inla_vanilla]{inla_vanilla()}}).
-\item \strong{Skew-normal and VB means.} \code{sn_vs_vb}, the gap between the
-skew-normal mean and the VB-corrected mean in posterior SDs. Both means
-target the posterior mean, so they should agree closely (to
-\eqn{O(n^{-2})}; Jamil & Rue, 2026, Proposition 3.4), and a gap signals
-higher-order effects or numerical error (Section 5.1). A gap above 0.1
-SDs is flagged: the posterior is far from Gaussian along that
-parameter, and either approximation may be off.
+\item \strong{Mean gap.} \code{mean_gap}, the gap between the skew-normal mean and the
+VB-corrected mean, in posterior SDs. Both recover the leading,
+\eqn{O(n^{-1})} shift from the mode to the posterior mean, so they
+agree to \eqn{O(n^{-2})} (Jamil & Rue, 2026, Proposition 3.4). A gap
+signals that the higher-order terms of that expansion about the mode
+matter, or numerical error (Section 5.1). A gap above 0.1 SDs is
+flagged: the posterior is far from Gaussian along that parameter, and
+either approximation may be off.
 }
 
-Every check flagged here but the scan path and the SN-VB gap also raises
+Every check flagged here but the ridge bend and the mean gap also raises
 one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
 mode shift, NMAD, scan-end mass, VB shift and Hessian condition number
 are those of INLAvaan's fit-time warning; the heavy-tails check is
-inlavanilla's own, as are the ridge bend and SN-VB flags. Every level is a
-package default, chosen so that a healthy fit stays silent, and not a
-calibrated cut-off: a tripped check is a prompt to look again, and
+inlavanilla's own, as are the ridge bend and mean gap flags. Every level
+is a package default, chosen so that a healthy fit stays silent, and not
+a calibrated cut-off: a tripped check is a prompt to look again, and
 silence is not a certificate of accuracy. In the simulations of Jamil and
 Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
 and the paper reports a calibration of the expected error against them in

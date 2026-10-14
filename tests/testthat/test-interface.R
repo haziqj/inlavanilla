@@ -1597,8 +1597,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$ridge_bend[1] <- 0.5
       f
     },
-    sn_vs_vb = function(f) {
-      f$diagnostics$marginals$sn_vs_vb[2] <- -0.3
+    mean_gap = function(f) {
+      f$diagnostics$marginals$mean_gap[2] <- -0.3
       f
     }
   )
@@ -1782,7 +1782,7 @@ test_that("summary() returns the table and the diagnostics", {
       "nmad",
       "alpha",
       "scan_end_mass",
-      "sn_vs_vb",
+      "mean_gap",
       "gamma1",
       "tails",
       "ridge_bend"
@@ -1800,7 +1800,7 @@ test_that("summary() returns the table and the diagnostics", {
     unname((fit_reg$mean_vb - fit_reg$mode) / sds)
   )
   expect_equal(
-    s$diagnostics$sn_vs_vb,
+    s$diagnostics$mean_gap,
     unname((fit_reg$summary[, "Mean"] - fit_reg$mean_vb) / sds)
   )
   expect_equal(s$diagnostics$alpha, unname(fit_reg$sn[, "alpha"]))
@@ -1912,7 +1912,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   # warning: the Newton step at the mode 0.1 SDs, the Hessian condition
   # number 1e8, the VB shift 1 SD, NMAD 0.1, the scan-end mass 0.05 and
   # tails; and, flagged by summary() alone, the ridge bend 0.25 nats and the
-  # SN - VB gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
+  # mean gap 0.1 SDs. Every diagnostic is first set 2% below its level, where
   # nothing may be flagged, and then 2% above it, where each must be, with
   # the warning's sentence where it has one.
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
@@ -1923,7 +1923,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$diagnostics$ridge_bend <- c(0.245, 0.245)
   below$diagnostics$nmad <- c(0.098, 0.098)
   below$diagnostics$scan_end_mass <- c(0.049, 0.049)
-  below$diagnostics$sn_vs_vb <- c(0.098, -0.098)
+  below$diagnostics$mean_gap <- c(0.098, -0.098)
   below$diagnostics$tails <- c(TRUE, TRUE)
   below$vb$fallback <- FALSE
   # Fixed, so the lines do not depend on the optimiser's path
@@ -1954,7 +1954,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   above$diagnostics$ridge_bend <- c(0.245, 0.255)
   above$diagnostics$nmad <- c(0.098, 0.102)
   above$diagnostics$scan_end_mass <- c(0.049, 0.051)
-  above$diagnostics$sn_vs_vb <- c(0.098, -0.102)
+  above$diagnostics$mean_gap <- c(0.098, -0.102)
   above$diagnostics$tails <- c(TRUE, FALSE)
   expect_identical(
     flagged(above),
