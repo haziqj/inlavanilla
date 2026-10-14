@@ -137,9 +137,9 @@
       
       Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
       
-                  Mean     SD    2.5%    50%  97.5%   Mode
-      intercept  0.582  0.286  -0.025  0.598  1.098  0.632
-      slope      0.594  0.222   0.174  0.588  1.047  0.576
+                    Mean     SD    2.5%    50%  97.5%   Mode
+      1 intercept  0.582  0.286  -0.025  0.598  1.098  0.632
+      2 slope      0.594  0.222   0.174  0.588  1.047  0.576
 
 # print(summary()) shows marginals, diagnostics and the evidence
 
@@ -154,15 +154,15 @@
       
       -- Posterior marginals --
       
-                  Mean     SD    2.5%    50%  97.5%   Mode
-      intercept  0.582  0.286  -0.025  0.598  1.098  0.632
-      slope      0.594  0.222   0.174  0.588  1.047  0.576
+                    Mean     SD    2.5%    50%  97.5%   Mode
+      1 intercept  0.582  0.286  -0.025  0.598  1.098  0.632
+      2 slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       -- Diagnostics --
       
-                 VB shift   NMAD  Unscanned  Ridge bend  Mean gap
-      intercept    -0.23   0.010    0.00078       0.037   -0.0068
-      slope         0.084  0.015    0.00013       0.14    -0.0042
+                   VB shift   NMAD  Unscanned  Ridge bend  Mean gap
+      1 intercept    -0.23   0.010    0.00078       0.037   -0.0068
+      2 slope         0.084  0.015    0.00013       0.14    -0.0042
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
@@ -182,15 +182,15 @@
       
       -- Posterior marginals --
       
-                  Mean     SD    2.5%    50%  97.5%   Mode
-      intercept  0.582  0.286  -0.025  0.598  1.098  0.632
-      slope      0.594  0.222   0.174  0.588  1.047  0.576
+                    Mean     SD    2.5%    50%  97.5%   Mode
+      1 intercept  0.582  0.286  -0.025  0.598  1.098  0.632
+      2 slope      0.594  0.222   0.174  0.588  1.047  0.576
       
       -- Diagnostics --
       
-                  NMAD  Unscanned  Ridge bend
-      intercept  0.010    0.00078       0.037
-      slope      0.015    0.00013       0.14 
+                    NMAD  Unscanned  Ridge bend
+      1 intercept  0.010    0.00078       0.037
+      2 slope      0.015    0.00013       0.14 
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.

@@ -1715,7 +1715,7 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     out,
     "Log marginal likelihood: [-0-9.]+ \\| Converged in [0-9]+ iterations? \\([0-9.]+m?s\\)\n"
   )
-  expect_match(out, "\nb +[-0-9. ]+$")
+  expect_match(out, "\n2 b +[-0-9. ]+$")
 
   # Converged means both checks pass: the mode check, and the VB
   # correction's settling
@@ -1896,11 +1896,14 @@ test_that("print() rounds each row to three significant figures of its SD", {
   fit <- inla_vanilla(lp, c(a = 99.999, b = 500), silent = TRUE)
   expect_equal(unname(fit$summary[, "SD"]), c(0.002, 300), tolerance = 1e-6)
   out <- strsplit(capture_output(print(fit)), "\n")[[1]]
-  row_a <- strsplit(trimws(grep("^a ", out, value = TRUE)), " +")[[1]]
-  row_b <- strsplit(trimws(grep("^b ", out, value = TRUE)), " +")[[1]]
+  line_a <- grep("^1 a ", out, value = TRUE)
+  line_b <- grep("^2 b ", out, value = TRUE)
+  row_a <- strsplit(trimws(line_a), " +")[[1]]
+  row_b <- strsplit(trimws(line_b), " +")[[1]]
   expect_identical(
     row_a,
     c(
+      "1",
       "a",
       "100.00000",
       "0.00200",
@@ -1910,7 +1913,27 @@ test_that("print() rounds each row to three significant figures of its SD", {
       "100.00000"
     )
   )
-  expect_identical(row_b, c("b", "1000", "300", "412", "1000", "1588", "1000"))
+  expect_identical(
+    row_b,
+    c("2", "b", "1000", "300", "412", "1000", "1588", "1000")
+  )
+})
+
+test_that("tables number their rows in grey, as a tibble does", {
+  # Right-aligned, before the row names
+  local_reproducible_output(crayon = TRUE)
+  tab <- matrix(
+    seq(0.5, 5, by = 0.5),
+    10,
+    dimnames = list(letters[1:10], "Mean")
+  )
+  out <- capture_output(cat_table(tab, scale = rep(1, 10), rowid = TRUE))
+  expect_match(out, cli::col_grey(" 1"), fixed = TRUE)
+  lines <- cli::ansi_strip(strsplit(out, "\n")[[1]])
+  expect_identical(
+    lines[c(1, 2, 11)],
+    c("      Mean", " 1 a  0.50", "10 j  5.00")
+  )
 })
 
 test_that("print(summary()) shows marginals, diagnostics and the evidence", {
@@ -1957,7 +1980,7 @@ test_that("print(summary()) fits the console width", {
   for (h in heads) {
     expect_true(any(grepl(h, out, fixed = TRUE)), label = h)
   }
-  expect_gt(sum(grepl("^intercept ", out)), 2)
+  expect_gt(sum(grepl("^1 intercept ", out)), 2)
   # A status line wraps with a hanging indent
   i <- grep("^v Mode found", out)
   expect_length(i, 1)

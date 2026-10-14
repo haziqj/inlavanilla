@@ -21,7 +21,12 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
     x$timing[["total"]]
   )
   cli::cat_line()
-  cat_table(x$summary, digits = digits, scale = x$summary[, "SD"])
+  cat_table(
+    x$summary,
+    digits = digits,
+    scale = x$summary[, "SD"],
+    rowid = TRUE
+  )
   # Whether to trust the table: shown only when something is off
   n_warnings <- length(x$warnings)
   n_flagged <- sum(flags)
@@ -272,7 +277,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_line()
 
   cat_heading("Posterior marginals")
-  cat_table(x$table, digits = digits, scale = x$table[, "SD"])
+  cat_table(x$table, digits = digits, scale = x$table[, "SD"], rowid = TRUE)
   cli::cat_line()
 
   cat_heading("Diagnostics")
@@ -292,7 +297,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     dtab <- as.matrix(diag[, cols[keep], drop = FALSE])
     colnames(dtab) <- heads[keep]
     flag <- param_flags(dg, gaussian)[, cols[keep], drop = FALSE]
-    cat_table(dtab, digits = 2, flag = flag)
+    cat_table(dtab, digits = 2, flag = flag, rowid = TRUE)
     cli::cat_line()
   }
 
@@ -705,9 +710,16 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
 # different scales each get a sensible number of decimals. Without it, each
 # column is formatted as a tibble prints it (see format_sigfig()), to
 # `digits` significant figures. The cells where `flag` (a logical matrix
-# like `tab`) is TRUE are red. Widths are worked out on the plain strings
-# before any styling.
-cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
+# like `tab`) is TRUE are red. With `rowid`, the rows are numbered in grey
+# before their names, as a tibble numbers its rows. Widths are worked out on
+# the plain strings before any styling.
+cat_table <- function(
+  tab,
+  digits = 3,
+  scale = NULL,
+  flag = NULL,
+  rowid = FALSE
+) {
   cells <- styled <- matrix("", nrow(tab), ncol(tab))
   if (is.null(scale)) {
     for (j in seq_len(ncol(tab))) {
@@ -733,7 +745,17 @@ cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
   heads <- colnames(tab)
   widths <- pmax(nchar(heads), apply(nchar(cells), 2, max))
   rn <- rownames(tab)
-  rw <- max(nchar(rn), 0L)
+  if (is.null(rn)) {
+    rn <- rep("", nrow(tab))
+  }
+  rn <- formatC(rn, width = -max(nchar(rn)))
+  rn_styled <- rn
+  if (rowid) {
+    ids <- formatC(seq_len(nrow(tab)), width = nchar(nrow(tab)))
+    rn <- paste(ids, rn)
+    rn_styled <- paste(cli::col_grey(ids), rn_styled)
+  }
+  rw <- max(nchar(rn))
   pad <- function(s, w) {
     vapply(seq_along(s), function(i) formatC(s[i], width = w[i]), "")
   }
@@ -771,7 +793,7 @@ cat_table <- function(tab, digits = 3, scale = NULL, flag = NULL) {
     )
     for (i in seq_len(nrow(cells))) {
       cli::cat_line(
-        formatC(rn[i], width = -rw),
+        rn_styled[i],
         paste0("  ", pad_cells(i, cols), collapse = "")
       )
     }

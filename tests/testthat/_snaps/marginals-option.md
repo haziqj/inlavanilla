@@ -15,9 +15,9 @@
       
       Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
       
-                  Mean     SD   2.5%    50%  97.5%   Mode
-      intercept  0.584  0.276  0.042  0.584  1.125  0.584
-      slope      0.595  0.226  0.152  0.595  1.038  0.595
+                    Mean     SD   2.5%    50%  97.5%   Mode
+      1 intercept  0.584  0.276  0.042  0.584  1.125  0.584
+      2 slope      0.595  0.226  0.152  0.595  1.038  0.595
 
 ---
 
@@ -32,15 +32,15 @@
       
       -- Posterior marginals --
       
-                  Mean     SD   2.5%    50%  97.5%   Mode
-      intercept  0.584  0.276  0.042  0.584  1.125  0.584
-      slope      0.595  0.226  0.152  0.595  1.038  0.595
+                    Mean     SD   2.5%    50%  97.5%   Mode
+      1 intercept  0.584  0.276  0.042  0.584  1.125  0.584
+      2 slope      0.595  0.226  0.152  0.595  1.038  0.595
       
       -- Diagnostics --
       
-                 VB shift
-      intercept    -0.23 
-      slope         0.084
+                   VB shift
+      1 intercept    -0.23 
+      2 slope         0.084
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
@@ -59,9 +59,9 @@
       
       -- Posterior marginals --
       
-                  Mean     SD   2.5%    50%  97.5%   Mode
-      intercept  0.648  0.276  0.106  0.648  1.190  0.648
-      slope      0.576  0.226  0.133  0.576  1.019  0.576
+                    Mean     SD   2.5%    50%  97.5%   Mode
+      1 intercept  0.648  0.276  0.106  0.648  1.190  0.648
+      2 slope      0.576  0.226  0.133  0.576  1.019  0.576
       
       -- Diagnostics --
       
