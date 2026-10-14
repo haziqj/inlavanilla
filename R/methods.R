@@ -227,8 +227,7 @@ summary.inla_vanilla <- function(
       vb = object$diagnostics$vb,
       counts = object$counts,
       timing = object$timing,
-      marginals = object$marginals,
-      has_grad = object$has_grad
+      marginals = object$marginals
     ),
     class = "summary.inla_vanilla"
   )
