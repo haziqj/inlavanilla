@@ -231,6 +231,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   iter <- 0L
   move <- Inf
   fallback <- FALSE
+  rerun <- FALSE
   reason <- NULL
   steps <- numeric()
   accelerated <- logical()
@@ -317,20 +318,23 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
       }
       if (any(bad)) colMeans(U[bad, , drop = FALSE]) else numeric(m)
     }
-    nl <- stats::nlminb(
-      start = numeric(m),
-      objective = function(d) objective(as.numeric(L %*% d)),
-      gradient = function(d) {
-        shift <- as.numeric(L %*% d)
-        g <- if (stein) {
-          -as.numeric(R %*% step_at(shift))
-        } else {
-          as.numeric(crossprod(L, -score(shift)))
-        }
-        if (all(is.finite(g))) g else away(shift)
-      },
-      control = list(rel.tol = 1e-8)
-    )
+    fall_back <- function(start) {
+      stats::nlminb(
+        start = start,
+        objective = function(d) objective(as.numeric(L %*% d)),
+        gradient = function(d) {
+          shift <- as.numeric(L %*% d)
+          g <- if (stein) {
+            -as.numeric(R %*% step_at(shift))
+          } else {
+            as.numeric(crossprod(L, -score(shift)))
+          }
+          if (all(is.finite(g))) g else away(shift)
+        },
+        control = list(rel.tol = 1e-8)
+      )
+    }
+    nl <- fall_back(numeric(m))
     shift <- as.numeric(L %*% nl$par)
     iter <- nl$iterations
     if (nl$objective >= failed) {
@@ -339,6 +343,23 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     # Where the fallback landed: the fixed-point step there, the Newton step
     # for the stationarity condition. One more sweep.
     step <- step_at(shift)
+    # With a gradient the objective and its gradient agree, so a landing that
+    # did not settle means nlminb() stopped short. It can report relative
+    # convergence well short of the optimum after starting where a node
+    # fails (the objective's 1e40 there). Rerun it once from where it landed,
+    # as the mode search reruns nlminb() (R/laplace.R). Without a gradient a
+    # rerun cannot help: its gradient, Stein's estimate, disagrees with the
+    # objective by the rule's error (lab/DESIGN.md). Only an unsettled
+    # landing with a gradient pays for it.
+    rerun <- !stein &&
+      all(is.finite(step)) &&
+      max(abs(step) / sds) >= warn_levels$vb_step
+    if (rerun) {
+      nl <- fall_back(nl$par)
+      shift <- as.numeric(L %*% nl$par)
+      iter <- iter + nl$iterations
+      step <- step_at(shift)
+    }
     # A landing that did not settle may be pinned to the edge of the region
     # where every node is finite, with the optimum beyond it. nlminb() then
     # stops as close to the edge as its tolerance allows, so a thousandth of
@@ -376,7 +397,8 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
       steps = steps,
       accelerated = accelerated,
       reason = reason,
-      nlminb = if (fallback) nl$message
+      nlminb = if (fallback) nl$message,
+      rerun = fallback && rerun
     ),
     # Joint KL divergence between the Laplace Gaussian and its shifted copy,
     # 0.5 shift' H shift. It is the location term the Laplace estimate of the

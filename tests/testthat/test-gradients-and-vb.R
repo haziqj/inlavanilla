@@ -1511,3 +1511,53 @@ test_that("the fallback moves to where logpost is finite at every node", {
   sds <- sqrt(diag(fit$cov))
   expect_lt(max_sd_diff(fit_fd$mean_vb, fit$mean_vb, sds), 0.1) # obs. 0.034
 })
+
+test_that("with a gradient a fallback that stops short is rerun and settles", {
+  # a + 1 ~ Gamma(4, 1), with a barrier at a = -1. At the mode, a = 2, the
+  # lowest node of the rule sits on the barrier, so the fallback starts where
+  # the objective fails, and nlminb() reported relative convergence 0.29 SDs
+  # short of the optimum. Rerun from where it landed, it settles at the shift
+  # of 0.649 SDs that a tighter tolerance also finds.
+  lp <- function(t) if (t[1] <= -1) -Inf else 3 * log(t[1] + 1) - (t[1] + 1)
+  gr <- function(t) if (t[1] <= -1) NaN else 3 / (t[1] + 1) - 1
+  fit <- inla_vanilla(
+    lp,
+    c(a = 2),
+    grad = gr,
+    marginals = "gaussian",
+    silent = TRUE
+  )
+  d <- fit$diagnostics$marginals
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_lt(d$vb_step_sigma, 1e-6)
+  expect_equal(d$vb_shift_sigma, 0.649, tolerance = 1e-3)
+  expect_length(fit$warnings, 0)
+  text <- paste(
+    capture_messages(inla_vanilla(
+      lp,
+      c(a = 2),
+      grad = gr,
+      marginals = "gaussian",
+      verbose = TRUE
+    )),
+    collapse = ""
+  )
+  expect_match(gsub("\n +", " ", text), "rerun once from where it landed")
+
+  # Without a gradient a rerun cannot help, and none is made: the landing is
+  # flagged instead
+  text <- paste(
+    capture_messages(suppressWarnings(
+      fit <- inla_vanilla(
+        lp,
+        c(a = 2),
+        marginals = "gaussian",
+        verbose = TRUE
+      )
+    )),
+    collapse = ""
+  )
+  expect_true(fit$diagnostics$vb$fallback)
+  expect_gt(fit$diagnostics$marginals$vb_step_sigma, 0.1)
+  expect_no_match(text, "rerun")
+})

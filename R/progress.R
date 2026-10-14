@@ -362,7 +362,8 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
           ": ",
           h$nlminb,
           ", after ",
-          plural(vbc$iterations, "iteration")
+          plural(vbc$iterations, "iteration"),
+          if (isTRUE(h$rerun)) ", rerun once from where it landed"
         ),
         paste0(
           grey("One more step would move a mean by ", with_sd(step_max)),
