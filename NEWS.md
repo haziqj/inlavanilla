@@ -17,6 +17,17 @@
 * The VB correction (`vb`) and the skew-normal marginals (`marginals =
   "skewnormal"` or `"gaussian"`) can each be switched off, down to the
   Laplace approximation alone.
+* The VB correction uses a degree-5 rule built on a regular simplex, with at
+  most (m + 1)(m + 2) + 1 nodes, against 2m^2 + 1 before, all within 3
+  posterior SDs. With a gradient it makes about half the calls at large m,
+  with the same accuracy. Without one, it takes the expected gradient from
+  values of `logpost` alone, by Stein's identity on the same nodes, instead of
+  finite-difference gradients: at most (m + 1)(m + 2) calls per sweep instead
+  of (m + 1)(2m^2 + 1), so it costs about as much as finding the mode. For the
+  39-parameter SEM of the Rcpp article that is 8,200 calls instead of
+  487,000. This VB mean is exact when the log-posterior is a polynomial of
+  degree four in whitened coordinates (six with a gradient), and typically
+  about 0.01 posterior SDs from exact VB.
 * Two website articles, "Speeding up with Rcpp" and "Using TMB", fit a
   structural equation model with 39 parameters from a log-posterior written
   in R, in C++ with an analytic gradient, and as a TMB template.
