@@ -36,9 +36,9 @@
       intercept    -0.23 
       slope         0.084
       
-      v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
-      v Hessian condition number 3.6, in posterior-SD units.
-      v VB correction in <n> iteration(s): max shift 0.23 posterior SDs.
+      v Mode found in <n> iteration(s) (Newton step <g> SD).
+      v Hessian condition number 3.6, in SD units.
+      v VB correction in <n> iteration(s): max shift 0.23 SD.
       i Gaussian marginals: no scans, so no skew-normal checks.
       
       Log marginal likelihood: -16.249 (Laplace -16.277, VB term 0.029)
@@ -57,8 +57,8 @@
       slope      0.576  0.226  0.133  0.576  1.019  0.576
       
       Diagnostics
-      v Mode found in <n> iteration(s) (Newton step <g> posterior SDs).
-      v Hessian condition number 3.6, in posterior-SD units.
+      v Mode found in <n> iteration(s) (Newton step <g> SD).
+      v Hessian condition number 3.6, in SD units.
       i No VB correction (vb = FALSE).
       i Gaussian marginals: no scans, so no skew-normal checks.
       

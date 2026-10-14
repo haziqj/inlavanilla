@@ -38,11 +38,7 @@ scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
-  x <- gsub(
-    "Newton step [-+0-9.e]+ posterior SDs",
-    "Newton step <g> posterior SDs",
-    x
-  )
+  x <- gsub("Newton step [-+0-9.e]+ SD", "Newton step <g> SD", x)
   x
 }
 

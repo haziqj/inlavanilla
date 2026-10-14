@@ -78,11 +78,7 @@ scrub_output <- function(x) {
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
-  x <- gsub(
-    "Newton step [-+0-9.e]+ posterior SDs",
-    "Newton step <g> posterior SDs",
-    x
-  )
+  x <- gsub("Newton step [-+0-9.e]+ SD", "Newton step <g> SD", x)
   x
 }
 
@@ -1968,13 +1964,12 @@ test_that("summary() flags each diagnostic at its documented level", {
   }
 
   expect_length(flagged(below), 0)
-  out <- capture_output(print(below))
+  out <- capture_output(print(below), width = 200)
   for (line in c(
-    "v Mode found in 9 iterations (Newton step 0.098 posterior SDs).",
-    "v Hessian condition number 9.8e+07, in posterior-SD units.",
-    "v VB correction in 3 iterations: max shift 0.98 posterior SDs.",
-    "v Skew-normal fits: max NMAD 0.098.",
-    "v Skew-normal and VB means agree to within 0.098 posterior SDs."
+    "v Mode found in 9 iterations (Newton step 0.098 SD).",
+    "v Hessian condition number 9.8e+07, in SD units.",
+    "v VB correction in 3 iterations: max shift 0.98 SD.",
+    "v Skew-normal fits: max NMAD 0.098, unscanned mass 0.049, ridge bend 0.24, mean gap 0.098 SD."
   )) {
     expect_match(out, line, fixed = TRUE)
   }
@@ -1991,14 +1986,14 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_identical(
     flagged(above),
     c(
-      "! Mode search stopped short (\"relative convergence (4)\"): the Newton step is more than 0.1 posterior SDs for `slope` (0.10).",
+      "! Mode search stopped short (\"relative convergence (4)\"): the Newton step is more than 0.1 SD for `slope` (0.10).",
       "! The Hessian at the mode is near-singular (condition number = 1.02e+08); some parameters may be weakly identified.",
-      "! VB correction in 3 iterations: the shift is more than 1 posterior SD for `slope` (1.02).",
+      "! VB correction in 3 iterations: the shift is more than 1 SD for `slope` (1.02).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.10).",
-      "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 posterior SDs either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
-      "! Heavy tails for `slope`: the density is still over 5% of its peak at the ends of the scanned window (4 posterior SDs either side of the mode), and the skew-normal extrapolates beyond it.",
-      "! The straight scan misses more than 0.25 nats at +-2 posterior SDs for `slope` (0.26): the marginal SD may be about 10% or more too small.",
-      "! Skew-normal and VB means differ by more than 0.1 posterior SDs for `slope` (0.10)."
+      "! The fitted marginal puts more than 0.05 of its mass beyond the scanned window (4 SD either side of the mode) for `slope` (0.05); its credible limits rely on extrapolation.",
+      "! Heavy tails for `slope`: the density is still over 5% of its peak at the ends of the scanned window (4 SD either side of the mode), and the skew-normal extrapolates beyond it.",
+      "! Ridge bend above 0.25 for `slope` (0.26): the marginal SD may be about 10% or more too small.",
+      "! Mean gap above 0.1 SD for `slope` (0.10): the posterior is far from Gaussian there, and either mean may be off."
     )
   )
 
@@ -2010,7 +2005,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_identical(
     flagged(both),
     c(
-      "! VB correction in 3 iterations: the shift is more than 1 posterior SD for `intercept` (1.50), `slope` (1.20).",
+      "! VB correction in 3 iterations: the shift is more than 1 SD for `intercept` (1.50), `slope` (1.20).",
       "! The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for `slope` (0.25), `intercept` (0.12)."
     )
   )
@@ -2021,7 +2016,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   expect_length(flagged(fallback), 0)
   expect_match(
     capture_output(print(fallback), width = 200),
-    "v VB correction in 3 iterations (via the fallback optimiser): max shift 0.98 posterior SDs.",
+    "v VB correction in 3 iterations (via the fallback optimiser): max shift 0.98 SD.",
     fixed = TRUE
   )
 

@@ -123,18 +123,21 @@ summary(fit)
   the posterior is far from symmetric.
 * **NMAD** measures how well the skew-normal fits the scanned log-posterior
   (the largest gap relative to the peak); small is good.
-* **Mean gap** compares the skew-normal mean with the VB-corrected mean, in
-  posterior SDs. Both estimate the posterior mean, so they should agree; a
-  large gap means the posterior is far from Gaussian and either may be off.
+* **Unscanned** is the mass each skew-normal puts beyond the scanned window,
+  4 posterior SDs either side of the mode, where it is extrapolated. It is
+  flagged above 0.05.
 * **Ridge bend** is the log-density, in nats, that each scan misses 2 SDs
   out, because it runs along a straight line, the conditional mode path,
   while the ridge of high density bends away from it. Above 0.25 it is
   flagged: the marginal SD may then be about 10% too small. The
   intercept's ridge bend is below that, and its marginal is only a little
   narrow, as the check against the exact posterior below shows.
-* **Unscanned** is the mass each skew-normal puts beyond the scanned window,
-  4 posterior SDs either side of the mode, where it is extrapolated. It is
-  flagged above 0.05.
+* **Mean gap** compares the skew-normal mean with the VB-corrected mean, in
+  posterior SDs. Both estimate the posterior mean, so they should agree; a
+  large gap means the posterior is far from Gaussian and either may be off.
+
+A flagged value is red in the table, and its check gets a line of its own,
+marked "!", below the table.
 
 `diagnostics(fit)` returns the same checks as numbers, under the names that
 INLAvaan's `diagnostics()` uses, and

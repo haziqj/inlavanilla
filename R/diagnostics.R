@@ -156,10 +156,11 @@ fmt_g3 <- function(x) {
 }
 
 # The sentence for a flagged check, as a cli template whose values are put
-# in `env`: INLAvaan's for the checks it shares, which summary() also prints
-# with every parameter listed (`n = Inf`), and inlavanilla's own for the
-# others. The mode and VB bullets name the worst parameter only, as
-# INLAvaan's do; summary() has its own lines for those two.
+# in `env`: INLAvaan's words for the checks it shares, with the SD unit of
+# sd_unit(), which summary() also prints with every parameter listed
+# (`n = Inf`), and inlavanilla's own for the others. The mode and VB
+# bullets name the worst parameter only, as INLAvaan's do; summary() has its
+# own lines for those two.
 problem_text <- function(check, dg, env, n = 3L) {
   p <- dg$param
   glob <- dg$global
@@ -172,7 +173,9 @@ problem_text <- function(check, dg, env, n = 3L) {
       paste0(
         "The gradient at the posterior mode is not zero (max |grad| = ",
         "{mode_grad}): a Newton step would move {.code {mode_worst}} by ",
-        "{mode_shift} posterior SDs."
+        "{mode_shift}",
+        sd_unit(),
+        "."
       )
     },
     nmad = paste0(
@@ -185,8 +188,9 @@ problem_text <- function(check, dg, env, n = 3L) {
     unscanned_mass = paste0(
       "The fitted marginal puts more than ",
       warn_levels$unscanned_mass,
-      " of its mass beyond the scanned window (4 posterior SDs either side ",
-      "of the mode) for ",
+      " of its mass beyond the scanned window (4",
+      sd_unit(),
+      " either side of the mode) for ",
       flagged_list(
         env,
         "sem",
@@ -201,17 +205,18 @@ problem_text <- function(check, dg, env, n = 3L) {
       "Heavy tails for ",
       list_template(env, "tails", p$names[!p$tails %in% TRUE], n = n),
       ": the density is still over 5% of its peak at the ends of the ",
-      "scanned window (4 posterior SDs either side of the mode), and the ",
-      "skew-normal extrapolates beyond it."
+      "scanned window (4",
+      sd_unit(),
+      " either side of the mode), and the skew-normal extrapolates beyond it."
     ),
     vb = {
       shift <- abs(p$vb_shift_sigma)
       env$vb_worst <- p$names[worst_first(shift)[1L]]
       env$vb_shift <- fmt_g3(glob[["vb_shift_max"]])
       paste0(
-        "The VB correction shifted {.code {vb_worst}} by {vb_shift} ",
-        "posterior SDs; the Gaussian approximation at the mode may be ",
-        "inaccurate."
+        "The VB correction shifted {.code {vb_worst}} by {vb_shift}",
+        sd_unit(),
+        "; the Gaussian approximation at the mode may be inaccurate."
       )
     },
     hess_cond = {
@@ -222,9 +227,9 @@ problem_text <- function(check, dg, env, n = 3L) {
       )
     },
     ridge_bend = paste0(
-      "The straight scan misses more than ",
+      "Ridge bend above ",
       summary_levels$ridge_bend,
-      " nats at +-2 posterior SDs for ",
+      " for ",
       flagged_list(
         env,
         "ridge_bend",
@@ -236,11 +241,11 @@ problem_text <- function(check, dg, env, n = 3L) {
       ": the marginal SD may be about 10% or more too small."
     ),
     mean_gap = paste0(
-      "Skew-normal and VB means differ by more than ",
-      summary_levels$mean_gap,
-      " posterior SDs for ",
+      "Mean gap above ",
+      with_sd(summary_levels$mean_gap),
+      " for ",
       flagged_list(env, "gap", dg, "mean_gap", summary_levels$mean_gap, n),
-      "."
+      ": the posterior is far from Gaussian there, and either mean may be off."
     )
   )
 }
