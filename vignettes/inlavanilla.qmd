@@ -16,8 +16,14 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-# Plain output, and no progress bars in the rendered page
-options(cli.num_colors = 1, cli.dynamic = FALSE, cli.progress_show_after = Inf)
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
 ```
 
 ## The idea
@@ -167,7 +173,8 @@ the approximations are trying to match.
 #| label: grid
 s <- fit$summary
 axes <- lapply(seq_len(3), function(j) {
-  seq(s[j, "Mean"] - 7 * s[j, "SD"], s[j, "Mean"] + 7 * s[j, "SD"], length.out = 61)
+  half <- 7 * s[j, "SD"]
+  seq(s[j, "Mean"] - half, s[j, "Mean"] + half, length.out = 61)
 })
 grid <- as.matrix(expand.grid(axes))
 eta <- X %*% t(grid)
@@ -196,7 +203,12 @@ probs <- c(0.025, 0.25, 0.5, 0.75, 0.975)
 sn_q <- summary(fit, probs = probs)$table[, paste0(100 * probs, "%")]
 cols <- c(Exact = "grey20", `Skew-normal` = "#C2410C", Laplace = "#0F766E")
 
-op <- par(mfrow = c(3, 1), mar = c(2.5, 7.5, 1.8, 1), mgp = c(2, 0.6, 0), las = 1)
+op <- par(
+  mfrow = c(3, 1),
+  mar = c(2.5, 7.5, 1.8, 1),
+  mgp = c(2, 0.6, 0),
+  las = 1
+)
 for (j in seq_len(3)) {
   q <- rbind(
     Exact = exact_quantiles(j, probs),
@@ -210,7 +222,10 @@ for (j in seq_len(3)) {
   segments(q[, 1], at, q[, 5], at, col = cols, lwd = 1.5)
   segments(q[, 2], at, q[, 4], at, col = cols, lwd = 6, lend = 1)
   points(q[, 3], at, pch = 21, bg = "white", col = cols, cex = 1.3, lwd = 1.5)
-  mtext(rownames(q), side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8)
+  mtext(
+    rownames(q),
+    side = 2, at = at, line = 0.5, col = cols, adj = 1, cex = 0.8
+  )
 }
 par(op)
 ```
