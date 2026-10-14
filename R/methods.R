@@ -7,40 +7,33 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
     line_col = vanilla_hex
   )
   cli::cat_line()
-  cat_table(x$summary, digits = digits, scale = x$summary[, "SD"])
-  cli::cat_line()
-  cli::cat_line(
-    cli::style_bold("Log marginal likelihood: "),
-    col_vanilla(format(round(x$logml, 2), nsmall = 2))
-  )
-  # Converged means the mode check of summary() passes, whatever the return
-  # code of nlminb(): the Newton step at the mode is within its level
   dg <- diagnostics_internal(
     x$diagnostics$optim,
     x$diagnostics$vb,
     x$diagnostics$marginals
   )
   flags <- check_flags(dg, is_gaussian(x))
-  took <- paste0(
-    plural(x$diagnostics$optim$iterations, "iteration"),
-    " (",
-    format_time(x$timing[["total"]]),
-    ")"
+  cat_headline(
+    x$logml,
+    2,
+    flags,
+    x$diagnostics$optim$iterations,
+    x$timing[["total"]]
   )
-  if (flags[["mode"]]) {
-    cat_status("warn", "Not converged after {took}.")
-  } else {
-    cli::cat_line("Converged in ", took, ".")
-  }
+  cli::cat_line()
+  cat_table(x$summary, digits = digits, scale = x$summary[, "SD"])
   # Whether to trust the table: shown only when something is off
   n_warnings <- length(x$warnings)
+  n_flagged <- sum(flags)
+  if (n_warnings > 0L || n_flagged > 0L) {
+    cli::cat_line()
+  }
   if (n_warnings > 0L) {
     cat_status(
       "warn",
       "{n_warnings} warning{?s} during the fit, kept in {.code $warnings}."
     )
   }
-  n_flagged <- sum(flags)
   if (n_flagged > 0L) {
     cat_status("warn", "{n_flagged} check{?s} flagged by {.fn summary}.")
   }
@@ -53,7 +46,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' scale of `logpost`, together with diagnostics of each stage of the
 #' approximation.
 #'
-#' Printed, the summary gives the fit first (the log marginal likelihood,
+#' Printed, the summary gives the fit first (the log marginal likelihood
+#' and whether the fit converged, the parts of the log marginal likelihood,
 #' and the calls and time each stage took), then the posterior marginals,
 #' then the diagnostics.
 #'
@@ -164,11 +158,17 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' colour. The status lines list every flagged parameter, worst first, with
 #' its value (the heavy-tails line, a yes/no check, lists names only, in
 #' parameter order); the warning lists at most three, as INLAvaan's does. With
-#' `silent = TRUE` the warning is only recorded in `fit$warnings`. Printing
-#' the fit ends by saying whether it converged, which is the mode check
-#' here, with the iterations of [stats::nlminb()] and the time the whole fit
-#' took. A line for its warnings and one counting the checks flagged here
-#' follow, each shown only when there are any.
+#' `silent = TRUE` the warning is only recorded in `fit$warnings`.
+#'
+#' Printing the fit and its summary both open with a headline: the log
+#' marginal likelihood, and whether the fit converged, with the iterations
+#' of [stats::nlminb()] and the time the whole fit took. Converged means
+#' that the computation reached its solution: both the mode check and the VB
+#' check pass, so no further step at the mode or at the VB mean would move
+#' a parameter by more than 0.1 posterior SDs. It says nothing of how well
+#' the approximation fits the posterior, which the other checks judge.
+#' Printing the fit ends with a line for its warnings and one counting the
+#' checks flagged here, each shown only when there are any.
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check
 #' with examples.
 #'
@@ -233,40 +233,39 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
     line_col = vanilla_hex
   )
   cli::cat_line()
-  # The fit, then its parameters, then how far to trust them
-  vb_term <- x$logml - x$logml_laplace
-  cat_wrap(paste0(
-    cli::style_bold("Log marginal likelihood: "),
-    col_vanilla(format(round(x$logml, 3), nsmall = 3)),
-    if (!is.null(x$vb)) {
-      cli::col_grey(
-        " (Laplace ",
-        format(round(x$logml_laplace, 3), nsmall = 3),
-        ", VB term ",
-        format(signif(vb_term, 2)),
-        ")"
-      )
-    }
-  ))
+  # The fit, then its parameters, then how far to trust them. The fit is the
+  # headline of print(), then the parts of the log marginal likelihood and
+  # what each stage cost.
+  diag <- x$diagnostics
+  gaussian <- is_gaussian(x)
+  has_vb <- !is.null(x$vb)
+  opt <- x$optim
+  dg <- diagnostics_internal(opt, x$vb, diag)
+  glob <- dg$global
+  flags <- check_flags(dg, gaussian)
+  tm <- x$timing
+  cat_headline(x$logml, 3, flags, opt$iterations, tm[["total"]])
+  if (has_vb) {
+    cat_wrap(cli::col_grey(
+      "Laplace ",
+      format(round(x$logml_laplace, 3), nsmall = 3),
+      " + VB term ",
+      format(signif(x$logml - x$logml_laplace, 2))
+    ))
+  }
   calls <- paste0(x$counts[["logpost"]], " logpost")
   if (x$has_grad) {
     calls <- paste0(calls, " and ", x$counts[["grad"]], " grad")
   }
-  tm <- x$timing
-  cat_wrap(
-    cli::col_grey(
-      calls,
-      " calls in ",
-      format_time(tm[["total"]]),
-      " (mode ",
-      format_time(tm[["laplace"]]),
-      ", VB ",
-      format_time(tm[["vb"]]),
-      ", marginals ",
-      format_time(tm[["marginals"]]),
-      ")"
-    )
-  )
+  cat_wrap(cli::col_grey(
+    calls,
+    " calls: mode ",
+    format_time(tm[["laplace"]]),
+    ", VB ",
+    format_time(tm[["vb"]]),
+    ", marginals ",
+    format_time(tm[["marginals"]])
+  ))
   cli::cat_line()
 
   cat_heading("Posterior marginals")
@@ -274,12 +273,6 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_line()
 
   cat_heading("Diagnostics")
-  diag <- x$diagnostics
-  gaussian <- is_gaussian(x)
-  has_vb <- !is.null(x$vb)
-  opt <- x$optim
-  dg <- diagnostics_internal(opt, x$vb, diag)
-  glob <- dg$global
   # VB first, then the skew-normal checks in the order of their status
   # lines, ending with the comparison of the two means
   cols <- c(
@@ -303,7 +296,6 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   # A status line per stage, and one "!" line for each flagged check, so that
   # the count in print() matches. Flagged lines list every flagged parameter,
   # worst first, through variables in `env` (see list_template()).
-  flags <- check_flags(dg, gaussian)
   env <- new.env(parent = environment())
   flagged_line <- function(check) {
     cat_status("warn", problem_text(check, dg, env, n = Inf), .envir = env)
@@ -865,6 +857,36 @@ format_sigfig <- function(x, sigfig = 3) {
     styled[k] <- paste0(pad_l[k], body, pad_r[k])
   }
   list(plain = plain, styled = styled)
+}
+
+# The headline of print() and summary(): the log marginal likelihood, to
+# `digits` decimals, and whether the fit converged. Converged means that both
+# convergence checks pass: no further Newton step at the mode, and no further
+# fixed-point step at the VB mean, would move a parameter by more than 0.1
+# posterior SDs. The iterations are the mode search's, and the time is the
+# whole fit's. On one line, or on two when that does not fit.
+cat_headline <- function(logml, digits, flags, iterations, secs) {
+  value <- paste0(
+    cli::style_bold("Log marginal likelihood: "),
+    col_vanilla(format(round(logml, digits), nsmall = digits))
+  )
+  its <- plural(iterations, "iteration")
+  conv <- if (flags[["mode"]]) {
+    cli::col_yellow(paste("Not converged after", its))
+  } else if (flags[["vb_step"]]) {
+    cli::col_yellow("Not converged: VB did not settle")
+  } else {
+    paste("Converged in", its)
+  }
+  conv <- paste0(conv, " (", format_time(secs), ")")
+  sep <- if (cli::is_utf8_output()) " \u00b7 " else " | "
+  line <- paste0(value, sep, conv)
+  if (cli::ansi_nchar(line) <= out_width()) {
+    cli::cat_line(line)
+  } else {
+    cli::cat_line(value)
+    cli::cat_line(conv)
+  }
 }
 
 # A section heading, as cli's level-two headings look: "── Title ──", and

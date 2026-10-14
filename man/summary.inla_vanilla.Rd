@@ -26,7 +26,8 @@ scale of \code{logpost}, together with diagnostics of each stage of the
 approximation.
 }
 \details{
-Printed, the summary gives the fit first (the log marginal likelihood,
+Printed, the summary gives the fit first (the log marginal likelihood
+and whether the fit converged, the parts of the log marginal likelihood,
 and the calls and time each stage took), then the posterior marginals,
 then the diagnostics.
 
@@ -139,11 +140,17 @@ prints numbers, with the flagged values in red where the console shows
 colour. The status lines list every flagged parameter, worst first, with
 its value (the heavy-tails line, a yes/no check, lists names only, in
 parameter order); the warning lists at most three, as INLAvaan's does. With
-\code{silent = TRUE} the warning is only recorded in \code{fit$warnings}. Printing
-the fit ends by saying whether it converged, which is the mode check
-here, with the iterations of \code{\link[stats:nlminb]{stats::nlminb()}} and the time the whole fit
-took. A line for its warnings and one counting the checks flagged here
-follow, each shown only when there are any.
+\code{silent = TRUE} the warning is only recorded in \code{fit$warnings}.
+
+Printing the fit and its summary both open with a headline: the log
+marginal likelihood, and whether the fit converged, with the iterations
+of \code{\link[stats:nlminb]{stats::nlminb()}} and the time the whole fit took. Converged means
+that the computation reached its solution: both the mode check and the VB
+check pass, so no further step at the mode or at the VB mean would move
+a parameter by more than 0.1 posterior SDs. It says nothing of how well
+the approximation fits the posterior, which the other checks judge.
+Printing the fit ends with a line for its warnings and one counting the
+checks flagged here, each shown only when there are any.
 \code{vignette("diagnostics", package = "inlavanilla")} explains every check
 with examples.
 
