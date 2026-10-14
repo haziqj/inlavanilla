@@ -70,9 +70,9 @@ flagged: it is a route of the solver, not a sign of a poor
 approximation. Where the solver lands is checked, as the mode is:
 \code{vb_step_sigma} is the step still to go at the VB mean, in posterior
 SDs (the fixed-point step there, which is the Newton step of the VB
-stationarity condition). It is flagged above 0.1, the level of the mode
-check, as a correction that did not settle. That check is inlavanilla's
-own.
+stationarity condition; see \code{\link[=diagnostics]{diagnostics()}}). It is flagged above 0.1,
+the level of the mode check, as a correction that did not settle. That
+check is inlavanilla's own.
 \item \strong{Skew-normal fits.} \code{nmad}, the largest gap between the fitted and
 the scanned density, relative to its peak (Jamil & Rue, 2026, Section
 4.4), flagged above 0.1. \code{alpha} is the shape of the fitted skew-normal
@@ -126,8 +126,8 @@ Every check flagged here but the ridge bend and the mean gap also raises
 one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
 mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
-are those of INLAvaan's fit-time warning; the VB and heavy-tails checks
-are inlavanilla's own, as are the ridge bend and mean gap flags. Every
+are those of INLAvaan's fit-time warning; the VB settling and
+heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap flags. Every
 level is a package default, chosen so that a healthy fit stays silent, and
 not a calibrated cut-off: a tripped check is a prompt to look again, and
 silence is not a certificate of accuracy. In the simulations of Jamil and
