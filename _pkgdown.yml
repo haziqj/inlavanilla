@@ -23,6 +23,7 @@ articles:
   - articles/dcm
   - articles/correlation
   - articles/binary-cfa
+  - articles/diagnostic-tests
 - title: Speed and gradients
   desc: >
     Faster log-posteriors and exact gradients for larger models. Both
