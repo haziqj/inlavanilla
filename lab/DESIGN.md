@@ -40,7 +40,10 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
   - NORTA
   - the `ucminf` and `optim` optimisers
   - Gauss–Hermite VB
-  - parallel cores
+  - parallel cores. Profiled in October 2026 (logistic regressions at m = 5, 20 and 40, and the 39-parameter SEM of the Rcpp article), and still not worth it:
+    - The marginals stage is 35–58% of a fit, and at m ≥ 20, 61–90% of that stage is spent in the user's `logpost` or `grad`. `fit_skew_normal()` takes 7–32% of the stage, about 1 ms per parameter. Rcpp would therefore save little (about 40 ms of a 1 s fit at m = 40), because C++ calling an R closure costs the same.
+    - Forking the per-parameter loop with `parallel::mclapply()` on 8 cores gave identical results and made the stage 3–5× faster at m ≈ 40, but the whole fit only 1.25–1.5× faster, and slower at m = 5. Done properly it would need workers that return their call counts, warnings and errors. It would also not work on Windows. The alternative there, separate R processes, cannot copy Rcpp, TMB or BridgeStan functions, which hold pointers that do not survive the copy.
+    - With a gradient, every γ₁ can come from 4m gradient calls instead of 2m² + 2m: the second differences of the gradient along the whitened axes, summed, give the trace part for all j at once. It agreed with `gamma1_grad()` to 6e-4 and would make a fit at m = 40 about 1.5× faster, but the owner judged it not worth changing INLAvaan's shortcut. Without a gradient there is no such saving.
   - PPP and DIC
 
 ## Open
