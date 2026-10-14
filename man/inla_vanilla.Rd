@@ -200,12 +200,12 @@ with \code{grad}. On test models it was about 0.01 posterior SDs from exact VB
 (0.003 with \code{grad}), and up to 0.1 on a strongly skewed posterior, against
 a VB error of 0.01 to 0.2 SDs from the posterior mean itself.
 
-With \code{grad}, the mode, the Hessian and the marginals are faster and more
-accurate, and the VB correction takes 2m^2 + 1 gradient calls per sweep.
-Beyond a handful of parameters it is then the slowest stage, and
-\code{vb = FALSE} skips it (and its term in the log marginal likelihood): the
-skew-normal marginals do not depend on it. \code{marginals = "gaussian"} saves
-the calls of the scans.
+With \code{grad}, every stage is faster and more accurate. The VB correction
+then takes at most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same
+nodes. Beyond a handful of parameters it and the marginals are the slowest
+stages. \code{vb = FALSE} skips the VB correction (and its term in the log
+marginal likelihood), and the skew-normal marginals do not depend on it;
+\code{marginals = "gaussian"} saves the calls of the scans.
 
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either

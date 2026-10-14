@@ -7,8 +7,7 @@
 #     log-determinant, and vanish for a Gaussian;
 # (c) fd_grad(), fd_jacobian() and fd_hessian() against analytic derivatives,
 #     including their exact error terms on polynomials;
-# (d) vb_nodes() and vb_simplex_nodes() integrate Gaussian moments up to
-#     degree five exactly;
+# (d) vb_nodes() integrates Gaussian moments up to degree five exactly;
 # (e) the VB shift against a reference VB solution computed here by tensor
 #     Gauss-Hermite quadrature (nodes by the Golub-Welsch method);
 # (f) vb = FALSE against vb = TRUE;
@@ -284,7 +283,7 @@ test_that("fits with and without a gradient agree on a two-parameter normal mode
   # which is exact for log-densities of degree four rather than six. The two
   # VB means differ by the error of that rule, for a shift of 0.29 SDs, and
   # the log marginal likelihood through its VB term.
-  expect_lt(d[["mean_vb"]], 0.015) # observed 5.2e-3 SDs
+  expect_lt(d[["mean_vb"]], 0.015) # observed 5.1e-3 SDs
   expect_lt(d[["logml"]], 4.5e-3) # observed 1.5e-3
 })
 
@@ -323,8 +322,8 @@ test_that("fits with and without a gradient agree on a five-parameter logistic r
   )
   # VB stage, from log-posterior values without a gradient, as above, for a
   # shift of 0.40 SDs
-  expect_lt(d[["mean_vb"]], 7.5e-3) # observed 2.6e-3 SDs
-  expect_lt(d[["logml"]], 2e-3) # observed 6.6e-4
+  expect_lt(d[["mean_vb"]], 7.5e-3) # observed 2.1e-3 SDs
+  expect_lt(d[["logml"]], 2e-3) # observed 4.4e-4
 })
 
 # (b) The volume correction ----------------------------------------------------
@@ -605,12 +604,6 @@ test_that("finite differences recycle a scalar step and make the documented numb
 
 # (d) The degree-5 cubature rule -----------------------------------------------
 
-# Every exponent vector of m variables with total degree <= max_degree
-monomial_exponents <- function(m, max_degree) {
-  grid <- as.matrix(expand.grid(rep(list(0:max_degree), m)))
-  grid[rowSums(grid) <= max_degree, , drop = FALSE]
-}
-
 # E[prod z_i^k_i] under N(0, I): the product of (k_i - 1)!! over the k_i,
 # or zero when any k_i is odd.
 gaussian_moment <- function(k) {
@@ -636,74 +629,8 @@ random_covariance <- function(m) {
   D %*% S %*% D
 }
 
-test_that("vb_nodes() has 2 m^2 + 1 nodes whose weights sum to one", {
-  set.seed(5)
-  for (m in 1:6) {
-    rule <- vb_nodes(random_covariance(m))
-    expect_identical(dim(rule$nodes), c(as.integer(2 * m^2 + 1), m))
-    expect_length(rule$weights, 2 * m^2 + 1)
-    expect_equal(sum(rule$weights), 1, tolerance = 1e-14)
-  }
-})
-
-test_that("vb_nodes() integrates every Gaussian moment up to degree five exactly", {
-  set.seed(6)
-  for (m in 1:6) {
-    Sigma <- random_covariance(m)
-    rule <- vb_nodes(Sigma)
-    # Whiten: x = z U with U'U = Sigma
-    z <- rule$nodes %*% solve(chol(Sigma))
-    exps <- monomial_exponents(m, 5)
-    err <- vapply(
-      seq_len(nrow(exps)),
-      function(r) {
-        k <- exps[r, ]
-        rule_moment(z, rule$weights, k) - gaussian_moment(k)
-      },
-      1
-    )
-    # Rounding, which grows with the condition number of Sigma: observed
-    # up to 8.1e-12, at m = 6 with condition number 2e5
-    expect_lt(max(abs(err)), 3e-11)
-
-    # The covariance itself, in the original coordinates
-    expect_equal(
-      crossprod(rule$nodes, rule$weights * rule$nodes),
-      Sigma,
-      tolerance = 1e-12
-    )
-
-    # Degree six is beyond the rule: E[z_1^6] = 15 is not reproduced, so the
-    # degree-five check above has teeth.
-    exps6 <- monomial_exponents(m, 6)
-    exps6 <- exps6[rowSums(exps6) == 6, , drop = FALSE]
-    err6 <- vapply(
-      seq_len(nrow(exps6)),
-      function(r) {
-        k <- exps6[r, ]
-        rule_moment(z, rule$weights, k) - gaussian_moment(k)
-      },
-      1
-    )
-    expect_gt(max(abs(err6)), 1)
-  }
-})
-
-test_that("in one dimension vb_nodes() is the three-point Gauss-Hermite rule", {
-  gh <- gauss_hermite(3)
-  rule <- vb_nodes(matrix(2.5^2))
-  ord <- order(rule$nodes[, 1])
-  expect_equal(rule$nodes[ord, 1], 2.5 * sort(gh$nodes), tolerance = 1e-14)
-  expect_equal(
-    rule$weights[ord],
-    gh$weights[order(gh$nodes)],
-    tolerance = 1e-14
-  )
-  expect_equal(sort(rule$weights), c(1, 1, 4) / 6, tolerance = 1e-14)
-})
-
 # Every exponent vector of m variables with total degree <= max_degree, built
-# up one variable at a time, for m too large for monomial_exponents()
+# up one variable at a time
 exponents_up_to <- function(m, max_degree) {
   if (m == 1) {
     return(matrix(0:max_degree, ncol = 1))
@@ -716,7 +643,7 @@ exponents_up_to <- function(m, max_degree) {
   )
 }
 
-test_that("vb_simplex_nodes() has (m + 1)(m + 2) + 1 nodes in antipodal pairs, within 3 SDs", {
+test_that("vb_nodes() has (m + 1)(m + 2) + 1 nodes in antipodal pairs, within 3 SDs", {
   # Fewer for m <= 3, where some directions coincide, and at m = 7, where the
   # vertex nodes have zero weight
   n_nodes <- c(3, 7, 15, 31, 43, 57, 57, 91, 111)
@@ -724,7 +651,7 @@ test_that("vb_simplex_nodes() has (m + 1)(m + 2) + 1 nodes in antipodal pairs, w
   set.seed(7)
   for (m in 1:9) {
     Sigma <- random_covariance(m)
-    rule <- vb_simplex_nodes(Sigma)
+    rule <- vb_nodes(Sigma)
     expect_identical(dim(rule$nodes), as.integer(c(n_nodes[m], m)))
     expect_equal(sum(rule$weights), 1, tolerance = 1e-14)
     # The centre, then one node of each antipodal pair, then the negatives
@@ -739,13 +666,13 @@ test_that("vb_simplex_nodes() has (m + 1)(m + 2) + 1 nodes in antipodal pairs, w
   }
 })
 
-test_that("vb_simplex_nodes() integrates every Gaussian moment up to degree five exactly", {
+test_that("vb_nodes() integrates every Gaussian moment up to degree five exactly", {
   # Every weight is positive up to m = 7, and the vertex weights are negative
   # from m = 8, so both regimes are covered
   set.seed(8)
   for (m in c(1:9, 12)) {
     Sigma <- random_covariance(m)
-    rule <- vb_simplex_nodes(Sigma)
+    rule <- vb_nodes(Sigma)
     expect_identical(min(rule$weights) > 0, m <= 7)
     z <- rule$nodes %*% solve(chol(Sigma))
     exps <- exponents_up_to(m, 5)
@@ -770,9 +697,9 @@ test_that("vb_simplex_nodes() integrates every Gaussian moment up to degree five
   }
 })
 
-test_that("vb_simplex_nodes() gives the classical rules in one, two and three dimensions", {
+test_that("vb_nodes() gives the classical rules in one, two and three dimensions", {
   # m = 1: the three-point Gauss-Hermite rule, as vb_nodes() is
-  rule <- vb_simplex_nodes(matrix(2.5^2))
+  rule <- vb_nodes(matrix(2.5^2))
   ord <- order(rule$nodes[, 1])
   expect_equal(
     rule$nodes[ord, 1],
@@ -783,7 +710,7 @@ test_that("vb_simplex_nodes() gives the classical rules in one, two and three di
 
   # m = 2: Radon's seven-point rule, the centre with weight 1/2 and a regular
   # hexagon of radius 2 with weights 1/12
-  rule <- vb_simplex_nodes(diag(2))
+  rule <- vb_nodes(diag(2))
   expect_equal(sqrt(rowSums(rule$nodes^2)), c(0, rep(2, 6)), tolerance = 1e-14)
   expect_equal(rule$weights, c(1 / 2, rep(1 / 12, 6)), tolerance = 1e-14)
   angles <- sort(atan2(rule$nodes[-1, 2], rule$nodes[-1, 1]) %% (2 * pi))
@@ -791,7 +718,7 @@ test_that("vb_simplex_nodes() gives the classical rules in one, two and three di
 
   # m = 3: the corners of a cube and the vertices of an octahedron, all at
   # radius sqrt(5), with weights 0.045 and 0.04, and 0.4 at the centre
-  rule <- vb_simplex_nodes(diag(3))
+  rule <- vb_nodes(diag(3))
   expect_equal(
     sqrt(rowSums(rule$nodes^2)),
     c(0, rep(sqrt(5), 14)),
@@ -924,7 +851,7 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D poster
 
   vb_err <- max_sd_diff(fit$mean_vb, ref, sds)
   laplace_err <- max_sd_diff(fit$mode, ref, sds)
-  expect_lt(vb_err, 7.5e-4) # observed 2.5e-4 SDs, for a shift of 0.25 SDs
+  expect_lt(vb_err, 7.5e-4) # observed 2.6e-4 SDs, for a shift of 0.25 SDs
   expect_lt(vb_err, laplace_err / 100)
 
   # Without a gradient, by Stein's identity on the simplex rule
@@ -970,9 +897,9 @@ test_that("the VB shift in posterior SDs does not depend on the scale of the par
     for (gr in list(gr_scaled, NULL)) {
       fit_scaled <- fit_past_init_check(lp_scaled, mod$init, grad = gr)
       expect_false(fit_scaled$diagnostics$vb$fallback)
-      # Against the exact VB shift, as for the unscaled model: observed 1.6e-4
-      # to 2.7e-4 SDs with the gradient, and 4.2e-3 to 4.6e-3 without, from
-      # Stein's identity on the simplex rule
+      # Against the exact VB shift, as for the unscaled model: observed 2.0e-4
+      # to 2.6e-4 SDs with the gradient, and 4.2e-3 to 4.6e-3 without, from
+      # Stein's identity
       tol <- if (is.null(gr)) 0.015 else 7.5e-4
       expect_lt(max(abs(shift_sd(fit_scaled) - ref_sd)), tol)
       if (scale[[1]] == scale[[2]]) {
@@ -1145,7 +1072,7 @@ test_that("without a gradient each VB sweep costs one log-posterior call per nod
   )
   expect_false(vb$fallback)
   # (m + 1)(m + 2) = 42 calls per sweep, no centre: observed 4 sweeps
-  n_nodes <- nrow(vb_simplex_nodes(fit$cov)$nodes) - 1L
+  n_nodes <- nrow(vb_nodes(fit$cov)$nodes) - 1L
   expect_identical(n_nodes, as.integer((m + 1) * (m + 2)))
   expect_identical(calls, vb$iterations * n_nodes)
   expect_equal(vb$shift, fit$mean_vb - fit$mode, tolerance = 1e-12)
