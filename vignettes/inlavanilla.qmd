@@ -103,8 +103,9 @@ fit
 
 The header names the approximation: skew-normal marginals, with the VB mean
 correction. The table summarises each parameter's skew-normal marginal: the
-mean, standard deviation, quantiles and mode. The last line says that
-`summary()` flags one of its checks; we come to it below. Each step of the
+mean, standard deviation, quantiles and mode, and the last line gives the
+log marginal likelihood. Had the fit raised a warning, or `summary()`
+flagged one of its checks, a line below it would say so. Each step of the
 fit reports as it finishes, with the time it took. `verbose = TRUE` adds a
 full diagnostic of each step, and `silent = TRUE` prints nothing at all, as
 in a simulation; the warnings it would have shown are kept in `fit$warnings`.
@@ -129,8 +130,10 @@ summary(fit)
   large gap means the posterior is far from Gaussian and either may be off.
 * **Bend** is the log-density, in nats, that each scan misses 2 SDs out,
   because it runs along a straight line while the other parameters'
-  conditional mode bends away from it. Above 0.1 it is flagged, as here for
-  the intercept: its marginal may be a little too narrow.
+  conditional mode bends away from it. Above 0.25 it is flagged: the
+  marginal SD may then be about 10% too small. The intercept's bend is
+  below that, and its marginal is only a little narrow, as the check
+  against the exact posterior below shows.
 * **End mass** is the mass each skew-normal puts beyond the scanned window,
   4 posterior SDs either side of the mode, where it is extrapolated. It is
   flagged above 0.05.
@@ -212,9 +215,9 @@ par(op)
 ```
 
 The skew-normal intervals track the exact ones closely. The intercept's is a
-little narrow, as its bend flag warned. The Laplace intervals are symmetric
-about the mode, so they cut the long tails short and miss values on the far
-side.
+little narrow, by about 5%, as its bend suggested. The Laplace intervals are
+symmetric about the mode, so they cut the long tails short and miss values on
+the far side.
 
 The grid also gives the exact log marginal likelihood:
 
