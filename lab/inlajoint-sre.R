@@ -20,11 +20,11 @@
 # P(1 / sqrt(tau) > 0.5) = 0.01. The book's printed fit used Wishart(10, I),
 # from an older INLAjoint.
 #
-# The 1,000 random effects integrate out inside logpost. Given the parameters,
-# b_i | y_i is normal in closed form, and the survival term sees b_i only
-# through u_i = gamma' b_i, which is normal too. So each subject needs one
-# integral over u_i, by adaptive Gauss-Hermite quadrature. Two versions treat
-# the log-hazards differently.
+# In versions A and B the 1,000 random effects integrate out inside logpost.
+# Given the parameters, b_i | y_i is normal in closed form, and the survival
+# term sees b_i only through u_i = gamma' b_i, which is normal too. So each
+# subject needs one integral over u_i, by adaptive Gauss-Hermite quadrature.
+# The two versions treat the log-hazards differently.
 #
 # Version A gives inla_vanilla() all 27 parameters, with f non-centred,
 # f = U diag(1 / sqrt(tau lambda + 0.01)) eta and eta ~ N(0, I). Centred, the
@@ -35,43 +35,62 @@
 # derivatives. That leaves 11 parameters, and sampling() draws f from its
 # Laplace approximation given each draw.
 #
+# Version C writes the complete-data log density, as one would for Stan, and
+# lets RTMB integrate b and f out by a Laplace approximation, with the
+# gradient by automatic differentiation. inla_vanilla() gets the same 11
+# parameters as in version B.
+#
 # Reference: Stan (NUTS) on all 1,027 parameters, and importance sampling for
 # the log marginal likelihood.
 #
-# Needs INLA, INLAjoint, mvtnorm, rstan and loo. Run from the package root:
+# Needs INLA, INLAjoint, RTMB, mvtnorm, rstan and loo. From the package root:
 #   Rscript lab/inlajoint-sre.R
 #
 # Results (October 2026; Stan 4 chains of 2,000 kept draws, R-hat 1.003, no
-# divergences). Version B matches Stan, as closely as INLAjoint or closer. The
-# 10 parameters other than the baseline variance are within 0.02 posterior SDs
-# in mean and 0.10 in the 2.5% and 97.5% quantiles, with SDs within 3.1%
-# (INLAjoint: 0.08, 0.17 and 3.1%, part of it Monte Carlo noise in its summary
-# of the random-effect SDs). The 15 log-hazards are within 0.07 SDs in mean
-# and 0.15 in the quantiles, with SDs within 3% (INLAjoint: 0.10, 0.37, and 3%
-# to 8% too wide). The baseline variance 1 / tau has mean 0.0092 against
-# Stan's 0.0089, and log tau a 97.5% quantile of 11.4 against Stan's 12.4
-# (INLAjoint: 10.0 to 10.8). INLAjoint's marginal of log tau changes from run
-# to run on several threads: its 2.5% quantile ranged from 2.0 to 3.0 over
-# six fits, against Stan's 2.9. The log marginal likelihood is -3336.13
-# against -3336.11 by importance sampling (Pareto k 0.33). INLAjoint's is
-# -3336.08 from its Gaussian approximation and -3341.07 from its integration,
-# once sum(log E) = -472.38 and the rw1 offset of -4.76 are removed. Version B
-# took 3.2 s (2,671 calls of logpost, 1.2 ms each), and its draws 1.6 ms each
-# for the inner Laplace (16 s for 10,000). INLAjoint took 2.9 s on 14 threads
-# and 8.9 s on one. Every check in summary() passes except heavy tails for log
-# tau, which is right: its right tail is the PC prior's.
+# divergences). Versions B and C match Stan, as closely as INLAjoint or
+# closer. The 10 parameters other than the baseline variance are within 0.02
+# posterior SDs in mean and 0.10 in the 2.5% and 97.5% quantiles, with SDs
+# within 3.1% (INLAjoint, over three runs: 0.08 to 0.09, 0.14 to 0.17 and
+# 3.1%, part of it Monte Carlo noise in its summary of the random-effect SDs).
+# The 15 log-hazards are within 0.07 SDs in mean (C: 0.13, since RTMB centres
+# f at the joint mode of b and f) and 0.15 in the quantiles (C: 0.26), with
+# SDs within 3% (INLAjoint: 0.10 to 0.14, 0.37 to 0.42, and 3% to 12% too
+# wide). The baseline variance 1 / tau has mean 0.0092 against Stan's 0.0089,
+# and log tau a 97.5% quantile of 11.4 against Stan's 12.4 (INLAjoint: 10.0
+# to 10.8). INLAjoint's marginal of log tau changes from run to run on
+# several threads: its 2.5% quantile ranged from 2.0 to 3.0 over six fits,
+# against Stan's 2.9. The log marginal likelihood is -3336.13 (B) and
+# -3336.12 (C) against -3336.11 by importance sampling (Pareto k 0.33).
+# INLAjoint's is -3336.1 to -3336.4 from its Gaussian approximation and
+# -3341.1 to -3341.2 from its integration, once sum(log E) = -472.38 and the
+# rw1 offset of -4.76 are removed. Every check in summary() passes for B and C
+# except heavy tails for log tau, which is right: its right tail is the PC
+# prior's.
+#
+# Cost: INLAjoint took 2.8 to 2.9 s on 14 threads and 8.9 to 9.1 s on one.
+# Version B took 3.2 s (2,671 calls of logpost, 1.2 ms each), version C 4.3 s
+# (485 calls of obj$fn at 1.8 ms and 1,157 of obj$gr at 3 ms). Draws of the
+# baseline rerun the inner Laplace: 1.6 ms each for B, 2.6 ms for C. Version
+# B's logpost is about 140 lines of hand-derived algebra, quadrature and
+# Newton steps. Version C's log density is 34, close to the 20 of Stan's
+# model block.
 #
 # Version A gets the same 10 parameters right (within 0.02 SDs in mean and
-# 0.11 in the quantiles) in 4.9 s (19,385 calls), but not the baseline. Log
-# tau has an exponential right tail and the eta's a funnel, which skew-normal
-# marginals cannot follow. Its draws put 1 / tau at 0, and the log-hazard SDs
-# come out 15% to 32% too small. Its warning names log tau and three eta's.
+# 0.11 in the quantiles) in about 5 s (19,385 calls), but not the baseline.
+# Log tau has an exponential right tail and the eta's a funnel, which
+# skew-normal marginals cannot follow. Its draws put 1 / tau at 0, and the
+# log-hazard SDs come out 15% to 32% too small. Its warning names log tau and
+# three eta's.
 #
-# Two findings about the comparison itself. With sdcor = TRUE, INLAjoint's row
+# Findings about the tools. With sdcor = TRUE, INLAjoint's row
 # "Baseline risk (variance)" holds 1 / sqrt(tau), so the book's 0.1015 is an
 # SD. R-INLA normalises the rw1 with an intrinsic model's constant even with
 # diagonal = 0.01: on a normal model with every hyperparameter fixed, its log
-# marginal likelihood is 4.76 below the exact one, at any tau.
+# marginal likelihood is 4.76 below the exact one, at any tau. And one about
+# RTMB: spHess() fills the same sparse matrix at every call, and
+# Matrix::Cholesky() caches its factor on it, so random-effect draws must
+# clear h@factors first, or every draw reuses the first factor. The dense
+# chol() of lab/theoph-rtmb.R is safe.
 #
 ################################################################################
 
@@ -396,6 +415,91 @@ logpost_b <- function(theta) {
     log_pc_prior(theta[["log_tau"]])
 }
 
+## ----- Version C: RTMB ------------------------------------------------------
+
+# The complete-data log density, as one would write it for Stan, with b and f
+# as random effects. RTMB integrates them out by a Laplace approximation and
+# differentiates the result, so inla_vanilla() gets the same 11 parameters as
+# in version B, with their gradient.
+y_long <- dat_long$Y
+t_long <- dat_long$time
+trt_long <- dat_long$trt
+id_long <- dat_long$id
+rw_r_sparse <- as(as.matrix(rw_r), "sparseMatrix")
+eye_sparse <- as(diag(n_cut), "sparseMatrix")
+
+log_joint <- function(p) {
+  sd_b <- exp(p$log_sd_b)
+  rho <- tanh(p$atanh_rho)
+  cov_b <- rho * sd_b[1] * sd_b[2]
+  sigma_b <- c(sd_b[1]^2, cov_b, cov_b, sd_b[2]^2)
+  dim(sigma_b) <- c(2, 2)
+  tau_e <- exp(-2 * p$log_sigma_e)
+  mu <- p$beta[1] +
+    p$b[id_long, 1] +
+    (p$beta[2] + p$b[id_long, 2]) * t_long +
+    (p$beta[3] + p$beta[4] * t_long) * trt_long
+  u <- p$b %*% p$gamma
+  # Longitudinal and survival likelihoods
+  sum(RTMB::dnorm(y_long, mu, exp(p$log_sigma_e), log = TRUE)) +
+    sum(event_indic * (p$f[event_node] + u)) -
+    sum((expo %*% exp(p$f)) * exp(u)) +
+    # Random effects and log-hazards
+    sum(RTMB::dmvnorm(p$b, 0, sigma_b, log = TRUE)) +
+    RTMB::dgmrf(
+      p$f,
+      0,
+      exp(p$log_tau) * rw_r_sparse + rw_diag * eye_sparse,
+      log = TRUE
+    ) +
+    # Priors, with the Jacobians of the log and atanh transforms
+    sum(RTMB::dnorm(p$beta, 0, 10, log = TRUE)) +
+    log(5e-5) -
+    5e-5 * tau_e +
+    log(2 * tau_e) -
+    sum(1 / sd_b^2) / (2 * (1 - rho^2)) -
+    log(4 * pi) +
+    log(4) -
+    3 * sum(p$log_sd_b) -
+    2 * log(1 - rho^2) +
+    sum(RTMB::dnorm(p$gamma, 0, 1, log = TRUE)) +
+    log_pc_prior(p$log_tau)
+}
+
+obj_c <- RTMB::MakeADFun(
+  function(p) -log_joint(p),
+  list(
+    beta = init_b[1:4],
+    log_sigma_e = init_b[[5]],
+    log_sd_b = init_b[6:7],
+    atanh_rho = init_b[[8]],
+    gamma = init_b[9:10],
+    log_tau = init_b[[11]],
+    b = matrix(0, n, 2),
+    f = rep(log_rate, n_cut)
+  ),
+  random = c("b", "f"),
+  silent = TRUE
+)
+
+# At each draw, (b, f) from the Laplace approximation given the draw. spHess()
+# fills the same sparse matrix at every call, and Cholesky() caches its factor
+# on it, so the cache must be cleared or every draw reuses the first factor.
+f_pos <- length(obj_c$env$random) - n_cut + seq_len(n_cut)
+natural_c <- function(theta) {
+  obj_c$fn(theta)
+  par <- obj_c$env$last.par
+  h <- obj_c$env$spHess(par, random = TRUE)
+  h@factors <- list()
+  ch <- Matrix::Cholesky(h, LDL = FALSE, perm = TRUE)
+  z <- Matrix::solve(
+    ch,
+    Matrix::solve(ch, rnorm(nrow(h)), system = "Lt"),
+    system = "Pt"
+  )
+  natural(theta, par[obj_c$env$random][f_pos] + as.vector(z)[f_pos])
+}
+
 ## ----- Natural-scale quantities ----------------------------------------------
 
 # Named as in INLAjoint's summary, then the log-hazards of the 15 intervals.
@@ -438,6 +542,18 @@ t_b <- system.time(fit_b <- inla_vanilla(logpost_b, init_b))[["elapsed"]]
 set.seed(1)
 t_b_draws <- system.time(
   draws_b <- sampling(fit_b, nsamp = n_draws, fun = natural_b)
+)[["elapsed"]]
+
+t_c <- system.time(
+  fit_c <- inla_vanilla(
+    function(theta) -obj_c$fn(theta),
+    init_b,
+    grad = function(theta) -as.vector(obj_c$gr(theta))
+  )
+)[["elapsed"]]
+set.seed(1)
+t_c_draws <- system.time(
+  draws_c <- sampling(fit_c, nsamp = n_draws, fun = natural_c)
 )[["elapsed"]]
 
 # Quadrature check at the mode: 15 against 41 nodes
@@ -655,6 +771,7 @@ summarise <- function(draws) {
 ref <- summarise(draws_stan)
 s_a <- summarise(draws_a)
 s_b <- summarise(draws_b)
+s_c <- summarise(draws_c)
 
 # INLAjoint's summaries, in the same layout. The SDs and the correlation of
 # the random effects, and the baseline variance, come from its summary(), the
@@ -695,6 +812,10 @@ cat(
 )
 print(round(gap(s_b)[par_main, ], 3))
 cat(
+  "\n== inla_vanilla(), version C, against Stan, in Stan's posterior SDs ==\n"
+)
+print(round(gap(s_c)[par_main, ], 3))
+cat(
   "\n== inla_vanilla(), version A, against Stan, in Stan's posterior SDs ==\n"
 )
 print(round(gap(s_a)[par_main, ], 3))
@@ -703,6 +824,7 @@ print(round(
   rbind(
     INLAjoint = worst(gap(s_ij)),
     version_b = worst(gap(s_b)),
+    version_c = worst(gap(s_c)),
     version_a = worst(gap(s_a))
   ),
   3
@@ -723,7 +845,8 @@ print(round(
       inla.emarginal(identity, log_tau_ij),
       inla.qmarginal(c(0.025, 0.5, 0.975), log_tau_ij)
     ),
-    version_b = fit_b$summary["log_tau", c("Mean", "2.5%", "50%", "97.5%")]
+    version_b = fit_b$summary["log_tau", c("Mean", "2.5%", "50%", "97.5%")],
+    version_c = fit_c$summary["log_tau", c("Mean", "2.5%", "50%", "97.5%")]
   ),
   2
 ))
@@ -742,6 +865,7 @@ print(round(
   c(
     importance = logml_ref,
     version_b = fit_b$logml,
+    version_c = fit_c$logml,
     version_a = fit_a$logml,
     inlajoint_integration = fit_ij$mlik[1, 1] - poisson_const - rw_offset,
     inlajoint_gaussian = fit_ij$mlik[2, 1] - poisson_const - rw_offset
@@ -774,7 +898,9 @@ cost <- function(label, fit, t_fit, t_draws) {
   cat(
     label,
     fit$counts[["logpost"]],
-    "calls,",
+    "logpost and",
+    fit$counts[["grad"]],
+    "grad calls,",
     round(t_fit, 2),
     "s, then",
     round(t_draws, 2),
@@ -784,6 +910,7 @@ cost <- function(label, fit, t_fit, t_draws) {
   )
 }
 cost("inla_vanilla(), version B:", fit_b, t_b, t_b_draws)
+cost("inla_vanilla(), version C:", fit_c, t_c, t_c_draws)
 cost("inla_vanilla(), version A:", fit_a, t_a, t_a_draws)
 cat("Stan:", round(t_stan, 1), "s of sampling\n")
 cat(
