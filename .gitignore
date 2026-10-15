@@ -57,3 +57,4 @@ docs
 vignettes/*_files
 vignettes/articles/*.html
 vignettes/articles/*_files
+lab/*_files

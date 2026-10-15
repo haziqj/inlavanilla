@@ -1,0 +1,587 @@
+---
+title: "The models of Oka (2026), fitted with inlavanilla"
+subtitle: "One data set from the hardest condition within reach, and the recovery of its parameters"
+date: today
+format:
+  pdf:
+    number-sections: true
+    toc: false
+    geometry: margin=2.5cm
+    fontsize: 11pt
+    colorlinks: true
+    fig-pos: "H"
+execute:
+  cache: true
+  echo: true
+  warning: false
+knitr:
+  opts_chunk:
+    comment: "#>"
+    fig.width: 7
+    fig.height: 3.2
+    fig.align: center
+    out.width: "100%"
+---
+
+```{r}
+#| label: setup
+#| include: false
+#| cache: false
+# ASCII output, no progress bars, 76 columns
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.unicode = FALSE,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
+suppressMessages(devtools::load_all("..", quiet = TRUE))
+source("oka-thesis-models.R")
+nsamp <- 4000
+dg <- function(fit, x) unclass(diagnostics(fit))[[x]]
+```
+
+Motonori Oka's thesis (Oka, 2026) estimates large latent variable models by
+marginal maximum likelihood: stochastic optimisation, with Langevin samplers
+for the latent variables. `inla_vanilla()` takes any log-posterior of the
+parameters, so each model here integrates its latent variables out inside
+`logpost`, by a quadrature rule built for that model, and hands the
+log-posterior of the parameters alone to `inla_vanilla()`. The code is in
+`lab/oka-thesis-models.R`, and `lab/oka-thesis.R` runs further checks.
+
+Each section takes the hardest condition of the thesis's simulation study
+that this route can reach, simulates one data set from it with a fixed seed,
+fits it, and checks the recovery of every parameter in three ways:
+
+1. the true value lies in its 95% credible interval;
+2. its standardised error, $z_j = (\hat\vartheta_j - \vartheta_j^*) / \operatorname{sd}_j$,
+   with $\hat\vartheta_j$ the posterior mean, is small, and the $z_j$ look like
+   draws from $N(0, 1)$;
+3. jointly, the squared Mahalanobis distance of the truth from the posterior,
+   $d^2 = (\hat\vartheta - \vartheta^*)^\top \hat\Sigma^{-1} (\hat\vartheta - \vartheta^*)$,
+   with $\hat\Sigma$ the posterior covariance from 4,000 draws, is not
+   extreme against $\chi^2_m$.
+
+With weak priors and this much data, the Bernstein--von Mises theorem makes
+the posterior close to the sampling distribution of the estimate, so over
+repeated data sets $z_j$ is roughly $N(0, 1)$ and $d^2$ roughly $\chi^2_m$.
+One data set cannot prove more than that the fit is consistent with the
+truth, but a wrong fit would fail these checks.
+
+```{r}
+#| label: recovery-helpers
+#| cache: false
+# The recovery table, the joint check and the plot of the z_j
+recovery_check <- function(fit, truth, nsamp = 4000) {
+  draws <- sampling(fit, nsamp = nsamp)
+  post_mean <- colMeans(draws)
+  post_sd <- apply(draws, 2, sd)
+  q <- apply(draws, 2, quantile, c(0.025, 0.975))
+  tab <- data.frame(
+    true = truth,
+    mean = post_mean,
+    sd = post_sd,
+    lower = q[1, ],
+    upper = q[2, ],
+    z = (post_mean - truth) / post_sd,
+    covers = q[1, ] <= truth & truth <= q[2, ]
+  )
+  d2 <- mahalanobis(truth, post_mean, cov(draws))
+  list(
+    table = tab,
+    d2 = d2,
+    m = length(truth),
+    p = pchisq(d2, length(truth), lower.tail = FALSE)
+  )
+}
+
+print_check <- function(rc) {
+  cat(sprintf(
+    paste(
+      "Covered by the 95%% interval: %d of %d. Largest |z|: %.2f.",
+      "d^2 = %.1f on %d df, p = %.2f.\n"
+    ),
+    sum(rc$table$covers),
+    rc$m,
+    max(abs(rc$table$z)),
+    rc$d2,
+    rc$m,
+    rc$p
+  ))
+}
+
+plot_z <- function(rc, main) {
+  z <- rc$table$z
+  m <- length(z)
+  par(mar = c(5.5, 4, 2, 1))
+  plot(
+    seq_len(m),
+    z,
+    pch = 19,
+    col = ifelse(rc$table$covers, "grey20", "firebrick"),
+    ylim = range(c(-3, 3, z)),
+    xaxt = "n",
+    xlab = "",
+    ylab = expression(z[j]),
+    main = main
+  )
+  abline(h = c(-1.96, 0, 1.96), lty = c(2, 1, 2), col = "grey60")
+  labels <- rownames(rc$table)
+  at <- if (m > 40) seq(1, m, by = 3) else seq_len(m)
+  axis(1, at = at, labels = labels[at], las = 2, cex.axis = 0.6)
+}
+```
+
+# Confirmatory M2PL (Chapter 2)
+
+## The model
+
+Respondent $i = 1, \ldots, N$ answers $J$ binary items and has $K$ correlated
+latent factors,
+$$
+P(y_{ij} = 1 \mid \xi_i) = \operatorname{logistic}\Big(d_j + \sum_{k=1}^K a_{jk} \xi_{ik}\Big),
+\qquad \xi_i \sim N_K(0, R),
+$$
+where $a_{jk} = 0$ unless the indicator matrix says that item $j$ measures
+factor $k$, and $R$ is a correlation matrix (the thesis's Section 2.2.1.2).
+The marginal likelihood of respondent $i$ is a $K$-dimensional integral,
+$$
+p(y_i \mid a, d, R) = \int \prod_{j=1}^J P(y_{ij} \mid \xi)^{y_{ij}}\,
+\{1 - P(y_{ij} \mid \xi)\}^{1 - y_{ij}}\, \phi_K(\xi; 0, R)\, d\xi,
+$$
+computed here by a product Gauss--Hermite rule with 15 nodes per factor, on
+the distinct response patterns. With $K = 2$, $R$ has one correlation $\rho$.
+The priors are $a_{jk}, d_j \sim N(0, 3^2)$ and $\rho \sim U(-1, 1)$, and
+`inla_vanilla()` works on $(a, d, \operatorname{atanh} \rho)$, with an
+analytic gradient.
+
+## The hardest instance
+
+The thesis simulates the M2PL with $(K, J) = (5, 50)$ and $(10, 200)$ at
+$N = 10{,}000$ (Section 2.4.1.2), and at $N = 2{,}000$ (Appendix 6.5). Those
+need 5- or 10-dimensional integrals per respondent and 150 or 650
+parameters, beyond a product rule inside every call of `logpost`. The one
+condition within reach is Appendix 6.6: $K = 2$, $J = 15$, $N = 2{,}000$,
+$d_j \sim U(-1, 1)$, nonzero $a_{jk} \sim U(0.5, 1.5)$ and $\rho = 0.5$. The
+thesis does not print its $15 \times 2$ indicator matrix, so 12 items load on
+one factor each, alternating, and 3 load on both.
+
+```{r}
+#| label: m2pl-data
+set.seed(2026)
+a_true <- m2pl_q * matrix(runif(length(m2pl_q), 0.5, 1.5), nrow(m2pl_q))
+d_true <- runif(nrow(m2pl_q), -1, 1)
+m2pl_truth <- setNames(
+  c(a_true[m2pl_free], d_true, atanh(0.5)),
+  m2pl_names
+)
+m2pl_pat <- collapse_patterns(sim_m2pl(2000, a_true, d_true, 0.5))
+c(patterns = nrow(m2pl_pat$y), parameters = length(m2pl_truth))
+```
+
+## Fit and recovery
+
+```{r}
+#| label: m2pl-fit
+m2pl_init <- setNames(
+  c(rep(1, length(m2pl_free)), numeric(nrow(m2pl_q)), 0),
+  m2pl_names
+)
+m2pl_fit <- inla_vanilla(
+  m2pl_logpost,
+  m2pl_init,
+  m2pl_grad,
+  y = m2pl_pat$y,
+  count = m2pl_pat$count,
+  nodes = gh_grid(15, 2)
+)
+diagnostics(m2pl_fit)
+```
+
+```{r}
+#| label: m2pl-recovery
+#| fig-cap: "Standardised errors of the 34 parameters of the M2PL. Red: not covered by the 95% interval."
+set.seed(1)
+m2pl_rc <- recovery_check(m2pl_fit, m2pl_truth)
+print_check(m2pl_rc)
+m2pl_err <- abs(m2pl_rc$table$mean - m2pl_rc$table$true)
+m2pl_mae <- tapply(m2pl_err, substr(m2pl_names, 1, 1), mean)
+plot_z(m2pl_rc, "M2PL, K = 2, J = 15, N = 2,000")
+```
+
+```{r}
+#| label: m2pl-table
+knitr::kable(m2pl_rc$table, digits = 3, booktabs = TRUE, longtable = TRUE)
+```
+
+The fit took `r round(m2pl_fit$timing[["total"]])` seconds, and every check
+of `inla_vanilla()` passes: the largest VB shift is
+`r round(dg(m2pl_fit, "vb_shift_max"), 2)` posterior SDs, and no marginal has
+heavy tails or a ridge bend over 0.25. `r sum(m2pl_rc$table$covers)` of the
+`r m2pl_rc$m` true values lie in their 95% intervals, about what 95% coverage
+gives, the largest $|z_j|$ is `r round(max(abs(m2pl_rc$table$z)), 2)`, and
+$d^2 = `r round(m2pl_rc$d2, 1)`$ on `r m2pl_rc$m` degrees of freedom
+($p = `r round(m2pl_rc$p, 2)`$). The mean absolute error of the posterior
+means is `r round(m2pl_mae[["a"]], 3)` for the loadings and
+`r round(m2pl_mae[["d"]], 3)` for the intercepts, against 0.082 and 0.058 for
+the thesis's QN-SOMALA at $N = 2{,}000$, $K = 5$ and $J = 50$ (Table 6.11).
+
+The approximation itself was checked against Stan, with NUTS on the full
+joint and the 4,000 factor scores sampled (4 chains of 2,000 draws,
+$\hat R \le 1.003$, no divergences): every posterior mean agreed within 0.014
+posterior SDs, every SD within 4%, and every 2.5% and 97.5% quantile within
+0.11 SDs.
+
+# Multilevel logistic regression (Chapter 2)
+
+## The model
+
+Cluster $i = 1, \ldots, N$ has $J_i$ binary responses, and every covariate
+has a random coefficient (Section 2.2.1.1),
+$$
+P(y_{ij} = 1 \mid \xi_i) = \operatorname{logistic}(x_{ij}^\top \xi_i),
+\qquad \xi_i \sim N_K(\mu, \Sigma), \qquad x_{ij1} = 1,
+$$
+so $\xi_{i1}$ is the random intercept, $\xi_{i2}, \ldots, \xi_{iK}$ are random
+slopes, $\mu$ holds the fixed effects and $\Sigma$ their covariance. Each
+cluster's $\xi_i$ is integrated out by a product Gauss--Hermite rule on
+$\xi = \mu + \operatorname{diag}(\sigma) L z$, with $L$ the Cholesky factor of
+the correlation matrix of $\Sigma$. The priors are $\mu_k \sim N(0, 5^2)$,
+$\sigma_k \sim N^+(0, 1)$ and an LKJ(1) prior, uniform over correlation
+matrices, on the correlations, which enter through their canonical partial
+correlations on the $\operatorname{atanh}$ scale.
+
+## The hardest instance
+
+The thesis has $K = 5$ ($J_i = 10$) and $K = 10$ ($J_i = 20$) random
+coefficients for $N = 10{,}000$ clusters (Section 2.4.1.1). The integral runs
+over all 10,000 clusters in every call of `logpost`, and a product rule of
+$n$ nodes per coefficient costs $n^K$ passes over the 100,000 responses.
+$K = 3$, with $6^3 = 216$ nodes, takes about a third of a second a call, and
+$K = 5$ would take minutes. So this keeps the thesis's $N = 10{,}000$,
+$J_i = 10$ and true values, $\mu_1 = 0.3$, slopes $\mu_k \sim U(0.1, 1.1)$,
+variances 0.1, covariances 0.05 and covariates $N(0, R)$ with correlations
+0.25, and takes $K = 3$: nine parameters.
+
+```{r}
+#| label: mlr-data
+set.seed(2027)
+mlr_mu <- c(0.3, runif(mlr_k - 1, 0.1, 1.1))
+mlr_sigma <- matrix(0.05, mlr_k, mlr_k)
+diag(mlr_sigma) <- 0.1
+mlr_truth <- setNames(
+  c(mlr_mu, log(sqrt(diag(mlr_sigma))), corr_to_w(cov2cor(mlr_sigma))),
+  mlr_names
+)
+mlr_dat <- sim_mlr(10000, mlr_mu, mlr_sigma)
+mean(mlr_dat$y)
+```
+
+## Fit and recovery
+
+```{r}
+#| label: mlr-fit
+mlr_init <- setNames(
+  c(runif(mlr_k, 0, 1.5), numeric(mlr_k + choose(mlr_k, 2))),
+  mlr_names
+)
+mlr_fit <- inla_vanilla(
+  mlr_logpost,
+  mlr_init,
+  y = mlr_dat$y,
+  x = mlr_dat$x,
+  nodes = gh_grid(mlr_n_gh, mlr_k)
+)
+diagnostics(mlr_fit)
+```
+
+```{r}
+#| label: mlr-recovery
+#| fig-cap: "Standardised errors of the nine parameters of the multilevel logistic regression."
+set.seed(1)
+mlr_rc <- recovery_check(mlr_fit, mlr_truth)
+print_check(mlr_rc)
+plot_z(mlr_rc, "Multilevel logistic regression, K = 3, N = 10,000")
+```
+
+```{r}
+#| label: mlr-table
+knitr::kable(mlr_rc$table, digits = 3, booktabs = TRUE)
+```
+
+On the natural scale, $\mu$ and the entries of $\Sigma$:
+
+```{r}
+#| label: mlr-natural
+mlr_draws <- sampling(mlr_fit, nsamp = nsamp, fun = mlr_natural)
+mlr_nat <- data.frame(
+  true = mlr_natural(mlr_truth),
+  mean = colMeans(mlr_draws),
+  lower = apply(mlr_draws, 2, quantile, 0.025),
+  upper = apply(mlr_draws, 2, quantile, 0.975)
+)
+mlr_nat$covers <- mlr_nat$lower <= mlr_nat$true & mlr_nat$true <= mlr_nat$upper
+knitr::kable(mlr_nat, digits = 4, booktabs = TRUE)
+mlr_err <- abs(mlr_nat$mean - mlr_nat$true)
+is_mu <- startsWith(rownames(mlr_nat), "mu")
+mlr_avg_mae <- (mean(mlr_err[is_mu]) + mean(mlr_err[!is_mu])) / 2
+```
+
+The fit took `r round(mlr_fit$timing[["total"]] / 60, 1)` minutes, nearly
+all of it in the 10,000 cluster integrals of each call of `logpost`. Every
+check passes but one borderline mean gap, of
+`r round(dg(mlr_fit, "mean_gap_max"), 2)` posterior SDs, on the third
+canonical partial correlation. `r sum(mlr_rc$table$covers)` of the `r mlr_rc$m` true values lie
+in their 95% intervals, the largest $|z_j|$ is
+`r round(max(abs(mlr_rc$table$z)), 2)`, and $d^2 = `r round(mlr_rc$d2, 1)`$
+on `r mlr_rc$m` degrees of freedom ($p = `r round(mlr_rc$p, 2)`$). The thesis's
+error measure, the mean of the mean absolute errors of $\mu$ and of $\Sigma$,
+is `r round(mlr_avg_mae, 4)` here, against 0.0113 for its D-SOMALA at $K = 5$
+(Table 2.2).
+
+# Grade of membership model (Chapter 3)
+
+## The model
+
+Respondent $i$ answers $J$ binary items and belongs in part to each of $K$
+latent profiles, with a membership vector on the simplex (Section 3.2.1.1),
+$$
+P(y_{ij} = 1 \mid \xi_i) = \sum_{k=1}^K \xi_{ik}\, \theta_{jk},
+\qquad \xi_i \sim \operatorname{Dirichlet}(\alpha),
+$$
+where $\theta_{jk}$ is the probability that profile $k$ answers item $j$. The
+thesis integrates $\xi_i$ by Langevin MCMC on the sphere. But each factor
+$\sum_k \xi_{ik} \theta_{jk}^{y_{ij}} (1 - \theta_{jk})^{1 - y_{ij}}$ is linear
+in $\xi_i$, so the integrand is a polynomial of degree $J$, and the integral
+is exact by a Gauss rule. With $K = 3$, stick-breaking writes the Dirichlet
+as two independent betas, $\xi_1 = u$, $\xi_2 = (1 - u) v$,
+$\xi_3 = (1 - u)(1 - v)$, with $u \sim \operatorname{Beta}(\alpha_1, \alpha_2 + \alpha_3)$
+and $v \sim \operatorname{Beta}(\alpha_2, \alpha_3)$, and a Gauss--Jacobi rule
+with $\lceil (J + 1)/2 \rceil$ nodes for each is exact.
+
+The thesis fits by maximum likelihood. For a Bayesian fit the prior on
+$\theta_{jk}$ matters here: the data cannot tell a probability of $10^{-9}$
+from one of 0.01, and about 40% of the true $\theta_{jk}$ lie within 0.01 of
+0 or 1. Under a uniform prior those probabilities are pulled inwards and
+$\alpha$ drops to make up for it. In a Stan check of the data set below, even
+the exact posterior then missed all three true $\alpha$. So the prior is the
+thesis's own generating distribution, $\theta_{jk} \sim \operatorname{Beta}(0.2, 0.2)$,
+with $\log \alpha_k \sim N(0, 1)$. `inla_vanilla()` works on
+$\Phi^{-1}(\theta_{jk})$ and $\log \alpha_k$ ($m = 63$), from values of
+`logpost` alone. On the probit scale the prior's tail near 0 or 1 is normal,
+like that of $N(0, 5)$, where on the logit scale it would be exponential.
+
+## The hardest instance
+
+The thesis has $K \in \{3, 6\}$, $J \in \{20, 40\}$ for $K = 3$ and
+$J \in \{40, 80\}$ for $K = 6$, uniform and non-uniform $\alpha$, $N = 2{,}000$,
+and $\theta_{jk} \sim \operatorname{Beta}(0.2, 0.2)$ (Section 3.3.1.1). With
+$K = 6$ the model has 246 or 486 parameters, and with $J = 40$ it has 123:
+too many for a fit that takes logpost values only. So this takes $K = 3$,
+$J = 20$ ($m = 63$) with the non-uniform $\alpha = (0.5, 1, 1.5)$, whose small
+first component puts many respondents near a vertex of the simplex.
+
+```{r}
+#| label: gom-data
+set.seed(2028)
+gom_theta <- matrix(rbeta(gom_j * gom_k, 0.2, 0.2), gom_j, gom_k)
+gom_pat <- collapse_patterns(sim_gom(2000, gom_theta, gom_alpha))
+mean(gom_theta < 0.01 | gom_theta > 0.99) # share of theta near 0 or 1
+```
+
+## Fit and recovery
+
+```{r}
+#| label: gom-fit
+gom_init <- setNames(
+  c(qnorm(rep(c(0.4, 0.5, 0.6), each = gom_j)), rep(log(2), 3)),
+  gom_names
+)
+gom_fit <- inla_vanilla(
+  gom_logpost,
+  gom_init,
+  y = gom_pat$y,
+  count = gom_pat$count
+)
+diagnostics(gom_fit)
+```
+
+The profiles carry no labels, so they are matched to the true ones first.
+
+```{r}
+#| label: gom-recovery
+#| fig-cap: "Standardised errors of the 63 parameters of the grade of membership model."
+#| fig-height: 3.6
+perms <- as.matrix(expand.grid(1:3, 1:3, 1:3))
+perms <- perms[apply(perms, 1, function(p) all(sort(p) == 1:3)), ]
+est <- pnorm(matrix(gom_fit$summary[gom_theta_ix, "Mean"], gom_j))
+gap <- apply(perms, 1, function(p) sum(abs(est - gom_theta[, p])))
+perm <- perms[which.min(gap), ]
+gom_truth <- setNames(
+  c(qnorm(gom_theta[, perm]), log(gom_alpha[perm])),
+  gom_names
+)
+set.seed(1)
+gom_rc <- recovery_check(gom_fit, gom_truth)
+print_check(gom_rc)
+plot_z(gom_rc, "Grade of membership, K = 3, J = 20, N = 2,000")
+```
+
+On the natural scale:
+
+```{r}
+#| label: gom-natural
+gom_draws <- sampling(gom_fit, nsamp = nsamp, fun = function(theta) {
+  c(pnorm(theta[gom_theta_ix]), exp(theta[gom_alpha_ix]))
+})
+post_mean <- colMeans(gom_draws)
+gom_mae <- c(
+  theta = mean(abs(post_mean[gom_theta_ix] - gom_theta[, perm])),
+  alpha = mean(abs(post_mean[gom_alpha_ix] - gom_alpha[perm]))
+)
+gom_mae
+gom_alpha_tab <- rbind(
+  true = gom_alpha[perm],
+  mean = post_mean[gom_alpha_ix],
+  lower = apply(gom_draws[, gom_alpha_ix], 2, quantile, 0.025),
+  upper = apply(gom_draws[, gom_alpha_ix], 2, quantile, 0.975)
+)
+colnames(gom_alpha_tab) <- paste0("alpha", seq_len(gom_k))
+round(gom_alpha_tab, 3)
+```
+
+This is the one model where the approximation falls short. The point
+estimates recover the truth: the posterior means of $\alpha$ are
+`r paste(sprintf("%.2f", gom_alpha_tab["mean", ]), collapse = ", ")` against
+`r paste(gom_alpha_tab["true", ], collapse = ", ")`, and the mean absolute
+errors are `r round(gom_mae[["theta"]], 3)` for $\theta$ and
+`r round(gom_mae[["alpha"]], 3)` for $\alpha$, against about 0.03 and 0.09
+for the thesis's manifold MALA after 500 seconds (Figure 3.3). But only
+`r sum(gom_rc$table$covers)` of the `r gom_rc$m` true values lie in their 95%
+intervals, and $d^2$ is far beyond $\chi^2_{63}$. The misses are mostly the
+$\theta_{jk}$ near 0 or 1, whose posterior is a normal cut off by the
+likelihood, with a long tail: the skew-normal marginals are too narrow there,
+and for a few parameters wrong. `inla_vanilla()` says so. Its VB correction
+does not settle, and `summary()` flags heavy tails, mass beyond the scanned
+window and ridge bends for these parameters.
+
+A Stan reference on the full joint, with the 2,000 membership vectors
+sampled, the same priors and 4 chains of 1,000 draws (each chain relabelled
+to the same profiles, $\hat R \le 1.03$ after that, 80 divergent transitions),
+covered 62 of the 63 true values. So the posterior itself recovers the
+parameters, and it is the skew-normal approximation that does not.
+
+# Multilevel latent regression scaling model (Chapter 4)
+
+## The model
+
+Student $i$ in school $g$ takes one booklet of items whose parameters are
+known from calibration: 2PL, 3PL and generalised partial credit (GPCM) items
+(Section 4.2.1). The scaling model regresses the trait on background
+predictors, with a random intercept per school,
+$$
+\theta_{gi} = \eta_g + x_{gi}^\top \beta + e_{gi}, \qquad
+e_{gi} \sim N(0, \sigma^2), \qquad \eta_g \sim N(\mu, \tau^2),
+$$
+and, for example, a 3PL item has
+$P(y_{gij} = 1 \mid \theta) = c_j + (1 - c_j) / [1 + \exp\{-a_j(\theta - b_j)\}]$.
+The thesis samples everything by MCMC. Here, since the items are fixed, each
+student's likelihood $L_{gi}(\theta)$ never changes, and its integral against
+$N(\eta_g + x_{gi}^\top \beta, \sigma^2)$ is a 30-node Gauss--Hermite rule
+placed once where $L_{gi}$ has its mass. The school intercepts then
+integrate out by adaptive Gauss--Hermite quadrature, five nodes at each
+school's mode. The priors follow the thesis's families with values of our
+own: $\beta \mid s^2 \sim N(0, s^2 I)$ with $s^2 \sim \operatorname{IG}(1, 1)$,
+which integrates to a multivariate $t$, $\sigma^2, \tau^2 \sim \operatorname{IG}(1, 0.5)$
+and $\mu \sim N(0, 10^2)$.
+
+## The hardest instance
+
+The thesis's Simulation Study 1 (Section 4.4.1) has $N = 5{,}000$ students in
+$G = 50$ schools, 150 items in 5 booklets of 30 (30 GPCM, 60 3PL, 60 2PL), 60
+predictors (20 continuous, 20 binary, 20 with three categories: 80 columns),
+13 of them nonzero in the unidimensional condition, and $\tau^2 = 0.1$,
+$\sigma^2 = 1$. The bidimensional condition needs 2-dimensional integrals for
+every student and school and about 45 parameters, out of reach, so this is
+the unidimensional one, fitted with the 13 true predictors: the scaling model
+that a perfect selection step would refit. The thesis draws the item
+parameters between the smallest and largest TIMSS 2023 values, which it does
+not print: here $a \sim U(0.6, 2)$, $b \sim U(-2, 2)$, $c \sim U(0.05, 0.3)$.
+
+```{r}
+#| label: scal-data
+set.seed(2029)
+scal_dat <- sim_scaling(50, scal_per)
+scal_rule <- scal_inner_rule(scal_dat, scal_dat$train | scal_dat$test, scal_r)
+sel <- which(scal_dat$beta != 0)
+scal_xs <- scal_dat$x[, sel, drop = FALSE]
+scal_names <- c(sprintf("b_%s", colnames(scal_dat$x)[sel]), "mu", "log_sigma", "log_tau")
+scal_truth <- setNames(c(scal_dat$beta[sel], 0, 0, log(sqrt(0.1))), scal_names)
+length(scal_truth)
+```
+
+## Fit and recovery
+
+```{r}
+#| label: scal-fit
+scal_init <- setNames(c(numeric(length(sel)), 0, 0, log(0.5)), scal_names)
+scal_fit <- inla_vanilla(
+  scal_logpost,
+  scal_init,
+  rule = scal_rule,
+  xs = scal_xs,
+  school = scal_dat$school
+)
+diagnostics(scal_fit)
+```
+
+```{r}
+#| label: scal-recovery
+#| fig-cap: "Standardised errors of the parameters of the scaling model."
+set.seed(1)
+scal_rc <- recovery_check(scal_fit, scal_truth)
+print_check(scal_rc)
+plot_z(scal_rc, "Scaling model, K = 1, N = 5,000, G = 50")
+```
+
+```{r}
+#| label: scal-table
+knitr::kable(scal_rc$table, digits = 3, booktabs = TRUE)
+```
+
+The fit took `r round(scal_fit$timing[["total"]])` seconds, and every check
+passes. `r sum(scal_rc$table$covers)` of the `r scal_rc$m` true values lie in
+their 95% intervals, the largest $|z_j|$ is
+`r round(max(abs(scal_rc$table$z)), 2)`, and $d^2 = `r round(scal_rc$d2, 1)`$
+on `r scal_rc$m` degrees of freedom ($p = `r round(scal_rc$p, 2)`$). The
+quadrature is checked in `lab/oka-thesis.R`: each student's 30-node rule
+agrees with a fine grid to about $10^{-4}$, and five adaptive nodes per school
+with fifteen to $10^{-7}$. That script also runs the thesis's Bayesian
+cross-validation on held-out items, which prefers the scaling model with the
+true predictors to one without predictors.
+
+# Summary
+
+Three of the four models recover their parameters as well as one data set
+can show. For the M2PL, the multilevel logistic regression and the scaling
+model, `inla_vanilla()`'s checks pass (but for one borderline mean gap in the
+second), `r sum(m2pl_rc$table$covers)` of `r m2pl_rc$m`,
+`r sum(mlr_rc$table$covers)` of `r mlr_rc$m` and
+`r sum(scal_rc$table$covers)` of `r scal_rc$m` true values lie in their 95%
+intervals, and $d^2$ is unremarkable against $\chi^2_m$. For the M2PL, a Stan
+reference confirms the marginals themselves. The grade of membership model is
+the exception. Its point estimates recover the truth, but the marginals of
+the item probabilities near 0 or 1 are too narrow, and `inla_vanilla()` flags
+them.
+
+What sets the limit for all four is the integral inside `logpost`. The
+thesis's larger conditions, with more latent dimensions, more profiles or two
+traits, need integrals or numbers of parameters out of reach of a quadrature
+rule run thousands of times. That is the scale its stochastic optimisation
+was built for.
+
+# Reference {.unnumbered}
+
+Oka, M. (2026). *Towards scalable psychometrics: Estimation, selection and
+evaluation of large-scale latent variable models* \[Doctoral thesis, London
+School of Economics and Political Science\].
