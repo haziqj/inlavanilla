@@ -62,6 +62,10 @@ fits it, and checks the recovery of every parameter in three ways:
    with $\hat\Sigma$ the posterior covariance from 4,000 draws, is not
    extreme against $\chi^2_m$.
 
+Each fit reports its time, stage by stage. The times are wall-clock seconds
+for one R process, on `r Sys.info()[["machine"]]` with
+`r R.version.string`, and the summary at the end collects them.
+
 With weak priors and this much data, the Bernstein--von Mises theorem makes
 the posterior close to the sampling distribution of the estimate, so over
 repeated data sets $z_j$ is roughly $N(0, 1)$ and $d^2$ roughly $\chi^2_m$.
@@ -107,6 +111,23 @@ print_check <- function(rc) {
     rc$d2,
     rc$m,
     rc$p
+  ))
+}
+
+# Seconds in each stage of the fit, and the calls of logpost and grad
+print_timing <- function(fit) {
+  t <- fit$timing
+  cat(sprintf(
+    paste0(
+      "Time: mode and Hessian %.1f s, VB %.1f s, marginals %.1f s,\n",
+      "total %.1f s. Calls: %d of logpost, %d of grad.\n"
+    ),
+    t[["laplace"]],
+    t[["vb"]],
+    t[["marginals"]],
+    t[["total"]],
+    fit$counts[["logpost"]],
+    fit$counts[["grad"]]
   ))
 }
 
@@ -196,6 +217,12 @@ m2pl_fit <- inla_vanilla(
   nodes = gh_grid(15, 2)
 )
 diagnostics(m2pl_fit)
+```
+
+```{r}
+#| label: m2pl-timing
+#| cache: false
+print_timing(m2pl_fit)
 ```
 
 ```{r}
@@ -293,6 +320,12 @@ mlr_fit <- inla_vanilla(
   nodes = gh_grid(mlr_n_gh, mlr_k)
 )
 diagnostics(mlr_fit)
+```
+
+```{r}
+#| label: mlr-timing
+#| cache: false
+print_timing(mlr_fit)
 ```
 
 ```{r}
@@ -406,6 +439,12 @@ gom_fit <- inla_vanilla(
 diagnostics(gom_fit)
 ```
 
+```{r}
+#| label: gom-timing
+#| cache: false
+print_timing(gom_fit)
+```
+
 The profiles carry no labels, so they are matched to the true ones first.
 
 ```{r}
@@ -449,6 +488,11 @@ gom_alpha_tab <- rbind(
 colnames(gom_alpha_tab) <- paste0("alpha", seq_len(gom_k))
 round(gom_alpha_tab, 3)
 ```
+
+The fit took `r round(gom_fit$timing[["total"]] / 60, 1)` minutes, of which
+`r round(gom_fit$timing[["vb"]] / 60, 1)` went to the VB correction: it falls
+back to an optimiser and does not settle, and costs most of the
+`r format(gom_fit$counts[["logpost"]], big.mark = ",")` calls of `logpost`.
 
 This is the one model where the approximation falls short. The point
 estimates recover the truth: the posterior means of $\alpha$ are
@@ -536,6 +580,12 @@ diagnostics(scal_fit)
 ```
 
 ```{r}
+#| label: scal-timing
+#| cache: false
+print_timing(scal_fit)
+```
+
+```{r}
 #| label: scal-recovery
 #| fig-cap: "Standardised errors of the parameters of the scaling model."
 set.seed(1)
@@ -573,6 +623,50 @@ reference confirms the marginals themselves. The grade of membership model is
 the exception. Its point estimates recover the truth, but the marginals of
 the item probabilities near 0 or 1 are too narrow, and `inla_vanilla()` flags
 them.
+
+The times, in seconds, with the number of parameters $m$ and the calls of
+`logpost` and its gradient:
+
+```{r}
+#| label: timing-table
+#| cache: false
+#| echo: false
+fits <- list(
+  "M2PL" = m2pl_fit,
+  "Multilevel logistic" = mlr_fit,
+  "Grade of membership" = gom_fit,
+  "Scaling model" = scal_fit
+)
+timing <- t(vapply(
+  fits,
+  function(fit) {
+    c(
+      m = nrow(fit$summary),
+      logpost = fit$counts[["logpost"]],
+      grad = fit$counts[["grad"]],
+      mode = fit$timing[["laplace"]],
+      VB = fit$timing[["vb"]],
+      marginals = fit$timing[["marginals"]],
+      total = fit$timing[["total"]]
+    )
+  },
+  numeric(7)
+))
+knitr::kable(
+  timing,
+  digits = 1,
+  booktabs = TRUE,
+  format.args = list(big.mark = ",")
+)
+```
+
+The time goes where each `logpost` call is dear or the calls are many. In the
+multilevel logistic regression every call integrates over 10,000 clusters
+(about a third of a second each), and in the grade of membership model the
+VB step that does not settle takes most of the calls. The thesis gives no
+time for these conditions. For scale, its QN-SOMALA took 44 seconds for the
+M2PL with $K = 5$, $J = 50$ and $N = 2{,}000$ (Table 6.11), and its
+simulations ran each algorithm for 500 to 2,000 seconds.
 
 What sets the limit for all four is the integral inside `logpost`. The
 thesis's larger conditions, with more latent dimensions, more profiles or two
