@@ -464,7 +464,7 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
 
 # The skew-normal marginals: one aligned line per parameter, with the values
 # that summary() flags marked, at its levels.
-report_marginals <- function(p, sn, calls) {
+report_marginals <- function(p, sn, calls, method = NULL, width = "trace") {
   rn <- rownames(sn)
   cols <- list(
     Shape = formatC(sn[, "alpha"], digits = 2, format = "f"),
@@ -536,6 +536,17 @@ report_marginals <- function(p, sn, calls) {
           warn_levels$unscanned_mass
         )
       ),
+      if (width != "trace") {
+        grey("Width term by width = \"", width, "\"")
+      },
+      if (any(method != width)) {
+        grey(
+          "TK fallback (ridge bend > ",
+          summary_levels$ridge_bend,
+          ") for ",
+          paste(rn[method != width], collapse = ", ")
+        )
+      },
       grey(format_calls(calls[[1]], calls[[2]], calls[[3]]))
     )
   )

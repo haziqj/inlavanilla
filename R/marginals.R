@@ -9,10 +9,23 @@
 # the path by adding t gamma1_j (Jamil & Rue, 2026, Corollary 3.3), and a
 # skew-normal is fitted to the corrected log-heights on a grid of t.
 #
+# The correction is the linear term of the width gamma_j(t) =
+# -1/2 log|H_{-j}(theta(t))|, the log-volume of the other parameters. Two
+# more accurate scans can replace it, each removing one error (the `width`
+# argument of inla_vanilla()): "cmp" takes the width exactly along the CMP,
+# removing the linearisation, and "tk" moves the other parameters to their
+# conditional mode at each point and takes height and width there, the
+# Laplace marginal of Tierney and Kadane (1986), removing the error of the
+# straight path as well. The skew-normal fit is the same for all three.
+#
 # Jamil, H., & Rue, H. (2026). Approximate Bayesian inference for structural
 # equation models using integrated nested Laplace approximations
 # (arXiv:2603.25690 [stat.ME]). arXiv.
 # https://doi.org/10.48550/arXiv.2603.25690
+#
+# Tierney, L., & Kadane, J. B. (1986). Accurate approximations for posterior
+# moments and marginal densities. Journal of the American Statistical
+# Association, 81(393), 82-86. https://doi.org/10.1080/01621459.1986.10478240
 
 # The volume correction gamma1_j: the rate of change, along v_j, of minus half
 # the log-determinant of the conditional precision of the other parameters,
@@ -90,6 +103,150 @@ whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
   tr
 }
 
+# The width term without the linearisation: the volume of the other
+# parameters, gamma_j(x) = -1/2 log|H_{-j}(x)|, from the negative Hessian
+# H_{-j} of the log-posterior in the other parameters at the point `x`. It
+# comes from one call of the user's Hessian, from central differences of the
+# gradient in the other coordinates (2(m - 1) gradient calls), or from second
+# differences of the log-posterior there ((m - 1)m calls, with `f0` the value
+# at `x`). The steps are those of the Hessian at the mode in laplace_at(), so
+# the volume at the mode, taken from lap$H, is on the same footing. NA where
+# H_{-j} is not positive definite or cannot be evaluated.
+cond_volume <- function(x, j, lp, gr, he, lap, f0 = NULL) {
+  others <- seq_along(x)[-j]
+  h <- lap$scales[others]
+  Hb <- if (!is.null(he)) {
+    -he(x)[others, others, drop = FALSE]
+  } else if (!is.null(gr)) {
+    gr_others <- function(y) {
+      x[others] <- y
+      gr(x)[others]
+    }
+    -fd_jacobian(gr_others, x[others], h = 1e-4 * h)
+  } else {
+    lp_others <- function(y) {
+      x[others] <- y
+      lp(x)
+    }
+    if (is.null(f0)) {
+      f0 <- lp(x)
+    }
+    -fd_hessian(lp_others, x[others], h = 0.01 * h, f0 = f0)
+  }
+  half_log_det(Hb)
+}
+
+# Minus half the log-determinant of a negative Hessian, symmetrised, or NA
+# when it is not positive definite.
+half_log_det <- function(H) {
+  R <- chol_or_null(0.5 * (H + t(H)))
+  if (is.null(R)) NA_real_ else -sum(log(diag(R)))
+}
+
+# Level 2, "cmp": the exact width term along the CMP, gamma_j(t) - gamma_j(0)
+# at each scan point, with the heights `raw` already known. The volume at
+# the mode is that of lap$H. Points where the height is not finite are left
+# NA, with no calls.
+width_cmp <- function(j, lp, gr, he, lap, Vscan, z, raw) {
+  g0 <- half_log_det(lap$H[-j, -j, drop = FALSE])
+  vapply(
+    seq_along(z),
+    function(k) {
+      if (z[k] == 0) {
+        return(0)
+      }
+      if (!is.finite(raw[k])) {
+        return(NA_real_)
+      }
+      x <- lap$mode + Vscan[, j] * z[k]
+      cond_volume(x, j, lp, gr, he, lap, f0 = raw[k]) - g0
+    },
+    numeric(1)
+  )
+}
+
+# Level 1, "tk": the Laplace marginal of Tierney and Kadane (1986). At each
+# scan point, theta_j = mode_j + t sd_j, the other parameters are moved to
+# their conditional mode, found by stats::nlminb() from the CMP point, in the
+# whitened coordinates of their conditional Laplace covariance C_j (where the
+# conditional posterior has unit curvature at the mode). The height is the
+# log-posterior there and the width the volume there, relative to the mode.
+# Returns both, with NA where the conditional mode or its volume could not be
+# found. Needs m > 1.
+scan_tk <- function(j, lp, gr, he, lap, Vscan, z) {
+  others <- seq_along(lap$mode)[-j]
+  height <- width <- rep(NA_real_, length(z))
+  g0 <- half_log_det(lap$H[-j, -j, drop = FALSE])
+  # u -> theta_{-j}: x_{-j} = start + Lc u, with Lc Lc' = H_{-j}^{-1}
+  Rc <- chol_or_null(lap$H[others, others, drop = FALSE])
+  Lc <- if (is.null(Rc)) {
+    diag(lap$scales[others], length(others))
+  } else {
+    backsolve(Rc, diag(length(others)))
+  }
+  for (k in seq_along(z)) {
+    if (z[k] == 0) {
+      height[k] <- lap$lp_max
+      width[k] <- 0
+      next
+    }
+    x0 <- lap$mode + Vscan[, j] * z[k]
+    to_x <- function(u) {
+      x <- x0
+      x[others] <- x0[others] + drop(Lc %*% u)
+      x
+    }
+    ob <- function(u) {
+      v <- lp(to_x(u))
+      if (is.finite(v)) -v else Inf
+    }
+    gro <- if (is.null(gr)) {
+      NULL
+    } else {
+      function(u) -drop(crossprod(Lc, gr(to_x(u))[others]))
+    }
+    heo <- if (is.null(he)) {
+      NULL
+    } else {
+      function(u) {
+        Hb <- -he(to_x(u))[others, others, drop = FALSE]
+        crossprod(Lc, Hb %*% Lc)
+      }
+    }
+    opt <- tryCatch(
+      stats::nlminb(
+        numeric(length(others)),
+        ob,
+        gradient = gro,
+        hessian = heo,
+        control = list(iter.max = 200L, eval.max = 400L)
+      ),
+      error = function(e) NULL
+    )
+    if (is.null(opt) || !is.finite(opt$objective)) {
+      next
+    }
+    x <- to_x(opt$par)
+    height[k] <- -opt$objective
+    width[k] <- cond_volume(x, j, lp, gr, he, lap, f0 = height[k]) - g0
+  }
+  list(height = height, width = width)
+}
+
+# The slope of a width curve at the mode, per posterior SD: the central
+# difference across t = 0 between the nearest scan points either side. For
+# the linear trace it is gamma1 itself.
+width_slope <- function(z, w) {
+  l <- which(z < 0)
+  r <- which(z > 0)
+  if (length(l) == 0L || length(r) == 0L) {
+    return(NA_real_)
+  }
+  l <- l[which.max(z[l])]
+  r <- r[which.min(z[r])]
+  (w[r] - w[l]) / (z[r] - z[l])
+}
+
 # Scan each parameter over +-4 Laplace SDs, as in INLAvaan, and fit its
 # skew-normal. `tails` is FALSE when the corrected log-height at an end of the
 # scan is still within 3 of its maximum (over 5% of the peak density): the
@@ -100,15 +257,24 @@ whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
 # bulk of others (a Fisher-z correlation lost an order of magnitude in SD
 # accuracy), so the problem is reported instead.
 #
-# The volume correction takes the best route the user's functions allow:
+# The width term (the volume of the other parameters) comes from `width`:
+# "trace" (the default) adds the linear term gamma1_j t, "cmp" the exact
+# volume along the CMP (width_cmp()), and "tk" replaces the scan by the
+# Laplace marginal of Tierney and Kadane (scan_tk()), heights included. With
+# `tk_fallback`, a parameter whose ridge bend is flagged (above
+# summary_levels$ridge_bend) is scanned by "tk" whatever `width` says. The
+# linear volume correction takes the best route the user's functions allow:
 # gamma1_hess() with a Hessian `he`, gamma1_grad() with a gradient, and
-# gamma1_lp() otherwise.
+# gamma1_lp() otherwise. With one parameter there are no other parameters,
+# and the three agree.
 #
 # Returns `sn`, a matrix with a row per parameter (the skew-normal on the
 # theta scale, the diagnostics, and `logC`, the log scale factor that sets
 # the fitted density's height against the scan normalised to a peak of 1),
-# the scan grid `z`, and `logpost`, the raw log-heights along each scan (a
-# column per parameter). plot(type = "sn_fit") draws them as INLAvaan's
+# the scan grid `z`, `logpost`, the log-heights along each scan (a column per
+# parameter: along the CMP, or at the conditional modes for "tk"), `width`,
+# the width term added to them (zero at the mode), and `method`, the width
+# method each parameter used. plot(type = "sn_fit") draws them as INLAvaan's
 # visual_debug() does.
 fit_marginals <- function(
   lp,
@@ -116,7 +282,9 @@ fit_marginals <- function(
   lap,
   ctrl,
   tick = function() NULL,
-  he = NULL
+  he = NULL,
+  width = "trace",
+  tk_fallback = FALSE
 ) {
   mode <- lap$mode
   Sigma <- lap$Sigma
@@ -126,7 +294,8 @@ fit_marginals <- function(
   Vscan <- sweep(Sigma, 2, sds, "/")
   z <- seq(-4, 4, length.out = ctrl$n_grid)
 
-  tr0 <- if (is.null(gr)) {
+  # The trace at the mode for gamma1_lp(), only when some parameter uses it
+  tr0 <- if (is.null(gr) && (width == "trace" || m == 1L)) {
     whitened_trace_lp(lp, mode, lap$lp_max, L)
   } else {
     NULL
@@ -141,39 +310,70 @@ fit_marginals <- function(
       c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "ridge_bend", "logC")
     )
   )
-  heights <- matrix(
+  heights <- widths <- matrix(
     NA_real_,
     length(z),
     m,
     dimnames = list(NULL, names(mode))
   )
+  method <- stats::setNames(rep(width, m), names(mode))
   # Scan points for the ridge bend (see scan_bend())
   i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
-
-  for (j in seq_len(m)) {
-    g1 <- if (!is.null(he)) {
-      gamma1_hess(j, he, mode, Vscan, Sigma)
-    } else if (is.null(gr)) {
-      gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, tr0)
-    } else {
-      gamma1_grad(j, gr, mode, Vscan, L)
-    }
-    # Log-posterior along the scan; the mode's height is known
-    raw <- vapply(
-      z,
-      function(t) {
-        if (t == 0) lap$lp_max else lp(mode + Vscan[, j] * t)
-      },
+  # Log-posterior along the CMP; the mode's height is known
+  cmp_height <- function(j, t) {
+    vapply(
+      t,
+      function(t) if (t == 0) lap$lp_max else lp(mode + Vscan[, j] * t),
       numeric(1)
     )
-    above <- function(h, y) {
-      is.finite(h) && h - max(y[is.finite(y)]) > -3
+  }
+  above <- function(h, y) {
+    is.finite(h) && h - max(y[is.finite(y)]) > -3
+  }
+
+  for (j in seq_len(m)) {
+    # The heights along the CMP, which "tk" does not need beyond the ridge
+    # bend, and that only without a gradient
+    raw <- if (width != "tk" || m == 1L) {
+      cmp_height(j, z)
+    } else {
+      replace(
+        rep(NA_real_, length(z)),
+        i_bend,
+        if (is.null(gr)) cmp_height(j, z[i_bend]) else NA_real_
+      )
+    }
+    bend <- scan_bend(j, lp, gr, lap, Vscan, z[i_bend], raw[i_bend])
+    if (tk_fallback && off_level(bend, summary_levels$ridge_bend)) {
+      method[[j]] <- "tk"
+    }
+
+    # The width term, and the heights it is added to. With one parameter
+    # there are no others, so the three methods are the same scan, taken by
+    # the linear route as before.
+    use <- if (m == 1L) "trace" else method[[j]]
+    if (use == "trace") {
+      g1 <- if (!is.null(he)) {
+        gamma1_hess(j, he, mode, Vscan, Sigma)
+      } else if (is.null(gr)) {
+        gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, tr0)
+      } else {
+        gamma1_grad(j, gr, mode, Vscan, L)
+      }
+      w <- g1 * z
+    } else if (use == "cmp") {
+      w <- width_cmp(j, lp, gr, he, lap, Vscan, z, raw)
+      g1 <- width_slope(z, w)
+    } else {
+      tk <- scan_tk(j, lp, gr, he, lap, Vscan, z)
+      raw <- tk$height
+      w <- tk$width
+      g1 <- width_slope(z, w)
     }
 
     # Corrected log-heights
-    y <- raw + g1 * z
+    y <- raw + w
     tails <- !above(y[1], y) && !above(y[length(y)], y)
-    bend <- scan_bend(j, lp, gr, lap, Vscan, z[i_bend], raw[i_bend])
 
     ok <- is.finite(y)
     fit <- fit_skew_normal(
@@ -194,9 +394,10 @@ fit_marginals <- function(
       fit$logC
     )
     heights[, j] <- raw
+    widths[, j] <- w
     tick()
   }
-  list(sn = out, z = z, logpost = heights)
+  list(sn = out, z = z, logpost = heights, width = widths, method = method)
 }
 
 # The mass each fitted marginal puts outside the window that was scanned to

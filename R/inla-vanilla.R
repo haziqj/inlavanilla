@@ -72,7 +72,10 @@
 #' is uncertain. For a normal mean with unknown variance the SD is about 11%
 #' too small at n = 12, 3% at n = 50, and under 1% at n = 200. The
 #' `ridge_bend` diagnostic of [summary.inla_vanilla()] flags this narrowing
-#' where it predicts about 10% or more.
+#' where it predicts about 10% or more. By default (`width = "trace"`) this
+#' is the scan of INLAvaan; `width = "tk"`, or `tk_fallback = TRUE` for the
+#' flagged parameters only, removes the narrowing at a higher cost (see the
+#' section on the width term).
 #'
 #' A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 #' structural equation model with 39 parameters and n = 75, the data could not
@@ -90,6 +93,39 @@
 #' of the two (0.44), but the other's ridge bend (0.11) was no larger than
 #' that of marginals within 7% in SD, and the `tails` check, which looks only
 #' 4 posterior SDs either side of the mode (the Laplace SDs), missed both.
+#'
+#' @section The width term:
+#' Each skew-normal scan follows the conditional mode path (CMP) of the
+#' Laplace Gaussian, \eqn{\vartheta(t) = \vartheta^* + t v_j} with
+#' \eqn{v_j = \Omega_{\cdot j} / \sqrt{\Omega_{jj}}}{v_j = Omega[, j] /
+#' sqrt(Omega[j, j])}, so that \eqn{t} counts posterior SDs. The log marginal
+#' is then about the height of the log-posterior along the path plus the
+#' width term \eqn{\gamma_j(t) = -\frac12 \log|H_{-j}(t)|}{gamma_j(t) =
+#' -1/2 log|H_-j(t)|}, where \eqn{H_{-j}}{H_-j} is the negative Hessian of
+#' the log-posterior with row and column j deleted: the log-volume of the
+#' other parameters. `width` sets how it is taken, in three levels that each
+#' remove one error:
+#' * `"trace"`, the default and INLAvaan's, linearises it,
+#'   \eqn{\gamma_j(t) \approx \gamma_j' t}{gamma_j(t) ~ gamma_j' t}, with
+#'   the slope from whitened differences of the gradient (Jamil & Rue, 2026a,
+#'   Corollary 3.3).
+#' * `"cmp"` takes \eqn{\gamma_j(t)}{gamma_j(t)} exactly along the same
+#'   path. Its difference from `"trace"` is the error of the linearisation.
+#' * `"tk"` moves the other parameters to their conditional mode at each
+#'   point of the scan and takes the height and the width term there: the
+#'   Laplace approximation of the marginal (Tierney & Kadane, 1986), INLA's
+#'   "Laplace strategy". Its difference from `"cmp"` is the error of the
+#'   straight path, which the `ridge_bend` diagnostic of
+#'   [summary.inla_vanilla()] predicts.
+#'
+#' The skew-normal is fitted to the corrected heights in the same way for
+#' all three, on the same grid. `tk_fallback = TRUE` keeps the cheap scan
+#' for every parameter but those whose ridge bend is flagged, and rescans
+#' those with `"tk"`. In `fit$diagnostics$marginals`, `width` gives the
+#' method each parameter used and `gamma1` the slope of its width term at
+#' the mode (for `"cmp"` and `"tk"`, a central difference across the mode).
+#' The ridge bend of a parameter scanned with `"tk"` is still reported, but
+#' not flagged.
 #'
 #' @section Gradients and Hessians:
 #' `grad` is optional. Without it, derivatives come from finite differences
@@ -226,9 +262,10 @@
 #'   `grad`. When `NULL` (the default), finite differences of `grad` are used.
 #' @param ... Further arguments passed to `logpost`, `grad` and `hess`, such
 #'   as the data. As in [stats::nlminb()], they come after the gradient and
-#'   the Hessian, and the arguments after them (`vb`, `marginals`, `verbose`,
-#'   `silent`, `control`) must be given by their full names, so data
-#'   arguments cannot partially match them. The arguments before them can be
+#'   the Hessian, and the arguments after them (`vb`, `marginals`, `width`,
+#'   `tk_fallback`, `verbose`, `silent`, `control`) must be given by their
+#'   full names, so data arguments cannot partially match them. A data
+#'   argument cannot take one of those names. The arguments before them can be
 #'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
 #'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
 #'   longer name.
@@ -240,6 +277,35 @@
 #'   uses the Gaussian marginal of the Laplace approximation, centred at the
 #'   VB mean when `vb = TRUE`, with no scans. Abbreviations such as `"skew"`
 #'   and `"gauss"` work too.
+#' @param width How each skew-normal scan accounts for the changing volume of
+#'   the other parameters, the width term
+#'   \eqn{\gamma_j(t) = -\frac12 \log|H_{-j}|}{gamma_j(t) = -1/2 log|H_-j|}
+#'   (see the section on the width term). With m parameters and
+#'   `n_grid` scan points, per parameter:
+#'   * `"trace"` (the default): its linear term \eqn{\gamma_j' t}{gamma_j' t},
+#'     as in INLAvaan, from 2m + 2 `grad` calls (one `hess` call with `hess`,
+#'     2m + 5 `logpost` calls without `grad`), on top of the `n_grid - 1`
+#'     `logpost` calls of the scan.
+#'   * `"cmp"`: the exact width term along the same straight scan, from the
+#'     Hessian of the other parameters at each scan point: about
+#'     `n_grid - 1` times 2(m - 1) `grad` calls (`n_grid - 1` `hess` calls
+#'     with `hess`, or `n_grid - 1` times (m - 1)m `logpost` calls without
+#'     `grad`).
+#'   * `"tk"`: the Laplace marginal of Tierney and Kadane (1986). At each scan
+#'     point the other parameters are moved to their conditional mode by
+#'     [stats::nlminb()], started from the straight scan, and the height and
+#'     the width term are taken there: the calls of `"cmp"` plus those of
+#'     `n_grid - 1` conditional optimisations, typically 5 to 20 `logpost`
+#'     and `grad` calls each with `grad`, and many more without.
+#'
+#'   With one parameter the three are the same. Abbreviations work. Ignored
+#'   for Gaussian marginals.
+#' @param tk_fallback Logical. Rescan with `width = "tk"` every parameter
+#'   whose `ridge_bend` is flagged (above 0.25, see [summary.inla_vanilla()])?
+#'   Default `FALSE`, so that a fit costs what `width` says and gives the same
+#'   marginals whatever its diagnostics. The parameters rescanned are listed
+#'   in `fit$fallback` and by [summary.inla_vanilla()]. Ignored for Gaussian
+#'   marginals and with `width = "tk"`.
 #' @param verbose Logical. Print a full diagnostic of each stage under its
 #'   progress line? Default `FALSE`. See the section on output.
 #' @param silent Logical. Print nothing at all, and muffle the warnings and
@@ -255,7 +321,10 @@
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
-#'   * `vb`, `marginals`, `verbose`, `silent`: the settings the fit used.
+#'   * `vb`, `marginals`, `width`, `tk_fallback`, `verbose`, `silent`: the
+#'     settings the fit used (`width` is `NA` for Gaussian marginals).
+#'   * `fallback`: the parameters that `tk_fallback` rescanned with
+#'     `width = "tk"` (empty when there were none).
 #'   * `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
 #'     part.
 #'   * `diagnostics`: the checks of each stage, which [diagnostics()]
@@ -270,11 +339,14 @@
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
 #'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
 #'     `vb_step_sigma`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with
-#'     `NA` for the checks the fit did not run.
+#'     `NA` for the checks the fit did not run, and `width`, the width method
+#'     of each scan (see the section on the width term).
 #'   * `scan`: the scans the skew-normals were fitted to, for
 #'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
 #'     mode, the log-posterior at each point (`logpost`, a column per
-#'     parameter), and the log scale factor `logC` of each fit on that grid.
+#'     parameter: along the CMP, or at the conditional modes for
+#'     `width = "tk"`), the width term added to it (`width`, zero at the
+#'     mode), and the log scale factor `logC` of each fit on that grid.
 #'     It is `NULL` for Gaussian marginals.
 #'   * `warnings`: the messages of the warnings raised during the fit, as a
 #'     character vector of plain text, each message once (empty when there
@@ -289,6 +361,11 @@
 #' Jamil, H., & Rue, H. (2026b). *Implementation and workflows for INLA-based
 #' approximate Bayesian structural equation modelling* (arXiv:2604.00671
 #' \[stat.CO\]). arXiv. <https://doi.org/10.48550/arXiv.2604.00671>
+#'
+#' Tierney, L., & Kadane, J. B. (1986). Accurate approximations for posterior
+#' moments and marginal densities. *Journal of the American Statistical
+#' Association*, *81*(393), 82–86.
+#' <https://doi.org/10.1080/01621459.1986.10478240>
 #'
 #' @seealso [sampling()] for posterior draws and derived quantities,
 #'   [summary.inla_vanilla()] and [diagnostics()] for diagnostics.
@@ -340,6 +417,8 @@ inla_vanilla <- function(
   ...,
   vb = TRUE,
   marginals = c("skewnormal", "gaussian"),
+  width = c("trace", "cmp", "tk"),
+  tk_fallback = FALSE,
   verbose = FALSE,
   silent = FALSE,
   control = list()
@@ -363,6 +442,8 @@ inla_vanilla <- function(
   }
   check_flag(vb, "vb")
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
+  width <- check_choice(width, c("trace", "cmp", "tk"), "width")
+  check_flag(tk_fallback, "tk_fallback")
   check_flag(verbose, "verbose")
   check_flag(silent, "silent")
   if (verbose && silent) {
@@ -395,6 +476,8 @@ inla_vanilla <- function(
       init,
       vb = vb,
       marginals = marginals,
+      width = width,
+      tk_fallback = tk_fallback,
       ctrl = ctrl,
       prog = prog,
       call = call,
@@ -429,6 +512,8 @@ vanilla_fit <- function(
   init,
   vb,
   marginals,
+  width,
+  tk_fallback,
   ctrl,
   prog,
   call,
@@ -661,7 +746,9 @@ vanilla_fit <- function(
         lap,
         ctrl,
         tick = function() progress_tick(prog),
-        he = he
+        he = he,
+        width = width,
+        tk_fallback = tk_fallback
       )
     )
     sn <- cbind(
@@ -669,7 +756,13 @@ vanilla_fit <- function(
       unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
     )
     # The scans, kept for plot(type = "sn_fit"): no further calls
-    scan <- list(z = mar$z, logpost = mar$logpost, logC = sn[, "logC"])
+    scan <- list(
+      z = mar$z,
+      logpost = mar$logpost,
+      width = mar$width,
+      logC = sn[, "logC"]
+    )
+    method <- mar$method
     progress_done(
       prog,
       paste0(
@@ -681,7 +774,7 @@ vanilla_fit <- function(
       elapsed() - t0
     )
     if (prog$detail) {
-      report_marginals(prog, sn, calls_since())
+      report_marginals(prog, sn, calls_since(), method, width)
     }
   } else {
     na <- rep(NA_real_, m)
@@ -698,6 +791,7 @@ vanilla_fit <- function(
     )
     rownames(sn) <- parnames
     scan <- NULL
+    method <- stats::setNames(rep(NA_character_, m), parnames)
     progress_info(
       prog,
       "Gaussian marginals (marginals = \"gaussian\"): no scans"
@@ -743,7 +837,9 @@ vanilla_fit <- function(
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
       ridge_bend = sn[, "ridge_bend"],
-      row.names = parnames
+      width = unname(method),
+      row.names = parnames,
+      stringsAsFactors = FALSE
     )
   )
 
@@ -782,6 +878,9 @@ vanilla_fit <- function(
     ),
     vb = vb,
     marginals = marginals,
+    width = if (skew) width else NA_character_,
+    tk_fallback = tk_fallback,
+    fallback = if (skew) parnames[method != width] else character(),
     has_grad = has_grad,
     verbose = prog$detail,
     silent = !prog$show,
@@ -803,6 +902,9 @@ new_inla_vanilla <- function(
   timing,
   vb,
   marginals,
+  width,
+  tk_fallback,
+  fallback,
   has_grad,
   verbose,
   silent,
@@ -824,6 +926,9 @@ new_inla_vanilla <- function(
       timing = timing,
       vb = vb,
       marginals = marginals,
+      width = width,
+      tk_fallback = tk_fallback,
+      fallback = fallback,
       has_grad = has_grad,
       verbose = verbose,
       silent = silent,
