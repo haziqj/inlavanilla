@@ -1,5 +1,15 @@
 # inlavanilla 0.1.1
 
+* `inla_vanilla()` gains `width`, how each skew-normal scan takes the width
+  term, the log-volume of the other parameters. `"trace"`, the default, is
+  the linear term of INLAvaan, as before. `"cmp"` takes it exactly along the
+  same straight scan, from the Hessian of the other parameters at each scan
+  point, and `"tk"` moves the other parameters to their conditional mode at
+  each point and takes the height and the width there, the Laplace marginal
+  of Tierney and Kadane (1986). `tk_fallback = TRUE` rescans with `"tk"` only
+  the parameters whose ridge bend is flagged, and `fit$fallback` and
+  `summary()` list them. Both cost more calls, given in `?inla_vanilla`.
+
 * `inla_vanilla()` takes the Hessian of `logpost` as an optional `hess`,
   after `grad`, as `nlminb()` does. With it, `nlminb()` takes Newton steps to
   the mode, the Hessian at the mode is the supplied one, and the volume
