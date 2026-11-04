@@ -489,6 +489,25 @@ cat_width <- function(x, diag, env) {
   }
 }
 
+#' Posterior means of an INLAvanilla fit
+#'
+#' The posterior mean of each parameter, from its skew-normal marginal, on
+#' the unconstrained scale of `logpost`: the `Mean` column of
+#' [summary.inla_vanilla()]. These are the estimates INLAvaan's `coef()`
+#' gives. For a fit with `marginals = "gaussian"` they are the VB-corrected
+#' means, or, with `vb = FALSE`, the mode. The joint posterior mode is
+#' `fit$mode`, and the VB-corrected mean `fit$mean_vb`.
+#'
+#' @param object An object of class `inla_vanilla`.
+#' @param ... Unused.
+#'
+#' @returns A named numeric vector, with one posterior mean per parameter.
+#' @export
+coef.inla_vanilla <- function(object, ...) {
+  # Named by row, as indexing one row of a matrix drops the name
+  stats::setNames(object$summary[, "Mean"], rownames(object$summary))
+}
+
 #' Plot an INLAvanilla fit
 #'
 #' By default (`type = "marg_pdf"`), draws the marginal density of each

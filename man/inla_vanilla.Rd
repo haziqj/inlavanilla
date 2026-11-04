@@ -102,7 +102,8 @@ recorded in \code{fit$warnings}. Cannot be combined with \code{verbose = TRUE}.}
 }
 \value{
 An object of class \code{inla_vanilla}, with methods for \code{\link[=print]{print()}},
-\code{\link[=summary]{summary()}}, \code{\link[=plot]{plot()}}, \code{\link[=sampling]{sampling()}} and \code{\link[=diagnostics]{diagnostics()}}. It is a list
+\code{\link[=summary]{summary()}}, \code{\link[=coef]{coef()}}, \code{\link[=plot]{plot()}}, \code{\link[=sampling]{sampling()}} and \code{\link[=diagnostics]{diagnostics()}}. It is
+a list
 holding, among other things:
 \itemize{
 \item \code{summary}: the posterior summary table (mean, SD, quantiles, mode).

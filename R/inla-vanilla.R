@@ -314,7 +314,8 @@
 #' @param control A list of tuning parameters; see the section on control.
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
-#'   [summary()], [plot()], [sampling()] and [diagnostics()]. It is a list
+#'   [summary()], [coef()], [plot()], [sampling()] and [diagnostics()]. It is
+#'   a list
 #'   holding, among other things:
 #'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
 #'   * `mode`, `cov`: the Laplace mode and covariance.
