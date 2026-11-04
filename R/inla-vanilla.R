@@ -626,7 +626,11 @@ vanilla_fit <- function(
   }
 
   # 1a. Joint Gaussian -------------------------------------------------------
+  # Each segment of fit$timing runs from its start to the start of the next,
+  # so the segments add up to the total. The progress lines time the work of
+  # each stage alone, from `t0`.
   t0 <- elapsed()
+  t_starts <- c(init = t_start, laplace = t0)
   stage_calls()
   progress_start(prog, "Finding the posterior mode, {cli::pb_current} calls")
   lap <- with_context(
@@ -688,6 +692,7 @@ vanilla_fit <- function(
   # With the user's gradient when there is one; without, from log-posterior
   # values alone (see vb_correct())
   t0 <- elapsed()
+  t_starts[["vb"]] <- t0
   vbc <- NULL
   if (vb) {
     stage_calls()
@@ -720,7 +725,6 @@ vanilla_fit <- function(
   } else {
     progress_info(prog, "No VB correction (vb = FALSE)")
   }
-  t_vb <- elapsed() - t0
   shift <- if (vb) vbc$shift else stats::setNames(numeric(m), parnames)
   mean_vb <- lap$mode + shift
 
@@ -728,6 +732,7 @@ vanilla_fit <- function(
   # With Gaussian marginals there are no scans: each marginal is the
   # Gaussian's own, N(mean_vb_j, Sigma_jj), a skew-normal with shape 0.
   t0 <- elapsed()
+  t_starts[["marginals"]] <- t0
   if (marginals == "skewnormal") {
     progress_start(
       prog,
@@ -798,7 +803,7 @@ vanilla_fit <- function(
       "Gaussian marginals (marginals = \"gaussian\"): no scans"
     )
   }
-  t_marginals <- elapsed() - t0
+  t_starts[["diagnostics"]] <- elapsed()
 
   logml <- lap$logml + if (vb) vbc$kld_global else 0
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
@@ -857,7 +862,8 @@ vanilla_fit <- function(
     has_grad = has_grad
   )
 
-  t_total <- elapsed() - t_start
+  t_end <- elapsed()
+  t_total <- t_end - t_start
   if (prog$detail) {
     report_end(prog, n_lp, n_gr, n_he, t_total)
   }
@@ -872,9 +878,7 @@ vanilla_fit <- function(
     scan = scan,
     counts = c(logpost = n_lp, grad = n_gr, hess = n_he),
     timing = c(
-      laplace = t_laplace,
-      vb = t_vb,
-      marginals = t_marginals,
+      stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
       total = t_total
     ),
     vb = vb,
