@@ -1,5 +1,8 @@
 # inlavanilla 0.1.1
 
+* `coef()` gives the posterior mean of each parameter, the `Mean` column of
+  `summary()`, as INLAvaan's `coef()` does.
+
 * `inla_vanilla()` gains `width`, how each skew-normal scan takes the width
   term, the log-volume of the other parameters. `"trace"`, the default, is
   the linear term of INLAvaan, as before. `"cmp"` takes it exactly along the
