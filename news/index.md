@@ -2,6 +2,11 @@
 
 ## inlavanilla 0.1.1
 
+- [`coef()`](https://rdrr.io/r/stats/coef.html) gives the posterior mean
+  of each parameter, the `Mean` column of
+  [`summary()`](https://rdrr.io/r/base/summary.html), as INLAvaan’s
+  [`coef()`](https://rdrr.io/r/stats/coef.html) does.
+
 - [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   gains `width`, how each skew-normal scan takes the width term, the
   log-volume of the other parameters. `"trace"`, the default, is the

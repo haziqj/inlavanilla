@@ -2,6 +2,8 @@
 
 ## All functions
 
+- [`coef(`*`<inla_vanilla>`*`)`](http://haziqj.ml/inlavanilla/reference/coef.inla_vanilla.md)
+  : Posterior means of an INLAvanilla fit
 - [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
   : Diagnostics of an INLAvanilla fit
 - [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
