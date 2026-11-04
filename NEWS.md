@@ -3,6 +3,11 @@
 * `coef()` gives the posterior mean of each parameter, the `Mean` column of
   `summary()`, as INLAvaan's `coef()` does.
 
+* `timing()` gives the elapsed time of each stage of the fit, as INLAvaan's
+  `timing()` does: `timing(fit)` the total, `timing(fit, what = "all")` every
+  stage. `fit$timing` gains `init` and `diagnostics`, the time before the
+  mode and after the marginals, so its segments now add up to `total`.
+
 * `inla_vanilla()` gains `width`, how each skew-normal scan takes the width
   term, the log-volume of the other parameters. `"trace"`, the default, is
   the linear term of INLAvaan, as before. `"cmp"` takes it exactly along the
