@@ -167,13 +167,13 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span>  atanh_rho <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">25</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [127ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [140ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [143ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [142ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [120ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [161ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -894.67 · Converged in 20 iterations (436ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -894.67 · Converged in 20 iterations (451ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                  Mean      SD      2.5%       50%     97.5%      Mode</span></span>
 <span><span class="co">#&gt; 1 b0         251.35    6.84    237.93    251.35    264.75    251.36  </span></span>
@@ -345,9 +345,9 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span></span>
 <span><span class="va">fit_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [44ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [86ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [63ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [53ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [57ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [69ms]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">draws_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_6</span>, nsamp <span class="op">=</span> <span class="fl">20000</span>, fun <span class="op">=</span> <span class="va">natural</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu">compare</span><span class="op">(</span><span class="va">draws_6</span>, <span class="va">ref</span><span class="op">$</span><span class="va">subjects_6</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -365,9 +365,9 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -322.764 · Converged in 20 iterations (197ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -322.764 · Converged in 20 iterations (183ms)</span></span>
 <span><span class="co">#&gt; Laplace -322.994 + VB term 0.23</span></span>
-<span><span class="co">#&gt; 937 logpost calls: mode 44ms, VB 86ms, marginals 64ms</span></span>
+<span><span class="co">#&gt; 937 logpost calls: mode 53ms, VB 57ms, marginals 69ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -423,7 +423,8 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
       // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
       for (var i=0; i<links.length; i++) {
         const link = links[i];
         if (!isInternal(link.href)) {
@@ -432,8 +433,69 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+          if (!link.classList.contains('no-external-icon')) {
+          }
         }
       }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
       const config = {
         allowHTML: true,
@@ -447,6 +509,7 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
         interactiveBorder: 10,
         theme: 'light-border',
         placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
       };
       if (contentFn) {
         config.content = contentFn;

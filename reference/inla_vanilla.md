@@ -46,6 +46,8 @@ inla_vanilla(
   ...,
   vb = TRUE,
   marginals = c("skewnormal", "gaussian"),
+  width = c("trace", "cmp", "tk"),
+  tk_fallback = FALSE,
   verbose = FALSE,
   silent = FALSE,
   control = list()
@@ -86,8 +88,9 @@ inla_vanilla(
   Further arguments passed to `logpost`, `grad` and `hess`, such as the
   data. As in [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
   they come after the gradient and the Hessian, and the arguments after
-  them (`vb`, `marginals`, `verbose`, `silent`, `control`) must be given
-  by their full names, so data arguments cannot partially match them.
+  them (`vb`, `marginals`, `width`, `tk_fallback`, `verbose`, `silent`,
+  `control`) must be given by their full names, so data arguments cannot
+  partially match them. A data argument cannot take one of those names.
   The arguments before them can be matched, as in
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html): a data argument
   named `g` or `gr` would be taken as `grad`, and one named `h` or `he`
@@ -107,6 +110,46 @@ inla_vanilla(
   Gaussian marginal of the Laplace approximation, centred at the VB mean
   when `vb = TRUE`, with no scans. Abbreviations such as `"skew"` and
   `"gauss"` work too.
+
+- width:
+
+  How each skew-normal scan accounts for the changing volume of the
+  other parameters, the width term \\\gamma_j(t) = -\frac12
+  \log\|H\_{-j}\|\\ (see the section on the width term). With m
+  parameters and `n_grid` scan points, per parameter:
+
+  - `"trace"` (the default): its linear term \\\gamma_j' t\\, as in
+    INLAvaan, from 2m + 2 `grad` calls (one `hess` call with `hess`,
+    2m + 5 `logpost` calls without `grad`), on top of the `n_grid - 1`
+    `logpost` calls of the scan.
+
+  - `"cmp"`: the exact width term along the same straight scan, from the
+    Hessian of the other parameters at each scan point: about
+    `n_grid - 1` times 2(m - 1) `grad` calls (`n_grid - 1` `hess` calls
+    with `hess`, or `n_grid - 1` times (m - 1)m `logpost` calls without
+    `grad`).
+
+  - `"tk"`: the Laplace marginal of Tierney and Kadane (1986). At each
+    scan point the other parameters are moved to their conditional mode
+    by [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), started
+    from the straight scan, and the height and the width term are taken
+    there: the calls of `"cmp"` plus those of `n_grid - 1` conditional
+    optimisations, typically 5 to 20 `logpost` and `grad` calls each
+    with `grad`, and many more without.
+
+  With one parameter the three are the same. Abbreviations work. Ignored
+  for Gaussian marginals.
+
+- tk_fallback:
+
+  Logical. Rescan with `width = "tk"` every parameter whose `ridge_bend`
+  is flagged (above 0.25, see
+  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md))?
+  Default `FALSE`, so that a fit costs what `width` says and gives the
+  same marginals whatever its diagnostics. The parameters rescanned are
+  listed in `fit$fallback` and by
+  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
+  Ignored for Gaussian marginals and with `width = "tk"`.
 
 - verbose:
 
@@ -142,7 +185,11 @@ It is a list holding, among other things:
 - `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
   parameter (with `alpha = 0` for Gaussian marginals).
 
-- `vb`, `marginals`, `verbose`, `silent`: the settings the fit used.
+- `vb`, `marginals`, `width`, `tk_fallback`, `verbose`, `silent`: the
+  settings the fit used (`width` is `NA` for Gaussian marginals).
+
+- `fallback`: the parameters that `tk_fallback` rescanned with
+  `width = "tk"` (empty when there were none).
 
 - `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
   part.
@@ -163,13 +210,16 @@ It is a list holding, among other things:
   parameter: `mode_shift_sigma`, `kld`, `vb_shift`, `vb_shift_sigma`,
   `nmad`, `alpha`, `unscanned_mass`, `vb_step_sigma`, `mean_gap`,
   `gamma1`, `tails` and `ridge_bend`, with `NA` for the checks the fit
-  did not run.
+  did not run, and `width`, the width method of each scan (see the
+  section on the width term).
 
 - `scan`: the scans the skew-normals were fitted to, for
   `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
   mode, the log-posterior at each point (`logpost`, a column per
-  parameter), and the log scale factor `logC` of each fit on that grid.
-  It is `NULL` for Gaussian marginals.
+  parameter: along the CMP, or at the conditional modes for
+  `width = "tk"`), the width term added to it (`width`, zero at the
+  mode), and the log scale factor `logC` of each fit on that grid. It is
+  `NULL` for Gaussian marginals.
 
 - `warnings`: the messages of the warnings raised during the fit, as a
   character vector of plain text, each message once (empty when there
@@ -222,7 +272,10 @@ a mean when the noise SD is uncertain. For a normal mean with unknown
 variance the SD is about 11% too small at n = 12, 3% at n = 50, and
 under 1% at n = 200. The `ridge_bend` diagnostic of
 [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
-flags this narrowing where it predicts about 10% or more.
+flags this narrowing where it predicts about 10% or more. By default
+(`width = "trace"`) this is the scan of INLAvaan; `width = "tk"`, or
+`tk_fallback = TRUE` for the flagged parameters only, removes the
+narrowing at a higher cost (see the section on the width term).
 
 A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could
@@ -242,6 +295,42 @@ flagged one of the two (0.44), but the other's ridge bend (0.11) was no
 larger than that of marginals within 7% in SD, and the `tails` check,
 which looks only 4 posterior SDs either side of the mode (the Laplace
 SDs), missed both.
+
+## The width term
+
+Each skew-normal scan follows the conditional mode path (CMP) of the
+Laplace Gaussian, \\\vartheta(t) = \vartheta^\* + t v_j\\ with \\v_j =
+\Omega\_{\cdot j} / \sqrt{\Omega\_{jj}}\\, so that \\t\\ counts
+posterior SDs. The log marginal is then about the height of the
+log-posterior along the path plus the width term \\\gamma_j(t) =
+-\frac12 \log\|H\_{-j}(t)\|\\, where \\H\_{-j}\\ is the negative Hessian
+of the log-posterior with row and column j deleted: the log-volume of
+the other parameters. `width` sets how it is taken, in three levels that
+each remove one error:
+
+- `"trace"`, the default and INLAvaan's, linearises it, \\\gamma_j(t)
+  \approx \gamma_j' t\\, with the slope from whitened differences of the
+  gradient (Jamil & Rue, 2026a, Corollary 3.3).
+
+- `"cmp"` takes \\\gamma_j(t)\\ exactly along the same path. Its
+  difference from `"trace"` is the error of the linearisation.
+
+- `"tk"` moves the other parameters to their conditional mode at each
+  point of the scan and takes the height and the width term there: the
+  Laplace approximation of the marginal (Tierney & Kadane, 1986), INLA's
+  "Laplace strategy". Its difference from `"cmp"` is the error of the
+  straight path, which the `ridge_bend` diagnostic of
+  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  predicts.
+
+The skew-normal is fitted to the corrected heights in the same way for
+all three, on the same grid. `tk_fallback = TRUE` keeps the cheap scan
+for every parameter but those whose ridge bend is flagged, and rescans
+those with `"tk"`. In `fit$diagnostics$marginals`, `width` gives the
+method each parameter used and `gamma1` the slope of its width term at
+the mode (for `"cmp"` and `"tk"`, a central difference across the mode).
+The ridge bend of a parameter scanned with `"tk"` is still reported, but
+not flagged.
 
 ## Gradients and Hessians
 
@@ -401,6 +490,11 @@ INLA-based approximate Bayesian structural equation modelling*
 (arXiv:2604.00671 \[stat.CO\]). arXiv.
 <https://doi.org/10.48550/arXiv.2604.00671>
 
+Tierney, L., & Kadane, J. B. (1986). Accurate approximations for
+posterior moments and marginal densities. *Journal of the American
+Statistical Association*, *81*(393), 82–86.
+<https://doi.org/10.1080/01621459.1986.10478240>
+
 ## See also
 
 [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) for
@@ -428,13 +522,13 @@ logpost <- function(theta, y) {
 }
 
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 10 iterations [5ms]
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
 #> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (18ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (17ms)
 #> 
 #>               Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu         5.159  0.327  4.517  5.159  5.800  5.159
@@ -456,11 +550,11 @@ fit <- inla_vanilla(
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
-#>     (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
+#>     8.8e-08σ (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -468,7 +562,7 @@ fit <- inla_vanilla(
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.24σ [2ms]
+#> ✔ VB mean correction, max shift 0.24σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04
 #>   Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback
 #>   Largest shift 0.24σ, for log_sigma (warning > 1σ)

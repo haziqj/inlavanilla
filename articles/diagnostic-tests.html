@@ -263,9 +263,9 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_Sp_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit_lc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_lc</span>, <span class="va">start</span>, y <span class="op">=</span> <span class="va">y</span>, count <span class="op">=</span> <span class="va">count</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 30 iterations [39ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.37σ [68ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 11 skew-normal marginals [66ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 30 iterations [40ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.37σ [45ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 11 skew-normal marginals [63ms]</span></span>
 <span><span class="va">fit_lcre</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">lp_lcre</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">start</span>, log_sigma1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span>, log_sigma0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -273,9 +273,9 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  count <span class="op">=</span> <span class="va">count</span>,</span>
 <span>  gh <span class="op">=</span> <span class="va">gh</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [268ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.5s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [331ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [255ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.3s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [309ms]</span></span>
 <span><span class="va">start_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="va">start</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
 <span>  logit_eta1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.2</span><span class="op">)</span>,</span>
@@ -284,9 +284,9 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_w0_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_fm</span>, <span class="va">start_fm</span>, y <span class="op">=</span> <span class="va">y</span>, count <span class="op">=</span> <span class="va">count</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 25 iterations [57ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [125ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [102ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 25 iterations [61ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [97ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [108ms]</span></span></code></pre></div>
 </div>
 <p>The seconds each fit took:</p>
 <div class="cell" data-layout-align="center">
@@ -294,7 +294,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>LC <span class="op">=</span> <span class="va">fit_lc</span>, LCRE <span class="op">=</span> <span class="va">fit_lcre</span>, FM <span class="op">=</span> <span class="va">fit_fm</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">timing</span><span class="op">[[</span><span class="st">"total"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   LC LCRE   FM </span></span>
-<span><span class="co">#&gt; 0.19 2.12 0.30</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.16 1.87 0.28</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
 </h2>
@@ -431,7 +431,8 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
       // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
       for (var i=0; i<links.length; i++) {
         const link = links[i];
         if (!isInternal(link.href)) {
@@ -440,8 +441,69 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+          if (!link.classList.contains('no-external-icon')) {
+          }
         }
       }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
       const config = {
         allowHTML: true,
@@ -455,6 +517,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
         interactiveBorder: 10,
         theme: 'light-border',
         placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
       };
       if (contentFn) {
         config.content = contentFn;

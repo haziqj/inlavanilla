@@ -204,9 +204,9 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (16ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (19ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0082</span></span>
-<span><span class="co">#&gt; 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms</span></span>
+<span><span class="co">#&gt; 66 logpost calls: mode 7ms, VB 2ms, marginals 6ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -242,7 +242,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [5ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [16ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
@@ -422,8 +422,8 @@
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [1ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [1ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [2ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checks-on-a-supplied-gradient">Checks on a supplied gradient<a class="anchor" aria-label="anchor" href="#checks-on-a-supplied-gradient"></a>
@@ -441,7 +441,8 @@
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
       // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
       for (var i=0; i<links.length; i++) {
         const link = links[i];
         if (!isInternal(link.href)) {
@@ -450,8 +451,69 @@
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+          if (!link.classList.contains('no-external-icon')) {
+          }
         }
       }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
       const config = {
         allowHTML: true,
@@ -465,6 +527,7 @@
         interactiveBorder: 10,
         theme: 'light-border',
         placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
       };
       if (contentFn) {
         config.content = contentFn;

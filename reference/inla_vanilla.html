@@ -148,6 +148,8 @@ approximation with the VB correction.</p>
 <span>  <span class="va">...</span>,</span>
 <span>  vb <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  marginals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"skewnormal"</span>, <span class="st">"gaussian"</span><span class="op">)</span>,</span>
+<span>  width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trace"</span>, <span class="st">"cmp"</span>, <span class="st">"tk"</span><span class="op">)</span>,</span>
+<span>  tk_fallback <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  silent <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -187,9 +189,10 @@ from the Matrix package, and a number when m = 1, work too). It needs
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Further arguments passed to <code>logpost</code>, <code>grad</code> and <code>hess</code>, such
 as the data. As in <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code>, they come after the gradient and
-the Hessian, and the arguments after them (<code>vb</code>, <code>marginals</code>, <code>verbose</code>,
-<code>silent</code>, <code>control</code>) must be given by their full names, so data
-arguments cannot partially match them. The arguments before them can be
+the Hessian, and the arguments after them (<code>vb</code>, <code>marginals</code>, <code>width</code>,
+<code>tk_fallback</code>, <code>verbose</code>, <code>silent</code>, <code>control</code>) must be given by their
+full names, so data arguments cannot partially match them. A data
+argument cannot take one of those names. The arguments before them can be
 matched, as in <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code>: a data argument named <code>g</code> or <code>gr</code> would be
 taken as <code>grad</code>, and one named <code>h</code> or <code>he</code> as <code>hess</code>, so give it a
 longer name.</p></dd>
@@ -207,6 +210,39 @@ default) fits a skew-normal to a scan of the log-posterior; <code>"gaussian"</co
 uses the Gaussian marginal of the Laplace approximation, centred at the
 VB mean when <code>vb = TRUE</code>, with no scans. Abbreviations such as <code>"skew"</code>
 and <code>"gauss"</code> work too.</p></dd>
+
+
+<dt id="arg-width">width<a class="anchor" aria-label="anchor" href="#arg-width"></a></dt>
+<dd><p>How each skew-normal scan accounts for the changing volume of
+the other parameters, the width term
+\(\gamma_j(t) = -\frac12 \log|H_{-j}|\)
+(see the section on the width term). With m parameters and
+<code>n_grid</code> scan points, per parameter:</p><ul><li><p><code>"trace"</code> (the default): its linear term \(\gamma_j' t\),
+as in INLAvaan, from 2m + 2 <code>grad</code> calls (one <code>hess</code> call with <code>hess</code>,
+2m + 5 <code>logpost</code> calls without <code>grad</code>), on top of the <code>n_grid - 1</code>
+<code>logpost</code> calls of the scan.</p></li>
+<li><p><code>"cmp"</code>: the exact width term along the same straight scan, from the
+Hessian of the other parameters at each scan point: about
+<code>n_grid - 1</code> times 2(m - 1) <code>grad</code> calls (<code>n_grid - 1</code> <code>hess</code> calls
+with <code>hess</code>, or <code>n_grid - 1</code> times (m - 1)m <code>logpost</code> calls without
+<code>grad</code>).</p></li>
+<li><p><code>"tk"</code>: the Laplace marginal of Tierney and Kadane (1986). At each scan
+point the other parameters are moved to their conditional mode by
+<code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code>, started from the straight scan, and the height and
+the width term are taken there: the calls of <code>"cmp"</code> plus those of
+<code>n_grid - 1</code> conditional optimisations, typically 5 to 20 <code>logpost</code>
+and <code>grad</code> calls each with <code>grad</code>, and many more without.</p></li>
+</ul><p>With one parameter the three are the same. Abbreviations work. Ignored
+for Gaussian marginals.</p></dd>
+
+
+<dt id="arg-tk-fallback">tk_fallback<a class="anchor" aria-label="anchor" href="#arg-tk-fallback"></a></dt>
+<dd><p>Logical. Rescan with <code>width = "tk"</code> every parameter
+whose <code>ridge_bend</code> is flagged (above 0.25, see <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>)?
+Default <code>FALSE</code>, so that a fit costs what <code>width</code> says and gives the same
+marginals whatever its diagnostics. The parameters rescanned are listed
+in <code>fit$fallback</code> and by <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>. Ignored for Gaussian
+marginals and with <code>width = "tk"</code>.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -233,7 +269,10 @@ holding, among other things:</p><ul><li><p><code>summary</code>: the posterior s
 <li><p><code>mean_vb</code>: the VB-corrected mean (the mode when <code>vb = FALSE</code>).</p></li>
 <li><p><code>sn</code>: the skew-normal parameters <code>xi</code>, <code>omega</code> and <code>alpha</code> per
 parameter (with <code>alpha = 0</code> for Gaussian marginals).</p></li>
-<li><p><code>vb</code>, <code>marginals</code>, <code>verbose</code>, <code>silent</code>: the settings the fit used.</p></li>
+<li><p><code>vb</code>, <code>marginals</code>, <code>width</code>, <code>tk_fallback</code>, <code>verbose</code>, <code>silent</code>: the
+settings the fit used (<code>width</code> is <code>NA</code> for Gaussian marginals).</p></li>
+<li><p><code>fallback</code>: the parameters that <code>tk_fallback</code> rescanned with
+<code>width = "tk"</code> (empty when there were none).</p></li>
 <li><p><code>logml</code>: the log marginal likelihood, and <code>logml_laplace</code> its Laplace
 part.</p></li>
 <li><p><code>diagnostics</code>: the checks of each stage, which <code><a href="diagnostics.html">diagnostics()</a></code>
@@ -248,11 +287,14 @@ the shift (<code>kld_global</code>); it is <code>NULL</code> when <code>vb = FAL
 is a data frame with a row per parameter: <code>mode_shift_sigma</code>, <code>kld</code>,
 <code>vb_shift</code>, <code>vb_shift_sigma</code>, <code>nmad</code>, <code>alpha</code>, <code>unscanned_mass</code>,
 <code>vb_step_sigma</code>, <code>mean_gap</code>, <code>gamma1</code>, <code>tails</code> and <code>ridge_bend</code>, with
-<code>NA</code> for the checks the fit did not run.</p></li>
+<code>NA</code> for the checks the fit did not run, and <code>width</code>, the width method
+of each scan (see the section on the width term).</p></li>
 <li><p><code>scan</code>: the scans the skew-normals were fitted to, for
 <code>plot(fit, type = "sn_fit")</code>: the grid <code>z</code> in posterior SDs from the
 mode, the log-posterior at each point (<code>logpost</code>, a column per
-parameter), and the log scale factor <code>logC</code> of each fit on that grid.
+parameter: along the CMP, or at the conditional modes for
+<code>width = "tk"</code>), the width term added to it (<code>width</code>, zero at the
+mode), and the log scale factor <code>logC</code> of each fit on that grid.
 It is <code>NULL</code> for Gaussian marginals.</p></li>
 <li><p><code>warnings</code>: the messages of the warnings raised during the fit, as a
 character vector of plain text, each message once (empty when there
@@ -302,7 +344,10 @@ O(1/n). Examples are a regression coefficient or a mean when the noise SD
 is uncertain. For a normal mean with unknown variance the SD is about 11%
 too small at n = 12, 3% at n = 50, and under 1% at n = 200. The
 <code>ridge_bend</code> diagnostic of <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> flags this narrowing
-where it predicts about 10% or more.</p>
+where it predicts about 10% or more. By default (<code>width = "trace"</code>) this
+is the scan of INLAvaan; <code>width = "tk"</code>, or <code>tk_fallback = TRUE</code> for the
+flagged parameters only, removes the narrowing at a higher cost (see the
+section on the width term).</p>
 <p>A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could not
 keep two residual variances away from zero, so on the log scale their
@@ -319,6 +364,38 @@ this. The <code>ridge_bend</code> diagnostic of <code><a href="summary.inla_vani
 of the two (0.44), but the other's ridge bend (0.11) was no larger than
 that of marginals within 7% in SD, and the <code>tails</code> check, which looks only
 4 posterior SDs either side of the mode (the Laplace SDs), missed both.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="the-width-term">The width term<a class="anchor" aria-label="anchor" href="#the-width-term"></a></h2>
+
+
+<p>Each skew-normal scan follows the conditional mode path (CMP) of the
+Laplace Gaussian, \(\vartheta(t) = \vartheta^* + t v_j\) with
+\(v_j = \Omega_{\cdot j} / \sqrt{\Omega_{jj}}\), so that \(t\) counts posterior SDs. The log marginal
+is then about the height of the log-posterior along the path plus the
+width term \(\gamma_j(t) = -\frac12 \log|H_{-j}(t)|\), where \(H_{-j}\) is the negative Hessian of
+the log-posterior with row and column j deleted: the log-volume of the
+other parameters. <code>width</code> sets how it is taken, in three levels that each
+remove one error:</p><ul><li><p><code>"trace"</code>, the default and INLAvaan's, linearises it,
+\(\gamma_j(t) \approx \gamma_j' t\), with
+the slope from whitened differences of the gradient (Jamil &amp; Rue, 2026a,
+Corollary 3.3).</p></li>
+<li><p><code>"cmp"</code> takes \(\gamma_j(t)\) exactly along the same
+path. Its difference from <code>"trace"</code> is the error of the linearisation.</p></li>
+<li><p><code>"tk"</code> moves the other parameters to their conditional mode at each
+point of the scan and takes the height and the width term there: the
+Laplace approximation of the marginal (Tierney &amp; Kadane, 1986), INLA's
+"Laplace strategy". Its difference from <code>"cmp"</code> is the error of the
+straight path, which the <code>ridge_bend</code> diagnostic of
+<code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> predicts.</p></li>
+</ul><p>The skew-normal is fitted to the corrected heights in the same way for
+all three, on the same grid. <code>tk_fallback = TRUE</code> keeps the cheap scan
+for every parameter but those whose ridge bend is flagged, and rescans
+those with <code>"tk"</code>. In <code>fit$diagnostics$marginals</code>, <code>width</code> gives the
+method each parameter used and <code>gamma1</code> the slope of its width term at
+the mode (for <code>"cmp"</code> and <code>"tk"</code>, a central difference across the mode).
+The ridge bend of a parameter scanned with <code>"tk"</code> is still reported, but
+not flagged.</p>
     </div>
     <div class="section level2">
     <h2 id="gradients-and-hessians">Gradients and Hessians<a class="anchor" aria-label="anchor" href="#gradients-and-hessians"></a></h2>
@@ -448,6 +525,10 @@ approximations</em> (arXiv:2603.25690 [stat.ME]). arXiv.
 <p>Jamil, H., &amp; Rue, H. (2026b). <em>Implementation and workflows for INLA-based
 approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 [stat.CO]). arXiv. <a href="https://doi.org/10.48550/arXiv.2604.00671" class="external-link">https://doi.org/10.48550/arXiv.2604.00671</a></p>
+<p>Tierney, L., &amp; Kadane, J. B. (1986). Accurate approximations for posterior
+moments and marginal densities. <em>Journal of the American Statistical
+Association</em>, <em>81</em>(393), 82–86.
+<a href="https://doi.org/10.1080/01621459.1986.10478240" class="external-link">https://doi.org/10.1080/01621459.1986.10478240</a></p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -472,13 +553,13 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[5ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[1ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
 <span class="r-in"><span><span class="va">fit</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> <span style="color: #D7875F;">─────────────────────────────────────────</span> <span style="color: #555555;">Skew-normal + VB</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (18ms)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (17ms)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>              <span style="font-weight: bold;"> Mean</span>  <span style="font-weight: bold;">   SD</span>  <span style="font-weight: bold;"> 2.5%</span>  <span style="font-weight: bold;">  50%</span>  <span style="font-weight: bold;">97.5%</span>  <span style="font-weight: bold;"> Mode</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">1</span> mu         5.159  <span style="color: #555555;">0.</span>327  4.517  5.159  5.800  5.159</span>
@@ -500,11 +581,11 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> 2 parameters: mu and log_sigma</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Derivatives by finite differences of logpost</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at init -481.47</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[1ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">nlminb: relative convergence (4), after 10 iterations (14 function and 26</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">gradient evaluations)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">(warning &gt; 0.1σ)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">8.8e-08σ (warning &gt; 0.1σ)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian by second differences of logpost: 6 calls, and 12 more to set the</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">steps</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Posterior correlation matrix: largest correlation -0.0042 (mu,</span></span>
@@ -512,7 +593,7 @@ approximate Bayesian structural equation modelling</em> (arXiv:2604.00671
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian condition number 1, in SD units (warning &gt; 1e+08)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Laplace log marginal likelihood -66.41</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">63 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.24σ</span> <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Fixed-point steps, largest over the parameters (σ): 0.25, 0.0079, 2.3e-04</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Converged in 3 iterations, Anderson acceleration at 1 of them; no fallback</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Largest shift 0.24σ, for log_sigma (warning &gt; 1σ)</span></span>

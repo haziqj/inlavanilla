@@ -139,8 +139,8 @@
 <span><span class="va">init_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="va">init_pois</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [16ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.025σ [28ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [39ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.025σ [19ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [26ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/loo.html">loo()</a></code> takes the fit, <code>loglik</code>, and the same data:</p>
 <div class="cell" data-layout-align="center">
@@ -155,7 +155,7 @@
 <span><span class="co">#&gt; looic        485.9  30.0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for</span></span>
-<span><span class="co">#&gt;   unit 39.</span></span></code></pre></div>
+<span><span class="co">#&gt;   unit 37.</span></span></code></pre></div>
 </div>
 <p><code>p_loo</code> is the effective number of parameters. Here it is about 21, for a model with 6 parameters: a sign that the model is misspecified. The counts vary much more than a Poisson distribution allows.</p>
 </section><section class="level3"><h3 id="a-negative-binomial-model">A negative binomial model<a class="anchor" aria-label="anchor" href="#a-negative-binomial-model"></a>
@@ -284,7 +284,7 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>refits <span class="op">=</span> <span class="va">time_refit</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span>, loo <span class="op">=</span> <span class="va">time_loo</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt; refits    loo </span></span>
-<span><span class="co">#&gt;  6.578  0.004</span></span>
+<span><span class="co">#&gt;  4.977  0.004</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>refits <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">elpd_refit</span><span class="op">)</span>, loo <span class="op">=</span> <span class="va">loo_nb</span><span class="op">$</span><span class="va">estimates</span><span class="op">[</span><span class="st">"elpd_loo"</span>, <span class="st">"Estimate"</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    refits       loo </span></span>
 <span><span class="co">#&gt; -202.6061 -202.1721</span></span></code></pre></div>
@@ -338,7 +338,8 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
       // Inspect non-navigation links and adorn them if external
-     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      window.quartoDecorateExternalLinks = function (root) {
+     var links = (root || window.document).querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
       for (var i=0; i<links.length; i++) {
         const link = links[i];
         if (!isInternal(link.href)) {
@@ -347,8 +348,69 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
           if (link.dataset.originalHref !== undefined) {
             link.href = link.dataset.originalHref;
           }
+          if (!link.classList.contains('no-external-icon')) {
+          }
         }
       }
+      };
+      window.quartoDecorateExternalLinks(window.document);
+    // Esc closes the popup (WCAG 1.4.13) and focus leaving both trigger and
+    // popup closes it (WCAG 2.4.11); tippy handles neither for interactive popups.
+    const hideOnEscAndFocusOut = {
+      name: 'hideOnEscAndFocusOut',
+      defaultValue: true,
+      fn(instance) {
+        const dismiss = () => {
+          // A show scheduled by the trigger delay would otherwise reopen it
+          instance.clearDelayTimeouts();
+          instance.hide();
+        };
+        const onKeyDown = (event) => {
+          if (event.key !== 'Escape') {
+            return;
+          }
+          // Keep Esc from also reaching page handlers (e.g. reveal.js overview),
+          // except an open reveal.js slide menu, which Esc should close too.
+          // The menu handles keys only when its keyboard option is on.
+          const menuHandlesEsc = window.Reveal?.getPlugin?.('menu')?.isOpen() &&
+            window.Reveal.getConfig().menu?.keyboard !== false;
+          if (!menuHandlesEsc) {
+            event.stopPropagation();
+          }
+          if (instance.popper.contains(window.document.activeElement)) {
+            // Disabled while refocusing so the focus trigger does not reopen it
+            instance.disable();
+            instance.reference.focus();
+            instance.enable();
+          }
+          dismiss();
+        };
+        const onFocusOut = (event) => {
+          const target = event.relatedTarget;
+          if (target && !instance.reference.contains(target) &&
+              !instance.popper.contains(target)) {
+            dismiss();
+          }
+        };
+        // On the trigger too: a click trigger (code-annotations: select) has no
+        // blur handling. Attached for the instance's lifetime so leaving the
+        // trigger also cancels a show still pending on the trigger delay.
+        instance.reference.addEventListener('focusout', onFocusOut);
+        return {
+          onShow() {
+            window.document.addEventListener('keydown', onKeyDown, true);
+            instance.popper.addEventListener('focusout', onFocusOut);
+          },
+          onHide() {
+            window.document.removeEventListener('keydown', onKeyDown, true);
+            instance.popper.removeEventListener('focusout', onFocusOut);
+          },
+          onDestroy() {
+            instance.reference.removeEventListener('focusout', onFocusOut);
+          },
+        };
+      },
+    };
     function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
       const config = {
         allowHTML: true,
@@ -362,6 +424,7 @@ p(\vartheta \mid y_{-i}) \, d\vartheta.
         interactiveBorder: 10,
         theme: 'light-border',
         placement: 'bottom-start',
+        plugins: [hideOnEscAndFocusOut],
       };
       if (contentFn) {
         config.content = contentFn;

@@ -3,6 +3,20 @@
 ## inlavanilla 0.1.1
 
 - [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  gains `width`, how each skew-normal scan takes the width term, the
+  log-volume of the other parameters. `"trace"`, the default, is the
+  linear term of INLAvaan, as before. `"cmp"` takes it exactly along the
+  same straight scan, from the Hessian of the other parameters at each
+  scan point, and `"tk"` moves the other parameters to their conditional
+  mode at each point and takes the height and the width there, the
+  Laplace marginal of Tierney and Kadane (1986). `tk_fallback = TRUE`
+  rescans with `"tk"` only the parameters whose ridge bend is flagged,
+  and `fit$fallback` and
+  [`summary()`](https://rdrr.io/r/base/summary.html) list them. Both
+  cost more calls, given in
+  [`?inla_vanilla`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
+
+- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   takes the Hessian of `logpost` as an optional `hess`, after `grad`, as
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) does. With it,
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes Newton steps
@@ -13,9 +27,11 @@
   precisely, and on test models it took 13% to 35% less time. A supplied
   `hess` is checked at the mode against central differences of `grad`,
   and `fit$counts` counts its calls.
+
 - The website article “Gradients with RTMB” is now “Gradients and
   Hessians with RTMB”. It passes RTMB’s Hessian too, and shows where the
   fit uses it, the time it saves and the more precise mode it finds.
+
 - The website article “Diagnostic classification models” is now
   “Cognitive diagnostic models”.
 

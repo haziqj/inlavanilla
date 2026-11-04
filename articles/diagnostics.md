@@ -78,9 +78,9 @@ fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
 #> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (16ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (19ms)
 #> Laplace -12.362 + VB term 0.0082
-#> 66 logpost calls: mode 6ms, VB 2ms, marginals 5ms
+#> 66 logpost calls: mode 7ms, VB 2ms, marginals 6ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -186,7 +186,7 @@ logpost_mix <- function(theta) {
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [5ms]
-#> ✔ VB mean correction, max shift 0.39σ [14ms]
+#> ✔ VB mean correction, max shift 0.39σ [16ms]
 #> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
@@ -457,8 +457,8 @@ fit <- withCallingHandlers(
   }
 )
 #> ✔ Found the posterior mode in 4 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.39σ [1ms]
-#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> ✔ VB mean correction, max shift 0.39σ [2ms]
+#> ✔ Fitted 1 skew-normal marginal [4ms]
 #> Check this fit.
 ```
 
