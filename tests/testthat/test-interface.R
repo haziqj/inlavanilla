@@ -2305,9 +2305,11 @@ test_that("summary() returns the table and the diagnostics", {
       "mean_gap",
       "gamma1",
       "tails",
-      "ridge_bend"
+      "ridge_bend",
+      "width"
     )
   )
+  expect_identical(s$diagnostics$width, rep("trace", length(init_reg)))
   expect_identical(rownames(s$diagnostics), names(init_reg))
   expect_identical(s$logml, fit_reg$logml)
   expect_identical(s$logml_laplace, fit_reg$logml_laplace)

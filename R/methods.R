@@ -227,7 +227,9 @@ summary.inla_vanilla <- function(
       vb = object$diagnostics$vb,
       counts = object$counts,
       timing = object$timing,
-      marginals = object$marginals
+      marginals = object$marginals,
+      width = object$width,
+      fallback = object$fallback
     ),
     class = "summary.inla_vanilla"
   )
@@ -418,8 +420,11 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       if (!flags[["unscanned_mass"]]) {
         paste("unscanned mass", fmt_cell(glob[["unscanned_mass_max"]]))
       },
-      if (!flags[["ridge_bend"]]) {
-        paste("ridge bend", fmt_cell(glob[["ridge_bend_max"]]))
+      # Over the straight scans only: the ridge bend of a parameter scanned
+      # at its conditional modes is not a check of that scan
+      if (!flags[["ridge_bend"]] && !all(scanned_tk(dg))) {
+        bends <- dg$param$ridge_bend[!scanned_tk(dg)]
+        paste("ridge bend", fmt_cell(max(bends)))
       },
       if (has_vb && !flags[["mean_gap"]]) {
         paste0("mean gap ", fmt_cell(glob[["mean_gap_max"]]), sd_unit())
@@ -440,8 +445,48 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         flagged_line(check)
       }
     }
+    # How the width term was taken, when not by the default linear trace
+    cat_width(x, diag, env)
   }
   invisible(x)
+}
+
+# The status lines for the width term: the method, when it is not the
+# default "trace", and the parameters the TK fallback rescanned, with their
+# ridge bends.
+cat_width <- function(x, diag, env) {
+  width <- x$width
+  if (!is.null(width) && !is.na(width) && width != "trace") {
+    how <- c(
+      cmp = "exact along the conditional mode path",
+      tk = "Laplace (Tierney-Kadane), at the conditional modes"
+    )[[width]]
+    cat_status(
+      "info",
+      paste0("Width term: ", how, " ({.code width = \"", width, "\"}).")
+    )
+  }
+  fb <- x$fallback
+  if (length(fb) > 0L) {
+    listed <- list_template(
+      env,
+      "fallback",
+      fb,
+      diag[fb, "ridge_bend"],
+      n = Inf
+    )
+    cat_status(
+      "info",
+      paste0(
+        "TK fallback (ridge bend > ",
+        summary_levels$ridge_bend,
+        "): rescanned at the conditional modes for ",
+        listed,
+        "."
+      ),
+      .envir = env
+    )
+  }
 }
 
 #' Plot an INLAvanilla fit
@@ -651,10 +696,13 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
   }
   draw <- function(j) {
     raw <- x$scan$logpost[, j]
-    ok <- is.finite(raw)
+    # The width term added to the heights: the linear volume correction, or
+    # the curve the fit kept for width = "cmp" or "tk"
+    w <- if (is.null(x$scan$width)) gamma1[j] * z else x$scan$width[, j]
+    ok <- is.finite(raw) & is.finite(w)
     zs <- z[ok]
     raw <- raw[ok]
-    y <- raw + gamma1[j] * zs
+    y <- raw + w[ok]
     zz <- seq(min(z), max(z), length.out = 201)
     fitted <- dsnorm(
       zz,
@@ -1030,7 +1078,9 @@ param_flags <- function(dg, gaussian) {
     unscanned_mass = sn &
       off_level(p$unscanned_mass, warn_levels$unscanned_mass),
     tails = sn & !p$tails %in% TRUE,
-    ridge_bend = sn & off_level(p$ridge_bend, summary_levels$ridge_bend),
+    ridge_bend = sn &
+      off_level(p$ridge_bend, summary_levels$ridge_bend) &
+      !scanned_tk(dg),
     mean_gap = sn & vb & off_level(abs(p$mean_gap), summary_levels$mean_gap)
   )
 }

@@ -108,7 +108,26 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
   )
   class(param) <- c("inla_vanilla_diagnostics_param", "data.frame")
 
-  list(global = global, param = param, message = optim$message)
+  # The width method of each scan, which decides whether the ridge bend is
+  # flagged (it is not for a parameter scanned by "tk"); NULL for a fit
+  # without it
+  list(
+    global = global,
+    param = param,
+    message = optim$message,
+    width = d$width
+  )
+}
+
+# TRUE for the parameters scanned at their conditional modes ("tk"), whose
+# ridge bend is not flagged: it measures what the straight scan misses, and
+# those scans do not take it.
+scanned_tk <- function(dg) {
+  if (is.null(dg$width)) {
+    rep(FALSE, nrow(dg$param))
+  } else {
+    dg$width %in% "tk"
+  }
 }
 
 # The order in which to list parameters: the largest values first, and any
@@ -152,7 +171,11 @@ flagged_list <- function(env, key, dg, column, level, n) {
   if (column %in% c("vb_shift_sigma", "mean_gap")) {
     x <- abs(x)
   }
-  bad <- which(off_level(x, level))
+  bad <- off_level(x, level)
+  if (column == "ridge_bend") {
+    bad <- bad & !scanned_tk(dg)
+  }
+  bad <- which(bad)
   bad <- bad[worst_first(x[bad])]
   list_template(env, key, dg$param$names[bad], x[bad], n = n)
 }
