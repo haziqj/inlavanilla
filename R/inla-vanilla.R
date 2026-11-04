@@ -314,8 +314,8 @@
 #' @param control A list of tuning parameters; see the section on control.
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
-#'   [summary()], [coef()], [plot()], [sampling()] and [diagnostics()]. It is
-#'   a list
+#'   [summary()], [coef()], [plot()], [sampling()], [diagnostics()] and
+#'   [timing()]. It is a list
 #'   holding, among other things:
 #'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
 #'   * `mode`, `cov`: the Laplace mode and covariance.
@@ -349,6 +349,8 @@
 #'     `width = "tk"`), the width term added to it (`width`, zero at the
 #'     mode), and the log scale factor `logC` of each fit on that grid.
 #'     It is `NULL` for Gaussian marginals.
+#'   * `timing`: the elapsed time of each stage of the fit, in seconds, which
+#'     [timing()] returns.
 #'   * `warnings`: the messages of the warnings raised during the fit, as a
 #'     character vector of plain text, each message once (empty when there
 #'     were none). They are recorded whether or not `silent` is `TRUE`.
