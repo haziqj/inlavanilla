@@ -2,7 +2,7 @@
 # validation, the checks of an analytic gradient, parameter names, arguments
 # passed through `...`, log-posteriors that fail or are not finite away from
 # the mode, improper posteriors and an unreached mode, progress messages, and
-# the print(), summary() and plot() methods.
+# the print(), summary(), coef() and plot() methods.
 #
 # The package raises its errors and warnings with abort() and warn()
 # (R/utils.R), which give them the classes "inlavanilla_error" and
@@ -2326,6 +2326,27 @@ test_that("summary() returns the table and the diagnostics", {
     unname((fit_reg$summary[, "Mean"] - fit_reg$mean_vb) / sds)
   )
   expect_equal(s$diagnostics$alpha, unname(fit_reg$sn[, "alpha"]))
+})
+
+test_that("coef() gives the posterior means of summary()", {
+  expect_identical(coef(fit_reg), fit_reg$summary[, "Mean"])
+  expect_identical(names(coef(fit_reg)), names(init_reg))
+
+  # Gaussian marginals are centred at the VB mean, or at the mode without VB
+  fit_g <- inla_vanilla(lp_reg, init_reg, marginals = "gaussian", silent = TRUE)
+  expect_equal(coef(fit_g), fit_g$mean_vb)
+  fit_g_novb <- inla_vanilla(
+    lp_reg,
+    init_reg,
+    marginals = "gaussian",
+    vb = FALSE,
+    silent = TRUE
+  )
+  expect_equal(coef(fit_g_novb), fit_g_novb$mode)
+
+  # One parameter keeps its name
+  fit_1 <- inla_vanilla(lp_gauss, c(mu = 0), silent = TRUE)
+  expect_identical(names(coef(fit_1)), "mu")
 })
 
 test_that("the printed model's summary agrees with 2D quadrature", {
