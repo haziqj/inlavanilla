@@ -126,7 +126,7 @@ posterior SDs. `vb_shift` is the same shift on the scale of `logpost`, and
 `kld`, half the square of `vb_shift_sigma`, is the Kullback-Leibler divergence
 of each shifted marginal from the unshifted one. A shift of a few tenths is
 normal for a skewed posterior; a shift above 1 SD means that the posterior is
-far from the Laplace Gaussian. When the fixed-point iteration hands over to
+far from the Laplace Gaussian. With `vb = "full"`, when the fixed-point iteration hands over to
 the optimiser, `fit$diagnostics$vb` records it, and `summary()` and the
 verbose output report it, but, as in INLAvaan, it is not flagged: it is a
 route of the solver, not a sign of a poor approximation.
@@ -138,12 +138,19 @@ level of the mode check, the correction has not settled and the fit has not
 converged. The VB mean is then off, and with it the VB term of the log
 marginal likelihood and the expansions of `loo()` and `waic()`. The
 skew-normal marginals do not depend on it, since they are scanned around the
-mode, and `vb = FALSE` leaves it out. Gaussian marginals
-(`marginals = "gaussian"`) are centred on it, and `vb = FALSE` centres them
+mode, and `vb = "off"` leaves it out. Gaussian marginals
+(`marginals = "gaussian"`) are centred on it, and `vb = "off"` centres them
 at the mode instead. Without a gradient, the usual cause is not the solver
 but the VB mean itself: from `logpost` values alone it is exact only for a
 log-posterior of degree four, and on a strongly skewed posterior it can be
 about 0.1 SDs out. Supplying `grad` is the fix.
+
+The default correction, `vb = "onestep"`, takes a single step from the mode, so
+there is no step still to go and `vb_step_sigma` is `NA`. The check applies when
+that step has to iterate: if it is over 2.5 posterior SDs or a node fails, the
+iteration carries on with capped steps, within the calls that the mode and
+Hessian took. Running out of them shows up here as a correction that did not
+settle, and `vb = "full"` is then the thing to try.
 
 With a gradient the fallback takes one more step of its own. If it lands
 short of settled, it is run once more from where it landed, much as the mode

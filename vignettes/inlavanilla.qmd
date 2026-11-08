@@ -39,9 +39,9 @@ log-posterior:
 1. **Joint Gaussian (Laplace).** Find the posterior mode and the curvature
    there. This gives a Gaussian approximation and the Laplace estimate of the
    log marginal likelihood.
-2. **VB mean correction.** Recentre the Gaussian at the mean that maximises
+2. **VB mean correction.** Move the Gaussian towards the mean that maximises
    its expected log-posterior, a better estimate of the posterior mean than
-   the mode.
+   the mode. By default this is one Newton step from the mode.
 3. **Skew-normal marginals.** For each parameter, scan the log-posterior
    along the path the Gaussian predicts, correct the scan for the changing
    volume of the other parameters, and fit a skew-normal to it.
@@ -104,8 +104,8 @@ fit
 
 The header names the approximation: skew-normal marginals, with the VB mean
 correction. The line under it gives the log marginal likelihood and whether
-the fit converged: whether the mode search and the VB correction both
-reached their solutions. The table summarises each parameter's skew-normal
+the fit converged: whether the mode search reached its solution, and the VB
+correction too when it had to iterate. The table summarises each parameter's skew-normal
 marginal: the mean, standard deviation, quantiles and mode. Had the fit
 raised a warning, or `summary()` flagged one of its checks, a line below the
 table would say so. Each step of the
@@ -272,9 +272,11 @@ catches most slips in hand-derived gradients.
 ## Cheaper approximations
 
 The VB correction and the skew-normal marginals are optional, and independent
-of each other. `vb = FALSE` skips the VB correction, and
+of each other. `vb = "off"` skips the VB correction, and
 `marginals = "gaussian"` skips the scans and keeps the Gaussian marginals.
-With both, the fit is the Laplace approximation alone.
+With both, the fit is the Laplace approximation alone. The default correction,
+`vb = "onestep"`, takes one Newton step from the mode. `vb = "full"` iterates
+to the VB solution, at a higher cost and to much the same answer.
 
 ```{r}
 #| label: cheaper
@@ -283,10 +285,11 @@ fit_fast <- function(...) {
 }
 # Named as the header of print() names them
 fits <- list(
-  `Skew-normal + VB` = fit,
-  `Skew-normal` = fit_fast(vb = FALSE),
-  `Laplace + VB` = fit_fast(marginals = "gaussian"),
-  Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
+  `Skew-normal + one-step VB` = fit,
+  `Skew-normal + full VB` = fit_fast(vb = "full"),
+  `Skew-normal` = fit_fast(vb = "off"),
+  `Laplace + one-step VB` = fit_fast(marginals = "gaussian"),
+  Laplace = fit_fast(vb = "off", marginals = "gaussian")
 )
 round(t(sapply(fits, function(f) {
   c(
@@ -300,11 +303,11 @@ round(t(sapply(fits, function(f) {
 Without the VB correction the skew-normal marginals are the same, because
 they are scanned around the mode, but the log marginal likelihood is the
 Laplace one. The VB correction moves the Gaussian's centre most of the way to
-the posterior mean, but a Gaussian cannot follow the long tail. Without a
-gradient it takes the expected gradient from values of `logpost` alone, and
-costs about as much as finding the mode. With a gradient it is more accurate,
-and as the number of parameters grows, it and the marginals become the
-slowest stages.
+the posterior mean, but a Gaussian cannot follow the long tail. With a
+gradient the default correction costs about one numerical Hessian. Without one
+it takes the expected gradient from values of `logpost` alone, and still costs
+less than finding the mode. As the number of parameters grows, the marginals
+become the slowest stage.
 
 ## Derived quantities
 

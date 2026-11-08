@@ -207,7 +207,7 @@ refit_elpd <- function(i) {
     init_nb,
     X = X[-i, ],
     y = y[-i],
-    vb = FALSE,
+    vb = "off",
     silent = TRUE
   )
   ll <- sampling(
