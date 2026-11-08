@@ -768,7 +768,8 @@ test_that("a wrong analytic gradient triggers the mismatch warning", {
       grad = function(theta, ...) 2 * gr_pois(theta, ...),
       y = pois_y,
       a0 = pois_a0,
-      b0 = pois_b0
+      b0 = pois_b0,
+      vb = "off"
     )),
     "does not match finite differences",
     class = "inlavanilla_warning"
@@ -2045,6 +2046,10 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f$diagnostics$marginals$vb_step_sigma[2] <- 0.4
       f
     },
+    vb_gain = function(f) {
+      f$diagnostics$vb$gain_ratio <- 0.2
+      f
+    },
     hess_cond = function(f) {
       f$diagnostics$optim$hess_cond <- 1e9
       f
@@ -2092,8 +2097,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     fit <- f(fit)
   }
   out <- capture_output(print(fit))
-  expect_match(out, "! 9 checks flagged by `summary()`.", fixed = TRUE)
-  expect_identical(n_flag_lines(fit), 9L)
+  expect_match(out, "! 10 checks flagged by `summary()`.", fixed = TRUE)
+  expect_identical(n_flag_lines(fit), 10L)
 
   # A normal mean with an unknown SD from 12 observations: summary() flags
   # the ridge bend of the mean alone (4 / 12 nats), and nothing in the small
