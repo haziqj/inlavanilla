@@ -175,6 +175,57 @@ The article compares these models by their log marginal likelihoods, so it uses
 `vb = "full"`. Differences from the random effects model, with its mirror image
 counted: truth -0.49 and -2.66, full -0.33 and -2.68, one-step -1.77 and -4.13.
 
+## Why one step fails, and the gain ratio
+
+`why-one-step-fails.R`: 160 fits in 36 model families, each against the true
+mean and log Z. One step assumes the expected log-posterior is a parabola with
+the Laplace curvature. The gain ratio (`vb_gain_ratio()`) is the rise delivered
+over the rise that parabola promises, on `axis_nodes()`, 4m + 2 calls of
+`logpost`. Its median is 0.85, and it is flagged below 0.5.
+
+Three ways to fail:
+
+1. The step overshoots, because the parabola is wrong: boundary, eight schools,
+   strongly skewed posteriors, LCRE (predicted +1.81, delivered -1.42). The full
+   solve does better.
+2. The posterior is not Gaussian-shaped: the random-intercept logistic, whose
+   true mean is about 4 SDs from the mode. The ratio is about 0.1, and the full
+   solve is worse.
+3. A far tail the mode cannot see: the log variances of the SEMs. The parabola
+   holds near the peak, the ratio is healthy, and only the mean gap fires.
+
+As shipped, with the guard. "Caught" counts the fits with that failure that the
+check flagged.
+
+| Failure | Gradient: fits | Gain ratio caught | Mean gap > 0.25 caught | No gradient: fits | Gain ratio caught | Mean gap > 0.25 caught |
+|---|---|---|---|---|---|---|
+| Mean error above 0.2 SD | 18 | 11 | 14 | 19 | 10 | 14 |
+| Mean error above 0.5 SD | 7 | 6 | 7 | 3 | 2 | 3 |
+| Worse than the full solve by 0.05 SD | 4 | 2 | 3 | 4 | 3 | 4 |
+| Log marginal likelihood off by over 1 nat | 11 | 1 | 10 | 19 | 4 | 15 |
+
+The counts are of the fits that stopped at one step (151 with a gradient, 147
+without). The rest went on to iterate, as the guard asked, and have no gain
+ratio.
+
+The gain ratio raised no false alarms: all 11 flagged fits with a gradient, and
+all 10 without one, had a mean error above 0.2 SD. It fired on none of the 133
+and 128 fits below that. The mean gap above 0.25 SD fires on 24 and 17 of them.
+So the ratio is precise and the mean gap is sensitive, and neither replaces the
+other. Most flags come from one family (random-intercept logistic: 9 of 11 with
+a gradient, 6 of 10 without).
+
+Rival checks, before the guard, on all 160 fits: the curvature along the step
+above 1 caught 4 of the 16 mean errors above 0.5 SD. A step above 1 SD caught 15
+of them but fired on 48 others.
+
+Acting on the ratio does not pay. Using the full solve on the flagged fits helped
+on 5 and hurt on 15 (all random-intercept), so the check warns and leaves the
+fit alone.
+
+Thresholds were chosen on these same fits, and 15 of the 36 families have 15
+datasets each while the others have one.
+
 ## Not tested
 
 `loo()` against brute-force leave-one-out.

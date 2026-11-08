@@ -40,6 +40,10 @@ identity needs that rule's degree. One step is accepted unless a node fails or
 the step exceeds 2.5 SDs. In that case the same rule is iterated with capped
 steps, within the budget.
 
+After a single step the fit checks it delivered what it promised (the gain
+ratio, flagged below 0.5). See RESULTS.md for why it is a warning and not a
+switch.
+
 The 2.5 SD level is a heuristic. At 2 SDs the guard fired on three large
 logistic fits where the plain step was mostly better. At 3 SDs it missed the
 strongly skewed skew-normal (a first step of 2.9 SDs).
@@ -50,6 +54,7 @@ strongly skewed skew-normal (a first step of 2.9 SDs).
 - `routes-benchmark.R`: 24 posteriors, one dataset each.
 - `routes-simulation.R`: nine families, 15 datasets each.
 - `guard-and-budget.R`: guard levels, and cost against the budget.
+- `why-one-step-fails.R`: which checks predict failure, and how well.
 - `RESULTS.md`: the numbers.
 
 The scripts compare routes outside the package and call `vb_correct()` with its
