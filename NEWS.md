@@ -9,6 +9,15 @@
   against 2.4e-4 on a test model), and the marginals move by a few
   ten-thousandths of a posterior SD. Fits without a gradient are unchanged.
 
+* Without a gradient, the `ridge_bend` check of the skew-normal marginals no
+  longer takes 2(m - 1) calls of `logpost` for every parameter. The calls of
+  the volume correction already show which way the ridge bends, so the check
+  costs 2 more calls per parameter, and only a value above 0.1 is taken again
+  from the full gradient. Every value that can reach the flag is computed as
+  before, and the marginals do not change. A fit of a logistic regression with
+  40 parameters without a gradient takes 23% fewer calls and is 1.3 times as
+  fast.
+
 * The VB mean correction now takes one Newton step by default, `vb =
   "onestep"`. With a gradient it costs 2m + 1 gradient calls, about one
   numerical Hessian, against usually four sweeps of up to (m + 1)(m + 2) + 1,
