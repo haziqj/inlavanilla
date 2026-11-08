@@ -290,12 +290,12 @@ not flagged.
 \code{grad} is optional. Without it, derivatives come from finite differences
 of \code{logpost}, and the number of calls grows with the square of the number
 of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
-marginals about m(\code{n_grid} + 2m + 5). The VB correction takes at most
-(m + 1)(m + 2) calls per sweep, over a few sweeps: it needs no derivatives,
+marginals about m(\code{n_grid} + 2m + 5). The VB correction takes (m + 1)(m + 2)
+calls, or that many per sweep with \code{vb = "full"}: it needs no derivatives,
 because Stein's identity gives the expected gradient from values of
-\code{logpost} alone. Its VB mean is then exact when the log-posterior is a
-polynomial of degree four in whitened coordinates, and up to degree six
-with \code{grad}. On test models it was about 0.01 posterior SDs from exact VB
+\code{logpost} alone. With \code{vb = "full"}, the VB mean is then exact when the
+log-posterior is a polynomial of degree four in whitened coordinates, and up
+to degree six with \code{grad}. On test models it was about 0.01 posterior SDs from exact VB
 (0.003 with \code{grad}), and up to 0.1 on a strongly skewed posterior (0.03
 with \code{grad}), against a VB error of 0.01 to 0.2 SDs from the posterior mean
 itself. On the most skewed posteriors the VB correction may then not
@@ -304,9 +304,9 @@ settle, and the fit says it has not converged (see
 
 With \code{grad}, every stage is more accurate. The fit is also faster when a
 gradient call costs about as much as a \code{logpost} call, as a hand-written
-gradient usually does, since it then makes about half as many calls in
-all. A gradient by automatic differentiation (RTMB, TMB) costs about two,
-and the fit takes about as long as without one. The default VB correction,
+gradient usually does, since it then makes far fewer calls in all. A
+gradient by automatic differentiation (RTMB, TMB) costs about two, and the
+fit is still somewhat faster than without one. The default VB correction,
 \code{vb = "onestep"}, takes 2m + 1 gradient calls, about as many as one numerical
 Hessian, and \code{vb = "full"} takes at most (m + 1)(m + 2) + 1 per sweep, usually
 about four sweeps. Beyond a handful of parameters the marginals are the
@@ -357,7 +357,10 @@ is itself an approximation to the posterior mean with an error of the same
 order. If the first step is over 2.5 posterior SDs, or a node fails, the
 iteration carries on with capped steps, within the number of calls that the
 mode and Hessian took. \code{diagnostics()} then has \code{vb_step_sigma}, the step
-still to go, which is \code{NA} after a single step.
+still to go, which is \code{NA} after a single step. A large first step can also
+overstate the VB term of the log marginal likelihood, so after a shift above
+1 posterior SD, which is flagged, compare models with care: \code{vb = "full"} may
+be closer.
 
 \code{vb = "full"} iterates to the solution, on a degree-5 rule with at most
 (m + 1)(m + 2) + 1 nodes, and hands over to \code{\link[stats:nlminb]{stats::nlminb()}} if it does not
