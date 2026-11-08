@@ -8,7 +8,7 @@
 #'
 #' For a fit with `marginals = "gaussian"` this is a draw from the joint
 #' Gaussian \eqn{N(\tilde\vartheta, \Omega)}, centred at the VB mean (or at
-#' the mode when `vb = FALSE`).
+#' the mode when `vb = "off"`).
 #'
 #' Draws never call the log-posterior, so they are cheap: large `nsamp` costs
 #' little. Use `fun` for natural-scale or derived quantities, such as

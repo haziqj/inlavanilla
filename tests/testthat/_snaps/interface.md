@@ -85,7 +85,8 @@
         <n> logpost calls
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
-        Converged in <n> iteration(s), <anderson>; no fallback
+        One step, accepted (guard > 2.5 SD)
+        Gain ratio # (warning < #)
         Largest shift # SD, for intercept (warning > 1 SD)
         KL term #, giving a log marginal likelihood of #
         <n> logpost calls
@@ -116,10 +117,11 @@
         <n> logpost and <n> grad calls
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
-        Converged in <n> iteration(s), <anderson>; no fallback
+        One step, accepted (guard > 2.5 SD)
+        Gain ratio # (warning < #)
         Largest shift # SD, for intercept (warning > 1 SD)
         KL term #, giving a log marginal likelihood of #
-        <n> grad calls
+        <n> logpost and <n> grad calls
       v Fitted 2 skew-normal marginals [<time>]
                    Shape NMAD Ridge bend Tails Unscanned gamma1
         intercept # # # ok # #
@@ -133,7 +135,7 @@
     Code
       print(fit_reg)
     Output
-      -- INLAvanilla --------------------------------------------- Skew-normal + VB --
+      -- INLAvanilla ------------------------------------ Skew-normal + one-step VB --
       
       Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
       
@@ -146,10 +148,10 @@
     Code
       print(summary(fit_reg))
     Output
-      -- INLAvanilla summary ------------------------------------- Skew-normal + VB --
+      -- INLAvanilla summary ---------------------------- Skew-normal + one-step VB --
       
-      Log marginal likelihood: -16.249 | Converged in <n> iteration(s) (<time>)
-      Laplace -16.277 + VB term 0.029
+      Log marginal likelihood: -16.246 | Converged in <n> iteration(s) (<time>)
+      Laplace -16.277 + VB term 0.031
       <n> logpost calls: mode <time>, VB <time>, marginals <time>
       
       -- Posterior marginals --
@@ -161,14 +163,14 @@
       -- Diagnostics --
       
                    VB shift   NMAD  Unscanned  Ridge bend  Mean gap
-      1 intercept    -0.23   0.010    0.00078       0.037   -0.0068
-      2 slope         0.084  0.015    0.00013       0.14    -0.0042
+      1 intercept    -0.24   0.010    0.00078       0.037    0.0031
+      2 slope         0.092  0.015    0.00013       0.14    -0.012 
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction settled in <n> iteration(s): max shift 0.23 SD.
+      v VB correction in one step: max shift 0.24 SD, gain ratio 0.977.
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14,
-        mean gap 0.0068 SD.
+        mean gap 0.012 SD.
 
 ---
 
@@ -194,7 +196,7 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      i No VB correction (vb = FALSE).
+      i No VB correction (vb = "off").
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14.
 
 # summary() rejects probabilities outside (0, 1)

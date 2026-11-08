@@ -7,7 +7,7 @@
 #' * `init`: the checks of the arguments, with the calls of `logpost`, `grad`
 #'   and `hess` at `init`.
 #' * `laplace`: the posterior mode and the Hessian there.
-#' * `vb`: the VB mean correction, close to zero with `vb = FALSE`.
+#' * `vb`: the VB mean correction, close to zero with `vb = "off"`.
 #' * `marginals`: the scans and the skew-normal fits, close to zero with
 #'   `marginals = "gaussian"`.
 #' * `diagnostics`: the diagnostics of the fit and its warning.

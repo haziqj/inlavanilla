@@ -1,5 +1,22 @@
 # inlavanilla 0.1.1
 
+* The VB mean correction now takes one Newton step by default, `vb =
+  "onestep"`. With a gradient it costs 2m + 1 gradient calls, about one
+  numerical Hessian, against usually four sweeps of up to (m + 1)(m + 2) + 1,
+  and on 133 simulated datasets it was as close to the posterior mean as the
+  full solve, or closer, on all but three. `vb = "full"` keeps the iterative
+  solve, and `vb = "off"` (or `FALSE`) leaves the correction out. `TRUE` means
+  the default. `fit$vb` is now the name of the method, and the headers of
+  `print()` and `summary()` name it. A first step over 2.5 posterior SDs, or a
+  node that fails, carries on with capped steps, within the calls that the mode
+  and Hessian took. `vb_step_sigma` is `NA` after a single step.
+
+* After a one-step VB correction the fit checks that the step delivered what
+  it promised. `vb_gain_ratio` in `diagnostics()` is the rise in the expected
+  log-posterior over the rise the step assumed, at a cost of 4m + 2 calls of
+  `logpost`. A ratio below 0.5 raises a warning that points to `vb = "full"`,
+  and `summary()` reports it.
+
 * `coef()` gives the posterior mean of each parameter, the `Mean` column of
   `summary()`, as INLAvaan's `coef()` does.
 

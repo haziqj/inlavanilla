@@ -29,8 +29,8 @@ options(
 `inla_vanilla()` calls `logpost` many times, and without a gradient the
 count grows with the square of the number of parameters $m$: the Hessian by
 finite differences takes about $m^2$ calls, the skew-normal scans about
-$2m^2$, and the VB correction $(m + 1)(m + 2)$ per sweep, over a few sweeps.
-For 39 parameters that is over 20,000 calls. Two things help: a faster
+$2m^2$, and the VB correction $(m + 1)(m + 2)$.
+For 39 parameters that is over 15,000 calls. Two things help: a faster
 `logpost`, and a gradient.
 
 This article does both for a structural equation model (SEM) with 39
@@ -296,20 +296,19 @@ us_r <- time_per_call(function() logpost_r(init, Y), n = 1000)
 us_r
 ```
 
-With `vb = FALSE`, `inla_vanilla()` skips the VB correction and runs only the
+With `vb = "off"`, `inla_vanilla()` skips the VB correction and runs only the
 mode search and the skew-normal marginals:
 
 ```{r}
 #| label: fit-r
-fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = FALSE)
+fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = "off")
 fit_r$counts
 ```
 
 These two stages take
 `r format(fit_r$counts[["logpost"]], big.mark = ",")` calls. The VB
-correction would add $(m + 1)(m + 2) = 1{,}640$ calls per sweep, over a few
-sweeps: without a gradient it takes the expected gradient from values of
-`logpost` alone. We come back to the cost of a full fit below.
+correction would add $(m + 1)(m + 2) = 1{,}640$ calls: without a gradient it
+takes the expected gradient from values of `logpost` alone. We come back to the cost of a full fit below.
 
 ## The log-posterior in C++
 
@@ -584,11 +583,9 @@ fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 ```
 
-The VB correction takes the same nodes either way: the gradient at
-$(m + 1)(m + 2) + 1 = 1{,}641$ points per sweep, or `logpost` at all but the
-centre. The gradient buys accuracy there: its VB mean is exact when the
-log-posterior is a polynomial of degree six, against degree four from
-`logpost` alone.
+With a gradient, the VB correction takes it at $2m + 1 = 79$ points, about
+as many as one numerical Hessian. Without one, it takes `logpost` at
+$(m + 1)(m + 2) = 1{,}640$ points.
 
 The three fits agree. The skew-normal marginals do not depend on the VB
 correction, so even `fit_r` gives the same table. The largest difference in a
@@ -617,7 +614,7 @@ the variation in democracy in 1965 (see $R^2$ below), so this variance is
 small and poorly determined, and its log has a long left tail. `summary()`
 flags it twice: the straight scan through the mode misses enough
 log-density that its marginal may come out too narrow, and its skew-normal
-and VB means differ by 0.2 posterior SDs, another sign that the marginal is
+and VB means differ by 0.35 posterior SDs, another sign that the marginal is
 hard to approximate.
 
 Here the flags are borne out. Checked against MCMC, the marginals of
@@ -717,8 +714,8 @@ posterior SDs. The two packages share the skew-normal marginals, and with
 them the limitation for `logv_dem65` and `logv_x2` described above.
 
 The log marginal likelihoods share their Laplace part. The VB terms differ a
-little, because INLAvaan takes the expectation in the VB correction with 64
-Sobol points and inlavanilla with a deterministic cubature rule:
+little, because INLAvaan iterates the VB correction to convergence, on 64
+Sobol points, and inlavanilla takes one step on a deterministic rule:
 
 ```{r}
 #| label: vs-inlavaan-logml
@@ -740,9 +737,9 @@ round(
 ```
 
 The Laplace parts agree to the last digit. The VB terms differ by
-`r round(int$vb$kld_global - (fit$logml - fit$logml_laplace), 2)`, from the
-two integration rules: 64 Sobol points estimate the expectation with Monte
-Carlo error, which the deterministic cubature rule avoids.
+`r round(int$vb$kld_global - (fit$logml - fit$logml_laplace), 2)`. The first
+is the iterated solution, with the Monte Carlo error of 64 Sobol points, and
+the second a single step.
 
 ## References
 

@@ -47,7 +47,7 @@ A posterior SD here is the Laplace SD at the mode,
 \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 is not the SD column of the summary table, which is the skew-normal's.
 Values that a fit did not compute are \code{NA}: the VB quantities with
-\code{vb = FALSE}, and the scan quantities with \code{marginals = "gaussian"}.
+\code{vb = "off"}, and the scan quantities with \code{marginals = "gaussian"}.
 
 \strong{Global diagnostics} (\code{type = "global"}), a named numeric vector:
 \itemize{
@@ -89,6 +89,11 @@ but flags nothing: the fallback is a route of the solver, not a measure
 of the approximation.
 \item \code{vb_step_max}: the largest \code{vb_step_sigma}. Like \code{mode_shift_max} it
 should be close to 0.
+\item \code{vb_gain_ratio}: how much of the promised rise in the expected
+log-posterior a one-step correction delivered: the rise under the
+Gaussian, over the \eqn{\frac12 \delta^\top H \delta}{1/2 d' H d} that
+the step assumes. Near 1 is healthy, and it is flagged below 0.5. \code{NA}
+when the correction iterated, or the step was too small to check.
 \item \code{mean_gap_max}: the largest absolute \code{mean_gap}.
 \item \code{ridge_bend_max}: the largest \code{ridge_bend}.
 \item \code{n_heavy_tails}: the number of parameters whose \code{tails} is \code{FALSE}.
@@ -103,7 +108,7 @@ differences of \code{logpost} a thousandth of a posterior SD apart. It
 should be close to 0.
 \item \code{grad_abs}: its absolute value.
 \item \code{grad_rel}: \code{grad_abs / (abs(par) + 1e-6)}, with \code{par} the VB mean (the
-mode when \code{vb = FALSE}), as in INLAvaan.
+mode when \code{vb = "off"}), as in INLAvaan.
 \item \code{mode_shift_sigma}: the Newton step at the mode, in posterior SDs,
 \eqn{|(\Sigma g)_j| / s_j} with \eqn{g} the gradient. It should be
 close to 0.
@@ -129,7 +134,8 @@ condition, as \code{mode_shift_sigma} is for the mode. After the fallback
 optimiser it is taken where the optimiser landed. On the fixed-point
 path it is the last step taken, which bounds the next, unless that step
 was 0.1 or more (a \code{vb_tol} above 0.1), when it is taken afresh. It
-should be close to 0 (\code{Inf} where the step is not finite).
+should be close to 0 (\code{Inf} where the step is not finite). It is \code{NA}
+after a one-step correction, which has no step still to go.
 \item \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, which
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} describes.
 }

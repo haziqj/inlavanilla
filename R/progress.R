@@ -400,7 +400,28 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   n_cut <- sum(h$cut)
   lines <- c(
     lines,
-    if (vbc$fallback) {
+    if (isTRUE(vbc$one_pass)) {
+      c(
+        grey("One step, accepted (guard > ", with_sd(vb_onestep_guard), ")"),
+        if (!is.na(vbc$gain_ratio)) {
+          paste0(
+            grey("Gain ratio ", fmt_num(vbc$gain_ratio)),
+            if (isTRUE(below_level(vbc$gain_ratio, warn_levels$vb_gain))) {
+              flag()
+            } else {
+              ""
+            },
+            grey(" (warning < ", warn_levels$vb_gain, ")")
+          )
+        }
+      )
+    } else if (isTRUE(h$ran_out)) {
+      grey(
+        "The first step was over the guard. Stopped after ",
+        plural(vbc$iterations, "iteration"),
+        ", at the budget of the mode and Hessian stage"
+      )
+    } else if (vbc$fallback) {
       # Where it landed: the step still to go there, marked when the
       # correction did not settle
       step_max <- max(vbc$step_sigma)

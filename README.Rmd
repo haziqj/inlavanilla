@@ -42,12 +42,12 @@ nothing model-specific:
 1. a **Laplace approximation** at the posterior mode, with the Laplace
    estimate of the log marginal likelihood;
 2. a **VB mean correction** that recentres the Gaussian at a better estimate
-   of the posterior mean;
+   of the posterior mean, in one Newton step by default;
 3. **skew-normal marginals**, one per parameter, fitted to scans of the
    log-posterior;
 4. **Gaussian copula draws** for any function of the parameters.
 
-Stages 2 and 3 are optional and independent: `vb = FALSE` skips the VB
+Stages 2 and 3 are optional and independent: `vb = "off"` skips the VB
 correction, and `marginals = "gaussian"` keeps the Gaussian marginals instead
 of scanning for skew-normal ones. With both, you get the Laplace approximation
 alone.

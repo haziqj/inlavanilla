@@ -20,7 +20,7 @@
 #'   1 / E[1 / p(y_u \mid \vartheta) \mid y],}
 #' an expectation over the full posterior. The posterior is taken as the
 #' Gaussian \eqn{N(\tilde\vartheta, \Omega)} of the fit, with the VB-corrected
-#' mean (the mode when `vb = FALSE`) and the Laplace covariance, and
+#' mean (the mode when `vb = "off"`) and the Laplace covariance, and
 #' \eqn{\ell_u} is expanded to second order about \eqn{\tilde\vartheta}, with
 #' score \eqn{s_u} and Hessian \eqn{H_u}. The expectation is then a Gaussian
 #' integral:

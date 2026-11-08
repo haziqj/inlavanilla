@@ -36,7 +36,7 @@ The segments are:
 \item \code{init}: the checks of the arguments, with the calls of \code{logpost}, \code{grad}
 and \code{hess} at \code{init}.
 \item \code{laplace}: the posterior mode and the Hessian there.
-\item \code{vb}: the VB mean correction, close to zero with \code{vb = FALSE}.
+\item \code{vb}: the VB mean correction, close to zero with \code{vb = "off"}.
 \item \code{marginals}: the scans and the skew-normal fits, close to zero with
 \code{marginals = "gaussian"}.
 \item \code{diagnostics}: the diagnostics of the fit and its warning.

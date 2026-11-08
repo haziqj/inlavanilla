@@ -13,7 +13,7 @@
 # The VB fallback is recorded only, as in INLAvaan: it is a route of the
 # solver, and the settling check judges where it lands. summary() flags
 # every warned check at the same level, and also the ridge bend and the mean
-# gap, which never warn. A check that did not run (VB with vb = FALSE, the
+# gap, which never warn. A check that did not run (VB with vb = "off", the
 # scans with Gaussian marginals) is NA and never flagged; one that ran and
 # gave a value that is not finite is.
 warn_levels <- list(
@@ -23,7 +23,9 @@ warn_levels <- list(
   vb_shift = 1,
   hess_cond = 1e8,
   # inlavanilla's own: the VB correction settles as the mode search does
-  vb_step = 0.1
+  vb_step = 0.1,
+  # inlavanilla's own: flagged below this, the share of the promised gain
+  vb_gain = 0.5
 )
 # The ridge bend level is a marginal SD about 10% too small,
 # 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
@@ -35,8 +37,19 @@ off_level <- function(x, level) {
   !(is.finite(x) & x <= level)
 }
 
+# TRUE where `x` is below `level` or not finite, among the checks that ran.
+below_level <- function(x, level) {
+  check_ran(x) & !(is.finite(x) & x >= level)
+}
+
+# Whether a check ran: NA is a check that did not run, and NaN a value it
+# produced, which off_level() flags
+check_ran <- function(x) {
+  !is.na(x) | is.nan(x)
+}
+
 # The global and per-parameter diagnostics, from the parts of a fit:
-# fit$diagnostics$optim, $vb (NULL when vb = FALSE) and $marginals, and the
+# fit$diagnostics$optim, $vb (NULL when vb = "off") and $marginals, and the
 # VB mean (`pars`, for grad_inf_rel and grad_rel; NA when not given). It runs
 # before the fit object exists, for the warning. The definitions are
 # INLAvaan's (R/method-diagnostics.R), with `grad` the gradient of minus the
@@ -75,6 +88,11 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     # inlavanilla's own
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
     vb_step_max = max_na(d$vb_step_sigma),
+    vb_gain_ratio = if (vb_applied && !is.null(vb$gain_ratio)) {
+      vb$gain_ratio
+    } else {
+      NA_real_
+    },
     mean_gap_max = max_na(abs(d$mean_gap)),
     ridge_bend_max = max_na(d$ridge_bend),
     n_heavy_tails = if (all(is.na(d$tails))) {
@@ -208,6 +226,15 @@ problem_text <- function(check, dg, env, n = 3L) {
         "."
       )
     },
+    vb_gain = {
+      env$vb_gain <- fmt_g3(glob[["vb_gain_ratio"]])
+      paste0(
+        "One-step VB delivered {vb_gain} of the rise in the expected ",
+        "log-posterior it promised (warning < ",
+        warn_levels$vb_gain,
+        "), so the Gaussian approximation at the mode may be inaccurate."
+      )
+    },
     vb_step = {
       env$vbs_worst <- p$names[worst_first(p$vb_step_sigma)[1L]]
       env$vbs_step <- fmt_g3(glob[["vb_step_max"]])
@@ -300,6 +327,7 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   warned <- c(
     "mode",
     "vb_step",
+    "vb_gain",
     "nmad",
     "unscanned_mass",
     "tails",
@@ -308,6 +336,15 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   )
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
+    if (check == "vb_gain") {
+      out <- c(
+        out,
+        i = paste0(
+          "Compare with {.code vb = \"full\"}, and treat the log marginal ",
+          "likelihood with care."
+        )
+      )
+    }
     if (check == "vb_step") {
       # Without a gradient the likely cause is the rule's error on a
       # posterior far from Gaussian, which a gradient removes, not the
@@ -328,12 +365,12 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
         i = if (gaussian) {
           paste0(
             "The Gaussian marginals are centred on the VB mean; ",
-            "{.code vb = FALSE} centres them at the mode."
+            "{.code vb = \"off\"} centres them at the mode."
           )
         } else {
           paste0(
             "The skew-normal marginals do not depend on it; ",
-            "{.code vb = FALSE} leaves it out."
+            "{.code vb = \"off\"} leaves it out."
           )
         }
       )
@@ -404,7 +441,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 #' is not the SD column of the summary table, which is the skew-normal's.
 #' Values that a fit did not compute are `NA`: the VB quantities with
-#' `vb = FALSE`, and the scan quantities with `marginals = "gaussian"`.
+#' `vb = "off"`, and the scan quantities with `marginals = "gaussian"`.
 #'
 #' **Global diagnostics** (`type = "global"`), a named numeric vector:
 #' * `npar`: the number of parameters.
@@ -443,6 +480,11 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   of the approximation.
 #' * `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
 #'   should be close to 0.
+#' * `vb_gain_ratio`: how much of the promised rise in the expected
+#'   log-posterior a one-step correction delivered: the rise under the
+#'   Gaussian, over the \eqn{\frac12 \delta^\top H \delta}{1/2 d' H d} that
+#'   the step assumes. Near 1 is healthy, and it is flagged below 0.5. `NA`
+#'   when the correction iterated, or the step was too small to check.
 #' * `mean_gap_max`: the largest absolute `mean_gap`.
 #' * `ridge_bend_max`: the largest `ridge_bend`.
 #' * `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
@@ -455,7 +497,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   should be close to 0.
 #' * `grad_abs`: its absolute value.
 #' * `grad_rel`: `grad_abs / (abs(par) + 1e-6)`, with `par` the VB mean (the
-#'   mode when `vb = FALSE`), as in INLAvaan.
+#'   mode when `vb = "off"`), as in INLAvaan.
 #' * `mode_shift_sigma`: the Newton step at the mode, in posterior SDs,
 #'   \eqn{|(\Sigma g)_j| / s_j} with \eqn{g} the gradient. It should be
 #'   close to 0.
@@ -479,7 +521,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   optimiser it is taken where the optimiser landed. On the fixed-point
 #'   path it is the last step taken, which bounds the next, unless that step
 #'   was 0.1 or more (a `vb_tol` above 0.1), when it is taken afresh. It
-#'   should be close to 0 (`Inf` where the step is not finite).
+#'   should be close to 0 (`Inf` where the step is not finite). It is `NA`
+#'   after a one-step correction, which has no step still to go.
 #' * `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
 #'   [summary.inla_vanilla()] describes.
 #'

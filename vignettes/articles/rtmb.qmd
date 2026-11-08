@@ -448,7 +448,7 @@ Without a gradient the fit calls `logpost`
 `r format(n_grad, big.mark = ",")` times. Both counts grow with the square
 of the number of parameters, so a gradient saves time only when it costs
 less than `r round((n_lp - n_lp_grad) / n_grad, 1)` calls of `logpost`.
-RTMB's costs about that, and its fit takes
+RTMB's costs less than that, and its fit takes
 `r round(seconds[["RTMB"]] / seconds[["R"]], 1)` times as long as R's. The
 speed comes from C++, and a hand-written gradient in C++ is the fastest of
 all.
@@ -487,11 +487,10 @@ agree to rounding error, and so is the fit with RTMB's Hessian. The
 skew-normal marginals are the same on every route: they are scanned around
 the mode and do not depend on the VB correction. Their differences, about a
 ten-thousandth of a posterior SD, come from where `nlminb()` stopped (see
-the next section). The gradient changes the VB correction. With it, the VB
-mean is exact when the log-posterior is a polynomial of degree six in
-whitened coordinates, against degree four from values of `logpost` alone
-(see the section on gradients and Hessians in `?inla_vanilla`). Here the
-fits without a gradient
+the next section). The gradient changes the VB correction, which then takes
+its step from the gradient at 2m + 1 = 79 points instead of from `logpost` at
+(m + 1)(m + 2) = 1,640 points (see the section on the VB correction in
+`?inla_vanilla`). Here the fits without a gradient
 move the VB mean by up to `r signif(vb_gap, 1)` posterior SDs and the log
 marginal likelihood by `r signif(logml_gap, 1)`. That is small, but it
 carries over to everything built on the VB mean: the log marginal
@@ -525,7 +524,7 @@ saved <- 1 - tm[["total", "RTMB and Hessian"]] / tm[["total", "RTMB"]]
 
 The marginals stage is `r round(marg_speedup, 1)` times as fast. A
 Hessian costs about as much as m gradients, so it saves about half of the
-volume correction, and the VB correction, the slowest stage, uses none. The
+volume correction, the slowest stage, and the VB correction uses none. The
 whole fit takes `r round(100 * saved)`% less time. The saving is larger
 where the Hessian is sparse, as when each of many parameters enters only a
 few terms of the log-posterior: a Hessian tape then costs far fewer than m
