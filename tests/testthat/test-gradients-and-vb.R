@@ -411,6 +411,45 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
   expect_lt(max(abs(2 * g_lp_half - g_lp - g_ref)), 3e-7)
 })
 
+test_that("the shared gradient step comes before the per-parameter progress line", {
+  mod <- poisson_regression_model(3)
+  ctrl <- vanilla_control(list())
+  lap <- laplace_fit(mod$logpost, mod$grad, mod$init, ctrl)
+  m <- length(lap$mode)
+  events <- character()
+  n_gr <- 0L
+  gr <- function(x) {
+    n_gr <<- n_gr + 1L
+    mod$grad(x)
+  }
+  log_event <- function(e) events <<- c(events, paste0(e, ":", n_gr))
+  # The per-parameter line starts once the shared step's calls are done, so
+  # its estimate of the time left does not charge them to the first parameter
+  fit_marginals(
+    mod$logpost,
+    gr,
+    lap,
+    ctrl,
+    tick = function() log_event("tick"),
+    start = log_event
+  )
+  expect_identical(events[1:2], c("shared:0", paste0("scans:", 4 * m + 1)))
+  expect_identical(sum(startsWith(events, "tick")), m)
+
+  # Without a gradient there is no shared step
+  events <- character()
+  fit_marginals(
+    mod$logpost,
+    NULL,
+    lap,
+    ctrl,
+    tick = function() log_event("tick"),
+    start = log_event
+  )
+  expect_identical(sub(":.*", "", events[1]), "scans")
+  expect_false(any(startsWith(events, "shared")))
+})
+
 test_that("the volume correction vanishes for an exactly Gaussian log-posterior", {
   mod <- gaussian_model()
   ctrl <- vanilla_control(list())

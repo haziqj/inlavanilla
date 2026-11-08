@@ -279,6 +279,7 @@ fit_marginals <- function(
   lap,
   ctrl,
   tick = function() NULL,
+  start = function(step) NULL,
   he = NULL,
   width = "trace",
   tk_fallback = FALSE
@@ -297,12 +298,16 @@ fit_marginals <- function(
   } else {
     NULL
   }
-  # The linear width term from the gradient, for all the parameters at once
+  # The linear width term from the gradient, for all the parameters at once.
+  # It has a progress line of its own, ahead of the per-parameter one, whose
+  # estimate of the time left would otherwise charge it to the first parameter.
   g1_grad <- if (!is.null(gr) && (width == "trace" || m == 1L)) {
+    start("shared")
     gamma1_grad(gr, mode, Vscan, principal_axes(Sigma))
   } else {
     NULL
   }
+  start("scans")
 
   out <- matrix(
     NA_real_,

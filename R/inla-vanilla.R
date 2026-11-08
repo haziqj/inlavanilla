@@ -792,16 +792,27 @@ vanilla_fit <- function(
   t0 <- elapsed()
   t_starts[["marginals"]] <- t0
   if (marginals == "skewnormal") {
-    progress_start(
-      prog,
-      paste0(
-        "Fitting ",
-        pb_item,
-        " skew-normal marginal",
-        if (m == 1L) "" else "s"
-      ),
-      total = m
-    )
+    start_marginals <- function(step) {
+      progress_close(prog)
+      if (step == "shared") {
+        stage_calls()
+        progress_start(
+          prog,
+          "Computing the volume corrections, {cli::pb_current} calls"
+        )
+      } else {
+        progress_start(
+          prog,
+          paste0(
+            "Fitting ",
+            pb_item,
+            " skew-normal marginal",
+            if (m == 1L) "" else "s"
+          ),
+          total = m
+        )
+      }
+    }
     mar <- with_context(
       "fitting the skew-normal marginals",
       fit_marginals(
@@ -810,6 +821,7 @@ vanilla_fit <- function(
         lap,
         ctrl,
         tick = function() progress_tick(prog),
+        start = start_marginals,
         he = he,
         width = width,
         tk_fallback = tk_fallback
