@@ -12,9 +12,9 @@
 #     Gauss-Hermite quadrature (nodes by the Golub-Welsch method);
 # (f) vb = FALSE against vb = TRUE;
 # (g) the nlminb() fallback of vb_correct();
-# (h) a supplied Hessian: fits agree with those from the gradient alone,
-#     gamma1_hess() agrees with gamma1_grad() and the exact slope, and
-#     nlminb() reaches a badly scaled mode without a restart.
+# (h) a supplied Hessian: fits agree with those from the gradient alone, the
+#     default marginals do not call it, and nlminb() reaches a badly scaled
+#     mode without a restart.
 #
 # The reference VB solution solves E_q[grad log p(mu + L z)] = 0 for mu, with
 # z ~ N(0, I) and L L' = fit$cov held fixed, as the package does. Location
@@ -269,21 +269,23 @@ test_that("fits with and without a gradient agree on a two-parameter normal mode
   expect_lt(d[["mode"]], 5e-7) # observed 1.4e-7 SDs
   expect_lt(d[["cov"]], 7e-6) # observed 2.3e-6
   expect_lt(d[["logml_laplace"]], 1.2e-6) # observed 4.0e-7
-  expect_lt(d[["summary"]], 7e-6) # observed 2.4e-6 SDs
-  expect_lt(d[["summary_table"]], 7e-6) # observed 2.4e-6 SDs
+  # The summaries differ by the forward-difference error of gamma1_lp(), which
+  # gamma1_grad() does not have.
+  expect_lt(d[["summary"]], 1e-3) # observed 3.3e-4 SDs
+  expect_lt(d[["summary_table"]], 1e-3) # observed 3.3e-4 SDs
   # The skew-normal parameters trade off against each other where the shape
   # is weakly identified (alpha = -0.3 for mu), so they move more than the
   # summaries they produce.
-  expect_lt(d[["xi"]], 8e-5) # observed 2.7e-5 SDs
-  expect_lt(d[["omega"]], 2e-5) # observed 6.5e-6
-  expect_lt(d[["alpha"]], 1e-4) # observed 3.8e-5
-  # Both volume-correction routes are exercised, and agree
+  expect_lt(d[["xi"]], 6e-4) # observed 2.1e-4 SDs
+  expect_lt(d[["omega"]], 1.2e-4) # observed 3.8e-5
+  expect_lt(d[["alpha"]], 1e-4) # observed 3.9e-5
+  # Both volume-correction routes are exercised, and agree to that error
   expect_lt(
     max(abs(
       fit_fd$diagnostics$marginals$gamma1 -
         fit_grad$diagnostics$marginals$gamma1
     )),
-    1e-6 # observed 3.4e-7
+    7e-4 # observed 2.3e-4
   )
 
   # VB stage. Without a gradient the expected gradient comes from
@@ -311,22 +313,22 @@ test_that("fits with and without a gradient agree on a five-parameter logistic r
   # Without a gradient nlminb() differences the objective itself and stops
   # slightly further from the mode. These values do not move when the data
   # are perturbed by 1e-14 relative, so they are not rounding luck, but other
-  # datasets (seeds 1 to 30) gave up to 7e-5 SDs in the mode and 2e-5 in the
-  # summaries.
+  # datasets (seeds 1 to 30) gave up to 7e-5 SDs in the mode.
   expect_lt(d[["mode"]], 2e-5) # observed 5.7e-6 SDs
   expect_lt(d[["cov"]], 8.5e-6) # observed 2.8e-6
   expect_lt(d[["logml_laplace"]], 6e-6) # observed 1.9e-6
-  expect_lt(d[["summary"]], 8e-6) # observed 2.6e-6 SDs
-  expect_lt(d[["summary_table"]], 8e-6) # observed 2.6e-6 SDs
-  expect_lt(d[["xi"]], 1.3e-6) # observed 4.2e-7 SDs
-  expect_lt(d[["omega"]], 3e-6) # observed 1.0e-6
-  expect_lt(d[["alpha"]], 9e-6) # observed 2.9e-6
+  # The forward-difference error of gamma1_lp(), as above
+  expect_lt(d[["summary"]], 1.2e-3) # observed 3.7e-4 SDs
+  expect_lt(d[["summary_table"]], 1.2e-3) # observed 3.7e-4 SDs
+  expect_lt(d[["xi"]], 7e-4) # observed 2.1e-4 SDs
+  expect_lt(d[["omega"]], 1.5e-4) # observed 4.9e-5
+  expect_lt(d[["alpha"]], 1e-4) # observed 3.4e-5
   expect_lt(
     max(abs(
       fit_fd$diagnostics$marginals$gamma1 -
         fit_grad$diagnostics$marginals$gamma1
     )),
-    4e-6 # observed 1.3e-6
+    7e-4 # observed 2.3e-4
   )
   # VB stage, from log-posterior values without a gradient, as above, for a
   # shift of 0.40 SDs
@@ -353,9 +355,19 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
     -0.5 * determinant(H[-j, -j, drop = FALSE])$modulus[[1]]
   }
 
-  g_grad <- g_lp <- g_ref <- g_grad_half <- g_lp_half <- numeric(m)
+  # The gradient route takes every parameter at once. The same with half the
+  # step, and the log-posterior route with the forward difference over half
+  # the distance.
+  g_grad <- gamma1_grad(mod$grad, lap$mode, v_scan, principal_axes(lap$Sigma))
+  g_grad_half <- gamma1_grad(
+    mod$grad,
+    lap$mode,
+    v_scan,
+    principal_axes(lap$Sigma),
+    h = 0.05
+  )
+  g_lp <- g_ref <- g_lp_half <- numeric(m)
   for (j in seq_len(m)) {
-    g_grad[j] <- gamma1_grad(j, mod$grad, lap$mode, v_scan, lap$L)
     g_lp[j] <- gamma1_lp(
       j,
       mod$logpost,
@@ -364,15 +376,6 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
       v_scan,
       lap$L,
       tr0
-    )
-    # The same, with the forward difference over half the distance
-    g_grad_half[j] <- gamma1_grad(
-      j,
-      mod$grad,
-      lap$mode,
-      v_scan,
-      lap$L,
-      d_outer = 0.005
     )
     g_lp_half[j] <- gamma1_lp(
       j,
@@ -389,23 +392,62 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
 
   # The model is skewed enough for the correction to matter
   expect_gt(max(abs(g_ref)), 0.1)
-  # The two routes agree with each other closely ...
-  expect_lt(max(abs(g_grad - g_lp)), 1e-6) # observed 2.0e-7
-  # ... and with the exact slope to within the O(d_outer) error of a forward
-  # difference 0.01 SDs from the mode (observed 2.3e-4 to 2.4e-4 for every
-  # parameter, both routes)
-  expect_lt(max(abs(g_grad - g_ref)), 6e-4)
+  # The gradient route is within the O(h^2) truncation of second differences
+  # 0.1 SDs wide of the exact slope (observed 3.0e-5), and the log-posterior
+  # route within the O(d_outer) error of a forward difference 0.01 SDs from the
+  # mode (observed 2.4e-4), which is also what separates the two
+  expect_lt(max(abs(g_grad - g_ref)), 5e-5)
   expect_lt(max(abs(g_lp - g_ref)), 6e-4)
-  # That error is the first-order truncation and nothing else: halving
-  # d_outer halves it (observed ratios 2.000 to 2.001), and the Richardson
-  # extrapolation 2 gamma1(d / 2) - gamma1(d) removes it, leaving 1.7e-7
-  # (gradient route) and 7.4e-8 (log-posterior route) against values up to
-  # 0.17. A constant bias in either route, such as a wrong baseline at the
-  # mode, would survive the extrapolation.
-  expect_lt(max(abs((g_grad - g_ref) / (g_grad_half - g_ref) - 2)), 0.01)
+  expect_lt(max(abs(g_grad - g_lp)), 6e-4)
+  # Each error is its truncation and nothing else. Halving h quarters the first
+  # (observed ratios 4.000 to 4.001), halving d_outer halves the second
+  # (observed 2.000 to 2.001), and Richardson extrapolation removes them,
+  # leaving 8.1e-10 (gradient route) and 7.4e-8 (log-posterior route) against
+  # values up to 0.17. A constant bias in either route, such as a wrong
+  # baseline at the mode, would survive the extrapolation.
+  expect_lt(max(abs((g_grad - g_ref) / (g_grad_half - g_ref) - 4)), 0.01)
   expect_lt(max(abs((g_lp - g_ref) / (g_lp_half - g_ref) - 2)), 0.01)
-  expect_lt(max(abs(2 * g_grad_half - g_grad - g_ref)), 5e-7)
+  expect_lt(max(abs((4 * g_grad_half - g_grad) / 3 - g_ref)), 5e-9)
   expect_lt(max(abs(2 * g_lp_half - g_lp - g_ref)), 3e-7)
+})
+
+test_that("the shared gradient step comes before the per-parameter progress line", {
+  mod <- poisson_regression_model(3)
+  ctrl <- vanilla_control(list())
+  lap <- laplace_fit(mod$logpost, mod$grad, mod$init, ctrl)
+  m <- length(lap$mode)
+  events <- character()
+  n_gr <- 0L
+  gr <- function(x) {
+    n_gr <<- n_gr + 1L
+    mod$grad(x)
+  }
+  log_event <- function(e) events <<- c(events, paste0(e, ":", n_gr))
+  # The per-parameter line starts once the shared step's calls are done, so
+  # its estimate of the time left does not charge them to the first parameter
+  fit_marginals(
+    mod$logpost,
+    gr,
+    lap,
+    ctrl,
+    tick = function() log_event("tick"),
+    start = log_event
+  )
+  expect_identical(events[1:2], c("shared:0", paste0("scans:", 4 * m + 1)))
+  expect_identical(sum(startsWith(events, "tick")), m)
+
+  # Without a gradient there is no shared step
+  events <- character()
+  fit_marginals(
+    mod$logpost,
+    NULL,
+    lap,
+    ctrl,
+    tick = function() log_event("tick"),
+    start = log_event
+  )
+  expect_identical(sub(":.*", "", events[1]), "scans")
+  expect_false(any(startsWith(events, "shared")))
 })
 
 test_that("the volume correction vanishes for an exactly Gaussian log-posterior", {
@@ -416,11 +458,16 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
     sds <- sqrt(diag(lap$Sigma))
     v_scan <- sweep(lap$Sigma, 2, sds, "/")
     tr0 <- whitened_trace_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+    expect_lt(
+      max(abs(gamma1_grad(
+        mod$grad,
+        lap$mode,
+        v_scan,
+        principal_axes(lap$Sigma)
+      ))),
+      1e-11 # observed 9.3e-15, rounding in differences of the gradient
+    )
     for (j in 1:3) {
-      expect_lt(
-        abs(gamma1_grad(j, mod$grad, lap$mode, v_scan, lap$L)),
-        1e-8 # observed 1.7e-9, rounding in differences of the gradient
-      )
       expect_lt(
         abs(gamma1_lp(
           j,
@@ -1614,24 +1661,23 @@ test_that("an oversized step is cut, and a fallback that stops short is rerun", 
 
 test_that("fits with a Hessian agree with fits from the gradient alone", {
   # The Hessian route differs only in the derivatives it takes: nlminb()'s
-  # Newton steps, the Hessian at the mode and the volume correction. The
-  # gradient route takes them by central differences of the gradient, to
-  # about 1e-8 relative, and nlminb() stops it 1e-6 SDs short of the mode
-  # (normal model), so the fits differ by those errors.
+  # Newton steps and the Hessian at the mode. The gradient route takes the
+  # latter by central differences of the gradient, to about 1e-8 relative, and
+  # nlminb() stops it 1e-6 SDs short of the mode (normal model), so the fits
+  # differ by those errors.
   tol <- list(
     # observed: normal model, then Poisson regression
     mode = 5e-6, # 1.4e-6 and 1.8e-7 SDs
     cov = 1.5e-6, # 4.4e-7 and 4.6e-8
-    xi = 1.5e-5, # 5.2e-6 and 2.2e-8 SDs
-    omega = 4e-6, # 1.3e-6 and 2.2e-8
-    alpha = 2e-5, # 7.1e-6 and 7.7e-8
-    summary = 1.5e-6, # 4.9e-7 and 4.2e-8 SDs
+    xi = 1.5e-5, # 5.2e-6 and 2.8e-8 SDs
+    omega = 4e-6, # 1.3e-6 and 1.9e-8
+    alpha = 2e-5, # 7.1e-6 and 6.9e-8
+    summary = 1.5e-6, # 4.9e-7 and 2.6e-8 SDs
     logml = 2e-8, # 5.7e-9 and 3.1e-10
     logml_laplace = 3e-7, # 1.0e-7 and 2.6e-9
     mean_vb = 4e-7 # 1.3e-7 and 1.1e-8 SDs
   )
   for (mod in list(normal_model(), poisson_regression_model(3))) {
-    m <- length(mod$init)
     fit_grad <- inla_vanilla(
       mod$logpost,
       mod$init,
@@ -1655,18 +1701,12 @@ test_that("fits with a Hessian agree with fits from the gradient alone", {
         fit_hess$diagnostics$marginals$gamma1 -
           fit_grad$diagnostics$marginals$gamma1
       )),
-      5e-8 # observed 7.5e-9 and 1.4e-8
+      5e-8 # observed 7.5e-9 and 3.2e-9
     )
-    # One Hessian per marginal, one at the mode and some in nlminb(). The
-    # volume correction no longer takes 2m + 2 gradient calls per marginal,
-    # and the mode search and the check of the Hessian change the count by a
-    # few more.
-    expect_gt(fit_hess$counts[["hess"]], m + 1)
+    # One Hessian at the mode and some in nlminb()
+    expect_gt(fit_hess$counts[["hess"]], 1)
     expect_identical(fit_grad$counts[["hess"]], 0L)
-    expect_lt(
-      fit_hess$counts[["grad"]],
-      fit_grad$counts[["grad"]] - m * (2 * m + 2) + 8
-    )
+    n_hess <- fit_hess$counts[["hess"]]
 
     # The Laplace approximation alone: only the mode stage uses the Hessian
     fit_grad <- inla_vanilla(
@@ -1691,65 +1731,8 @@ test_that("fits with a Hessian agree with fits from the gradient alone", {
       max(abs(fit_hess$cov - fit_grad$cov) / outer(sds, sds)),
       1.5e-6 # observed 4.4e-7 and 4.6e-8
     )
-  }
-})
-
-test_that("gamma1_hess() agrees with gamma1_grad() and with the exact slope", {
-  mod <- poisson_regression_model(3)
-  lap <- laplace_fit(
-    mod$logpost,
-    mod$grad,
-    mod$init,
-    vanilla_control(list()),
-    he = mod$hessian
-  )
-  m <- length(lap$mode)
-  sds <- sqrt(diag(lap$Sigma))
-  v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  # The reference of the test of gamma1_grad() and gamma1_lp() above
-  log_vol <- function(j, t) {
-    H <- -mod$hessian(lap$mode + t * v_scan[, j])
-    -0.5 * determinant(H[-j, -j, drop = FALSE])$modulus[[1]]
-  }
-  g_hess <- g_hess_half <- g_grad <- g_ref <- numeric(m)
-  for (j in seq_len(m)) {
-    g_hess[j] <- gamma1_hess(j, mod$hessian, lap$mode, v_scan, lap$Sigma)
-    g_hess_half[j] <- gamma1_hess(
-      j,
-      mod$hessian,
-      lap$mode,
-      v_scan,
-      lap$Sigma,
-      d_outer = 0.005
-    )
-    g_grad[j] <- gamma1_grad(j, mod$grad, lap$mode, v_scan, lap$L)
-    g_ref[j] <- (log_vol(j, 1e-4) - log_vol(j, -1e-4)) / 2e-4
-  }
-  expect_gt(max(abs(g_ref)), 0.1)
-  expect_lt(max(abs(g_hess - g_grad)), 5e-9) # observed 1.1e-9
-  # The O(d_outer) error of the forward difference and nothing else: halving
-  # d_outer halves it (observed ratios 1.9996 to 2.001), and the Richardson
-  # extrapolation leaves 1.2e-7 against values up to 0.17
-  expect_lt(max(abs((g_hess - g_ref) / (g_hess_half - g_ref) - 2)), 0.01)
-  expect_lt(max(abs(2 * g_hess_half - g_hess - g_ref)), 4e-7)
-
-  # For an exactly Gaussian log-posterior it vanishes
-  mod <- gaussian_model()
-  he <- function(x) -mod$precision
-  lap <- laplace_fit(
-    mod$logpost,
-    mod$grad,
-    mod$init,
-    vanilla_control(list()),
-    he = he
-  )
-  sds <- sqrt(diag(lap$Sigma))
-  v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  for (j in 1:3) {
-    expect_lt(
-      abs(gamma1_hess(j, he, lap$mode, v_scan, lap$Sigma)),
-      1e-12 # observed 4.4e-14
-    )
+    # So the VB correction and the default marginals add no Hessian calls
+    expect_identical(fit_hess$counts[["hess"]], n_hess)
   }
 })
 

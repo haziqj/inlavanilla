@@ -146,8 +146,9 @@
 #' With `grad`, every stage is more accurate. The fit is also faster when a
 #' gradient call costs about as much as a `logpost` call, as a hand-written
 #' gradient usually does, since it then makes far fewer calls in all. A
-#' gradient by automatic differentiation (RTMB, TMB) costs about two, and the
-#' fit is still somewhat faster than without one. The default VB correction,
+#' gradient by automatic differentiation (RTMB, TMB) costs about two, and
+#' beyond a handful of parameters the fit is still several times faster than
+#' without one (four times at m = 39). The default VB correction,
 #' `vb = "onestep"`, takes 2m + 1 gradient calls, about as many as one numerical
 #' Hessian, and `vb = "full"` takes at most (m + 1)(m + 2) + 1 per sweep, usually
 #' about four sweeps. Beyond a handful of parameters the marginals are the
@@ -157,15 +158,16 @@
 #' `marginals = "gaussian"` saves the calls of the scans.
 #'
 #' `hess` is optional too, and needs `grad`, as in [stats::nlminb()]. With
-#' it, [stats::nlminb()] takes Newton steps to the mode, the Hessian at the
-#' mode is the supplied one, and the volume correction of each skew-normal
-#' marginal takes one `hess` call instead of 2m + 2 `grad` calls. The VB
-#' correction and the scans do not use it. The fit is the one `grad` alone
-#' gives, to the error of its finite differences (about 1e-8, relative),
-#' except that the mode is found more precisely, so `hess` saves time rather
-#' than adding accuracy. On test models with an automatic-differentiation
-#' Hessian (RTMB) the fits took 13% to 35% less time, the most where the
-#' Hessian was sparse.
+#' it, [stats::nlminb()] takes Newton steps to the mode, and the Hessian at
+#' the mode is the supplied one. The VB correction does not use it, nor do the
+#' default marginals, whose volume correction takes 4m + 1 `grad` calls for all
+#' the parameters together, where a Hessian each would cost far more.
+#' `width = "cmp"` and `width = "tk"` do use it. The fit is the one `grad`
+#' alone gives, to the error of its finite differences (about 1e-8, relative),
+#' except that the mode is found more precisely. A dense Hessian costs about m
+#' gradients, so this takes a little longer: a structural equation model with
+#' 39 parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
+#' with it and 0.17 s without.
 #'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -317,9 +319,9 @@
 #'   (see the section on the width term). With m parameters and
 #'   `n_grid` scan points, per parameter:
 #'   * `"trace"` (the default): its linear term \eqn{\gamma_j' t}{gamma_j' t},
-#'     as in INLAvaan, from 2m + 2 `grad` calls (one `hess` call with `hess`,
-#'     2m + 5 `logpost` calls without `grad`), on top of the `n_grid - 1`
-#'     `logpost` calls of the scan.
+#'     as in INLAvaan, from 4 `grad` calls, and one more for all the parameters
+#'     together (2m + 5 `logpost` calls without `grad`), on top of the
+#'     `n_grid - 1` `logpost` calls of the scan.
 #'   * `"cmp"`: the exact width term along the same straight scan, from the
 #'     Hessian of the other parameters at each scan point: about
 #'     `n_grid - 1` times 2(m - 1) `grad` calls (`n_grid - 1` `hess` calls
@@ -790,16 +792,27 @@ vanilla_fit <- function(
   t0 <- elapsed()
   t_starts[["marginals"]] <- t0
   if (marginals == "skewnormal") {
-    progress_start(
-      prog,
-      paste0(
-        "Fitting ",
-        pb_item,
-        " skew-normal marginal",
-        if (m == 1L) "" else "s"
-      ),
-      total = m
-    )
+    start_marginals <- function(step) {
+      progress_close(prog)
+      if (step == "shared") {
+        stage_calls()
+        progress_start(
+          prog,
+          "Computing the volume corrections, {cli::pb_current} calls"
+        )
+      } else {
+        progress_start(
+          prog,
+          paste0(
+            "Fitting ",
+            pb_item,
+            " skew-normal marginal",
+            if (m == 1L) "" else "s"
+          ),
+          total = m
+        )
+      }
+    }
     mar <- with_context(
       "fitting the skew-normal marginals",
       fit_marginals(
@@ -808,6 +821,7 @@ vanilla_fit <- function(
         lap,
         ctrl,
         tick = function() progress_tick(prog),
+        start = start_marginals,
         he = he,
         width = width,
         tk_fallback = tk_fallback

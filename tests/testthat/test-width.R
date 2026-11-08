@@ -262,13 +262,13 @@ test_that("the costlier widths make more calls", {
   n_gr <- vapply(fits_nm, function(f) f$counts[["grad"]], numeric(1))
   expect_lt(n_gr[["trace"]], n_gr[["cmp"]])
   expect_lt(n_gr[["cmp"]], n_gr[["tk"]])
-  # "cmp" replaces the 2m + 2 calls of the trace by 2(m - 1) calls at each
-  # scan point but the mode, per parameter
+  # "cmp" replaces the 4m + 1 calls of the trace, shared by all the parameters,
+  # by 2(m - 1) calls at each scan point but the mode, per parameter
   m <- 2
   n_grid <- length(fits_nm$cmp$scan$z)
   expect_identical(
     n_gr[["cmp"]] - n_gr[["trace"]],
-    m * ((n_grid - 1) * 2 * (m - 1) - (2 * m + 2))
+    m * (n_grid - 1) * 2 * (m - 1) - (4 * m + 1)
   )
 })
 

@@ -68,9 +68,9 @@ the other parameters, the width term
 \code{n_grid} scan points, per parameter:
 \itemize{
 \item \code{"trace"} (the default): its linear term \eqn{\gamma_j' t}{gamma_j' t},
-as in INLAvaan, from 2m + 2 \code{grad} calls (one \code{hess} call with \code{hess},
-2m + 5 \code{logpost} calls without \code{grad}), on top of the \code{n_grid - 1}
-\code{logpost} calls of the scan.
+as in INLAvaan, from 4 \code{grad} calls, and one more for all the parameters
+together (2m + 5 \code{logpost} calls without \code{grad}), on top of the
+\code{n_grid - 1} \code{logpost} calls of the scan.
 \item \code{"cmp"}: the exact width term along the same straight scan, from the
 Hessian of the other parameters at each scan point: about
 \code{n_grid - 1} times 2(m - 1) \code{grad} calls (\code{n_grid - 1} \code{hess} calls
@@ -305,8 +305,9 @@ settle, and the fit says it has not converged (see
 With \code{grad}, every stage is more accurate. The fit is also faster when a
 gradient call costs about as much as a \code{logpost} call, as a hand-written
 gradient usually does, since it then makes far fewer calls in all. A
-gradient by automatic differentiation (RTMB, TMB) costs about two, and the
-fit is still somewhat faster than without one. The default VB correction,
+gradient by automatic differentiation (RTMB, TMB) costs about two, and
+beyond a handful of parameters the fit is still several times faster than
+without one (four times at m = 39). The default VB correction,
 \code{vb = "onestep"}, takes 2m + 1 gradient calls, about as many as one numerical
 Hessian, and \code{vb = "full"} takes at most (m + 1)(m + 2) + 1 per sweep, usually
 about four sweeps. Beyond a handful of parameters the marginals are the
@@ -316,15 +317,16 @@ the skew-normal marginals do not depend on it;
 \code{marginals = "gaussian"} saves the calls of the scans.
 
 \code{hess} is optional too, and needs \code{grad}, as in \code{\link[stats:nlminb]{stats::nlminb()}}. With
-it, \code{\link[stats:nlminb]{stats::nlminb()}} takes Newton steps to the mode, the Hessian at the
-mode is the supplied one, and the volume correction of each skew-normal
-marginal takes one \code{hess} call instead of 2m + 2 \code{grad} calls. The VB
-correction and the scans do not use it. The fit is the one \code{grad} alone
-gives, to the error of its finite differences (about 1e-8, relative),
-except that the mode is found more precisely, so \code{hess} saves time rather
-than adding accuracy. On test models with an automatic-differentiation
-Hessian (RTMB) the fits took 13\% to 35\% less time, the most where the
-Hessian was sparse.
+it, \code{\link[stats:nlminb]{stats::nlminb()}} takes Newton steps to the mode, and the Hessian at
+the mode is the supplied one. The VB correction does not use it, nor do the
+default marginals, whose volume correction takes 4m + 1 \code{grad} calls for all
+the parameters together, where a Hessian each would cost far more.
+\code{width = "cmp"} and \code{width = "tk"} do use it. The fit is the one \code{grad}
+alone gives, to the error of its finite differences (about 1e-8, relative),
+except that the mode is found more precisely. A dense Hessian costs about m
+gradients, so this takes a little longer: a structural equation model with
+39 parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
+with it and 0.17 s without.
 
 A supplied \code{grad} is checked against finite differences at \code{init}, and
 its Jacobian at the mode is checked for symmetry, with a warning if either

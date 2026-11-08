@@ -1,5 +1,14 @@
 # inlavanilla 0.1.1
 
+* With a gradient, the volume correction of the skew-normal marginals now takes
+  4m + 1 gradient calls for all m parameters together, against 2m + 2 for each
+  parameter, from second differences of the gradient along the principal axes
+  of the covariance. A spatial factor model with 82 parameters, whose 3,078
+  latent values RTMB integrates out, went from 757 s to 193 s. The differences
+  are central, so the correction is also closer to the exact slope (3e-5
+  against 2.4e-4 on a test model), and the marginals move by a few
+  ten-thousandths of a posterior SD. Fits without a gradient are unchanged.
+
 * The VB mean correction now takes one Newton step by default, `vb =
   "onestep"`. With a gradient it costs 2m + 1 gradient calls, about one
   numerical Hessian, against usually four sweeps of up to (m + 1)(m + 2) + 1,
@@ -37,16 +46,15 @@
 
 * `inla_vanilla()` takes the Hessian of `logpost` as an optional `hess`,
   after `grad`, as `nlminb()` does. With it, `nlminb()` takes Newton steps to
-  the mode, the Hessian at the mode is the supplied one, and the volume
-  correction of each skew-normal marginal takes one `hess` call instead of
-  2m + 2 `grad` calls. RTMB gives it with the gradient, as `obj$he`. The fit
-  is the same, except that the mode is found more precisely, and on test
-  models it took 13% to 35% less time. A supplied `hess` is checked at the
-  mode against central differences of `grad`, and `fit$counts` counts its
-  calls.
+  the mode, and the Hessian at the mode is the supplied one. RTMB gives it with
+  the gradient, as `obj$he`. The fit is the same, except that the mode is found
+  more precisely, for a little more time (8% on a model with 39 parameters).
+  The default marginals do not use it, but `width = "cmp"` and `"tk"` do. A
+  supplied `hess` is checked at the mode against central differences of `grad`,
+  and `fit$counts` counts its calls.
 * The website article "Gradients with RTMB" is now "Gradients and Hessians
   with RTMB". It passes RTMB's Hessian too, and shows where the fit uses it,
-  the time it saves and the more precise mode it finds.
+  what it costs and the more precise mode it finds.
 * The website article "Diagnostic classification models" is now "Cognitive
   diagnostic models".
 

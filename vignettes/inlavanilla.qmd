@@ -477,7 +477,7 @@ The articles [Speeding up with Rcpp](rcpp.html) and
 [Gradients and Hessians with RTMB](rtmb.html) work through both routes for a
 structural equation model with 39 parameters. C++ makes each call about ten
 times faster than R. A gradient from RTMB makes the fit more accurate and
-somewhat faster than R, and its Hessian makes it faster still.
+several times faster than R.
 
 ## References
 
