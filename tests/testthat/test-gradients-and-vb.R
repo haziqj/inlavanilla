@@ -12,9 +12,9 @@
 #     Gauss-Hermite quadrature (nodes by the Golub-Welsch method);
 # (f) vb = FALSE against vb = TRUE;
 # (g) the nlminb() fallback of vb_correct();
-# (h) a supplied Hessian: fits agree with those from the gradient alone,
-#     gamma1_hess() agrees with gamma1_grad() and the exact slope, and
-#     nlminb() reaches a badly scaled mode without a restart.
+# (h) a supplied Hessian: fits agree with those from the gradient alone, the
+#     default marginals do not call it, and nlminb() reaches a badly scaled
+#     mode without a restart.
 #
 # The reference VB solution solves E_q[grad log p(mu + L z)] = 0 for mu, with
 # z ~ N(0, I) and L L' = fit$cov held fixed, as the package does. Location
@@ -1622,25 +1622,23 @@ test_that("an oversized step is cut, and a fallback that stops short is rerun", 
 
 test_that("fits with a Hessian agree with fits from the gradient alone", {
   # The Hessian route differs only in the derivatives it takes: nlminb()'s
-  # Newton steps, the Hessian at the mode and the volume correction. The
-  # gradient route takes them by central differences of the gradient, to
-  # about 1e-8 relative, and nlminb() stops it 1e-6 SDs short of the mode
-  # (normal model), so the fits differ by those errors. The marginals differ
-  # by more, the forward-difference error of gamma1_hess().
+  # Newton steps and the Hessian at the mode. The gradient route takes the
+  # latter by central differences of the gradient, to about 1e-8 relative, and
+  # nlminb() stops it 1e-6 SDs short of the mode (normal model), so the fits
+  # differ by those errors.
   tol <- list(
     # observed: normal model, then Poisson regression
     mode = 5e-6, # 1.4e-6 and 1.8e-7 SDs
     cov = 1.5e-6, # 4.4e-7 and 4.6e-8
-    xi = 8e-4, # 2.4e-4 and 2.8e-4 SDs
-    omega = 1.2e-4, # 3.8e-5 and 3.4e-5
-    alpha = 2.4e-4, # 2.1e-5 and 7.8e-5
-    summary = 1e-3, # 3.3e-4 and 2.8e-4 SDs
+    xi = 1.5e-5, # 5.2e-6 and 2.8e-8 SDs
+    omega = 4e-6, # 1.3e-6 and 1.9e-8
+    alpha = 2e-5, # 7.1e-6 and 6.9e-8
+    summary = 1.5e-6, # 4.9e-7 and 2.6e-8 SDs
     logml = 2e-8, # 5.7e-9 and 3.1e-10
     logml_laplace = 3e-7, # 1.0e-7 and 2.6e-9
     mean_vb = 4e-7 # 1.3e-7 and 1.1e-8 SDs
   )
   for (mod in list(normal_model(), poisson_regression_model(3))) {
-    m <- length(mod$init)
     fit_grad <- inla_vanilla(
       mod$logpost,
       mod$init,
@@ -1664,17 +1662,12 @@ test_that("fits with a Hessian agree with fits from the gradient alone", {
         fit_hess$diagnostics$marginals$gamma1 -
           fit_grad$diagnostics$marginals$gamma1
       )),
-      8e-4 # observed 2.3e-4 and 2.5e-4
+      5e-8 # observed 7.5e-9 and 3.2e-9
     )
-    # One Hessian per marginal, one at the mode and some in nlminb(). The
-    # volume correction no longer takes its 4m + 1 gradient calls, and the
-    # mode search and the check of the Hessian change the count by a few more.
-    expect_gt(fit_hess$counts[["hess"]], m + 1)
+    # One Hessian at the mode and some in nlminb()
+    expect_gt(fit_hess$counts[["hess"]], 1)
     expect_identical(fit_grad$counts[["hess"]], 0L)
-    expect_lt(
-      fit_hess$counts[["grad"]],
-      fit_grad$counts[["grad"]] - (4 * m + 1) + 8
-    )
+    n_hess <- fit_hess$counts[["hess"]]
 
     # The Laplace approximation alone: only the mode stage uses the Hessian
     fit_grad <- inla_vanilla(
@@ -1699,66 +1692,8 @@ test_that("fits with a Hessian agree with fits from the gradient alone", {
       max(abs(fit_hess$cov - fit_grad$cov) / outer(sds, sds)),
       1.5e-6 # observed 4.4e-7 and 4.6e-8
     )
-  }
-})
-
-test_that("gamma1_hess() agrees with gamma1_grad() and with the exact slope", {
-  mod <- poisson_regression_model(3)
-  lap <- laplace_fit(
-    mod$logpost,
-    mod$grad,
-    mod$init,
-    vanilla_control(list()),
-    he = mod$hessian
-  )
-  m <- length(lap$mode)
-  sds <- sqrt(diag(lap$Sigma))
-  v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  # The reference of the test of gamma1_grad() and gamma1_lp() above
-  log_vol <- function(j, t) {
-    H <- -mod$hessian(lap$mode + t * v_scan[, j])
-    -0.5 * determinant(H[-j, -j, drop = FALSE])$modulus[[1]]
-  }
-  g_grad <- gamma1_grad(mod$grad, lap$mode, v_scan, principal_axes(lap$Sigma))
-  g_hess <- g_hess_half <- g_ref <- numeric(m)
-  for (j in seq_len(m)) {
-    g_hess[j] <- gamma1_hess(j, mod$hessian, lap$mode, v_scan, lap$Sigma)
-    g_hess_half[j] <- gamma1_hess(
-      j,
-      mod$hessian,
-      lap$mode,
-      v_scan,
-      lap$Sigma,
-      d_outer = 0.005
-    )
-    g_ref[j] <- (log_vol(j, 1e-4) - log_vol(j, -1e-4)) / 2e-4
-  }
-  expect_gt(max(abs(g_ref)), 0.1)
-  # They differ by the forward-difference error of gamma1_hess()
-  expect_lt(max(abs(g_hess - g_grad)), 6e-4) # observed 2.5e-4
-  # The O(d_outer) error of the forward difference and nothing else: halving
-  # d_outer halves it (observed ratios 1.9996 to 2.001), and the Richardson
-  # extrapolation leaves 1.2e-7 against values up to 0.17
-  expect_lt(max(abs((g_hess - g_ref) / (g_hess_half - g_ref) - 2)), 0.01)
-  expect_lt(max(abs(2 * g_hess_half - g_hess - g_ref)), 4e-7)
-
-  # For an exactly Gaussian log-posterior it vanishes
-  mod <- gaussian_model()
-  he <- function(x) -mod$precision
-  lap <- laplace_fit(
-    mod$logpost,
-    mod$grad,
-    mod$init,
-    vanilla_control(list()),
-    he = he
-  )
-  sds <- sqrt(diag(lap$Sigma))
-  v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  for (j in 1:3) {
-    expect_lt(
-      abs(gamma1_hess(j, he, lap$mode, v_scan, lap$Sigma)),
-      1e-12 # observed 4.4e-14
-    )
+    # So the VB correction and the default marginals add no Hessian calls
+    expect_identical(fit_hess$counts[["hess"]], n_hess)
   }
 })
 

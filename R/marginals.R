@@ -60,20 +60,6 @@ gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
   )
 }
 
-# The correction from one call of the user's Hessian, by a forward difference
-# of `d_outer` posterior SDs from the mode: the whitened trace tr(L' H L) =
-# tr(H Sigma) and the curvature along v_j at mode + d_outer v_j, read off the
-# one matrix. The baselines m and 1 hold exactly, since Sigma is the inverse
-# of the user's Hessian at the mode.
-gamma1_hess <- function(j, he, mode, Vscan, Sigma, d_outer = 0.01) {
-  m <- length(mode)
-  vj <- Vscan[, j]
-  H <- -he(mode + vj * d_outer)
-  tr <- sum(H * Sigma)
-  vHv <- sum(vj * (H %*% vj))
-  -0.5 * (tr - m) / d_outer + 0.5 * (vHv - 1) / d_outer
-}
-
 # The correction from the log-posterior alone, by a forward difference of
 # `d_outer` posterior SDs from the mode. Each whitened curvature is a second
 # difference of the log-posterior, 2m + 5 calls per parameter. Second
@@ -274,10 +260,10 @@ width_slope <- function(z, w) {
 # Laplace marginal of Tierney and Kadane (scan_tk()), heights included. With
 # `tk_fallback`, a parameter whose ridge bend is flagged (above
 # summary_levels$ridge_bend) is scanned by "tk" whatever `width` says. The
-# linear volume correction takes the best route the user's functions allow:
-# gamma1_hess() with a Hessian `he`, gamma1_grad() with a gradient, and
-# gamma1_lp() otherwise. With one parameter there are no other parameters,
-# and the three agree.
+# linear volume correction takes gamma1_grad() with a gradient, whether or not
+# there is a Hessian, because a Hessian per parameter costs far more than the
+# gradients it would save, and gamma1_lp() otherwise. With one parameter there
+# are no other parameters, and the two agree.
 #
 # Returns `sn`, a matrix with a row per parameter (the skew-normal on the
 # theta scale, the diagnostics, and `logC`, the log scale factor that sets
@@ -312,7 +298,7 @@ fit_marginals <- function(
     NULL
   }
   # The linear width term from the gradient, for all the parameters at once
-  g1_grad <- if (!is.null(gr) && is.null(he) && (width == "trace" || m == 1L)) {
+  g1_grad <- if (!is.null(gr) && (width == "trace" || m == 1L)) {
     gamma1_grad(gr, mode, Vscan, principal_axes(Sigma))
   } else {
     NULL
@@ -370,9 +356,7 @@ fit_marginals <- function(
     # the linear route as before.
     use <- if (m == 1L) "trace" else method[[j]]
     if (use == "trace") {
-      g1 <- if (!is.null(he)) {
-        gamma1_hess(j, he, mode, Vscan, Sigma)
-      } else if (is.null(gr)) {
+      g1 <- if (is.null(gr)) {
         gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, tr0)
       } else {
         g1_grad[[j]]
