@@ -64,9 +64,19 @@ gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
 # `d_outer` posterior SDs from the mode. Each whitened curvature is a second
 # difference of the log-posterior, 2m + 5 calls per parameter. Second
 # differences carry a truncation error of their own, so the baselines at the
-# mode (`tr0`, and the curvature along v_j computed here) are taken by the same
-# rule rather than set to m and 1, and the error cancels in the forward
+# mode (`at_mode`, and the curvature along v_j computed here) are taken by the
+# same rule rather than set to m and 1, and the error cancels in the forward
 # difference.
+#
+# The same calls, differenced the other way, give the whitened gradient at
+# mode + d_outer v_j, and from it the direction in which the ridge bends, for
+# scan_bend(). In whitened coordinates the scan direction is a = L[j, ] / s_j,
+# and with T the third derivative at the mode the gradient along the scan is
+#   g(t) = g(0) - t a + t^2 / 2 T(a, a, .) + ...
+# So g(t) - g(0) + t a, without its part along a, is the second-order term
+# that points across the ridge. Returns `gamma1` and `bend_dir`, that
+# direction as a unit vector in whitened coordinates, or NULL if it cannot be
+# found.
 gamma1_lp <- function(
   j,
   lp,
@@ -74,30 +84,41 @@ gamma1_lp <- function(
   lp_max,
   Vscan,
   L,
-  tr0,
+  at_mode,
   d_outer = 0.01,
   h = 1e-2
 ) {
-  m <- length(mode)
   vj <- Vscan[, j]
   th <- mode + vj * d_outer
   f_th <- lp(th)
-  tr <- 0
-  for (k in seq_len(m)) {
-    tr <- tr - fd_curvature(lp, th, L[, k], h, f0 = f_th)
-  }
+  at_th <- whitened_lp(lp, th, f_th, L, h)
   vHv <- -fd_curvature(lp, th, vj, h, f0 = f_th)
   vHv0 <- -fd_curvature(lp, mode, vj, h, f0 = lp_max)
-  -0.5 * (tr - tr0) / d_outer + 0.5 * (vHv - vHv0) / d_outer
+  a <- L[j, ] / sqrt(sum(L[j, ]^2))
+  across <- at_th$grad - at_mode$grad + d_outer * a
+  across <- across - a * sum(a * across)
+  size <- sqrt(sum(across^2))
+  list(
+    gamma1 = -0.5 *
+      (at_th$trace - at_mode$trace) /
+      d_outer +
+      0.5 * (vHv - vHv0) / d_outer,
+    bend_dir = if (is.finite(size) && size > 0) across / size
+  )
 }
 
-# Whitened trace of the precision at the mode by the rule of gamma1_lp().
-whitened_trace_lp <- function(lp, mode, lp_max, L, h = 1e-2) {
+# The whitened trace of the precision at `x`, whose log-posterior is `f_x`, and
+# the whitened gradient there, from the same 2m calls along the columns of L.
+whitened_lp <- function(lp, x, f_x, L, h = 1e-2) {
   tr <- 0
+  grad <- numeric(ncol(L))
   for (k in seq_len(ncol(L))) {
-    tr <- tr - fd_curvature(lp, mode, L[, k], h, f0 = lp_max)
+    up <- lp(x + h * L[, k])
+    down <- lp(x - h * L[, k])
+    tr <- tr - (up - 2 * f_x + down) / h^2
+    grad[k] <- (up - down) / (2 * h)
   }
-  tr
+  list(trace = tr, grad = grad)
 }
 
 # The width term without the linearisation: the volume of the other
@@ -292,9 +313,9 @@ fit_marginals <- function(
   Vscan <- sweep(Sigma, 2, sds, "/")
   z <- seq(-4, 4, length.out = ctrl$n_grid)
 
-  # The trace at the mode for gamma1_lp(), only when some parameter uses it
-  tr0 <- if (is.null(gr) && (width == "trace" || m == 1L)) {
-    whitened_trace_lp(lp, mode, lap$lp_max, L)
+  # The baselines at the mode for gamma1_lp(), only when some parameter uses it
+  at_mode <- if (is.null(gr) && (width == "trace" || m == 1L)) {
+    whitened_lp(lp, mode, lap$lp_max, L)
   } else {
     NULL
   }
@@ -351,7 +372,23 @@ fit_marginals <- function(
         if (is.null(gr)) cmp_height(j, z[i_bend]) else NA_real_
       )
     }
-    bend <- scan_bend(j, lp, gr, lap, Vscan, z[i_bend], raw[i_bend])
+    # Without a gradient the volume correction comes first, because its calls
+    # also say which way the ridge bends
+    g1_lp <- if (!is.null(at_mode)) {
+      gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, at_mode)
+    } else {
+      NULL
+    }
+    bend <- scan_bend(
+      j,
+      lp,
+      gr,
+      lap,
+      Vscan,
+      z[i_bend],
+      raw[i_bend],
+      g1_lp$bend_dir
+    )
     if (tk_fallback && off_level(bend, summary_levels$ridge_bend)) {
       method[[j]] <- "tk"
     }
@@ -361,11 +398,7 @@ fit_marginals <- function(
     # the linear route as before.
     use <- if (m == 1L) "trace" else method[[j]]
     if (use == "trace") {
-      g1 <- if (is.null(gr)) {
-        gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, tr0)
-      } else {
-        g1_grad[[j]]
-      }
+      g1 <- if (is.null(gr)) g1_lp$gamma1 else g1_grad[[j]]
       w <- g1 * z
     } else if (use == "cmp") {
       w <- width_cmp(j, lp, gr, he, lap, Vscan, z, raw)
@@ -442,10 +475,23 @@ unscanned_mass <- function(sn, mode, sds) {
 # gradient is the user's, or one-sided differences in the other coordinates
 # only (m - 1 calls per point, reusing the scan's height), with their bias,
 # half a step times the curvature, removed with the Laplace curvature.
-scan_bend <- function(j, lp, gr, lap, Vscan, t, f_t) {
+#
+# Without a gradient those differences would be about as many calls as the
+# volume correction, for a check that most parameters pass easily. So `dir`,
+# the direction of the bend from gamma1_lp(), is tried first, at one call per
+# point (bend_along()). That gain is a lower bound on the full one, and usually
+# close to it. The differences are taken only when it is above `bend_screen`,
+# so that every value that can reach the flag is the full one.
+scan_bend <- function(j, lp, gr, lap, Vscan, t, f_t, dir = NULL) {
   m <- length(lap$mode)
   if (m < 2L) {
     return(0)
+  }
+  if (is.null(gr) && !is.null(dir)) {
+    along <- bend_along(j, lp, lap, Vscan, t, f_t, dir)
+    if (along <= bend_screen) {
+      return(along)
+    }
   }
   Sigma <- lap$Sigma
   sds <- sqrt(diag(Sigma))
@@ -471,5 +517,28 @@ scan_bend <- function(j, lp, gr, lap, Vscan, t, f_t) {
     }
     gain[k] <- if (all(is.finite(g))) 0.5 * sum(g * (C %*% g)) else Inf
   }
+  max(gain)
+}
+
+# Below this ridge bend, the gain along one direction is reported without
+# the full gradient (scan_bend()). It was the flag level until October 2026:
+# in the normal mean with an unknown SD a bend of 0.1 is a marginal SD 4% too
+# small (lab/bend-threshold.md). A bend at the flag level escapes the screen
+# only if the direction holds less than 40% of its gain, and over 351
+# parameters of 28 models one flagged bend did (lab/bend-screen.R).
+bend_screen <- 0.1
+
+# The gain of scan_bend() along one direction `dir`, a unit vector in whitened
+# coordinates, where the Laplace curvature is 1. One call per point.
+bend_along <- function(j, lp, lap, Vscan, t, f_t, dir, h = 1e-3) {
+  step <- h * drop(lap$L %*% dir)
+  gain <- vapply(
+    seq_along(t),
+    function(k) {
+      d <- (lp(lap$mode + Vscan[, j] * t[k] + step) - f_t[k]) / h + 0.5 * h
+      if (is.finite(d)) 0.5 * d^2 else Inf
+    },
+    numeric(1)
+  )
   max(gain)
 }
