@@ -469,15 +469,17 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
     )
     for (j in 1:3) {
       expect_lt(
-        abs(gamma1_lp(
-          j,
-          mod$logpost,
-          lap$mode,
-          lap$lp_max,
-          v_scan,
-          lap$L,
-          at_mode
-        )$gamma1),
+        abs(
+          gamma1_lp(
+            j,
+            mod$logpost,
+            lap$mode,
+            lap$lp_max,
+            v_scan,
+            lap$L,
+            at_mode
+          )$gamma1
+        ),
         1e-10 # observed 1e-12
       )
     }
