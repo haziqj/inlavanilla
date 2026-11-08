@@ -30,7 +30,7 @@ options(
 count grows with the square of the number of parameters $m$: the Hessian by
 finite differences takes about $m^2$ calls, the skew-normal scans about
 $2m^2$, and the VB correction $(m + 1)(m + 2)$.
-For 39 parameters that is over 15,000 calls. Two things help: a faster
+For 39 parameters that is over 13,000 calls. Two things help: a faster
 `logpost`, and a gradient.
 
 This article does both for a structural equation model (SEM) with 39

@@ -344,7 +344,7 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
   m <- length(lap$mode)
   sds <- sqrt(diag(lap$Sigma))
   v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  tr0 <- whitened_trace_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
 
   # Independent reference: gamma1_j is the slope along the scan direction of
   # minus half the log-determinant of the conditional precision of the other
@@ -375,8 +375,8 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
       lap$lp_max,
       v_scan,
       lap$L,
-      tr0
-    )
+      at_mode
+    )$gamma1
     g_lp_half[j] <- gamma1_lp(
       j,
       mod$logpost,
@@ -384,9 +384,9 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
       lap$lp_max,
       v_scan,
       lap$L,
-      tr0,
+      at_mode,
       d_outer = 0.005
-    )
+    )$gamma1
     g_ref[j] <- (log_vol(j, 1e-4) - log_vol(j, -1e-4)) / 2e-4
   }
 
@@ -457,7 +457,7 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
     lap <- laplace_fit(mod$logpost, gr, mod$init, ctrl)
     sds <- sqrt(diag(lap$Sigma))
     v_scan <- sweep(lap$Sigma, 2, sds, "/")
-    tr0 <- whitened_trace_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+    at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
     expect_lt(
       max(abs(gamma1_grad(
         mod$grad,
@@ -469,15 +469,17 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
     )
     for (j in 1:3) {
       expect_lt(
-        abs(gamma1_lp(
-          j,
-          mod$logpost,
-          lap$mode,
-          lap$lp_max,
-          v_scan,
-          lap$L,
-          tr0
-        )),
+        abs(
+          gamma1_lp(
+            j,
+            mod$logpost,
+            lap$mode,
+            lap$lp_max,
+            v_scan,
+            lap$L,
+            at_mode
+          )$gamma1
+        ),
         1e-10 # observed 1e-12
       )
     }

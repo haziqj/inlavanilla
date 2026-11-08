@@ -73,8 +73,8 @@ for (j in 1:3) {
     logpost(mode),
     sweep(S, 2, sds, "/"),
     L,
-    whitened_trace_lp(logpost, mode, logpost(mode), L)
-  )
+    whitened_lp(logpost, mode, logpost(mode), L)
+  )$gamma1
   Hoo <- H[-j, -j, drop = FALSE]
   scan <- function(newton) {
     sapply(z, function(t) {

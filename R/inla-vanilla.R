@@ -131,7 +131,8 @@
 #' `grad` is optional. Without it, derivatives come from finite differences
 #' of `logpost`, and the number of calls grows with the square of the number
 #' of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
-#' marginals about m(`n_grid` + 2m + 5). The VB correction takes (m + 1)(m + 2)
+#' marginals about m(`n_grid` + 2m + 6), with 2(m - 1) more for each parameter
+#' whose ridge bend is above 0.1. The VB correction takes (m + 1)(m + 2)
 #' calls, or that many per sweep with `vb = "full"`: it needs no derivatives,
 #' because Stein's identity gives the expected gradient from values of
 #' `logpost` alone. With `vb = "full"`, the VB mean is then exact when the
