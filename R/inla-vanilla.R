@@ -158,17 +158,16 @@
 #' `marginals = "gaussian"` saves the calls of the scans.
 #'
 #' `hess` is optional too, and needs `grad`, as in [stats::nlminb()]. With
-#' it, [stats::nlminb()] takes Newton steps to the mode, the Hessian at the
-#' mode is the supplied one, and the volume correction of each skew-normal
-#' marginal takes one `hess` call, where `grad` alone serves all the marginals
-#' with 4m + 1 calls. The VB correction and the scans do not use it. The fit
-#' is the one `grad` alone gives, except that the mode is found more precisely
-#' and the marginals differ by about 3e-4 posterior SDs, the error of the
-#' forward difference that the `hess` route takes. A dense Hessian costs about
-#' m gradients, so `hess` adds precision at the mode rather than saving time:
-#' a structural equation model with 39 parameters and an
-#' automatic-differentiation Hessian (RTMB) took 0.30 s with it and 0.16 s
-#' without.
+#' it, [stats::nlminb()] takes Newton steps to the mode, and the Hessian at
+#' the mode is the supplied one. The VB correction does not use it, nor do the
+#' default marginals, whose volume correction takes 4m + 1 `grad` calls for all
+#' the parameters together, where a Hessian each would cost far more.
+#' `width = "cmp"` and `width = "tk"` do use it. The fit is the one `grad`
+#' alone gives, to the error of its finite differences (about 1e-8, relative),
+#' except that the mode is found more precisely. A dense Hessian costs about m
+#' gradients, so this takes a little longer: a structural equation model with
+#' 39 parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
+#' with it and 0.17 s without.
 #'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -321,8 +320,8 @@
 #'   `n_grid` scan points, per parameter:
 #'   * `"trace"` (the default): its linear term \eqn{\gamma_j' t}{gamma_j' t},
 #'     as in INLAvaan, from 4 `grad` calls, and one more for all the parameters
-#'     together (one `hess` call with `hess`, 2m + 5 `logpost` calls without
-#'     `grad`), on top of the `n_grid - 1` `logpost` calls of the scan.
+#'     together (2m + 5 `logpost` calls without `grad`), on top of the
+#'     `n_grid - 1` `logpost` calls of the scan.
 #'   * `"cmp"`: the exact width term along the same straight scan, from the
 #'     Hessian of the other parameters at each scan point: about
 #'     `n_grid - 1` times 2(m - 1) `grad` calls (`n_grid - 1` `hess` calls
