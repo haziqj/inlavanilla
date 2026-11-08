@@ -3,12 +3,19 @@
 # the Gaussian expectation of the log-posterior. At the optimum the expected
 # gradient vanishes, E[grad log pi(mode + shift + z)] = 0 for z ~ N(0, Sigma).
 #
-# Ported from INLAvaan: the same fixed-point iteration with Anderson(1)
-# acceleration and an nlminb() fallback. The Gaussian expectation uses a
-# deterministic degree-5 cubature rule built on a regular simplex (see
-# vb_nodes()) rather than INLAvaan's Sobol points: with a gradient, the
-# expected gradient over its nodes; without one, Stein's identity on the same
-# nodes, from log-posterior values alone.
+# There are two ways to solve it. vb = "full" iterates to the solution: a
+# fixed-point iteration with Anderson(1) acceleration and an nlminb() fallback,
+# on a degree-5 cubature rule built on a regular simplex (vb_nodes()). With a
+# gradient it uses the expected gradient over the nodes. Without one it uses
+# Stein's identity on the same nodes, from log-posterior values alone.
+#
+# vb = "onestep", the default, takes the first step of that iteration and
+# stops. The fixed-point map is nearly flat (its slope is O(1/n)), so the first
+# step holds most of the movement, and exact VB is itself only O(n^-3/2)
+# posterior SDs from the posterior mean. With a gradient the step uses 2m + 1
+# nodes on the principal axes (axis_nodes()), about one numerical Hessian.
+# Without one it is one Stein pass on vb_nodes(), since Stein's identity needs
+# that rule's degree. See lab/ideas/2026-11-one-step-vb.
 
 # Node set for the Gaussian expectation: a degree-5 rule built on a regular
 # simplex, on the principal axes of Sigma. In whitened coordinates its nodes
@@ -45,15 +52,39 @@
 # symmetric under the sign of a single axis, so the rule must not depend on
 # the signs that eigen() happens to return.
 vb_nodes <- function(Sigma) {
-  m <- ncol(Sigma)
-  e <- eigen(Sigma, symmetric = TRUE)
-  # Each axis with its largest entry positive
-  top <- max.col(abs(t(e$vectors)), ties.method = "first")
-  axes <- sweep(e$vectors, 2, sign(e$vectors[cbind(top, seq_len(m))]), "*")
-  A <- sweep(axes, 2, sqrt(pmax(e$values, 0)), "*")
-  rule <- simplex_rule(m)
+  A <- principal_axes(Sigma)
+  rule <- simplex_rule(ncol(Sigma))
   half <- rule$nodes[1 + seq_len(rule$n_pairs), , drop = FALSE] %*% t(A)
   list(nodes = rbind(0, half, -half), weights = rule$weights)
+}
+
+# The node set of the one-step correction with a gradient: the centre and
+# +/- sqrt(3) SDs along each principal axis of Sigma, 2m + 1 nodes, as many
+# gradients as a numerical Hessian. Written as differences from the centre,
+# the expected gradient is g0 + sum_k (g(+a_k) + g(-a_k) - 2 g0) / 6. In one
+# dimension this is the three-point Gauss-Hermite rule, as vb_nodes() is. The
+# rule is exact for polynomials of degree three, so the gradient of a quartic
+# log-posterior is averaged exactly, and the leading shift, half the trace of
+# the third derivatives, is exact on a cubic. A wider rule did not help: it
+# picks up the tails, and the first step then moves further from the
+# posterior mean (lab/ideas/2026-11-one-step-vb).
+axis_nodes <- function(Sigma) {
+  m <- ncol(Sigma)
+  half <- sqrt(3) * t(principal_axes(Sigma))
+  list(
+    nodes = rbind(0, half, -half),
+    weights = c(1 - m / 3, rep(1 / 6, 2 * m))
+  )
+}
+
+# The principal axes of Sigma, scaled so that A A' = Sigma, each with its
+# largest entry positive
+principal_axes <- function(Sigma) {
+  m <- ncol(Sigma)
+  e <- eigen(Sigma, symmetric = TRUE)
+  top <- max.col(abs(t(e$vectors)), ties.method = "first")
+  axes <- sweep(e$vectors, 2, sign(e$vectors[cbind(top, seq_len(m))]), "*")
+  sweep(axes, 2, sqrt(pmax(e$values, 0)), "*")
 }
 
 # The rule of vb_nodes() in whitened coordinates
@@ -113,10 +144,33 @@ simplex_rule <- function(m) {
 # The largest fixed-point step, in posterior SDs (see vb_correct())
 vb_maxstep <- 1.5
 
-vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
+# The largest first step that vb = "onestep" accepts, in posterior SDs. Beyond
+# it the premise of a small correction has failed, and the iteration carries
+# on with capped steps. The level is a heuristic: at 2 SDs the guard fired on
+# large logistic regressions where the plain step was mostly better, and at 3
+# SDs it let through a strongly skewed posterior whose first step was 2.9 SDs
+# (lab/ideas/2026-11-one-step-vb).
+vb_onestep_guard <- 2.5
+
+# `method` is "onestep" or "full". `budget` is the calls of the mode and
+# Hessian stage: when one-step VB has to iterate, it stops within that many
+# calls (at least two passes), and never calls nlminb() on account of its
+# length, so the VB stage stays within what the fit has already spent.
+vb_correct <- function(
+  lp,
+  gr,
+  mode,
+  Sigma,
+  R,
+  L,
+  ctrl,
+  method = "full",
+  budget = Inf
+) {
   m <- length(mode)
   stein <- is.null(gr)
-  rule <- vb_nodes(Sigma)
+  onestep <- method == "onestep"
+  rule <- if (onestep && !stein) axis_nodes(Sigma) else vb_nodes(Sigma)
   Z <- rule$nodes
   w <- rule$weights
   nn <- nrow(Z)
@@ -233,7 +287,18 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   # The history (the step at each iteration, in posterior SDs, whether it was
   # cut and whether the Anderson secant replaced it) and the reason for a
   # fallback are kept for verbose output.
+  #
+  # With vb = "onestep" the first step is taken whole and the iteration stops
+  # there, unless it is not finite or larger than the guard. Then the iteration
+  # goes on as above, within the budget: on running out, the last point stands,
+  # and the settling check reports how far it still had to go.
   maxstep <- vb_maxstep
+  maxit <- ctrl$vb_maxit
+  if (onestep) {
+    calls_per_pass <- if (stein) nn - 1L else nn
+    maxit <- min(maxit, max(2L, floor(budget / calls_per_pass)))
+  }
+  one_pass <- FALSE
   shift <- numeric(m)
   iter <- 0L
   move <- Inf
@@ -244,7 +309,7 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
   cut <- logical()
   accelerated <- logical()
   step_prev <- shift_prev <- NULL
-  for (it in seq_len(ctrl$vb_maxit)) {
+  for (it in seq_len(maxit)) {
     step <- step_at(shift)
     if (!all(is.finite(step))) {
       fallback <- TRUE
@@ -257,10 +322,18 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     }
     move <- max(abs(step) / sds)
     steps[it] <- move
+    if (onestep && it == 1L && move <= vb_onestep_guard) {
+      shift <- shift + step
+      iter <- 1L
+      cut[it] <- FALSE
+      accelerated[it] <- FALSE
+      one_pass <- TRUE
+      break
+    }
     raw <- step
     cut[it] <- move > maxstep
     if (cut[it]) {
-      if (it > 1L && cut[it - 1L]) {
+      if (!onestep && it > 1L && cut[it - 1L]) {
         fallback <- TRUE
         reason <- paste0("two steps in a row were over ", with_sd(maxstep))
         break
@@ -299,7 +372,8 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     shift <- shift + update
     iter <- it
   }
-  if (move >= ctrl$vb_tol) {
+  ran_out <- onestep && !one_pass && !fallback && move >= ctrl$vb_tol
+  if (!onestep && move >= ctrl$vb_tol) {
     fallback <- TRUE
     if (is.null(reason)) {
       reason <- "the iteration did not converge in `vb_maxit` steps"
@@ -387,30 +461,36 @@ vb_correct <- function(lp, gr, mode, Sigma, R, L, ctrl) {
     ) {
       stop_failed_nodes(shift + step / 1000, pinned = TRUE)
     }
-  } else if (max(abs(step) / sds) >= warn_levels$vb_step) {
-    # The iteration met a vb_tol above the settling level, so the step just
-    # taken says little about the one still to go: take it. One more sweep,
-    # which the default vb_tol never needs.
+  } else if (!one_pass && max(abs(step) / sds) >= warn_levels$vb_step) {
+    # The iteration met a vb_tol above the settling level, or one-step VB ran
+    # out of budget, so the step just taken says little about the one still
+    # to go: take it. One more sweep, which the default vb_tol never needs.
     step <- step_at(shift)
   }
   # The step still to go at the VB mean, per parameter in posterior SDs, as
   # the Newton step at the mode is for the mode: the step where the fallback
   # landed, or on the fixed-point path the last step taken, which was below
   # vb_tol and bounds the next (taken afresh when it was above the settling
-  # level). A step that is not finite is Inf.
+  # level). A step that is not finite is Inf. One step has no step still to
+  # go, as it would take another pass to know, so the check did not run: NA.
   step_sigma <- abs(step) / sds
   step_sigma[!is.finite(step_sigma)] <- Inf
+  if (one_pass) {
+    step_sigma[] <- NA_real_
+  }
 
   names(shift) <- names(mode)
   list(
     shift = shift,
     iterations = iter,
     fallback = fallback,
+    one_pass = one_pass,
     step_sigma = stats::setNames(step_sigma, names(mode)),
     history = list(
       steps = steps,
       cut = cut,
       accelerated = accelerated,
+      ran_out = ran_out,
       reason = reason,
       nlminb = if (fallback) nl$message,
       rerun = fallback && rerun
