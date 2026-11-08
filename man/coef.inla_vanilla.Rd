@@ -19,6 +19,6 @@ The posterior mean of each parameter, from its skew-normal marginal, on
 the unconstrained scale of \code{logpost}: the \code{Mean} column of
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. These are the estimates INLAvaan's \code{coef()}
 gives. For a fit with \code{marginals = "gaussian"} they are the VB-corrected
-means, or, with \code{vb = FALSE}, the mode. The joint posterior mode is
+means, or, with \code{vb = "off"}, the mode. The joint posterior mode is
 \code{fit$mode}, and the VB-corrected mean \code{fit$mean_vb}.
 }

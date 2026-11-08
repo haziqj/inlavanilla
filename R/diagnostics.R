@@ -485,7 +485,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   optimiser it is taken where the optimiser landed. On the fixed-point
 #'   path it is the last step taken, which bounds the next, unless that step
 #'   was 0.1 or more (a `vb_tol` above 0.1), when it is taken afresh. It
-#'   should be close to 0 (`Inf` where the step is not finite).
+#'   should be close to 0 (`Inf` where the step is not finite). It is `NA`
+#'   after a one-step correction, which has no step still to go.
 #' * `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
 #'   [summary.inla_vanilla()] describes.
 #'

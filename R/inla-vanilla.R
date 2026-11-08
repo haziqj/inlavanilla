@@ -147,10 +147,13 @@
 #' gradient call costs about as much as a `logpost` call, as a hand-written
 #' gradient usually does, since it then makes about half as many calls in
 #' all. A gradient by automatic differentiation (RTMB, TMB) costs about two,
-#' and the fit takes about as long as without one. The VB correction takes at
-#' most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same nodes. Beyond a handful of parameters it and the marginals are the slowest
-#' stages. `vb = "off"` skips the VB correction (and its term in the log
-#' marginal likelihood), and the skew-normal marginals do not depend on it;
+#' and the fit takes about as long as without one. The default VB correction,
+#' `vb = "onestep"`, takes 2m + 1 gradient calls, about as many as one numerical
+#' Hessian, and `vb = "full"` takes at most (m + 1)(m + 2) + 1 per sweep, usually
+#' about four sweeps. Beyond a handful of parameters the marginals are the
+#' slowest stage, along with the VB correction under `vb = "full"`. `vb = "off"`
+#' skips the VB correction (and its term in the log marginal likelihood), and
+#' the skew-normal marginals do not depend on it;
 #' `marginals = "gaussian"` saves the calls of the scans.
 #'
 #' `hess` is optional too, and needs `grad`, as in [stats::nlminb()]. With
@@ -178,6 +181,27 @@
 #' vector) are numbered, as `beta[1]`, `beta[2]`, and so on. TMB gives no
 #' Hessian for a model with random effects.
 #'
+#' @section The VB correction:
+#' The VB mean correction moves the centre of the Laplace Gaussian towards the
+#' posterior, keeping its covariance. It maximises the expected log-posterior
+#' under that Gaussian, so that at the solution the gradient, averaged over the
+#' Gaussian, is zero.
+#'
+#' `vb = "onestep"` takes the first Newton step towards that solution, with the
+#' Laplace curvature, and stops. With a gradient, the average is taken over the
+#' mode and \eqn{\pm\sqrt 3}{+/- sqrt(3)} posterior SDs along each principal
+#' axis of the covariance. Without one, it is one pass of Stein's identity on
+#' the rule of `vb = "full"`. Most of the movement is in that step, and exact VB
+#' is itself an approximation to the posterior mean with an error of the same
+#' order. If the first step is over 2.5 posterior SDs, or a node fails, the
+#' iteration carries on with capped steps, within the number of calls that the
+#' mode and Hessian took. `diagnostics()` then has `vb_step_sigma`, the step
+#' still to go, which is `NA` after a single step.
+#'
+#' `vb = "full"` iterates to the solution, on a degree-5 rule with at most
+#' (m + 1)(m + 2) + 1 nodes, and hands over to [stats::nlminb()] if it does not
+#' converge.
+#'
 #' @section Control:
 #' `control` is a list with any of:
 #' * `n_grid`: number of grid points per skew-normal scan, spread over
@@ -186,9 +210,10 @@
 #'   below the maximum are ignored in the skew-normal fit (default `-6`).
 #' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
 #'   tolerance in posterior SDs (default `1e-3`) for the VB correction's
-#'   fixed-point iteration. A step over 1.5 posterior SDs is cut to 1.5. If
-#'   two steps in a row are cut, or it has not converged after `vb_maxit`
-#'   steps, [stats::nlminb()] takes over.
+#'   fixed-point iteration, with `vb = "full"` and when a one-step correction
+#'   has to iterate. A step over 1.5 posterior SDs is cut to 1.5. With
+#'   `vb = "full"`, if two steps in a row are cut, or it has not converged
+#'   after `vb_maxit` steps, [stats::nlminb()] takes over.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
 #'   `iter.max` and `eval.max` default to `1000` and `2000`, and `trace = 1`
 #'   prints its iterations.
@@ -269,13 +294,16 @@
 #'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
 #'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
 #'   longer name.
-#' @param vb Logical. Apply the VB mean correction? Default `TRUE`. It enters
-#'   the log marginal likelihood, and the skew-normal means are checked against
-#'   it (see [summary.inla_vanilla()]).
+#' @param vb The VB mean correction: `"onestep"` (the default) takes one Newton
+#'   step from the mode, `"full"` iterates to the VB solution, and `"off"` (or
+#'   `FALSE`) leaves it out. `TRUE` means the default, and abbreviations such as
+#'   `"one"` work too. See the section on the VB correction. The correction
+#'   enters the log marginal likelihood, and the skew-normal means are checked
+#'   against it (see [summary.inla_vanilla()]).
 #' @param marginals The marginal of each parameter: `"skewnormal"` (the
 #'   default) fits a skew-normal to a scan of the log-posterior; `"gaussian"`
 #'   uses the Gaussian marginal of the Laplace approximation, centred at the
-#'   VB mean when `vb = TRUE`, with no scans. Abbreviations such as `"skew"`
+#'   VB mean unless `vb = "off"`, with no scans. Abbreviations such as `"skew"`
 #'   and `"gauss"` work too.
 #' @param width How each skew-normal scan accounts for the changing volume of
 #'   the other parameters, the width term
@@ -334,7 +362,8 @@
 #'     [stats::nlminb()], the gradient of minus the log-posterior at the mode
 #'     (`grad`), the whitened gradient there (`grad_mode`), and the condition
 #'     number of the Hessian in posterior-SD units (`hess_cond`). `vb` holds
-#'     the iterations of the VB correction, whether it fell back to
+#'     the iterations of the VB correction, whether it stopped at the first
+#'     step (`one_pass`), whether it fell back to
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
 #'     the shift (`kld_global`); it is `NULL` when `vb = "off"`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,

@@ -10,7 +10,7 @@ inla_vanilla(
   grad = NULL,
   hess = NULL,
   ...,
-  vb = TRUE,
+  vb = c("onestep", "full", "off"),
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
@@ -48,14 +48,17 @@ matched, as in \code{nlminb()}: a data argument named \code{g} or \code{gr} woul
 taken as \code{grad}, and one named \code{h} or \code{he} as \code{hess}, so give it a
 longer name.}
 
-\item{vb}{Logical. Apply the VB mean correction? Default \code{TRUE}. It enters
-the log marginal likelihood, and the skew-normal means are checked against
-it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
+\item{vb}{The VB mean correction: \code{"onestep"} (the default) takes one Newton
+step from the mode, \code{"full"} iterates to the VB solution, and \code{"off"} (or
+\code{FALSE}) leaves it out. \code{TRUE} means the default, and abbreviations such as
+\code{"one"} work too. See the section on the VB correction. The correction
+enters the log marginal likelihood, and the skew-normal means are checked
+against it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
 
 \item{marginals}{The marginal of each parameter: \code{"skewnormal"} (the
 default) fits a skew-normal to a scan of the log-posterior; \code{"gaussian"}
 uses the Gaussian marginal of the Laplace approximation, centred at the
-VB mean when \code{vb = TRUE}, with no scans. Abbreviations such as \code{"skew"}
+VB mean unless \code{vb = "off"}, with no scans. Abbreviations such as \code{"skew"}
 and \code{"gauss"} work too.}
 
 \item{width}{How each skew-normal scan accounts for the changing volume of
@@ -108,7 +111,7 @@ holding, among other things:
 \itemize{
 \item \code{summary}: the posterior summary table (mean, SD, quantiles, mode).
 \item \code{mode}, \code{cov}: the Laplace mode and covariance.
-\item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = FALSE}).
+\item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = "off"}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
 parameter (with \code{alpha = 0} for Gaussian marginals).
 \item \code{vb}, \code{marginals}, \code{width}, \code{tk_fallback}, \code{verbose}, \code{silent}: the
@@ -123,9 +126,10 @@ returns under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.in
 \code{\link[stats:nlminb]{stats::nlminb()}}, the gradient of minus the log-posterior at the mode
 (\code{grad}), the whitened gradient there (\code{grad_mode}), and the condition
 number of the Hessian in posterior-SD units (\code{hess_cond}). \code{vb} holds
-the iterations of the VB correction, whether it fell back to
+the iterations of the VB correction, whether it stopped at the first
+step (\code{one_pass}), whether it fell back to
 \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
-the shift (\code{kld_global}); it is \code{NULL} when \code{vb = FALSE}. \code{marginals}
+the shift (\code{kld_global}); it is \code{NULL} when \code{vb = "off"}. \code{marginals}
 is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
 \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
 \code{vb_step_sigma}, \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with
@@ -166,13 +170,13 @@ changing volume of the other parameters, and fitted by a skew-normal
 through the correlations of \eqn{\Omega}.
 }
 
-Stages 2 and 3 are optional and independent of each other. \code{vb = FALSE}
+Stages 2 and 3 are optional and independent of each other. \code{vb = "off"}
 skips the VB correction, which leaves the marginals unchanged (they are
 scanned around the mode) but gives the Laplace log marginal likelihood.
 \code{marginals = "gaussian"} skips the scans and uses the Gaussian's own
 marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at the VB mean
-(or at the mode when \code{vb = FALSE}); \code{\link[=sampling]{sampling()}} then draws from the joint
-Gaussian. So \verb{vb = FALSE, marginals = "gaussian"} is the Laplace
+(or at the mode when \code{vb = "off"}); \code{\link[=sampling]{sampling()}} then draws from the joint
+Gaussian. So \verb{vb = "off", marginals = "gaussian"} is the Laplace
 approximation alone, and \code{marginals = "gaussian"} alone is the Laplace
 approximation with the VB correction.
 }
@@ -302,10 +306,13 @@ With \code{grad}, every stage is more accurate. The fit is also faster when a
 gradient call costs about as much as a \code{logpost} call, as a hand-written
 gradient usually does, since it then makes about half as many calls in
 all. A gradient by automatic differentiation (RTMB, TMB) costs about two,
-and the fit takes about as long as without one. The VB correction takes at
-most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same nodes. Beyond a handful of parameters it and the marginals are the slowest
-stages. \code{vb = FALSE} skips the VB correction (and its term in the log
-marginal likelihood), and the skew-normal marginals do not depend on it;
+and the fit takes about as long as without one. The default VB correction,
+\code{vb = "onestep"}, takes 2m + 1 gradient calls, about as many as one numerical
+Hessian, and \code{vb = "full"} takes at most (m + 1)(m + 2) + 1 per sweep, usually
+about four sweeps. Beyond a handful of parameters the marginals are the
+slowest stage, along with the VB correction under \code{vb = "full"}. \code{vb = "off"}
+skips the VB correction (and its term in the log marginal likelihood), and
+the skew-normal marginals do not depend on it;
 \code{marginals = "gaussian"} saves the calls of the scans.
 
 \code{hess} is optional too, and needs \code{grad}, as in \code{\link[stats:nlminb]{stats::nlminb()}}. With
@@ -334,6 +341,29 @@ vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on. TMB gives no
 Hessian for a model with random effects.
 }
 
+\section{The VB correction}{
+
+The VB mean correction moves the centre of the Laplace Gaussian towards the
+posterior, keeping its covariance. It maximises the expected log-posterior
+under that Gaussian, so that at the solution the gradient, averaged over the
+Gaussian, is zero.
+
+\code{vb = "onestep"} takes the first Newton step towards that solution, with the
+Laplace curvature, and stops. With a gradient, the average is taken over the
+mode and \eqn{\pm\sqrt 3}{+/- sqrt(3)} posterior SDs along each principal
+axis of the covariance. Without one, it is one pass of Stein's identity on
+the rule of \code{vb = "full"}. Most of the movement is in that step, and exact VB
+is itself an approximation to the posterior mean with an error of the same
+order. If the first step is over 2.5 posterior SDs, or a node fails, the
+iteration carries on with capped steps, within the number of calls that the
+mode and Hessian took. \code{diagnostics()} then has \code{vb_step_sigma}, the step
+still to go, which is \code{NA} after a single step.
+
+\code{vb = "full"} iterates to the solution, on a degree-5 rule with at most
+(m + 1)(m + 2) + 1 nodes, and hands over to \code{\link[stats:nlminb]{stats::nlminb()}} if it does not
+converge.
+}
+
 \section{Control}{
 
 \code{control} is a list with any of:
@@ -344,9 +374,10 @@ Hessian for a model with random effects.
 below the maximum are ignored in the skew-normal fit (default \code{-6}).
 \item \code{vb_maxit}, \code{vb_tol}: iteration limit (default \code{25}) and convergence
 tolerance in posterior SDs (default \code{1e-3}) for the VB correction's
-fixed-point iteration. A step over 1.5 posterior SDs is cut to 1.5. If
-two steps in a row are cut, or it has not converged after \code{vb_maxit}
-steps, \code{\link[stats:nlminb]{stats::nlminb()}} takes over.
+fixed-point iteration, with \code{vb = "full"} and when a one-step correction
+has to iterate. A step over 1.5 posterior SDs is cut to 1.5. With
+\code{vb = "full"}, if two steps in a row are cut, or it has not converged
+after \code{vb_maxit} steps, \code{\link[stats:nlminb]{stats::nlminb()}} takes over.
 \item \code{nlminb}: a list of \code{\link[stats:nlminb]{stats::nlminb()}} controls for the mode search.
 \code{iter.max} and \code{eval.max} default to \code{1000} and \code{2000}, and \code{trace = 1}
 prints its iterations.

@@ -159,7 +159,7 @@ checks flagged here, each shown only when there are any.
 \code{vignette("diagnostics", package = "inlavanilla")} explains every check
 with examples.
 
-With \code{vb = FALSE} there is no VB mean: the VB columns of
+With \code{vb = "off"} there is no VB mean: the VB columns of
 \code{summary(fit)$diagnostics} are \code{NA}, as INLAvaan's \code{diagnostics()} leaves
 them, and are left out of the table. With \code{marginals = "gaussian"} there
 are no scans, so the scan columns are \code{NA} and only the VB shift is shown.

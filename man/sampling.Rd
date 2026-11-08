@@ -38,7 +38,7 @@ each parameter's skew-normal quantile, \eqn{\vartheta_j = Q_j(u_j)}.
 \details{
 For a fit with \code{marginals = "gaussian"} this is a draw from the joint
 Gaussian \eqn{N(\tilde\vartheta, \Omega)}, centred at the VB mean (or at
-the mode when \code{vb = FALSE}).
+the mode when \code{vb = "off"}).
 
 Draws never call the log-posterior, so they are cheap: large \code{nsamp} costs
 little. Use \code{fun} for natural-scale or derived quantities, such as
