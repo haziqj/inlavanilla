@@ -113,7 +113,9 @@ other models this is a rough guide: on test models it was mostly within
 a factor of 1.5 of the true shortfall, above it in logistic and Poisson
 regressions and below it in a nonlinear regression. \code{ridge_bend} is
 flagged above 0.25, a shortfall of 10\% by that formula (see the Accuracy
-section of \code{\link[=inla_vanilla]{inla_vanilla()}}).
+section of \code{\link[=inla_vanilla]{inla_vanilla()}}). Without \code{grad}, a value below 0.1 is the
+gain along the direction in which the ridge bends, not the full one, so
+it can be a little low.
 \item \strong{Mean gap.} \code{mean_gap}, the gap between the skew-normal mean and the
 VB-corrected mean, in posterior SDs. Both recover the leading,
 \eqn{O(n^{-1})} shift from the mode to the posterior mean, so they

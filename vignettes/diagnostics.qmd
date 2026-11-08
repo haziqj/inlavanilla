@@ -325,6 +325,12 @@ other models it is a rough guide to how much: on test models it was mostly
 within a factor of 1.5 of the true gap, and it overstated the narrowing in
 logistic and Poisson regressions.
 
+With `grad` the check costs two gradient calls per parameter. Without it, the
+calls of `logpost` that the volume correction already makes show which way
+the ridge bends, and the check costs two more calls per parameter, along that
+direction. A value above 0.1 is then taken again from the full gradient, at
+$2(m - 1)$ calls, so every value that can reach the flag is the full one.
+
 ## Tails and unscanned mass
 
 Both checks are about the edge of the scanned window, but they look at
