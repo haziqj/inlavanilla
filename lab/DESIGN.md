@@ -62,7 +62,13 @@ Decisions agreed after `IDEA.md` was written. Where the two disagree, this file 
 
 ## Open
 
-Nothing at present.
+Parked by the owner in November 2026, after one-step VB (`lab/ideas/2026-11-one-step-vb`):
+
+- **The evidence after a large shift.** The VB term ½δᵀHδ is leading-order, and a large first step can overstate it: on the random effects model of the diagnostic-tests article it is 1.2 nats too high, against 0.3 too low for `vb = "full"`. The gain ratio catches few of these (1 of 11 with a gradient), and the mean gap more (10 of 11). Capping the term at the gain delivered helped only a little (90th percentile of the error 0.79 against 0.95 nats).
+- **Posteriors far from Gaussian.** On funnels (random-intercept logistic, eight schools) and heavy-tailed variances (the SEM's log variances), every VB option is poor, and the checks can only warn.
+- **The two levels.** The 2.5 SD guard (`vb_onestep_guard`) and the 0.5 gain level (`warn_levels$vb_gain`) were chosen on the fits they were tested on, so they need trying on new models.
+- **`loo()` under one-step VB.** Compared only with `vb = "full"`, where elpd moved by 0.006 to 0.57, not with brute-force leave-one-out.
+- **Without a gradient.** The axis rule on numerical gradients beat one Stein pass on the means of the three diagnostic-test models (0.14 against 0.16, 0.82 against 0.92, 0.30 against 0.36 SDs), at about twice the calls. It has not been tested more widely.
 
 ## Findings to discuss
 
