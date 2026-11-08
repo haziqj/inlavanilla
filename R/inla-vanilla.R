@@ -20,13 +20,13 @@
 #' 4. **Gaussian copula draws.** [sampling()] couples the skew-normal marginals
 #'    through the correlations of \eqn{\Omega}.
 #'
-#' Stages 2 and 3 are optional and independent of each other. `vb = FALSE`
+#' Stages 2 and 3 are optional and independent of each other. `vb = "off"`
 #' skips the VB correction, which leaves the marginals unchanged (they are
 #' scanned around the mode) but gives the Laplace log marginal likelihood.
 #' `marginals = "gaussian"` skips the scans and uses the Gaussian's own
 #' marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at the VB mean
-#' (or at the mode when `vb = FALSE`); [sampling()] then draws from the joint
-#' Gaussian. So `vb = FALSE, marginals = "gaussian"` is the Laplace
+#' (or at the mode when `vb = "off"`); [sampling()] then draws from the joint
+#' Gaussian. So `vb = "off", marginals = "gaussian"` is the Laplace
 #' approximation alone, and `marginals = "gaussian"` alone is the Laplace
 #' approximation with the VB correction.
 #'
@@ -149,7 +149,7 @@
 #' all. A gradient by automatic differentiation (RTMB, TMB) costs about two,
 #' and the fit takes about as long as without one. The VB correction takes at
 #' most (m + 1)(m + 2) + 1 gradient calls per sweep, at the same nodes. Beyond a handful of parameters it and the marginals are the slowest
-#' stages. `vb = FALSE` skips the VB correction (and its term in the log
+#' stages. `vb = "off"` skips the VB correction (and its term in the log
 #' marginal likelihood), and the skew-normal marginals do not depend on it;
 #' `marginals = "gaussian"` saves the calls of the scans.
 #'
@@ -319,7 +319,7 @@
 #'   holding, among other things:
 #'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
 #'   * `mode`, `cov`: the Laplace mode and covariance.
-#'   * `mean_vb`: the VB-corrected mean (the mode when `vb = FALSE`).
+#'   * `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
 #'   * `vb`, `marginals`, `width`, `tk_fallback`, `verbose`, `silent`: the
@@ -336,7 +336,7 @@
 #'     number of the Hessian in posterior-SD units (`hess_cond`). `vb` holds
 #'     the iterations of the VB correction, whether it fell back to
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
-#'     the shift (`kld_global`); it is `NULL` when `vb = FALSE`. `marginals`
+#'     the shift (`kld_global`); it is `NULL` when `vb = "off"`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
 #'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
 #'     `vb_step_sigma`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with
@@ -418,7 +418,7 @@ inla_vanilla <- function(
   grad = NULL,
   hess = NULL,
   ...,
-  vb = TRUE,
+  vb = c("onestep", "full", "off"),
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
@@ -443,7 +443,7 @@ inla_vanilla <- function(
       ))
     }
   }
-  check_flag(vb, "vb")
+  vb <- check_vb(vb)
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
   width <- check_choice(width, c("trace", "cmp", "tk"), "width")
   check_flag(tk_fallback, "tk_fallback")
@@ -696,7 +696,8 @@ vanilla_fit <- function(
   t0 <- elapsed()
   t_starts[["vb"]] <- t0
   vbc <- NULL
-  if (vb) {
+  use_vb <- vb != "off"
+  if (use_vb) {
     stage_calls()
     progress_start(
       prog,
@@ -704,12 +705,25 @@ vanilla_fit <- function(
     )
     vbc <- with_context(
       "applying the VB mean correction",
-      vb_correct(lp, gr, lap$mode, lap$Sigma, lap$R, lap$L, ctrl)
+      vb_correct(
+        lp,
+        gr,
+        lap$mode,
+        lap$Sigma,
+        lap$R,
+        lap$L,
+        ctrl,
+        method = vb,
+        budget = n_lp + n_gr + n_he
+      )
     )
     # The fallback is a route of the solver, reported but not marked, as in
     # INLAvaan. A correction that did not settle is marked.
     vb_max <- max(abs(vbc$shift) / sds)
-    settled <- !any(off_level(vbc$step_sigma, warn_levels$vb_step))
+    settled <- !any(
+      check_ran(vbc$step_sigma) &
+        off_level(vbc$step_sigma, warn_levels$vb_step)
+    )
     progress_done(
       prog,
       paste0(
@@ -725,9 +739,9 @@ vanilla_fit <- function(
       report_vb(prog, vbc, sds, lap$logml, calls_since())
     }
   } else {
-    progress_info(prog, "No VB correction (vb = FALSE)")
+    progress_info(prog, "No VB correction (vb = \"off\")")
   }
-  shift <- if (vb) vbc$shift else stats::setNames(numeric(m), parnames)
+  shift <- if (use_vb) vbc$shift else stats::setNames(numeric(m), parnames)
   mean_vb <- lap$mode + shift
 
   # 2. Skew-normal marginals -------------------------------------------------
@@ -807,12 +821,12 @@ vanilla_fit <- function(
   }
   t_starts[["diagnostics"]] <- elapsed()
 
-  logml <- lap$logml + if (vb) vbc$kld_global else 0
+  logml <- lap$logml + if (use_vb) vbc$kld_global else 0
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
 
   # The diagnostics, in the names and order of INLAvaan's diagnostics() where
   # it has the quantity. Checks that did not run are NA: the VB columns with
-  # vb = FALSE, the scan columns with Gaussian marginals.
+  # vb = "off", the scan columns with Gaussian marginals.
   skew <- marginals == "skewnormal"
   na <- rep(NA_real_, m)
   diagnostics <- list(
@@ -825,23 +839,24 @@ vanilla_fit <- function(
       grad_mode = lap$grad_mode,
       hess_cond = lap$hess_cond
     ),
-    vb = if (vb) {
+    vb = if (use_vb) {
       list(
         iterations = vbc$iterations,
         fallback = vbc$fallback,
+        one_pass = vbc$one_pass,
         kld_global = vbc$kld_global
       )
     },
     marginals = data.frame(
       mode_shift_sigma = lap$mode_shift,
-      kld = if (vb) 0.5 * (shift / sds)^2 else na,
-      vb_shift = if (vb) shift else na,
-      vb_shift_sigma = if (vb) shift / sds else na,
+      kld = if (use_vb) 0.5 * (shift / sds)^2 else na,
+      vb_shift = if (use_vb) shift else na,
+      vb_shift_sigma = if (use_vb) shift / sds else na,
       nmad = sn[, "nmad"],
       alpha = if (skew) sn[, "alpha"] else na,
       unscanned_mass = sn[, "unscanned_mass"],
-      vb_step_sigma = if (vb) vbc$step_sigma else na,
-      mean_gap = if (vb && skew) (mom$mean - mean_vb) / sds else na,
+      vb_step_sigma = if (use_vb) vbc$step_sigma else na,
+      mean_gap = if (use_vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
       ridge_bend = sn[, "ridge_bend"],
@@ -1035,6 +1050,18 @@ check_flag <- function(x, arg) {
   if (!is.logical(x) || length(x) != 1L || is.na(x)) {
     abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
   }
+}
+
+# The VB method: one of "onestep", "full" and "off", where TRUE is the default
+# and FALSE is "off"
+check_vb <- function(vb) {
+  if (isTRUE(vb)) {
+    return("onestep")
+  }
+  if (isFALSE(vb)) {
+    return("off")
+  }
+  check_choice(vb, c("onestep", "full", "off"), "vb")
 }
 
 # One of `choices` (lower case), or an unambiguous abbreviation of one in any

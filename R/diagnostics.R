@@ -13,7 +13,7 @@
 # The VB fallback is recorded only, as in INLAvaan: it is a route of the
 # solver, and the settling check judges where it lands. summary() flags
 # every warned check at the same level, and also the ridge bend and the mean
-# gap, which never warn. A check that did not run (VB with vb = FALSE, the
+# gap, which never warn. A check that did not run (VB with vb = "off", the
 # scans with Gaussian marginals) is NA and never flagged; one that ran and
 # gave a value that is not finite is.
 warn_levels <- list(
@@ -35,8 +35,14 @@ off_level <- function(x, level) {
   !(is.finite(x) & x <= level)
 }
 
+# Whether a check ran: NA is a check that did not run, and NaN a value it
+# produced, which off_level() flags
+check_ran <- function(x) {
+  !is.na(x) | is.nan(x)
+}
+
 # The global and per-parameter diagnostics, from the parts of a fit:
-# fit$diagnostics$optim, $vb (NULL when vb = FALSE) and $marginals, and the
+# fit$diagnostics$optim, $vb (NULL when vb = "off") and $marginals, and the
 # VB mean (`pars`, for grad_inf_rel and grad_rel; NA when not given). It runs
 # before the fit object exists, for the warning. The definitions are
 # INLAvaan's (R/method-diagnostics.R), with `grad` the gradient of minus the
@@ -328,12 +334,12 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
         i = if (gaussian) {
           paste0(
             "The Gaussian marginals are centred on the VB mean; ",
-            "{.code vb = FALSE} centres them at the mode."
+            "{.code vb = \"off\"} centres them at the mode."
           )
         } else {
           paste0(
             "The skew-normal marginals do not depend on it; ",
-            "{.code vb = FALSE} leaves it out."
+            "{.code vb = \"off\"} leaves it out."
           )
         }
       )
@@ -404,7 +410,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 #' is not the SD column of the summary table, which is the skew-normal's.
 #' Values that a fit did not compute are `NA`: the VB quantities with
-#' `vb = FALSE`, and the scan quantities with `marginals = "gaussian"`.
+#' `vb = "off"`, and the scan quantities with `marginals = "gaussian"`.
 #'
 #' **Global diagnostics** (`type = "global"`), a named numeric vector:
 #' * `npar`: the number of parameters.
@@ -455,7 +461,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   should be close to 0.
 #' * `grad_abs`: its absolute value.
 #' * `grad_rel`: `grad_abs / (abs(par) + 1e-6)`, with `par` the VB mean (the
-#'   mode when `vb = FALSE`), as in INLAvaan.
+#'   mode when `vb = "off"`), as in INLAvaan.
 #' * `mode_shift_sigma`: the Newton step at the mode, in posterior SDs,
 #'   \eqn{|(\Sigma g)_j| / s_j} with \eqn{g} the gradient. It should be
 #'   close to 0.

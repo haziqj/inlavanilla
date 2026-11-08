@@ -11,40 +11,40 @@
     Code
       print(fit_g_vb)
     Output
-      -- INLAvanilla ------------------------------------------------- Laplace + VB --
+      -- INLAvanilla ---------------------------------------- Laplace + one-step VB --
       
       Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
       
                     Mean     SD   2.5%    50%  97.5%   Mode
-      1 intercept  0.584  0.276  0.042  0.584  1.125  0.584
-      2 slope      0.595  0.226  0.152  0.595  1.038  0.595
+      1 intercept  0.581  0.276  0.039  0.581  1.123  0.581
+      2 slope      0.597  0.226  0.154  0.597  1.039  0.597
 
 ---
 
     Code
       print(summary(fit_g_vb))
     Output
-      -- INLAvanilla summary ----------------------------------------- Laplace + VB --
+      -- INLAvanilla summary -------------------------------- Laplace + one-step VB --
       
-      Log marginal likelihood: -16.249 | Converged in <n> iteration(s) (<time>)
-      Laplace -16.277 + VB term 0.029
+      Log marginal likelihood: -16.246 | Converged in <n> iteration(s) (<time>)
+      Laplace -16.277 + VB term 0.031
       <n> logpost calls: mode <time>, VB <time>, marginals <time>
       
       -- Posterior marginals --
       
                     Mean     SD   2.5%    50%  97.5%   Mode
-      1 intercept  0.584  0.276  0.042  0.584  1.125  0.584
-      2 slope      0.595  0.226  0.152  0.595  1.038  0.595
+      1 intercept  0.581  0.276  0.039  0.581  1.123  0.581
+      2 slope      0.597  0.226  0.154  0.597  1.039  0.597
       
       -- Diagnostics --
       
                    VB shift
-      1 intercept    -0.23 
-      2 slope         0.084
+      1 intercept    -0.24 
+      2 slope         0.092
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction settled in <n> iteration(s): max shift 0.23 SD.
+      v VB correction in one step: max shift 0.24 SD.
       i Gaussian marginals: no scans, so no skew-normal checks.
 
 ---
@@ -67,6 +67,6 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      i No VB correction (vb = FALSE).
+      i No VB correction (vb = "off").
       i Gaussian marginals: no scans, so no skew-normal checks.
 

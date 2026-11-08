@@ -3,7 +3,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
     width = out_width(),
     left = cli::style_bold("INLAvanilla"),
-    right = cli::col_grey(method_label(is_gaussian(x), isTRUE(x$vb))),
+    right = cli::col_grey(method_label(is_gaussian(x), x$vb)),
     line_col = vanilla_hex
   )
   cli::cat_line()
@@ -182,7 +182,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check
 #' with examples.
 #'
-#' With `vb = FALSE` there is no VB mean: the VB columns of
+#' With `vb = "off"` there is no VB mean: the VB columns of
 #' `summary(fit)$diagnostics` are `NA`, as INLAvaan's `diagnostics()` leaves
 #' them, and are left out of the table. With `marginals = "gaussian"` there
 #' are no scans, so the scan columns are `NA` and only the VB shift is shown.
@@ -225,6 +225,7 @@ summary.inla_vanilla <- function(
       diagnostics = object$diagnostics$marginals,
       optim = object$diagnostics$optim,
       vb = object$diagnostics$vb,
+      vb_method = object$vb,
       counts = object$counts,
       timing = object$timing,
       marginals = object$marginals,
@@ -240,7 +241,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
     width = out_width(),
     left = cli::style_bold("INLAvanilla summary"),
-    right = cli::col_grey(method_label(is_gaussian(x), !is.null(x$vb))),
+    right = cli::col_grey(method_label(is_gaussian(x), x$vb_method)),
     line_col = vanilla_hex
   )
   cli::cat_line()
@@ -377,7 +378,11 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       max_shift <- with_sd(glob[["vb_shift_max"]])
       cat_status(
         "ok",
-        "VB correction settled in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
+        if (isTRUE(x$vb$one_pass)) {
+          "VB correction in one step: max shift {max_shift}."
+        } else {
+          "VB correction settled in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
+        }
       )
     } else if (flags[["vb"]]) {
       listed <- flagged_list(
@@ -401,7 +406,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       )
     }
   } else {
-    cat_status("info", "No VB correction (vb = FALSE).")
+    cat_status("info", "No VB correction (vb = \"off\").")
   }
 
   if (gaussian) {
@@ -495,7 +500,7 @@ cat_width <- function(x, diag, env) {
 #' the unconstrained scale of `logpost`: the `Mean` column of
 #' [summary.inla_vanilla()]. These are the estimates INLAvaan's `coef()`
 #' gives. For a fit with `marginals = "gaussian"` they are the VB-corrected
-#' means, or, with `vb = FALSE`, the mode. The joint posterior mode is
+#' means, or, with `vb = "off"`, the mode. The joint posterior mode is
 #' `fit$mode`, and the VB-corrected mean `fit$mean_vb`.
 #'
 #' @param object An object of class `inla_vanilla`.
@@ -514,7 +519,7 @@ coef.inla_vanilla <- function(object, ...) {
 #' parameter, on the unconstrained scale, with the Gaussian marginal of the
 #' Laplace approximation for comparison. The vertical line marks the
 #' posterior mean. For a fit with `marginals = "gaussian"` the marginals are
-#' Gaussian: centred at the VB mean, or, with `vb = FALSE`, the Laplace
+#' Gaussian: centred at the VB mean, or, with `vb = "off"`, the Laplace
 #' marginals themselves, drawn without a second copy.
 #'
 #' `type = "sn_fit"` shows each skew-normal fit against the scan it was
@@ -625,7 +630,7 @@ plot_marginals <- function(x, idx, laplace, ...) {
   col_lap <- "#0F766E"
   label <- if (!is_gaussian(x)) {
     "Skew-normal"
-  } else if (isTRUE(x$vb)) {
+  } else if (x$vb != "off") {
     "VB Gaussian"
   } else {
     # The marginals are the Laplace ones: nothing to overlay
@@ -1051,10 +1056,13 @@ is_gaussian <- function(x) {
 }
 
 # The approximation, as the headers of print() and summary() name it: the
-# marginals, and "+ VB" when the VB correction ran. Gaussian marginals are
+# marginals, and the VB method when the correction ran. Gaussian marginals are
 # those of the Laplace approximation (centred at the VB mean with VB).
 method_label <- function(gaussian, vb) {
-  paste0(if (gaussian) "Laplace" else "Skew-normal", if (vb) " + VB")
+  paste0(
+    if (gaussian) "Laplace" else "Skew-normal",
+    switch(vb, onestep = " + one-step VB", full = " + full VB", off = "")
+  )
 }
 
 # The checks that summary() flags, each TRUE when flagged: the mode, the VB
@@ -1090,7 +1098,9 @@ param_flags <- function(dg, gaussian) {
   vb <- isTRUE(dg$global[["vb_applied"]] == 1)
   cbind(
     mode_shift_sigma = off_level(p$mode_shift_sigma, warn_levels$mode_shift),
-    vb_step_sigma = vb & off_level(p$vb_step_sigma, warn_levels$vb_step),
+    vb_step_sigma = vb &
+      check_ran(p$vb_step_sigma) &
+      off_level(p$vb_step_sigma, warn_levels$vb_step),
     vb_shift_sigma = vb &
       off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift),
     nmad = sn & off_level(p$nmad, warn_levels$nmad),

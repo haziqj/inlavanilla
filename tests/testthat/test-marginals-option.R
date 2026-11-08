@@ -240,7 +240,7 @@ test_that("print() and summary() describe Gaussian marginals", {
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
   # Gaussian marginals are the Laplace approximation's
   out <- capture_output(print(fit_g_vb))
-  expect_match(out, "-- INLAvanilla -+ Laplace \\+ VB --")
+  expect_match(out, "-- INLAvanilla -+ Laplace \\+ one-step VB --")
   expect_no_match(out, "Skew-normal")
   out <- capture_output(print(fit_g))
   expect_match(out, "-- INLAvanilla -+ Laplace --")

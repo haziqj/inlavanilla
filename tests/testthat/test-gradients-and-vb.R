@@ -21,6 +21,11 @@
 # errors are in posterior SDs (sqrt(diag(fit$cov))). Tolerances on
 # approximations were calibrated by printing the actual errors first; each
 # comment states the observed value.
+# The tests in this file check the VB solver against its exact target, so they
+# ask for it. test-vb-onestep.R tests the default.
+inla_vanilla <- function(..., vb = "full") {
+  inlavanilla::inla_vanilla(..., vb = vb)
+}
 
 # Helpers ----------------------------------------------------------------------
 
@@ -1092,7 +1097,7 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
     vb = FALSE,
     silent = TRUE
   )
-  expect_false(fit$vb)
+  expect_identical(fit$vb, "off")
   expect_identical(fit$mean_vb, fit$mode)
   expect_identical(fit$logml, fit$logml_laplace)
   expect_null(fit$diagnostics$vb)

@@ -21,6 +21,11 @@
 # actual errors first; each comment states the observed value. The skew-normal
 # results with finite differences and with an analytic gradient agree to about
 # 1e-7 SDs, so the same approximation tolerances serve both.
+# The tests in this file check the VB solver against its exact target, so they
+# ask for it. test-vb-onestep.R tests the default.
+inla_vanilla <- function(..., vb = "full") {
+  inlavanilla::inla_vanilla(..., vb = vb)
+}
 
 probs <- c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975)
 

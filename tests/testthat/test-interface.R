@@ -430,11 +430,11 @@ test_that("hess must return a finite m x m matrix at init", {
   )
 })
 
-test_that("vb, verbose and silent must be a single TRUE or FALSE", {
+test_that("verbose and silent must be a single TRUE or FALSE, and vb a method", {
   for (bad in list(NA, c(TRUE, FALSE))) {
     expect_error(
       inla_vanilla(lp_gauss, c(a = 0.5), vb = bad, silent = TRUE),
-      "`vb` must be `TRUE` or `FALSE`",
+      "`vb` must be one of",
       class = "inlavanilla_error"
     )
     expect_error(
@@ -599,6 +599,7 @@ test_that("control entries reach the stages they tune", {
       y = pois_y,
       a0 = pois_a0,
       b0 = pois_b0,
+      vb = "full",
       control = list(...),
       silent = TRUE
     )$diagnostics$vb
@@ -1048,7 +1049,7 @@ test_that("data arguments named like vb, verbose or control reach logpost", {
     inla_vanilla(lp, c(a = 0.5), v = 1, verb = 2, sil = 5, con = 3, contr = 4)
   )
   expect_equal(fit$mode[["a"]], 15, tolerance = 1e-6)
-  expect_true(fit$vb)
+  expect_identical(fit$vb, "onestep")
   expect_false(fit$verbose)
   expect_false(fit$silent)
 })
@@ -1282,6 +1283,7 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
         y = pois_y,
         a0 = pois_a0,
         b0 = pois_b0,
+        vb = "full",
         control = list(nlminb = list(iter.max = 1))
       )
     ),
@@ -1321,6 +1323,7 @@ test_that("a VB fallback with a small shift leaves the stage line unmarked", {
       y = pois_y,
       a0 = pois_a0,
       b0 = pois_b0,
+      vb = "full",
       control = list(vb_maxit = 1)
     )
   )
@@ -1582,7 +1585,7 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
     marginals = "gaussian",
     verbose = TRUE
   ))
-  expect_match(msgs, "^i No VB correction \\(vb = FALSE\\)", all = FALSE)
+  expect_match(msgs, "^i No VB correction \\(vb = \"off\"\\)", all = FALSE)
   expect_match(msgs, "^i Gaussian marginals .*: no scans", all = FALSE)
   expect_no_match(msgs, "Fixed-point|Shape")
 
@@ -1652,7 +1655,7 @@ test_that("a VB correction that does not settle is flagged from end to end", {
   ctrl_x6 <- list(vb_maxit = 1)
   w <- expect_warning(
     msgs <- capture_messages(
-      fit <- inla_vanilla(lp_x6, c(t = 0.3), control = ctrl_x6)
+      fit <- inla_vanilla(lp_x6, c(t = 0.3), vb = "full", control = ctrl_x6)
     ),
     class = "inlavanilla_diagnostics_warning"
   )
@@ -1677,7 +1680,13 @@ test_that("a VB correction that does not settle is flagged from end to end", {
   )
   # The verbose report marks the step where the fallback landed
   text <- unwrap_msgs(capture_messages(suppressWarnings(
-    inla_vanilla(lp_x6, c(t = 0.3), verbose = TRUE, control = ctrl_x6)
+    inla_vanilla(
+      lp_x6,
+      c(t = 0.3),
+      vb = "full",
+      verbose = TRUE,
+      control = ctrl_x6
+    )
   )))
   expect_match(
     text,
@@ -1695,6 +1704,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     y = pois_y,
     a0 = pois_a0,
     b0 = pois_b0,
+    vb = "full",
     control = list(nlminb = list(iter.max = 1)),
     verbose = TRUE
   )))
@@ -1919,7 +1929,7 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   expect_identical(res$value, fit_reg)
   # The rule names the approximation, not the time it took, which the
   # headline under it gives, with the log marginal likelihood
-  expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ VB --\n")
+  expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ one-step VB --\n")
   expect_no_match(strsplit(out, "\n")[[1]][1], "[0-9](ms|s)\\b|parameters")
   expect_match(
     out,
@@ -2267,7 +2277,11 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     testthat::local_reproducible_output(unicode = FALSE)
     out <- fit_text()
     expect_false(any(grepl("[^\001-\177]", out, useBytes = TRUE)))
-    expect_match(out, "-- INLAvanilla -+ Skew-normal \\+ VB --", all = FALSE)
+    expect_match(
+      out,
+      "-- INLAvanilla -+ Skew-normal \\+ one-step VB --",
+      all = FALSE
+    )
     expect_match(out, "max shift [0-9.e-]+ SD", all = FALSE)
     expect_match(out, "Largest shift [0-9.e-]+ SD", all = FALSE)
   })
@@ -2503,6 +2517,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   below$diagnostics$vb_step_sigma <- c(0.098, 0.098)
   below$diagnostics$tails <- c(TRUE, TRUE)
   below$vb$fallback <- FALSE
+  below$vb$one_pass <- FALSE
   # Fixed, so the lines do not depend on the optimiser's path
   below$optim$message <- "relative convergence (4)"
   below$optim$iterations <- 9L
