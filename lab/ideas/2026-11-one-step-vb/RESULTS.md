@@ -130,6 +130,51 @@ marginals:
 
 The two are compared with each other here, not with brute-force leave-one-out.
 
+## ECPE against Stan
+
+The DINA model of `vignettes/articles/cdm.qmd`, 63 parameters, no gradient, so
+one-step is one Stein pass. Largest gap in the posterior mean from Stan, in
+Stan's SDs, with Gaussian marginals centred on each mean.
+
+| Block | Laplace | One-step | Full |
+|---|---|---|---|
+| Guessing | 0.256 | 0.102 | 0.121 |
+| Slipping | 0.189 | 0.048 | 0.071 |
+| Class proportions | 0.622 | 0.238 | 0.191 |
+
+The VB stage takes 2.1 s against 14.6 s. The default fit takes 22.9 s and 45,148
+calls against 35.7 s and 70,108. The skew-normal marginals do not depend on VB.
+
+## Where one step is worse: diagnostic tests
+
+Three latent class models of `vignettes/articles/diagnostic-tests.qmd`, no
+gradient, against long Metropolis runs (means) and importance sampling (log
+Z). Worst-parameter error in the mean, in SDs.
+
+| Model | m | One-step | Full | Axis rule, numerical gradient |
+|---|---|---|---|---|
+| Conditionally independent | 11 | 0.16 | 0.18 | 0.14 |
+| Random effects (LCRE) | 13 | 0.92 | 0.83 | 0.82 |
+| Finite mixture | 13 | 0.36 | 0.31 | 0.30 |
+
+On the random effects model the true shifts of the log SDs are 1.25 and 1.43
+SDs, and every method is off by about 0.8 or more somewhere. One-step gets those
+two right to 0.27, and is worse on the sensitivities and specificities (RMS over
+parameters 0.50, against 0.36 for the full solve).
+
+Log marginal likelihood, error against importance sampling (SE 0.004 to 0.022).
+
+| Model | Laplace | One-step | Full |
+|---|---|---|---|
+| Conditionally independent | -0.35 | -0.08 | -0.14 |
+| Random effects (LCRE) | -0.83 | +1.20 | -0.31 |
+| Finite mixture | -0.70 | -0.28 | -0.32 |
+
+The VB term is a leading-order term, and a first step of 1.5 SDs overstates it.
+The article compares these models by their log marginal likelihoods, so it uses
+`vb = "full"`. Differences from the random effects model, with its mirror image
+counted: truth -0.49 and -2.66, full -0.33 and -2.68, one-step -1.77 and -4.13.
+
 ## Not tested
 
-The ECPE model, and `loo()` against brute-force leave-one-out.
+`loo()` against brute-force leave-one-out.
