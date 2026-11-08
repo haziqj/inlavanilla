@@ -168,7 +168,7 @@ of these posteriors and worse on others.
 A shift above 1 SD is also a reason to treat the log marginal likelihood with
 care. Its VB term, $\tfrac12\delta^\top H\delta$, is a leading-order term, and a
 large first step can overstate it. On the random effects model of the article
-[Diagnostic tests without a gold standard](articles/diagnostic-tests.html), the
+[Diagnostic tests without a gold standard](diagnostic-tests.html), the
 default gives a log marginal likelihood 1.2 nats too high, and `vb = "full"` one
 0.3 nats too low.
 

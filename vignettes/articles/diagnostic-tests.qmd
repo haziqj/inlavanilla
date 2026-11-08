@@ -254,12 +254,7 @@ lp_fm <- function(theta, y, count) {
 A latent class model has a mirror image: swapping the two classes, with
 $\text{Se}_j \to 1 - \text{Sp}_j$, fits the data just as well. Starting each
 fit from sensitivities and specificities of 0.7 picks the image in which the
-tests are informative. These posteriors are far from Gaussian, and we compare
-the models by their log marginal likelihoods, so we ask for `vb = "full"`. On
-the random effects model the default one-step correction moves `log_sigma1` by
-1.5 posterior SDs, with a warning, and, checked against importance sampling,
-its log marginal likelihood is 1.2 nats too high. With `vb = "full"` it is 0.3
-too low. The skew-normal marginals are the same either way.
+tests are informative.^[These fits use `vb = "full"`, as the models are compared by their log marginal likelihoods. The [diagnostics vignette](diagnostics.html) explains why.]
 
 ```{r}
 #| label: fits
