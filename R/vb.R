@@ -296,7 +296,8 @@ vb_correct <- function(
   maxit <- ctrl$vb_maxit
   if (onestep) {
     calls_per_pass <- if (stein) nn - 1L else nn
-    maxit <- min(maxit, max(2L, floor(budget / calls_per_pass)))
+    # One pass of the budget is kept for the step still to go, if it runs out
+    maxit <- min(maxit, max(2L, floor(budget / calls_per_pass) - 1L))
   }
   one_pass <- FALSE
   shift <- numeric(m)
