@@ -87,6 +87,49 @@ It changes by a median of 0.04 nats (90th percentile 0.41) between the capped
 axis pass and the solver. The axis pass was closer to the importance-sampling
 truth in 7 of 9 families, and 0.135 nats worse in the worst one.
 
+## After implementation
+
+`inla_vanilla()` itself, with the guard at 2.5 SDs and Gaussian marginals. VB
+calls are the gradient calls over those of `vb = "off"`. The budget is all the
+calls of the `vb = "off"` fit.
+
+| Model | m | One-step | Full | Budget | Stopped at step 1 | Largest gap (SDs) |
+|---|---|---|---|---|---|---|
+| mtcars logistic | 3 | 7 | 60 | 92 | yes | 0.041 |
+| Logistic | 20 | 41 | 2,315 | 478 | yes | 0.231 |
+| Logistic | 30 | 61 | 3,972 | 622 | yes | 0.128 |
+| Logistic | 40 | 81 | 5,169 | 768 | yes | 0.041 |
+| Poisson | 15 | 31 | 1,365 | 352 | yes | 0.045 |
+| CFA, n = 60 | 12 | 25 | 732 | 306 | yes | 0.026 |
+| Random-intercept logistic | 13 | 27 | 1,688 | 345 | yes | 1.111 |
+| Eight schools | 10 | 294 | 2,926 | 296 | no | 0.899 |
+| Skew-normal, alpha = 10 | 1 | 18 | 18 | 43 | no | 0.000 |
+| Political Democracy SEM | 39 | 79 | 6,564 | 921 | yes | 0.154 |
+
+On the two hard models with large gaps (random-intercept logistic, eight
+schools), neither method is close to the posterior mean: the errors are 1 SD or
+more.
+
+Larger logistic regressions (n = 10m), total time of the fit with Gaussian
+marginals:
+
+| m | `"off"` | `"onestep"` | `"full"` | VB gradients, one-step | VB gradients, full | Largest gap (SDs) |
+|---|---|---|---|---|---|---|
+| 80 | 0.10 s | 0.10 s | 1.90 s | 161 | 19,929 | 0.049 |
+| 120 | 0.22 s | 0.27 s | 8.99 s | 241 | 44,289 | 0.072 |
+
+`loo()` on logistic regressions, elpd under each method.
+
+| Model | m | One-step | Full | Difference | SE of elpd |
+|---|---|---|---|---|---|
+| mtcars | 3 | -7.571 | -7.621 | 0.051 | 2.36 |
+| Logistic | 5 | -26.649 | -26.656 | 0.006 | 3.65 |
+| Logistic | 10 | -43.218 | -43.247 | 0.029 | 6.68 |
+| Logistic, near separation | 20 | -46.198 | -46.768 | 0.570 | 9.57 |
+| Logistic | 30 | -108.642 | -108.785 | 0.142 | 12.10 |
+
+The two are compared with each other here, not with brute-force leave-one-out.
+
 ## Not tested
 
-`loo()` and `waic()`, more than 40 parameters, and the ECPE model.
+The ECPE model, and `loo()` against brute-force leave-one-out.
