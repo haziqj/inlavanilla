@@ -28,31 +28,43 @@
 # Association, 81(393), 82-86. https://doi.org/10.1080/01621459.1986.10478240
 
 # The volume correction gamma1_j: the rate of change, along v_j, of minus half
-# the log-determinant of the conditional precision of the other parameters,
-# taken by a forward difference of `d_outer` posterior SDs from the mode. In
+# the log-determinant of the conditional precision of the other parameters. In
 # whitened coordinates (columns of L) the precision at the mode is the
 # identity, so its trace is m and v_j' H v_j = 1 there.
 
-# INLAvaan's "shortcut" correction, from the gradient: the whitened trace and
-# the curvature along v_j at mode + d_outer v_j by central differences of the
-# gradient, 2m + 2 gradient calls.
-gamma1_grad <- function(j, gr, mode, Vscan, L, d_outer = 0.01, h = 1e-5) {
+# The correction for every parameter at once, from the gradient. With T the
+# third derivative of the log-posterior at the mode,
+#   gamma1_j = 1/2 (sum_k T(A_k, A_k, v_j) - T(v_j, v_j, v_j)),
+# and T(a, a, .) is the second difference of the gradient along a. So one
+# vector, the sum over k, holds the trace part of every parameter, and each
+# v_j adds one more second difference: 4m + 1 gradient calls for all m
+# parameters. The step is `h` posterior SDs. Truncation grows as h^2, and noise
+# in the gradient, such as that of an inner optimisation, as 1 / h^2. Any A
+# with A A' = Sigma gives the same sum in the limit. fit_marginals() passes the
+# principal axes, so that the truncation does not depend on the order of the
+# parameters.
+gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
   m <- length(mode)
-  vj <- Vscan[, j]
-  th <- mode + vj * d_outer
-  tr <- 0
-  for (k in seq_len(m)) {
-    Lk <- L[, k]
-    tr <- tr + sum(Lk * (gr(th - Lk * h) - gr(th + Lk * h))) / (2 * h)
+  g0 <- gr(mode)
+  second_diff <- function(a) {
+    (gr(mode + h * a) + gr(mode - h * a) - 2 * g0) / h^2
   }
-  vHv <- sum(vj * (gr(th - vj * h) - gr(th + vj * h))) / (2 * h)
-  -0.5 * (tr - m) / d_outer + 0.5 * (vHv - 1) / d_outer
+  u <- numeric(m)
+  for (k in seq_len(m)) {
+    u <- u + second_diff(A[, k])
+  }
+  vapply(
+    seq_len(m),
+    function(j) 0.5 * sum(Vscan[, j] * (u - second_diff(Vscan[, j]))),
+    numeric(1)
+  )
 }
 
-# The same correction from one call of the user's Hessian at
-# mode + d_outer v_j: the whitened trace tr(L' H L) = tr(H Sigma) and the
-# curvature along v_j, read off the one matrix. The baselines m and 1 hold
-# exactly, since Sigma is the inverse of the user's Hessian at the mode.
+# The correction from one call of the user's Hessian, by a forward difference
+# of `d_outer` posterior SDs from the mode: the whitened trace tr(L' H L) =
+# tr(H Sigma) and the curvature along v_j at mode + d_outer v_j, read off the
+# one matrix. The baselines m and 1 hold exactly, since Sigma is the inverse
+# of the user's Hessian at the mode.
 gamma1_hess <- function(j, he, mode, Vscan, Sigma, d_outer = 0.01) {
   m <- length(mode)
   vj <- Vscan[, j]
@@ -62,14 +74,13 @@ gamma1_hess <- function(j, he, mode, Vscan, Sigma, d_outer = 0.01) {
   -0.5 * (tr - m) / d_outer + 0.5 * (vHv - 1) / d_outer
 }
 
-# The same correction from the log-posterior alone. Each whitened curvature is
-# a second difference of the log-posterior rather than a difference of two
-# finite-difference gradients, so the cost is 2m + 5 calls per parameter
-# instead of the 4m^2 + 4m that the gradient route would take with
-# finite-difference gradients. Second differences carry a truncation error of
-# their own, so the baselines at the mode (`tr0`, and the curvature along v_j
-# computed here) are taken by the same rule rather than set to m and 1, and
-# the error cancels in the forward difference.
+# The correction from the log-posterior alone, by a forward difference of
+# `d_outer` posterior SDs from the mode. Each whitened curvature is a second
+# difference of the log-posterior, 2m + 5 calls per parameter. Second
+# differences carry a truncation error of their own, so the baselines at the
+# mode (`tr0`, and the curvature along v_j computed here) are taken by the same
+# rule rather than set to m and 1, and the error cancels in the forward
+# difference.
 gamma1_lp <- function(
   j,
   lp,
@@ -300,6 +311,12 @@ fit_marginals <- function(
   } else {
     NULL
   }
+  # The linear width term from the gradient, for all the parameters at once
+  g1_grad <- if (!is.null(gr) && is.null(he) && (width == "trace" || m == 1L)) {
+    gamma1_grad(gr, mode, Vscan, principal_axes(Sigma))
+  } else {
+    NULL
+  }
 
   out <- matrix(
     NA_real_,
@@ -358,7 +375,7 @@ fit_marginals <- function(
       } else if (is.null(gr)) {
         gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, tr0)
       } else {
-        gamma1_grad(j, gr, mode, Vscan, L)
+        g1_grad[[j]]
       }
       w <- g1 * z
     } else if (use == "cmp") {
