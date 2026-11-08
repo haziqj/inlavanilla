@@ -148,7 +148,8 @@ test_that("with a gradient one step costs 2m + 1 gradient calls", {
   on <- fit_model(mod, marginals = "gaussian")
   off <- fit_model(mod, vb = "off", marginals = "gaussian")
   expect_identical(on$counts[["grad"]] - off$counts[["grad"]], 13L)
-  expect_identical(on$counts[["logpost"]], off$counts[["logpost"]])
+  # And 4m + 2 calls of logpost for the gain ratio
+  expect_identical(on$counts[["logpost"]] - off$counts[["logpost"]], 26L)
 })
 
 test_that("without a gradient one step is one pass of logpost calls", {
@@ -167,7 +168,11 @@ test_that("without a gradient one step is one pass of logpost calls", {
     silent = TRUE
   )
   n_nodes <- nrow(vb_nodes(on$cov)$nodes) - 1L
-  expect_identical(on$counts[["logpost"]] - off$counts[["logpost"]], n_nodes)
+  # The pass, and 4m + 2 calls for the gain ratio
+  expect_identical(
+    on$counts[["logpost"]] - off$counts[["logpost"]],
+    n_nodes + 18L
+  )
   expect_identical(on$diagnostics$vb$iterations, 1L)
 })
 
@@ -256,6 +261,96 @@ test_that("in several dimensions one step moves most of the way", {
   # Observed: the largest shift is 0.33 SDs, and the two differ by 0.03
   expect_lt(max(abs(shift_on - shift_full)), 0.05)
   expect_gt(stats::cor(shift_on, shift_full), 0.99)
+})
+
+# The gain ratio ----------------------------------------------------------------
+
+test_that("the gain ratio is the rise delivered over the rise promised", {
+  # Whitened: slope sqrt(a) (1 - exp(sigma z)), so the expected log-posterior
+  # is known at the nodes, and the ratio can be written out
+  a <- 2
+  mod <- log_gamma_model(a)
+  fit <- fit_model(mod)
+  s <- 1 / sqrt(a)
+  d <- log_gamma_first_step(a)
+  l <- function(z) sqrt(a) * z - a * (exp(s * z) - 1)
+  expected <- function(d) {
+    2 / 3 * l(d) + (l(d + sqrt(3)) + l(d - sqrt(3))) / 6
+  }
+  ratio <- (expected(d) - expected(0)) / (0.5 * d^2)
+  expect_equal(fit$diagnostics$vb$gain_ratio, ratio, tolerance = 1e-4)
+  expect_equal(
+    unname(diagnostics(fit)[["vb_gain_ratio"]]),
+    ratio,
+    tolerance = 1e-4
+  )
+})
+
+test_that("the gain ratio is near 1 with data and falls with skewness", {
+  gain <- function(a) fit_model(log_gamma_model(a))$diagnostics$vb$gain_ratio
+  ratios <- vapply(c(50, 5, 1, 0.45), gain, 0)
+  expect_true(all(diff(ratios) < 0))
+  expect_gt(ratios[1], 0.95)
+  expect_lt(ratios[4], 0.5)
+})
+
+test_that("a low gain ratio warns, and points to the full solve", {
+  testthat::local_reproducible_output(width = 80, crayon = FALSE)
+  mod <- log_gamma_model(0.45)
+  w <- expect_warning(
+    fit <- inla_vanilla(
+      mod$logpost,
+      mod$init,
+      grad = mod$grad,
+      verbose = FALSE
+    ),
+    class = "inlavanilla_diagnostics_warning"
+  ) |>
+    suppressMessages()
+  text <- gsub("\\s+", " ", cli::ansi_strip(conditionMessage(w)))
+  expect_match(text, "One-step VB delivered", fixed = TRUE)
+  expect_match(text, "Compare with `vb = \"full\"`", fixed = TRUE)
+  expect_match(
+    gsub("\\s+", " ", capture_output(print(summary(fit)))),
+    "VB correction in one step delivered",
+    fixed = TRUE
+  )
+})
+
+test_that("a healthy gain ratio raises nothing and is printed", {
+  testthat::local_reproducible_output(width = 80, crayon = FALSE)
+  fit <- fit_model(log_gamma_model(5))
+  expect_identical(fit$warnings, character())
+  expect_match(
+    capture_output(print(summary(fit))),
+    "gain ratio 0.93",
+    fixed = TRUE
+  )
+})
+
+test_that("the gain ratio did not run when the correction iterated", {
+  mod <- skew_normal_model(10)
+  on <- fit_model(mod)
+  expect_false(on$diagnostics$vb$one_pass)
+  expect_true(is.na(on$diagnostics$vb$gain_ratio))
+  full <- fit_model(log_gamma_model(2), vb = "full")
+  expect_true(is.na(full$diagnostics$vb$gain_ratio))
+})
+
+test_that("a step too small to check has no gain ratio", {
+  # A Gaussian posterior: the first step is zero
+  lp <- function(theta) -0.5 * sum(theta^2)
+  gr <- function(theta) -theta
+  fit <- inla_vanilla(lp, c(a = 0.5, b = -0.2), grad = gr, silent = TRUE)
+  expect_true(is.na(fit$diagnostics$vb$gain_ratio))
+  expect_identical(fit$warnings, character())
+})
+
+test_that("below_level() flags low and non-finite values, not NA", {
+  expect_identical(
+    below_level(c(0.2, 0.5, 0.9, NA, NaN, Inf, -Inf), 0.5),
+    c(TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE)
+  )
 })
 
 # The guard ------------------------------------------------------------------

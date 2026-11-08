@@ -44,7 +44,7 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction in one step: max shift 0.24 SD.
+      v VB correction in one step: max shift 0.24 SD, gain ratio 0.977.
       i Gaussian marginals: no scans, so no skew-normal checks.
 
 ---

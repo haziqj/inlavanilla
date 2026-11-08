@@ -89,6 +89,11 @@ but flags nothing: the fallback is a route of the solver, not a measure
 of the approximation.
 \item \code{vb_step_max}: the largest \code{vb_step_sigma}. Like \code{mode_shift_max} it
 should be close to 0.
+\item \code{vb_gain_ratio}: how much of the promised rise in the expected
+log-posterior a one-step correction delivered: the rise under the
+Gaussian, over the \eqn{\frac12 \delta^\top H \delta}{1/2 d' H d} that
+the step assumes. Near 1 is healthy, and it is flagged below 0.5. \code{NA}
+when the correction iterated, or the step was too small to check.
 \item \code{mean_gap_max}: the largest absolute \code{mean_gap}.
 \item \code{ridge_bend_max}: the largest \code{ridge_bend}.
 \item \code{n_heavy_tails}: the number of parameters whose \code{tails} is \code{FALSE}.

@@ -437,6 +437,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "unscanned_mass_max",
       "vb_fallback",
       "vb_step_max",
+      "vb_gain_ratio",
       "mean_gap_max",
       "ridge_bend_max",
       "n_heavy_tails"

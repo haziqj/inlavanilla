@@ -357,7 +357,10 @@ is itself an approximation to the posterior mean with an error of the same
 order. If the first step is over 2.5 posterior SDs, or a node fails, the
 iteration carries on with capped steps, within the number of calls that the
 mode and Hessian took. \code{diagnostics()} then has \code{vb_step_sigma}, the step
-still to go, which is \code{NA} after a single step. A large first step can also
+still to go, which is \code{NA} after a single step. After a single step the fit
+checks that it delivered what it promised: \code{vb_gain_ratio} in \code{diagnostics()}
+is the rise in the expected log-posterior over the rise the step assumed, and
+a ratio below 0.5 raises a warning. A large first step can also
 overstate the VB term of the log marginal likelihood, so after a shift above
 1 posterior SD, which is flagged, compare models with care: \code{vb = "full"} may
 be closer.

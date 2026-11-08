@@ -401,7 +401,20 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   lines <- c(
     lines,
     if (isTRUE(vbc$one_pass)) {
-      grey("One step, accepted (guard > ", with_sd(vb_onestep_guard), ")")
+      c(
+        grey("One step, accepted (guard > ", with_sd(vb_onestep_guard), ")"),
+        if (!is.na(vbc$gain_ratio)) {
+          paste0(
+            grey("Gain ratio ", fmt_num(vbc$gain_ratio)),
+            if (isTRUE(below_level(vbc$gain_ratio, warn_levels$vb_gain))) {
+              flag()
+            } else {
+              ""
+            },
+            grey(" (warning < ", warn_levels$vb_gain, ")")
+          )
+        }
+      )
     } else if (isTRUE(h$ran_out)) {
       grey(
         "The first step was over the guard. Stopped after ",

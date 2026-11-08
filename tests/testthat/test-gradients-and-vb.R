@@ -1121,7 +1121,8 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
     "vb_kld_global",
     "kld_max",
     "vb_fallback",
-    "vb_step_max"
+    "vb_step_max",
+    "vb_gain_ratio"
   )) {
     expect_identical(g[[nm]], NA_real_)
   }

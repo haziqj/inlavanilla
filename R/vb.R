@@ -77,6 +77,30 @@ axis_nodes <- function(Sigma) {
   )
 }
 
+# How much of the promised gain one step delivered. The step takes the expected
+# log-posterior to be a parabola with the Laplace curvature, which promises a
+# rise of 0.5 shift' H shift. The ratio is the rise that came about, over that
+# promise, so it is near 1 when the premise holds, and small or negative when
+# the step went too far or the posterior is far from Gaussian
+# (lab/ideas/2026-11-one-step-vb). The expectations use axis_nodes(), with or
+# without a gradient: 4m + 2 calls of logpost. A step too small to check is NA.
+vb_gain_ratio <- function(lp, mode, Sigma, R, shift) {
+  promised <- 0.5 * sum((R %*% shift)^2)
+  if (promised < 1e-6) {
+    return(NA_real_)
+  }
+  rule <- axis_nodes(Sigma)
+  expected <- function(mu) {
+    lps <- vapply(
+      seq_len(nrow(rule$nodes)),
+      function(b) lp(mu + rule$nodes[b, ]),
+      0
+    )
+    lps[1] + sum(rule$weights[-1] * (lps[-1] - lps[1]))
+  }
+  (expected(mode + shift) - expected(mode)) / promised
+}
+
 # The principal axes of Sigma, scaled so that A A' = Sigma, each with its
 # largest entry positive
 principal_axes <- function(Sigma) {
@@ -486,6 +510,11 @@ vb_correct <- function(
     iterations = iter,
     fallback = fallback,
     one_pass = one_pass,
+    gain_ratio = if (one_pass) {
+      vb_gain_ratio(lp, mode, Sigma, R, shift)
+    } else {
+      NA_real_
+    },
     step_sigma = stats::setNames(step_sigma, names(mode)),
     history = list(
       steps = steps,

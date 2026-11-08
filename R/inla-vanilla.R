@@ -196,7 +196,10 @@
 #' order. If the first step is over 2.5 posterior SDs, or a node fails, the
 #' iteration carries on with capped steps, within the number of calls that the
 #' mode and Hessian took. `diagnostics()` then has `vb_step_sigma`, the step
-#' still to go, which is `NA` after a single step. A large first step can also
+#' still to go, which is `NA` after a single step. After a single step the fit
+#' checks that it delivered what it promised: `vb_gain_ratio` in `diagnostics()`
+#' is the rise in the expected log-posterior over the rise the step assumed, and
+#' a ratio below 0.5 raises a warning. A large first step can also
 #' overstate the VB term of the log marginal likelihood, so after a shift above
 #' 1 posterior SD, which is flagged, compare models with care: `vb = "full"` may
 #' be closer.
@@ -752,6 +755,7 @@ vanilla_fit <- function(
     # The fallback is a route of the solver, reported but not marked, as in
     # INLAvaan. A correction that did not settle is marked.
     vb_max <- max(abs(vbc$shift) / sds)
+    gain_ok <- !isTRUE(below_level(vbc$gain_ratio, warn_levels$vb_gain))
     settled <- !any(
       check_ran(vbc$step_sigma) &
         off_level(vbc$step_sigma, warn_levels$vb_step)
@@ -762,10 +766,14 @@ vanilla_fit <- function(
         "VB mean correction, max shift ",
         hl(paste0(format(signif(vb_max, 2)), sd_unit())),
         if (vbc$fallback) " (fallback optimiser)" else "",
-        if (!settled) ", not settled" else ""
+        if (!settled) ", not settled" else "",
+        if (!gain_ok) ", gain below its promise" else ""
       ),
       elapsed() - t0,
-      ok = settled && is.finite(vb_max) && vb_max <= warn_levels$vb_shift
+      ok = settled &&
+        gain_ok &&
+        is.finite(vb_max) &&
+        vb_max <= warn_levels$vb_shift
     )
     if (prog$detail) {
       report_vb(prog, vbc, sds, lap$logml, calls_since())
@@ -876,6 +884,7 @@ vanilla_fit <- function(
         iterations = vbc$iterations,
         fallback = vbc$fallback,
         one_pass = vbc$one_pass,
+        gain_ratio = vbc$gain_ratio,
         kld_global = vbc$kld_global
       )
     },

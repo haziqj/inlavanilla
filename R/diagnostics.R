@@ -23,7 +23,9 @@ warn_levels <- list(
   vb_shift = 1,
   hess_cond = 1e8,
   # inlavanilla's own: the VB correction settles as the mode search does
-  vb_step = 0.1
+  vb_step = 0.1,
+  # inlavanilla's own: flagged below this, the share of the promised gain
+  vb_gain = 0.5
 )
 # The ridge bend level is a marginal SD about 10% too small,
 # 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
@@ -33,6 +35,11 @@ summary_levels <- list(ridge_bend = 0.25, mean_gap = 0.1)
 # TRUE where `x` is above `level` or not finite.
 off_level <- function(x, level) {
   !(is.finite(x) & x <= level)
+}
+
+# TRUE where `x` is below `level` or not finite, among the checks that ran.
+below_level <- function(x, level) {
+  check_ran(x) & !(is.finite(x) & x >= level)
 }
 
 # Whether a check ran: NA is a check that did not run, and NaN a value it
@@ -81,6 +88,11 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     # inlavanilla's own
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
     vb_step_max = max_na(d$vb_step_sigma),
+    vb_gain_ratio = if (vb_applied && !is.null(vb$gain_ratio)) {
+      vb$gain_ratio
+    } else {
+      NA_real_
+    },
     mean_gap_max = max_na(abs(d$mean_gap)),
     ridge_bend_max = max_na(d$ridge_bend),
     n_heavy_tails = if (all(is.na(d$tails))) {
@@ -214,6 +226,15 @@ problem_text <- function(check, dg, env, n = 3L) {
         "."
       )
     },
+    vb_gain = {
+      env$vb_gain <- fmt_g3(glob[["vb_gain_ratio"]])
+      paste0(
+        "One-step VB delivered {vb_gain} of the rise in the expected ",
+        "log-posterior it promised (warning < ",
+        warn_levels$vb_gain,
+        "), so the Gaussian approximation at the mode may be inaccurate."
+      )
+    },
     vb_step = {
       env$vbs_worst <- p$names[worst_first(p$vb_step_sigma)[1L]]
       env$vbs_step <- fmt_g3(glob[["vb_step_max"]])
@@ -306,6 +327,7 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   warned <- c(
     "mode",
     "vb_step",
+    "vb_gain",
     "nmad",
     "unscanned_mass",
     "tails",
@@ -314,6 +336,15 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   )
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
+    if (check == "vb_gain") {
+      out <- c(
+        out,
+        i = paste0(
+          "Compare with {.code vb = \"full\"}, and treat the log marginal ",
+          "likelihood with care."
+        )
+      )
+    }
     if (check == "vb_step") {
       # Without a gradient the likely cause is the rule's error on a
       # posterior far from Gaussian, which a gradient removes, not the
@@ -449,6 +480,11 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   of the approximation.
 #' * `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
 #'   should be close to 0.
+#' * `vb_gain_ratio`: how much of the promised rise in the expected
+#'   log-posterior a one-step correction delivered: the rise under the
+#'   Gaussian, over the \eqn{\frac12 \delta^\top H \delta}{1/2 d' H d} that
+#'   the step assumes. Near 1 is healthy, and it is flagged below 0.5. `NA`
+#'   when the correction iterated, or the step was too small to check.
 #' * `mean_gap_max`: the largest absolute `mean_gap`.
 #' * `ridge_bend_max`: the largest `ridge_bend`.
 #' * `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
