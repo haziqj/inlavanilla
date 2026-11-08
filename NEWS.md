@@ -11,6 +11,12 @@
   node that fails, carries on with capped steps, within the calls that the mode
   and Hessian took. `vb_step_sigma` is `NA` after a single step.
 
+* After a one-step VB correction the fit checks that the step delivered what
+  it promised. `vb_gain_ratio` in `diagnostics()` is the rise in the expected
+  log-posterior over the rise the step assumed, at a cost of 4m + 2 calls of
+  `logpost`. A ratio below 0.5 raises a warning that points to `vb = "full"`,
+  and `summary()` reports it.
+
 * `coef()` gives the posterior mean of each parameter, the `Mean` column of
   `summary()`, as INLAvaan's `coef()` does.
 

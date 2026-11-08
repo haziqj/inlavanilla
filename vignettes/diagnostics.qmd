@@ -55,6 +55,7 @@ can still do badly.
 |---|---|---|---|---|
 | Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
+| VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
 | Hessian | `hess_cond` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
@@ -151,6 +152,18 @@ that step has to iterate: if it is over 2.5 posterior SDs or a node fails, the
 iteration carries on with capped steps, within the calls that the mode and
 Hessian took. Running out of them shows up here as a correction that did not
 settle, and `vb = "full"` is then the thing to try.
+
+One step rests on a single premise: that the expected log-posterior is a
+parabola with the Laplace curvature. That premise can be tested.
+`vb_gain_ratio` in `diagnostics(fit)` is the rise in the expected log-posterior
+that the step delivered, over the rise the parabola promised,
+$\tfrac12\delta^\top H\delta$. It costs $4m + 2$ calls of `logpost`. Near 1 the
+premise holds, and below 0.5 the fit warns. A low ratio means that the step went
+too far, or that the posterior is far from Gaussian around the mode. It cannot
+see a long tail far from the mode, where the parabola still holds near the
+peak: there only the mean gap, below, shows the trouble. The check says how far
+to trust the step, not what to do about it, as `vb = "full"` is better on some
+of these posteriors and worse on others.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood with
 care. Its VB term, $\tfrac12\delta^\top H\delta$, is a leading-order term, and a
