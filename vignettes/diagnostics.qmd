@@ -152,6 +152,13 @@ iteration carries on with capped steps, within the calls that the mode and
 Hessian took. Running out of them shows up here as a correction that did not
 settle, and `vb = "full"` is then the thing to try.
 
+A shift above 1 SD is also a reason to treat the log marginal likelihood with
+care. Its VB term, $\tfrac12\delta^\top H\delta$, is a leading-order term, and a
+large first step can overstate it. On the random effects model of the article
+[Diagnostic tests without a gold standard](articles/diagnostic-tests.html), the
+default gives a log marginal likelihood 1.2 nats too high, and `vb = "full"` one
+0.3 nats too low.
+
 With a gradient the fallback takes one more step of its own. If it lands
 short of settled, it is run once more from where it landed, much as the mode
 search reruns its optimiser when the gradient at the mode is not yet small.

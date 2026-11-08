@@ -254,7 +254,12 @@ lp_fm <- function(theta, y, count) {
 A latent class model has a mirror image: swapping the two classes, with
 $\text{Se}_j \to 1 - \text{Sp}_j$, fits the data just as well. Starting each
 fit from sensitivities and specificities of 0.7 picks the image in which the
-tests are informative.
+tests are informative. These posteriors are far from Gaussian, and we compare
+the models by their log marginal likelihoods, so we ask for `vb = "full"`. On
+the random effects model the default one-step correction moves `log_sigma1` by
+1.5 posterior SDs, with a warning, and, checked against importance sampling,
+its log marginal likelihood is 1.2 nats too high. With `vb = "full"` it is 0.3
+too low. The skew-normal marginals are the same either way.
 
 ```{r}
 #| label: fits
@@ -263,13 +268,14 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Se_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
-fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count)
+fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count, vb = "full")
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
   y = y,
   count = count,
-  gh = gh
+  gh = gh,
+  vb = "full"
 )
 start_fm <- c(
   start[1],
@@ -278,7 +284,7 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w1_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
-fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count)
+fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count, vb = "full")
 ```
 
 The seconds each fit took:

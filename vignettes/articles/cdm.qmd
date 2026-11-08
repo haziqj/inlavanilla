@@ -150,7 +150,7 @@ Over two in five examinees have mastered all three attributes, and nearly a
 third none of them. The classes with only the morphosyntactic or only the
 cohesive attribute are rare, at 1 to 2%.
 
-The fit takes about 40 seconds, most of it in the 70,000 or so calls of
+The fit takes about 25 seconds, most of it in the 45,000 or so calls of
 `logpost` that 63 parameters need without a gradient.
 
 ## Checking against Stan
