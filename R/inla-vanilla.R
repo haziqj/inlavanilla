@@ -146,8 +146,9 @@
 #' With `grad`, every stage is more accurate. The fit is also faster when a
 #' gradient call costs about as much as a `logpost` call, as a hand-written
 #' gradient usually does, since it then makes far fewer calls in all. A
-#' gradient by automatic differentiation (RTMB, TMB) costs about two, and the
-#' fit is still somewhat faster than without one. The default VB correction,
+#' gradient by automatic differentiation (RTMB, TMB) costs about two, and
+#' beyond a handful of parameters the fit is still several times faster than
+#' without one (four times at m = 39). The default VB correction,
 #' `vb = "onestep"`, takes 2m + 1 gradient calls, about as many as one numerical
 #' Hessian, and `vb = "full"` takes at most (m + 1)(m + 2) + 1 per sweep, usually
 #' about four sweeps. Beyond a handful of parameters the marginals are the
@@ -159,13 +160,15 @@
 #' `hess` is optional too, and needs `grad`, as in [stats::nlminb()]. With
 #' it, [stats::nlminb()] takes Newton steps to the mode, the Hessian at the
 #' mode is the supplied one, and the volume correction of each skew-normal
-#' marginal takes one `hess` call instead of 2m + 2 `grad` calls. The VB
-#' correction and the scans do not use it. The fit is the one `grad` alone
-#' gives, to the error of its finite differences (about 1e-8, relative),
-#' except that the mode is found more precisely, so `hess` saves time rather
-#' than adding accuracy. On test models with an automatic-differentiation
-#' Hessian (RTMB) the fits took 13% to 35% less time, the most where the
-#' Hessian was sparse.
+#' marginal takes one `hess` call, where `grad` alone serves all the marginals
+#' with 4m + 1 calls. The VB correction and the scans do not use it. The fit
+#' is the one `grad` alone gives, except that the mode is found more precisely
+#' and the marginals differ by about 3e-4 posterior SDs, the error of the
+#' forward difference that the `hess` route takes. A dense Hessian costs about
+#' m gradients, so `hess` adds precision at the mode rather than saving time:
+#' a structural equation model with 39 parameters and an
+#' automatic-differentiation Hessian (RTMB) took 0.30 s with it and 0.16 s
+#' without.
 #'
 #' A supplied `grad` is checked against finite differences at `init`, and
 #' its Jacobian at the mode is checked for symmetry, with a warning if either
@@ -317,9 +320,9 @@
 #'   (see the section on the width term). With m parameters and
 #'   `n_grid` scan points, per parameter:
 #'   * `"trace"` (the default): its linear term \eqn{\gamma_j' t}{gamma_j' t},
-#'     as in INLAvaan, from 2m + 2 `grad` calls (one `hess` call with `hess`,
-#'     2m + 5 `logpost` calls without `grad`), on top of the `n_grid - 1`
-#'     `logpost` calls of the scan.
+#'     as in INLAvaan, from 4 `grad` calls, and one more for all the parameters
+#'     together (one `hess` call with `hess`, 2m + 5 `logpost` calls without
+#'     `grad`), on top of the `n_grid - 1` `logpost` calls of the scan.
 #'   * `"cmp"`: the exact width term along the same straight scan, from the
 #'     Hessian of the other parameters at each scan point: about
 #'     `n_grid - 1` times 2(m - 1) `grad` calls (`n_grid - 1` `hess` calls
