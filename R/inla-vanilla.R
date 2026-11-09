@@ -707,7 +707,7 @@ vanilla_fit <- function(
   }
   tick <- function() {
     n <- st$n_lp + st$n_gr + st$n_he
-    if (prog$calls && n %% 16L == 0L) {
+    if (prog$calls && n %% prog$every == 0L) {
       progress_tick(prog, set = n - n_base)
     }
   }
@@ -747,10 +747,16 @@ vanilla_fit <- function(
 
   # One call of each function, to fail at once with a clear message. Anything
   # more waits for the mode, where it costs nothing (grad_gap())
+  t_first <- elapsed()
   lp_init <- with_context(
     "evaluating logpost at init",
     check_logpost_at_init(logpost_x, init)
   )
+  # A slow function gets its progress line on time, and an update is nothing
+  # beside the call
+  if (elapsed() - t_first >= progress_slow_s) {
+    prog$every <- 1L
+  }
   if (has_grad) {
     with_context(
       "evaluating grad at init",
@@ -774,7 +780,11 @@ vanilla_fit <- function(
   t0 <- elapsed()
   t_starts <- c(init = t_start, laplace = t0)
   stage_calls()
-  progress_start(prog, "Finding the posterior mode, {cli::pb_current} calls")
+  progress_start(
+    prog,
+    paste0("Finding the posterior mode, ", pb_calls),
+    waited = t0 - t_start
+  )
   lap <- with_context(
     "finding the posterior mode",
     laplace_fit(lp, gr, init, ctrl, he)
@@ -841,7 +851,7 @@ vanilla_fit <- function(
     stage_calls()
     progress_start(
       prog,
-      "Applying the VB mean correction, {cli::pb_current} calls"
+      paste0("Applying the VB mean correction, ", pb_calls)
     )
     vbc <- with_context(
       "applying the VB mean correction",
@@ -901,7 +911,7 @@ vanilla_fit <- function(
         stage_calls()
         progress_start(
           prog,
-          "Computing the volume corrections, {cli::pb_current} calls"
+          paste0("Computing the volume corrections, ", pb_calls)
         )
       } else {
         progress_start(

@@ -860,6 +860,37 @@ test_that("the gradient is compared with logpost at no cost in calls", {
   expect_identical(fit$warnings, character())
 })
 
+test_that("a slow function gets its progress line on time", {
+  # The line is created after the first calls, which count towards its delay,
+  # and every call then updates it, not every 16th.
+  ticks <- 0L
+  local_mocked_bindings(
+    progress_tick = function(p, set = NULL) {
+      ticks <<- ticks + 1L
+      invisible(NULL)
+    }
+  )
+  lp <- function(theta) {
+    Sys.sleep(0.02)
+    lp_gauss(theta)
+  }
+  fit <- suppressMessages(inla_vanilla(
+    lp,
+    c(a = 0.3, b = 0.2),
+    vb = "off",
+    marginals = "gaussian"
+  ))
+  expect_gte(ticks, fit$counts[["logpost"]])
+  ticks <- 0L
+  fit <- suppressMessages(inla_vanilla(
+    lp_gauss,
+    c(a = 0.3, b = 0.2),
+    vb = "off",
+    marginals = "gaussian"
+  ))
+  expect_lte(ticks, fit$counts[["logpost"]] %/% 16L + 1L)
+})
+
 test_that("the gradient check works whatever the scale of the posterior", {
   # theta ~ N(s, s^2). A gradient twice too large has the right zero, so the
   # mode is right and nothing later notices, but the Hessian taken from it is
@@ -1547,8 +1578,8 @@ test_that("a running stage shows its sentence and the time, not a cli bar", {
   loo(fit, loglik)
   expect_length(formats, 4)
   lines <- c(
-    "Finding the posterior mode, {cli::pb_current} calls",
-    "Applying the VB mean correction, {cli::pb_current} calls",
+    paste0("Finding the posterior mode, ", pb_calls),
+    paste0("Applying the VB mean correction, ", pb_calls),
     paste0("Fitting ", pb_item, " skew-normal marginals"),
     "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls"
   )

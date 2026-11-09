@@ -17,6 +17,7 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p$frame <- frame
   p$id <- NULL
   p$calls <- FALSE # whether the log-posterior wrapper should tick the bar
+  p$every <- 16L # it ticks every so many calls, or every call for a slow one
   p$warnings <- character()
   p
 }
@@ -30,13 +31,17 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
 # the number of calls. The delay is set while the bar is created (cli reads it
 # then) and the option is restored afterwards. A user's own setting is kept,
 # so a knitr or Quarto setup chunk can keep bars, which cannot redraw in place
-# there, out of the document.
-progress_start <- function(p, msg, total = NA) {
+# there, out of the document. `waited` is the seconds already gone before this
+# stage, which count towards the delay.
+progress_start <- function(p, msg, total = NA, waited = 0) {
   if (!p$show) {
     return(invisible(p))
   }
   old <- options(
-    cli.progress_show_after = getOption("cli.progress_show_after", 0.5)
+    cli.progress_show_after = getOption(
+      "cli.progress_show_after",
+      max(0.5 - waited, 0)
+    )
   )
   on.exit(options(old))
   p$id <- cli::cli_progress_bar(
@@ -52,6 +57,14 @@ progress_start <- function(p, msg, total = NA) {
   p$calls <- is.na(total)
   invisible(p)
 }
+
+# A first call longer than this, in seconds, makes every call tick the line. A
+# tick costs a microsecond or two, which matters only beside a very fast
+# function, and 16 calls of less than this are too short to notice.
+progress_slow_s <- 0.01
+
+# The calls so far, in a line that counts them
+pb_calls <- "{cli::pb_current} call{?s}"
 
 # The item being worked on, "4/6", counted from 1 as in INLAvaan
 pb_item <- "{min(cli::pb_current + 1, cli::pb_total)}/{cli::pb_total}"
