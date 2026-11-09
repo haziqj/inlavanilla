@@ -110,9 +110,9 @@ init <- c(
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
 fit <- inla_vanilla(logpost, init, y = y, eta = eta)
-#> ✔ Found the posterior mode in 190 iterations [15.2s]
-#> ✔ VB mean correction, max shift 0.44σ [23.1s]
-#> ✔ Fitted 63 skew-normal marginals [11.3s]
+#> ✔ Found the posterior mode in 186 iterations [22.9s]
+#> ✔ VB mean correction, max shift 0.79σ [4.8s]
+#> ✔ Fitted 63 skew-normal marginals [10.7s]
 ```
 
 Draws give the parameters on the probability scale, and the share of
@@ -145,7 +145,7 @@ Over two in five examinees have mastered all three attributes, and
 nearly a third none of them. The classes with only the morphosyntactic
 or only the cohesive attribute are rare, at 1 to 2%.
 
-The fit takes about 40 seconds, most of it in the 70,000 or so calls of
+The fit takes about 25 seconds, most of it in the 45,000 or so calls of
 `logpost` that 63 parameters need without a gradient.
 
 ## Checking against Stan

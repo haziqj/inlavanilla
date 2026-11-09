@@ -65,9 +65,9 @@ logpost_pois <- function(theta, X, y) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
-#> ✔ Found the posterior mode in 29 iterations [10ms]
-#> ✔ VB mean correction, max shift 0.025σ [13ms]
-#> ✔ Fitted 6 skew-normal marginals [19ms]
+#> ✔ Found the posterior mode in 29 iterations [15ms]
+#> ✔ VB mean correction, max shift 0.025σ [18ms]
+#> ✔ Fitted 6 skew-normal marginals [24ms]
 ```
 
 [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) takes the fit,
@@ -128,7 +128,7 @@ loo_nb
 #> ── Leave-one-out cross-validation ────────────────────────────── 54 units ──
 #> 
 #>           Estimate   SE
-#> elpd_loo    -202.2  4.8
+#> elpd_loo    -202.1  4.8
 #> p_loo          6.0  0.8
 #> looic        404.3  9.6
 #> 
@@ -152,7 +152,7 @@ elpd_diff <- function(a, b) {
 }
 elpd_diff(loo_nb, loo_pois)
 #> elpd_diff        se 
-#>  40.75547  10.62584
+#>  40.77979  10.63887
 ```
 
 The negative binomial predicts better, by about four standard errors.
@@ -169,7 +169,7 @@ fit_add <- inla_vanilla(logpost_nb, init_add, X = X_add, y = y, silent = TRUE)
 loo_add <- loo(fit_add, loglik_nb, X = X_add, y = y)
 elpd_diff(loo_nb, loo_add)
 #> elpd_diff        se 
-#>  2.047182  2.718401
+#>  2.064323  2.713827
 ```
 
 The interaction model is ahead, but by less than one standard error: the
@@ -184,7 +184,7 @@ gives the same comparison as a table:
 loo::loo_compare(list(poisson = loo_pois, nb = loo_nb, nb_additive = loo_add))
 #>        model elpd_diff se_diff p_worse diag_diff diag_elpd
 #>           nb       0.0     0.0      NA                    
-#>  nb_additive      -2.0     2.7    0.77   N < 100          
+#>  nb_additive      -2.1     2.7    0.78   N < 100          
 #>      poisson     -40.8    10.6    1.00   N < 100
 #> 
 #> Diagnostic flags present.
@@ -203,8 +203,8 @@ waic(fit_nb, loglik_nb, X = X, y = y)
 #> 
 #>            Estimate   SE
 #> elpd_waic    -202.0  4.8
-#> p_waic          5.9  0.8
-#> waic          404.1  9.6
+#> p_waic          5.8  0.8
+#> waic          404.0  9.6
 #> 
 #> ✔ Second-order expansion for every unit.
 ```
@@ -227,7 +227,7 @@ refit_elpd <- function(i) {
     init_nb,
     X = X[-i, ],
     y = y[-i],
-    vb = FALSE,
+    vb = "off",
     silent = TRUE
   )
   ll <- sampling(
@@ -246,10 +246,10 @@ time_loo <- system.time(loo(fit_nb, loglik_nb, X = X, y = y))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  3.877  0.003
+#>  4.667  0.005
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
-#> -202.6061 -202.1721
+#> -202.6061 -202.1478
 ```
 
 ``` r
@@ -275,7 +275,7 @@ refits, one point per loom. The points lie on the identity
 line.](model-comparison_files/figure-html/refit-plot-1.png)
 
 The two agree loom by loom, to within 0.05 nats, and their totals differ
-by 0.4, a tenth of the standard error.
+by 0.5, a tenth of the standard error.
 [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) took a fraction
 of the time of the 54 refits.
 
@@ -305,7 +305,7 @@ Here no loom comes close:
 
 summary(loo_nb$pointwise[, "k"])
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#> 0.09739 0.10298 0.11533 0.12795 0.14013 0.22925
+#> 0.09707 0.10268 0.11503 0.12762 0.13973 0.22890
 ```
 
 ## References

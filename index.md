@@ -13,12 +13,12 @@ It runs the approximation pipeline of
 1.  a **Laplace approximation** at the posterior mode, with the Laplace
     estimate of the log marginal likelihood;
 2.  a **VB mean correction** that recentres the Gaussian at a better
-    estimate of the posterior mean;
+    estimate of the posterior mean, in one Newton step by default;
 3.  **skew-normal marginals**, one per parameter, fitted to scans of the
     log-posterior;
 4.  **Gaussian copula draws** for any function of the parameters.
 
-Stages 2 and 3 are optional and independent: `vb = FALSE` skips the VB
+Stages 2 and 3 are optional and independent: `vb = "off"` skips the VB
 correction, and `marginals = "gaussian"` keeps the Gaussian marginals
 instead of scanning for skew-normal ones. With both, you get the Laplace
 approximation alone.
@@ -67,12 +67,12 @@ logpost <- function(theta, y, n) {
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 #> ✔ Found the posterior mode in 6 iterations [3ms]
-#> ✔ VB mean correction, max shift 0.17σ [28ms]
-#> ✔ Fitted 1 skew-normal marginal [20ms]
+#> ✔ VB mean correction, max shift 0.17σ [26ms]
+#> ✔ Fitted 1 skew-normal marginal [16ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (55ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (48ms)
 #> 
 #>              Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494

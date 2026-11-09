@@ -4,7 +4,7 @@ By default (`type = "marg_pdf"`), draws the marginal density of each
 parameter, on the unconstrained scale, with the Gaussian marginal of the
 Laplace approximation for comparison. The vertical line marks the
 posterior mean. For a fit with `marginals = "gaussian"` the marginals
-are Gaussian: centred at the VB mean, or, with `vb = FALSE`, the Laplace
+are Gaussian: centred at the VB mean, or, with `vb = "off"`, the Laplace
 marginals themselves, drawn without a second copy.
 
 ## Usage

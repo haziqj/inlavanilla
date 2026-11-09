@@ -6,7 +6,7 @@ the unconstrained scale of `logpost`: the `Mean` column of
 These are the estimates INLAvaan's
 [`coef()`](https://rdrr.io/r/stats/coef.html) gives. For a fit with
 `marginals = "gaussian"` they are the VB-corrected means, or, with
-`vb = FALSE`, the mode. The joint posterior mode is `fit$mode`, and the
+`vb = "off"`, the mode. The joint posterior mode is `fit$mode`, and the
 VB-corrected mean `fit$mean_vb`.
 
 ## Usage

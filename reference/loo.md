@@ -89,7 +89,7 @@ unit \\u\\, its conditional predictive ordinate, is \$\$\mathrm{CPO}\_u
 = p(y_u \mid y\_{-u}) = 1 / E\[1 / p(y_u \mid \vartheta) \mid y\],\$\$
 an expectation over the full posterior. The posterior is taken as the
 Gaussian \\N(\tilde\vartheta, \Omega)\\ of the fit, with the
-VB-corrected mean (the mode when `vb = FALSE`) and the Laplace
+VB-corrected mean (the mode when `vb = "off"`) and the Laplace
 covariance, and \\\ell_u\\ is expanded to second order about
 \\\tilde\vartheta\\, with score \\s_u\\ and Hessian \\H_u\\. The
 expectation is then a Gaussian integral: \$\$\log \mathrm{CPO}\_u =
@@ -111,6 +111,13 @@ The scores and Hessians come from finite differences of `loglik` along
 the principal axes of \\\Omega\\, a hundredth of a posterior SD apart:
 \\m^2 + m + 1\\ calls of `loglik` for \\m\\ parameters, each returning
 every unit.
+
+The calls use the `cores` of the fit, or the plan set with
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+when the fit has none, as the scans of
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+do (see its section on parallel computation), with the same results as a
+serial run. Calls expected to take under a second in all stay serial.
 
 **Existence and the leverage k.** For each unit, the eigenvalues \\k\\
 of \\-\Omega H_u\\ are the shares of the posterior precision the unit
@@ -188,8 +195,8 @@ logpost <- function(theta, time, y) {
 
 fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
 #> ✔ Found the posterior mode in 9 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.12σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [4ms]
+#> ✔ VB mean correction, max shift 0.12σ [2ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 loo(fit, loglik, time = time, y = y)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 

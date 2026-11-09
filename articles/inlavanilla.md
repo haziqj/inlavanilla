@@ -13,9 +13,10 @@ It runs the approximation pipeline of
 1.  **Joint Gaussian (Laplace).** Find the posterior mode and the
     curvature there. This gives a Gaussian approximation and the Laplace
     estimate of the log marginal likelihood.
-2.  **VB mean correction.** Recentre the Gaussian at the mean that
+2.  **VB mean correction.** Move the Gaussian towards the mean that
     maximises its expected log-posterior, a better estimate of the
-    posterior mean than the mode.
+    posterior mean than the mode. By default this is one Newton step
+    from the mode.
 3.  **Skew-normal marginals.** For each parameter, scan the
     log-posterior along the path the Gaussian predicts, correct the scan
     for the changing volume of the other parameters, and fit a
@@ -76,13 +77,13 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [5ms]
-#> ✔ VB mean correction, max shift 0.44σ [9ms]
-#> ✔ Fitted 3 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 10 iterations [8ms]
+#> ✔ VB mean correction, max shift 0.49σ [16ms]
+#> ✔ Fitted 3 skew-normal marginals [12ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.61 · Converged in 10 iterations (23ms)
+#> Log marginal likelihood: -11.59 · Converged in 10 iterations (41ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -92,10 +93,10 @@ fit
 
 The header names the approximation: skew-normal marginals, with the VB
 mean correction. The line under it gives the log marginal likelihood and
-whether the fit converged: whether the mode search and the VB correction
-both reached their solutions. The table summarises each parameter’s
-skew-normal marginal: the mean, standard deviation, quantiles and mode.
-Had the fit raised a warning, or
+whether the fit converged: whether the mode search reached its solution,
+and the VB correction too when it had to iterate. The table summarises
+each parameter’s skew-normal marginal: the mean, standard deviation,
+quantiles and mode. Had the fit raised a warning, or
 [`summary()`](https://rdrr.io/r/base/summary.html) flagged one of its
 checks, a line below the table would say so. Each step of the fit
 reports as it finishes, with the time it took. `verbose = TRUE` adds a
@@ -109,11 +110,11 @@ each stage:
 ``` r
 
 summary(fit)
-#> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla summary ──────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.612 · Converged in 10 iterations (23ms)
-#> Laplace -11.709 + VB term 0.097
-#> 263 logpost calls: mode 5ms, VB 9ms, marginals 6ms
+#> Log marginal likelihood: -11.591 · Converged in 10 iterations (41ms)
+#> Laplace -11.709 + VB term 0.12
+#> 233 logpost calls: mode 10ms, VB 16ms, marginals 12ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -125,15 +126,15 @@ summary(fit)
 #> ── Diagnostics ──
 #> 
 #>         VB shift    NMAD  Unscanned  Ridge bend  Mean gap
-#> 1 b0       -0.13  0.0091    0.00041       0.14     0.0048
-#> 2 b_wt     -0.44  0.017     0.0022        0.050   -0.052 
-#> 3 b_hp      0.28  0.0049    0.0018        0.024    0.057 
+#> 1 b0       -0.15  0.0091    0.00041       0.14     0.026 
+#> 2 b_wt     -0.49  0.017     0.0022        0.049   -0.0043
+#> 3 b_hp      0.28  0.0049    0.0018        0.022    0.054 
 #> 
 #> ✔ Mode found in 10 iterations (Newton step 1.4e-07σ).
 #> ✔ Hessian condition number 4.4, in SD units.
-#> ✔ VB correction settled in 4 iterations: max shift 0.44σ.
+#> ✔ VB correction in one step: max shift 0.49σ, gain ratio 0.806.
 #> ✔ Skew-normal fits: max NMAD 0.017, unscanned mass 0.0022, ridge bend 0.14,
-#>   mean gap 0.057σ.
+#>   mean gap 0.054σ.
 ```
 
 - **VB shift** is how far the VB mean correction moved each mean from
@@ -273,11 +274,10 @@ c(
   Laplace = fit$logml_laplace
 )
 #>        exact VB-corrected      Laplace 
-#>    -11.61846    -11.61242    -11.70894
+#>    -11.61846    -11.59107    -11.70894
 ```
 
-The VB correction moves the Laplace estimate most of the way to the
-exact value.
+The VB correction removes most of the error of the Laplace estimate.
 
 ## Supplying a gradient
 
@@ -295,26 +295,29 @@ grad <- function(theta, X, y) {
 }
 fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
-#> [1] 1.813245e-06
+#> [1] 0.001068982
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 #>                    logpost grad hess
-#> finite_differences     263    0    0
-#> gradient               134  108    0
+#> finite_differences     233    0    0
+#> gradient               110   44    0
 ```
 
 The two fits agree to several decimal places, and the gradient version
-calls `logpost` about half as often.
+calls `logpost` less often.
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
-checks a supplied gradient against finite differences at `init` and
-warns if they disagree, which catches most slips in hand-derived
-gradients.
+compares a supplied gradient with `logpost` at the mode, at no extra
+cost, and warns if they disagree, which catches most slips in
+hand-derived gradients.
 
 ## Cheaper approximations
 
 The VB correction and the skew-normal marginals are optional, and
-independent of each other. `vb = FALSE` skips the VB correction, and
+independent of each other. `vb = "off"` skips the VB correction, and
 `marginals = "gaussian"` skips the scans and keeps the Gaussian
-marginals. With both, the fit is the Laplace approximation alone.
+marginals. With both, the fit is the Laplace approximation alone. The
+default correction, `vb = "onestep"`, takes one Newton step from the
+mode. `vb = "full"` iterates to the VB solution, at a higher cost and to
+much the same answer.
 
 ``` r
 
@@ -323,10 +326,11 @@ fit_fast <- function(...) {
 }
 # Named as the header of print() names them
 fits <- list(
-  `Skew-normal + VB` = fit,
-  `Skew-normal` = fit_fast(vb = FALSE),
-  `Laplace + VB` = fit_fast(marginals = "gaussian"),
-  Laplace = fit_fast(vb = FALSE, marginals = "gaussian")
+  `Skew-normal + one-step VB` = fit,
+  `Skew-normal + full VB` = fit_fast(vb = "full"),
+  `Skew-normal` = fit_fast(vb = "off"),
+  `Laplace + one-step VB` = fit_fast(marginals = "gaussian"),
+  Laplace = fit_fast(vb = "off", marginals = "gaussian")
 )
 round(t(sapply(fits, function(f) {
   c(
@@ -335,21 +339,23 @@ round(t(sapply(fits, function(f) {
     f$summary["b_wt", c("Mean", "2.5%", "97.5%")]
   )
 })), 2)
-#>                  calls  logml  Mean  2.5% 97.5%
-#> Skew-normal + VB   263 -11.61 -5.12 -8.00 -2.72
-#> Skew-normal        207 -11.71 -5.12 -8.00 -2.72
-#> Laplace + VB       152 -11.61 -5.06 -7.52 -2.60
-#> Laplace             96 -11.71 -4.51 -6.97 -2.05
+#>                           calls  logml  Mean  2.5% 97.5%
+#> Skew-normal + one-step VB   233 -11.59 -5.12 -8.00 -2.72
+#> Skew-normal + full VB       261 -11.61 -5.12 -8.00 -2.72
+#> Skew-normal                 205 -11.71 -5.12 -8.00 -2.72
+#> Laplace + one-step VB       124 -11.59 -5.12 -7.58 -2.66
+#> Laplace                      96 -11.71 -4.51 -6.97 -2.05
 ```
 
 Without the VB correction the skew-normal marginals are the same,
 because they are scanned around the mode, but the log marginal
 likelihood is the Laplace one. The VB correction moves the Gaussian’s
 centre most of the way to the posterior mean, but a Gaussian cannot
-follow the long tail. Without a gradient it takes the expected gradient
-from values of `logpost` alone, and costs about as much as finding the
-mode. With a gradient it is more accurate, and as the number of
-parameters grows, it and the marginals become the slowest stages.
+follow the long tail. With a gradient the default correction costs about
+one numerical Hessian. Without one it takes the expected gradient from
+values of `logpost` alone, and still costs less than finding the mode.
+As the number of parameters grows, the marginals become the slowest
+stage.
 
 ## Derived quantities
 
@@ -364,7 +370,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008176
+#> [1,] -0.7657929 -5.309342 0.3008175
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```
@@ -431,7 +437,7 @@ fit_wt <- inla_vanilla(
 )
 log_bf <- fit$logml - fit_wt$logml
 log_bf
-#> [1] 1.418548
+#> [1] 1.415006
 ```
 
 A log Bayes factor of 1.4 favours the model with horsepower, by a factor
@@ -532,8 +538,51 @@ Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md) and [Gradients and
 Hessians with RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md) work
 through both routes for a structural equation model with 39 parameters.
 C++ makes each call about ten times faster than R. A gradient from RTMB
-makes the fit more accurate, at about the speed of R, and its Hessian
-makes it a little faster.
+makes the fit more accurate and several times faster than R.
+
+## Using several cores
+
+The skew-normal scans can run in parallel, since no parameter’s scan
+depends on another’s. We ask for this with `cores`, which needs the
+optional [future](https://future.futureverse.org) package. Its
+`availableCores()` counts the cores this machine offers, and respects
+any limit set on a shared machine. Here `omit = 1` leaves one free for
+everything else:
+
+``` r
+
+cores <- future::availableCores(omit = 1)
+fit_par <- inla_vanilla(
+  logpost, init, X = X, y = y, width = "tk", cores = cores
+)
+```
+
+The results and the progress line are those of a serial fit, and
+[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
+[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) use the same
+setting. A long scan uses every core, a shorter one fewer, and a scan
+expected to take under a second stays serial, so `cores` changes nothing
+on a model as small as this one. The gain depends on how much of the fit
+is scanning: the mode, the Hessian and the VB correction stay serial.
+With `width = "tk"` the scans are nearly the whole fit, and a logistic
+regression with 40 parameters went from 25.5 s to 3.6 s on 12 cores.
+With the default width they are about half of a slow fit, and that fit
+gained about 1.5 times.
+
+In a terminal on macOS or Linux the workers are forks of the R session,
+which share everything. In RStudio, on Windows and in Positron, whose
+console refuses to fork, they are separate R sessions: these need the
+package installed, and are sent your functions and data. A log-posterior
+written in R needs nothing more. Compiled code cannot always be sent, so
+the fit first checks that a worker gets the same value at the mode, and
+otherwise runs serially with a message. The articles [Speeding up with
+Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md) and [Gradients and
+Hessians with RTMB](http://haziqj.ml/inlavanilla/articles/rtmb.md) show
+what to do then.
+
+With `cores` left unset, a fit follows a plan set with
+[`future::plan()`](https://future.futureverse.org/reference/plan.html),
+and is serial if there is none. `cores = 1` is serial whatever the plan.
 
 ## References
 

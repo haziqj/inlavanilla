@@ -17,3 +17,5 @@
   Draw from an approximate posterior
 - [`summary(`*`<inla_vanilla>`*`)`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   : Summarise an INLAvanilla fit
+- [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md) : Time
+  taken by each stage of an INLAvanilla fit

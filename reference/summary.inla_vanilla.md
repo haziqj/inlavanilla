@@ -52,8 +52,8 @@ the skew-normal and VB means as an internal check (Section 5.1). The
 mode shift, the Hessian condition number and the unscanned mass come
 from INLAvaan's
 [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
-not from the paper. `vb_step_sigma`, `tails` and `ridge_bend` are
-inlavanilla's own.
+not from the paper. `grad_gap`, `vb_step_sigma`, `tails` and
+`ridge_bend` are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \\\sqrt{\Sigma\_{jj}}\\, as in INLAvaan's
@@ -69,6 +69,14 @@ diagnostics, with the level at which each is flagged where it is, are:
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) can report failure
   at an accurate mode, and success short of one. With the VB check
   below, it is what makes the fit converged.
+
+- **Gradient.** `grad_gap`, how far a supplied `grad` is from `logpost`
+  at the mode: the larger of the difference in slope per conditional
+  posterior SD and half the relative difference in curvature, so about
+  how far it moves the mode in SDs and the relative error it makes in an
+  SD. It is flagged above 0.1, costs no calls, and is `NA` without
+  `grad` or with `hess`. A wrong gradient mostly harms the log marginal
+  likelihood and the covariance, since the scans use `logpost` itself.
 
 - **Hessian.** `hess_cond`, the condition number of the Hessian at the
   mode with each parameter in posterior-SD units (the eigenvalue ratio
@@ -140,6 +148,8 @@ diagnostics, with the level at which each is flagged where it is, are:
   `ridge_bend` is flagged above 0.25, a shortfall of 10% by that formula
   (see the Accuracy section of
   [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+  Without `grad`, a value below 0.1 is the gain along the direction in
+  which the ridge bends, not the full one, so it can be a little low.
 
 - **Mean gap.** `mean_gap`, the gap between the skew-normal mean and the
   VB-corrected mean, in posterior SDs. Both recover the leading,
@@ -186,7 +196,7 @@ any.
 [`vignette("diagnostics", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/diagnostics.md)
 explains every check with examples.
 
-With `vb = FALSE` there is no VB mean: the VB columns of
+With `vb = "off"` there is no VB mean: the VB columns of
 `summary(fit)$diagnostics` are `NA`, as INLAvaan's
 [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
 leaves them, and are left out of the table. With

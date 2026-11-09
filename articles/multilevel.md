@@ -93,13 +93,13 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [79ms]
-#> ✔ VB mean correction, max shift 0.3σ [94ms]
-#> ✔ Fitted 6 skew-normal marginals [91ms]
+#> ✔ Found the posterior mode in 20 iterations [144ms]
+#> ✔ VB mean correction, max shift 0.3σ [55ms]
+#> ✔ Fitted 6 skew-normal marginals [154ms]
 fit
-#> ── INLAvanilla ───────────────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -894.67 · Converged in 20 iterations (282ms)
+#> Log marginal likelihood: -894.66 · Converged in 20 iterations (379ms)
 #> 
 #>                  Mean      SD      2.5%       50%     97.5%      Mode
 #> 1 b0         251.35    6.84    237.93    251.35    264.75    251.36  
@@ -293,9 +293,9 @@ determined:
 
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [29ms]
-#> ✔ VB mean correction, max shift 0.42σ [41ms]
-#> ✔ Fitted 6 skew-normal marginals [51ms]
+#> ✔ Found the posterior mode in 20 iterations [54ms]
+#> ✔ VB mean correction, max shift 0.42σ [15ms]
+#> ✔ Fitted 6 skew-normal marginals [64ms]
 set.seed(1)
 draws_6 <- sampling(fit_6, nsamp = 20000, fun = natural)
 round(compare(draws_6, ref$subjects_6), 3)
@@ -319,11 +319,11 @@ ridge bend:
 ``` r
 
 summary(fit_6)
-#> ── INLAvanilla summary ───────────────────────────────── Skew-normal + VB ──
+#> ── INLAvanilla summary ──────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -322.764 · Converged in 20 iterations (125ms)
-#> Laplace -322.994 + VB term 0.23
-#> 937 logpost calls: mode 29ms, VB 42ms, marginals 52ms
+#> Log marginal likelihood: -322.676 · Converged in 20 iterations (139ms)
+#> Laplace -322.994 + VB term 0.32
+#> 665 logpost calls: mode 55ms, VB 16ms, marginals 65ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -338,21 +338,21 @@ summary(fit_6)
 #> ── Diagnostics ──
 #> 
 #>              VB shift      NMAD  Unscanned  Ridge bend  Mean gap
-#> 1 b0           -0.010  0.00028    0.000066    0.63        0.0026
-#> 2 b1            0.017  0.000012   0.000063    0.76       -0.019 
-#> 3 log_tau0      0.23   0.037      0.00022     0.034       0.073 
-#> 4 log_tau1      0.42   0.050      0.0023      0.043       0.13  
-#> 5 atanh_rho     0.23   0.041      0.0048      1.1         0.18  
-#> 6 log_sigma     0.26   0.0061     0.00043     0.000085   -0.0014
+#> 1 b0           -0.018  0.00028    0.000066    0.63         0.010
+#> 2 b1            0.027  0.000012   0.000063    0.76        -0.029
+#> 3 log_tau0      0.24   0.037      0.00022     0.032        0.064
+#> 4 log_tau1      0.42   0.050      0.0023      0.040        0.13 
+#> 5 atanh_rho     0.38   0.041      0.0048      1.1          0.034
+#> 6 log_sigma     0.31   0.0061     0.00043     0.000066    -0.050
 #> 
 #> ✔ Mode found in 20 iterations (Newton step 9e-07σ).
 #> ✔ Hessian condition number 1.8, in SD units.
-#> ✔ VB correction settled in 6 iterations: max shift 0.42σ.
+#> ✔ VB correction in one step: max shift 0.42σ, gain ratio 0.697.
 #> ✔ Skew-normal fits: max NMAD 0.050, unscanned mass 0.0048.
 #> ! Ridge bend > 0.25 for `atanh_rho` (1.06), `b1` (0.76), `b0` (0.63): the
 #>   marginal SD may be >10% too small.
-#> ! Mean gap > 0.1σ for `atanh_rho` (0.18), `log_tau1` (0.13): the posterior
-#>   is far from Gaussian there, and either mean may be off.
+#> ! Mean gap > 0.1σ for `log_tau1` (0.13): the posterior is far from Gaussian
+#>   there, and either mean may be off.
 ```
 
 ``` r

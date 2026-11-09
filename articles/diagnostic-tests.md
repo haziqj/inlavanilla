@@ -231,7 +231,7 @@ lp_fm <- function(theta, y, count) {
 A latent class model has a mirror image: swapping the two classes, with
 \\\text{Se}\_j \to 1 - \text{Sp}\_j\\, fits the data just as well.
 Starting each fit from sensitivities and specificities of 0.7 picks the
-image in which the tests are informative.
+image in which the tests are informative.[^1]
 
 ``` r
 
@@ -240,20 +240,21 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Se_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
-fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count)
-#> ✔ Found the posterior mode in 30 iterations [23ms]
-#> ✔ VB mean correction, max shift 0.37σ [35ms]
-#> ✔ Fitted 11 skew-normal marginals [50ms]
+fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count, vb = "full")
+#> ✔ Found the posterior mode in 30 iterations [45ms]
+#> ✔ VB mean correction, max shift 0.37σ [51ms]
+#> ✔ Fitted 11 skew-normal marginals [55ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
   y = y,
   count = count,
-  gh = gh
+  gh = gh,
+  vb = "full"
 )
-#> ✔ Found the posterior mode in 29 iterations [140ms]
-#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [779ms]
-#> ✔ Fitted 13 skew-normal marginals [168ms]
+#> ✔ Found the posterior mode in 29 iterations [254ms]
+#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.3s]
+#> ✔ Fitted 13 skew-normal marginals [303ms]
 start_fm <- c(
   start[1],
   logit_eta1 = qlogis(0.2),
@@ -261,10 +262,10 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w1_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
-fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count)
-#> ✔ Found the posterior mode in 25 iterations [35ms]
-#> ✔ VB mean correction, max shift 0.44σ [77ms]
-#> ✔ Fitted 13 skew-normal marginals [65ms]
+fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count, vb = "full")
+#> ✔ Found the posterior mode in 25 iterations [65ms]
+#> ✔ VB mean correction, max shift 0.44σ [110ms]
+#> ✔ Fitted 13 skew-normal marginals [94ms]
 ```
 
 The seconds each fit took:
@@ -274,7 +275,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.12 1.10 0.19
+#> 0.17 1.86 0.29
 ```
 
 ## Results
@@ -452,3 +453,8 @@ estimated from data on adults in villages northwest of Accra, Ghana.
 Qu, Y., Tan, M., & Kutner, M. H. (1996). Random effects models in latent
 class analysis for evaluating accuracy of diagnostic tests.
 *Biometrics*, *52*(3), 797–810. <https://doi.org/10.2307/2533043>
+
+[^1]: These fits use `vb = "full"`, as the models are compared by their
+    log marginal likelihoods. The [diagnostics
+    vignette](http://haziqj.ml/inlavanilla/articles/diagnostics.md)
+    explains why.

@@ -2,10 +2,96 @@
 
 ## inlavanilla 0.1.1
 
+- The mode search now allows 5000 iterations and 5000 evaluations by
+  default, up from 1000 and 2000, so that slowly converging fits do not
+  stop at the limit. `control$nlminb` still sets them.
+
+- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  now goes straight to the mode. A supplied `grad` used to be compared
+  with finite differences of `logpost` at `init`, before anything was
+  printed, at about 8m to 12m calls of `logpost`: 175 calls and 14% of
+  the time on an RTMB model with 21 parameters. It is now compared at
+  the mode, for each parameter and at no cost in calls, from differences
+  the fit takes there anyway. The new `grad_gap` in
+  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  holds the result, and the fit-time warning and
+  [`summary()`](https://rdrr.io/r/base/summary.html) flag it above 0.1.
+  A gradient of the wrong sign, which stops the fit at the mode, is now
+  named in the error. With a slow `logpost`, the first progress line
+  appears half a second after the start, or once the first calls are
+  done if they take longer, and moves with every call.
+
+- With a gradient, the volume correction of the skew-normal marginals
+  now takes 4m + 1 gradient calls for all m parameters together, against
+  2m + 2 for each parameter, from second differences of the gradient
+  along the principal axes of the covariance. A spatial factor model
+  with 82 parameters, whose 3,078 latent values RTMB integrates out,
+  went from 757 s to 193 s. The differences are central, so the
+  correction is also closer to the exact slope (3e-5 against 2.4e-4 on a
+  test model), and the marginals move by a few ten-thousandths of a
+  posterior SD. Fits without a gradient are unchanged.
+
+- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  gains `cores`. With `cores = 8` the per-parameter scans of the
+  skew-normal marginals, and the calls of `loglik` in
+  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
+  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md), run in
+  parallel through the future package, which is optional, with the
+  results and the progress line of a serial fit. Forked workers are used
+  where they are safe, and separate R sessions elsewhere. A long scan
+  uses all the cores, a shorter one fewer, and one expected to take
+  under a second stays serial. With `width = "tk"`, a fit of 25.5 s took
+  3.2 s on 12 cores. With the default width the scans are about half of
+  a slow fit, and the same model gained about 1.5 times. Compiled code
+  (Rcpp, TMB, RTMB) cannot be sent to separate sessions, so the fit
+  checks a worker’s value at the mode and otherwise runs serially with a
+  message. By default, `cores = NULL`, the fit follows
+  [`future::plan()`](https://future.futureverse.org/reference/plan.html)
+  and is serial if no plan is set. An interactive fit whose scans will
+  take more than 10 s then says once that `cores` would help.
+
+- Without a gradient, the `ridge_bend` check of the skew-normal
+  marginals no longer takes 2(m - 1) calls of `logpost` for every
+  parameter. The calls of the volume correction already show which way
+  the ridge bends, so the check costs 2 more calls per parameter, and
+  only a value above 0.1 is taken again from the full gradient. Every
+  value that can reach the flag is computed as before, and the marginals
+  do not change. A fit of a logistic regression with 40 parameters
+  without a gradient takes 23% fewer calls and is 1.3 times as fast.
+
+- The VB mean correction now takes one Newton step by default,
+  `vb = "onestep"`. With a gradient it costs 2m + 1 gradient calls,
+  about one numerical Hessian, against usually four sweeps of up to (m +
+  1)(m + 2) + 1, and on 133 simulated datasets it was as close to the
+  posterior mean as the full solve, or closer, on all but three.
+  `vb = "full"` keeps the iterative solve, and `vb = "off"` (or `FALSE`)
+  leaves the correction out. `TRUE` means the default. `fit$vb` is now
+  the name of the method, and the headers of
+  [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) name it. A first
+  step over 2.5 posterior SDs, or a node that fails, carries on with
+  capped steps, within the calls that the mode and Hessian took.
+  `vb_step_sigma` is `NA` after a single step.
+
+- After a one-step VB correction the fit checks that the step delivered
+  what it promised. `vb_gain_ratio` in
+  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  is the rise in the expected log-posterior over the rise the step
+  assumed, at a cost of 4m + 2 calls of `logpost`. A ratio below 0.5
+  raises a warning that points to `vb = "full"`, and
+  [`summary()`](https://rdrr.io/r/base/summary.html) reports it.
+
 - [`coef()`](https://rdrr.io/r/stats/coef.html) gives the posterior mean
   of each parameter, the `Mean` column of
   [`summary()`](https://rdrr.io/r/base/summary.html), as INLAvaan’s
   [`coef()`](https://rdrr.io/r/stats/coef.html) does.
+
+- [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md) gives
+  the elapsed time of each stage of the fit, as INLAvaan’s
+  [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md) does:
+  `timing(fit)` the total, `timing(fit, what = "all")` every stage.
+  `fit$timing` gains `init` and `diagnostics`, the time before the mode
+  and after the marginals, so its segments now add up to `total`.
 
 - [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   gains `width`, how each skew-normal scan takes the width term, the
@@ -25,17 +111,17 @@
   takes the Hessian of `logpost` as an optional `hess`, after `grad`, as
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) does. With it,
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes Newton steps
-  to the mode, the Hessian at the mode is the supplied one, and the
-  volume correction of each skew-normal marginal takes one `hess` call
-  instead of 2m + 2 `grad` calls. RTMB gives it with the gradient, as
-  `obj$he`. The fit is the same, except that the mode is found more
-  precisely, and on test models it took 13% to 35% less time. A supplied
-  `hess` is checked at the mode against central differences of `grad`,
-  and `fit$counts` counts its calls.
+  to the mode, and the Hessian at the mode is the supplied one. RTMB
+  gives it with the gradient, as `obj$he`. The fit is the same, except
+  that the mode is found more precisely, for a little more time (8% on a
+  model with 39 parameters). The default marginals do not use it, but
+  `width = "cmp"` and `"tk"` do. A supplied `hess` is checked at the
+  mode against central differences of `grad`, and `fit$counts` counts
+  its calls.
 
 - The website article “Gradients with RTMB” is now “Gradients and
   Hessians with RTMB”. It passes RTMB’s Hessian too, and shows where the
-  fit uses it, the time it saves and the more precise mode it finds.
+  fit uses it, what it costs and the more precise mode it finds.
 
 - The website article “Diagnostic classification models” is now
   “Cognitive diagnostic models”.
