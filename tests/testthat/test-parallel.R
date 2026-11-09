@@ -490,6 +490,42 @@ test_that("the jobs grow with the scan and stop at the workers and the items", {
   expect_identical(jobs(est_s = 1, cost = 1), 1L)
 })
 
+test_that("the time a worker spends on its job does not reduce the jobs", {
+  # Handing a job over takes 0.01 s and the job 5 s, as when a worker builds a
+  # compiled model again. Workers do that side by side, so only the handing
+  # over counts.
+  now <- 100
+  local_mocked_bindings(
+    par_workers = function() 12L,
+    par_globals = function(functions) {
+      list(found = list(), packages = character())
+    },
+    par_future = function(job, ids, data, setup) {
+      now <<- now + 0.01
+      "a future"
+    },
+    elapsed = function() now
+  )
+  local_mocked_bindings(
+    value = function(x, ...) {
+      now <<- now + 5
+      1
+    },
+    .package = "future"
+  )
+  setup <- par_setup(
+    list(),
+    function(ids, data) 1,
+    list(),
+    est_s = 100,
+    n = 40L,
+    note = function(text) FALSE,
+    label = "",
+    what = ""
+  )
+  expect_identical(setup$jobs, 12L)
+})
+
 test_that("the items are dealt out in turn, with none left out", {
   g <- par_groups(10L, 3L)
   expect_length(g, 3L)
