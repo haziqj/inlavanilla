@@ -407,14 +407,19 @@ functions and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent, so the
 fit first checks that a worker gets the same value at the mode, and
 otherwise runs serially with a message.
 
-To use separate sessions with compiled code, rebuild it on each worker. With
-RTMB, where \code{obj} comes from \code{MakeADFun()}:
+To use separate sessions with compiled code, rebuild it on each worker: put
+whatever creates it in a function, and call that function again when the
+process is not the one that started the fit. With RTMB and random effects
+(without them, RTMB needs none of this):
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{pid <- Sys.getpid()
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{build <- function() \{
+  RTMB::MakeADFun(model, parameters, random = "u", silent = TRUE)
+\}
+obj <- build()
+pid <- Sys.getpid()
 rebuild <- function() \{
   if (Sys.getpid() != pid) \{
-    library(RTMB)
-    obj$retape()
+    obj <<- build()
     pid <<- Sys.getpid()
   \}
 \}
@@ -429,7 +434,8 @@ grad <- function(theta) \{
 }\if{html}{\out{</div>}}
 
 With Rcpp, \code{rebuild()} calls \code{Rcpp::sourceCpp(file, cacheDir = dir)} instead,
-with a \code{dir} of your own so that the workers share one compiled copy.
+with a \code{dir} of your own so that the workers share one compiled copy. The
+RTMB and Rcpp articles on the package website have worked versions.
 
 With \code{cores} left at \code{NULL} the fit follows a plan set with \code{future::plan()},
 and runs serially if there is none, so a plan can apply to every fit in a

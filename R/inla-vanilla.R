@@ -236,15 +236,20 @@
 #' fit first checks that a worker gets the same value at the mode, and
 #' otherwise runs serially with a message.
 #'
-#' To use separate sessions with compiled code, rebuild it on each worker. With
-#' RTMB, where `obj` comes from `MakeADFun()`:
+#' To use separate sessions with compiled code, rebuild it on each worker: put
+#' whatever creates it in a function, and call that function again when the
+#' process is not the one that started the fit. With RTMB and random effects
+#' (without them, RTMB needs none of this):
 #'
 #' ```r
+#' build <- function() {
+#'   RTMB::MakeADFun(model, parameters, random = "u", silent = TRUE)
+#' }
+#' obj <- build()
 #' pid <- Sys.getpid()
 #' rebuild <- function() {
 #'   if (Sys.getpid() != pid) {
-#'     library(RTMB)
-#'     obj$retape()
+#'     obj <<- build()
 #'     pid <<- Sys.getpid()
 #'   }
 #' }
@@ -259,7 +264,8 @@
 #' ```
 #'
 #' With Rcpp, `rebuild()` calls `Rcpp::sourceCpp(file, cacheDir = dir)` instead,
-#' with a `dir` of your own so that the workers share one compiled copy.
+#' with a `dir` of your own so that the workers share one compiled copy. The
+#' RTMB and Rcpp articles on the package website have worked versions.
 #'
 #' With `cores` left at `NULL` the fit follows a plan set with `future::plan()`,
 #' and runs serially if there is none, so a plan can apply to every fit in a
