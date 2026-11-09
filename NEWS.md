@@ -9,19 +9,19 @@
   against 2.4e-4 on a test model), and the marginals move by a few
   ten-thousandths of a posterior SD. Fits without a gradient are unchanged.
 
-* The per-parameter scans of the skew-normal marginals, and the calls of
-  `loglik` in `loo()` and `waic()`, can now run in parallel. There is no new
-  argument: they follow `future::plan()` from the future package, which is
-  optional, as in blavaan. The results and the progress line are those of a
-  serial fit. A long scan uses every worker of the plan, a shorter one fewer,
-  and one expected to take under a second stays serial. With `width = "tk"`, a
-  fit of 25.5 s took 3.2 s on 12 workers. With the default width the scans are
-  about half of a slow fit, and the same model gained about 1.5 times. Compiled
-  code (Rcpp, TMB, RTMB) cannot be sent to `multisession` workers, so the fit
-  checks a worker's value at the mode and otherwise runs serially with a
-  message. `multicore` shares it. With no plan nothing changes, and an
-  interactive fit whose scans will take more than 10 s says once that a plan
-  would help.
+* `inla_vanilla()` gains `cores`. With `cores = 8` the per-parameter scans of
+  the skew-normal marginals, and the calls of `loglik` in `loo()` and `waic()`,
+  run in parallel through the future package, which is optional, with the
+  results and the progress line of a serial fit. Forked workers are used where
+  they are safe, and separate R sessions elsewhere. A long scan uses all the
+  cores, a shorter one fewer, and one expected to take under a second stays
+  serial. With `width = "tk"`, a fit of 25.5 s took 3.2 s on 12 cores. With the
+  default width the scans are about half of a slow fit, and the same model
+  gained about 1.5 times. Compiled code (Rcpp, TMB, RTMB) cannot be sent to
+  separate sessions, so the fit checks a worker's value at the mode and
+  otherwise runs serially with a message. By default, `cores = NULL`, the fit
+  follows `future::plan()` and is serial if no plan is set. An interactive fit
+  whose scans will take more than 10 s then says once that `cores` would help.
 
 * Without a gradient, the `ridge_bend` check of the skew-normal marginals no
   longer takes 2(m - 1) calls of `logpost` for every parameter. The calls of
