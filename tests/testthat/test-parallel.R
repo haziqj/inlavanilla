@@ -381,11 +381,13 @@ test_that("cores = 1 is serial whatever the plan", {
 test_that("cores puts the user's own plan back", {
   force_workers()
   skip_if(!par_can_fork(), "needs forks to run under devtools::test()")
-  on_forks({
-    fit <- fit_reg(cores = 3)
-    expect_identical(fit$workers, 3L)
-    expect_identical(future::nbrOfWorkers(), 2L)
-  })
+  old <- future::plan()
+  on.exit(future::plan(old), add = TRUE)
+  # A different kind of plan from the forks that `cores` chooses here
+  future::plan(future::multisession, workers = 2L)
+  fit <- fit_reg(cores = 2)
+  expect_identical(fit$workers, 2L)
+  expect_s3_class(future::plan(), "multisession")
 })
 
 test_that("cores never asks for more workers than the machine offers", {
