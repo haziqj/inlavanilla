@@ -9,6 +9,20 @@
   against 2.4e-4 on a test model), and the marginals move by a few
   ten-thousandths of a posterior SD. Fits without a gradient are unchanged.
 
+* The per-parameter scans of the skew-normal marginals, and the calls of
+  `loglik` in `loo()` and `waic()`, can now run in parallel. There is no new
+  argument: they follow `future::plan()` from the future package, which is
+  optional, as in blavaan. The results and the progress line are those of a
+  serial fit. A long scan uses every worker of the plan, a shorter one fewer,
+  and one expected to take under a second stays serial. With `width = "tk"`, a
+  fit of 25.5 s took 3.2 s on 12 workers. With the default width the scans are
+  about half of a slow fit, and the same model gained about 1.5 times. Compiled
+  code (Rcpp, TMB, RTMB) cannot be sent to `multisession` workers, so the fit
+  checks a worker's value at the mode and otherwise runs serially with a
+  message. `multicore` shares it. With no plan nothing changes, and an
+  interactive fit whose scans will take more than 10 s says once that a plan
+  would help.
+
 * Without a gradient, the `ridge_bend` check of the skew-normal marginals no
   longer takes 2(m - 1) calls of `logpost` for every parameter. The calls of
   the volume correction already show which way the ridge bends, so the check
