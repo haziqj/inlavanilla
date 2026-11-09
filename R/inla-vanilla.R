@@ -229,10 +229,37 @@
 #'
 #' `cores` needs the future package, which is optional. It uses forked workers
 #' where those are safe, in a terminal on macOS or Linux, and separate R
-#' sessions elsewhere (Windows, RStudio, Positron). Forks share everything.
-#' Separate sessions are sent your functions and data, and compiled code (Rcpp,
-#' TMB, RTMB) cannot be sent, so the fit first checks that a worker gets the
-#' same value at the mode, and otherwise runs serially with a message.
+#' sessions elsewhere: on Windows, in RStudio, and in Positron's console, which
+#' refuses to fork. Forks share everything. Separate sessions need the package
+#' installed, not just loaded with `devtools::load_all()`, and are sent your
+#' functions and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent, so the
+#' fit first checks that a worker gets the same value at the mode, and
+#' otherwise runs serially with a message.
+#'
+#' To use separate sessions with compiled code, rebuild it on each worker. With
+#' RTMB, where `obj` comes from `MakeADFun()`:
+#'
+#' ```r
+#' pid <- Sys.getpid()
+#' rebuild <- function() {
+#'   if (Sys.getpid() != pid) {
+#'     library(RTMB)
+#'     obj$retape()
+#'     pid <<- Sys.getpid()
+#'   }
+#' }
+#' logpost <- function(theta) {
+#'   rebuild()
+#'   -obj$fn(theta)
+#' }
+#' grad <- function(theta) {
+#'   rebuild()
+#'   -obj$gr(theta)
+#' }
+#' ```
+#'
+#' With Rcpp, `rebuild()` calls `Rcpp::sourceCpp(file, cacheDir = dir)` instead,
+#' with a `dir` of your own so that the workers share one compiled copy.
 #'
 #' With `cores` left at `NULL` the fit follows a plan set with `future::plan()`,
 #' and runs serially if there is none, so a plan can apply to every fit in a

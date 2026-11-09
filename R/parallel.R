@@ -30,15 +30,17 @@ is_interactive <- function() interactive()
 par_has_future <- function() requireNamespace("future", quietly = TRUE)
 par_available <- function() future::availableCores()
 
+# The program running R, in lower case: "ark" in Positron's console
+par_program <- function() tolower(basename(commandArgs(FALSE)[1L]))
+
 # Forked workers share everything, compiled code included, so they are the
 # choice where they are safe. future's own check knows that forking is not
-# available on Windows and unstable in RStudio, but not that forked children can
-# die silently in Positron's ark kernel, so that is checked here as INLAvaan's
-# fork_is_safe() does.
+# available on Windows and unstable in RStudio, but says yes in Positron, whose
+# ark kernel refuses to fork, with an error. The program is checked and not the
+# POSITRON variable, which can reach Positron's integrated terminals, where a
+# plain R forks well.
 par_can_fork <- function() {
-  future::supportsMulticore() &&
-    !identical(Sys.getenv("POSITRON"), "1") &&
-    !identical(tolower(basename(commandArgs(FALSE)[1L])), "ark")
+  future::supportsMulticore() && !identical(par_program(), "ark")
 }
 
 # Put a plan for `cores` workers in place for one fit, with never more workers
@@ -183,8 +185,9 @@ par_setup <- function(
       " will run serially, because `",
       what,
       "` did not give the same value on a parallel worker. Compiled code ",
-      "(Rcpp, TMB, RTMB) cannot be sent to a separate R session. It can use ",
-      "forked workers, which need a terminal on macOS or Linux."
+      "(Rcpp, TMB, RTMB) cannot be sent to a separate R session: rebuild it on ",
+      "each worker, or use forked workers from a terminal on macOS or Linux ",
+      "(see Parallel computation in ?inla_vanilla)."
     ))
     return(serial)
   }

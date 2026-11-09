@@ -414,13 +414,22 @@ test_that("cores without the future package runs serially and says so", {
 })
 
 test_that("cores uses separate sessions where forks are not safe", {
-  for (var in c("POSITRON", "RSTUDIO")) {
-    Sys.setenv(RSTUDIO_TERM = "")
-    do.call(Sys.setenv, stats::setNames(list("1"), var))
-    expect_false(par_can_fork(), label = var)
-    Sys.unsetenv(var)
-  }
-  Sys.unsetenv("RSTUDIO_TERM")
+  # Positron's console refuses to fork
+  local_mocked_bindings(par_program = function() "ark")
+  expect_false(par_can_fork())
+  # RStudio's console is unstable when forked, by future's own check
+  Sys.setenv(RSTUDIO = "1", RSTUDIO_TERM = "")
+  on.exit(Sys.unsetenv(c("RSTUDIO", "RSTUDIO_TERM")), add = TRUE)
+  local_mocked_bindings(par_program = function() "r")
+  expect_false(par_can_fork())
+})
+
+test_that("the POSITRON variable alone does not stop forks", {
+  skip_if(!future::supportsMulticore(), "no forks here")
+  local_mocked_bindings(par_program = function() "r")
+  Sys.setenv(POSITRON = "1")
+  on.exit(Sys.unsetenv("POSITRON"), add = TRUE)
+  expect_true(par_can_fork())
 })
 
 test_that("loo() and waic() use the cores of the fit", {
@@ -560,8 +569,7 @@ test_that("cores runs separate sessions where forks are not safe", {
   old <- future::plan()
   on.exit(future::plan(old), add = TRUE)
   future::plan(future::sequential)
-  Sys.setenv(POSITRON = "1")
-  on.exit(Sys.unsetenv("POSITRON"), add = TRUE)
+  local_mocked_bindings(par_program = function() "ark")
   ref <- fit_reg()
   fit <- fit_reg(cores = 2)
   expect_identical(fit$workers, 2L)
