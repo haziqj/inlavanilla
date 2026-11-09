@@ -1517,10 +1517,25 @@ test_that("progress bars follow the user's cli.progress_show_after", {
   old <- options(cli.progress_show_after = NULL)
   on.exit(options(old), add = TRUE)
 
-  # Unset: half a second for each of the three stages, then unset again
+  # Unset: half a second for each of the three stages, less for the first by the
+  # time already gone, then unset again. That time can be a millisecond, or
+  # nothing at all on a fast machine, so the first is only bounded.
   suppressMessages(inla_vanilla(lp_reg, init_reg))
-  expect_identical(seen, rep(0.5, 3))
+  expect_length(seen, 3)
+  expect_lte(seen[[1]], 0.5)
+  expect_identical(seen[-1], rep(0.5, 2))
   expect_null(getOption("cli.progress_show_after"))
+
+  # The time gone counts: a logpost that is slow until the first bar is created
+  seen <- NULL
+  slow_start <- function(theta) {
+    if (is.null(seen)) {
+      Sys.sleep(0.02)
+    }
+    lp_reg(theta)
+  }
+  suppressMessages(inla_vanilla(slow_start, init_reg))
+  expect_lt(seen[[1]], 0.5)
 
   # Set by the user: kept
   seen <- NULL
