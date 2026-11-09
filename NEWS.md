@@ -1,5 +1,16 @@
 # inlavanilla 0.1.1
 
+* `inla_vanilla()` now goes straight to the mode. A supplied `grad` used to be
+  compared with finite differences of `logpost` at `init`, before anything was
+  printed, at about 8m to 12m calls of `logpost`: 175 calls and 14% of the time
+  on an RTMB model with 21 parameters. It is now compared at the mode, for each
+  parameter and at no cost in calls, from differences the fit takes there
+  anyway. The new `grad_gap` in `diagnostics()` holds the result, and the
+  fit-time warning and `summary()` flag it above 0.1. A gradient of the wrong
+  sign, which stops the fit at the mode, is now named in the error. With a slow
+  `logpost`, the first progress line appears half a second after the start, or
+  once the first calls are done if they take longer, and moves with every call.
+
 * With a gradient, the volume correction of the skew-normal marginals now takes
   4m + 1 gradient calls for all m parameters together, against 2m + 2 for each
   parameter, from second differences of the gradient along the principal axes

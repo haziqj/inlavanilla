@@ -54,6 +54,7 @@ can still do badly.
 | Check | In `diagnostics(fit, type = "param")` | Flagged by `summary()` | Fit-time warning | From |
 |---|---|---|---|---|
 | Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
+| Gradient | `grad_gap` | above 0.1 | the same | inlavanilla |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
 | VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
 | Hessian | `hess_cond` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
@@ -546,11 +547,15 @@ fit <- withCallingHandlers(
 
 ## Checks on a supplied gradient
 
-When you pass `grad`, it is compared with finite differences of `logpost` at
-`init`, per posterior SD, and its Jacobian at the mode is checked for
-symmetry, as the Hessian of a function must be. Either failure gives a
-warning of its own, because a wrong gradient gives a wrong mode and wrong
-marginals.
+When you pass `grad`, the fit does not stop to test it first. At the mode it
+compares `grad` with differences of `logpost` that it has taken there anyway,
+for each parameter and at no cost in calls. `grad_gap` in
+`diagnostics(fit, type = "param")` holds the result: the larger of the
+difference in slope per posterior SD and half the relative difference in
+curvature. It is flagged above 0.1, a mode moved by a tenth of an SD or an SD
+about 10% off. The Jacobian at the mode is also checked for symmetry, as the
+Hessian of a function must be, and either failure gives a warning. A gradient
+of the wrong sign stops the fit at the mode, and the error says so.
 
 ## References
 

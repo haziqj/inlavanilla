@@ -573,8 +573,9 @@ gradient:
 fit <- inla_vanilla(logpost_cpp, init, grad = grad_cpp, Y = Y)
 ```
 
-`inla_vanilla()` checks the gradient against finite differences at `init`,
-and its Jacobian at the mode for symmetry, and warns if either check fails.
+`inla_vanilla()` compares the gradient with `logpost` at the mode, at no extra
+cost, and checks its Jacobian there for symmetry, and warns if either check
+fails.
 Here neither does. The calls and times (in seconds) of the three fits:
 
 ```{r}

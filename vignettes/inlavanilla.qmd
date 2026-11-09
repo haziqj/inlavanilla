@@ -264,8 +264,8 @@ rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 ```
 
 The two fits agree to several decimal places, and the gradient version calls
-`logpost` less often. `inla_vanilla()` checks a supplied gradient
-against finite differences at `init` and warns if they disagree, which
+`logpost` less often. `inla_vanilla()` compares a supplied gradient with
+`logpost` at the mode, at no extra cost, and warns if they disagree, which
 catches most slips in hand-derived gradients.
 
 ## Cheaper approximations
