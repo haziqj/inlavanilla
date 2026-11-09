@@ -38,8 +38,8 @@ Most of the checks are those of INLAvaan's \code{diagnostics()}, and
 the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 gap between the skew-normal and VB means as an internal check (Section
 5.1). The mode shift, the Hessian condition number and the unscanned mass
-come from INLAvaan's \code{diagnostics()}, not from the paper. \code{vb_step_sigma},
-\code{tails} and \code{ridge_bend} are inlavanilla's own.
+come from INLAvaan's \code{diagnostics()}, not from the paper. \code{grad_gap},
+\code{vb_step_sigma}, \code{tails} and \code{ridge_bend} are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -53,6 +53,13 @@ parameter. It is flagged above 0.1, whatever the return code of
 \code{\link[stats:nlminb]{stats::nlminb()}}, whose message is then shown: without a gradient
 \code{nlminb()} can report failure at an accurate mode, and success short of
 one. With the VB check below, it is what makes the fit converged.
+\item \strong{Gradient.} \code{grad_gap}, how far a supplied \code{grad} is from \code{logpost} at
+the mode: the larger of the difference in slope per conditional posterior
+SD and half the relative difference in curvature, so about how far it
+moves the mode in SDs and the relative error it makes in an SD. It is
+flagged above 0.1, costs no calls, and is \code{NA} without \code{grad} or with
+\code{hess}. A wrong gradient mostly harms the log marginal likelihood and the
+covariance, since the scans use \code{logpost} itself.
 \item \strong{Hessian.} \code{hess_cond}, the condition number of the Hessian at the
 mode with each parameter in posterior-SD units (the eigenvalue ratio of
 the posterior correlation matrix). It is flagged above \eqn{10^8}: some

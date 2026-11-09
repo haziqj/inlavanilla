@@ -750,8 +750,7 @@ test_that("an error inside logpost or grad says where the fit stopped", {
 
 test_that("a wrong analytic gradient triggers the mismatch warning", {
   # Right for `a`, twice too large for `b`: the warning names `b`. (A sign
-  # error would also be caught, but then the optimiser climbs away from the
-  # mode and the fit fails later with the Hessian error.)
+  # error stops the fit, with the Hessian error, which then says so.)
   # (Warnings are tested at the default output level, without silent = TRUE,
   # which would muffle them; its stage lines are suppressed.)
   gr_wrong <- function(theta) c(-(theta[[1]] - 1), -2 * (theta[[2]] - 1))
@@ -771,9 +770,125 @@ test_that("a wrong analytic gradient triggers the mismatch warning", {
       b0 = pois_b0,
       vb = "off"
     )),
-    "does not match finite differences",
-    class = "inlavanilla_warning"
+    "does not match `logpost`",
+    class = "inlavanilla_diagnostics_warning"
   )
+})
+
+test_that("a gradient of the wrong sign is named in the Hessian error", {
+  err <- expect_error(
+    suppressMessages(inla_vanilla(
+      lp_gauss,
+      c(a = 0.3, b = 0.2),
+      grad = function(theta) -gr_gauss(theta)
+    )),
+    "not positive definite",
+    class = "inlavanilla_error"
+  )
+  expect_match(conditionMessage(err), "wrong sign")
+  # An improper posterior is not blamed on the gradient
+  err <- expect_error(
+    inla_vanilla(
+      function(theta) 0,
+      c(a = 0.3),
+      grad = function(theta) 0,
+      silent = TRUE
+    ),
+    "not positive definite"
+  )
+  expect_no_match(conditionMessage(err), "wrong sign")
+})
+
+test_that("the gradient is compared with logpost at no cost in calls", {
+  # One call of each function is checked at init, and those are the only ones
+  # that fit$counts leaves out: the comparison at the mode adds none, whether
+  # the gradient is right or wrong.
+  n <- c(lp = 0L, gr = 0L)
+  lp <- function(theta) {
+    n[["lp"]] <<- n[["lp"]] + 1L
+    lp_gauss(theta)
+  }
+  gr <- function(theta) {
+    n[["gr"]] <<- n[["gr"]] + 1L
+    gr_gauss(theta)
+  }
+  fit <- inla_vanilla(lp, c(a = 0.3, b = 0.2), grad = gr, silent = TRUE)
+  expect_identical(
+    n,
+    c(lp = fit$counts[["logpost"]] + 1L, gr = fit$counts[["grad"]] + 1L)
+  )
+  gap <- diagnostics(fit, type = "param")$grad_gap
+  expect_length(gap, 2)
+  expect_true(all(gap < 1e-3))
+  expect_identical(
+    unname(diagnostics(fit)[["grad_gap_max"]]),
+    max(gap)
+  )
+
+  # The wrong one: flagged by name, in the warning, print() and summary()
+  fit <- inla_vanilla(
+    lp_gauss,
+    c(a = 0.3, b = 0.2),
+    grad = function(theta) c(1, 2) * gr_gauss(theta),
+    silent = TRUE
+  )
+  gap <- diagnostics(fit, type = "param")$grad_gap
+  expect_lt(gap[[1]], 1e-3)
+  expect_equal(gap[[2]], 0.5, tolerance = 1e-3)
+  expect_match(
+    fit$warnings,
+    "does not match `logpost` at the mode",
+    all = FALSE
+  )
+  expect_match(fit$warnings, "for `b` \\(0.50\\)", all = FALSE)
+  text <- paste(cli::ansi_strip(capture.output(summary(fit))), collapse = " ")
+  expect_match(text, "`grad` does not match `logpost`", fixed = TRUE)
+
+  # A check that did not run is NA and not flagged: without a gradient, and
+  # with a Hessian, which takes no differences of logpost to read
+  fit <- inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), silent = TRUE)
+  expect_true(all(is.na(diagnostics(fit, type = "param")$grad_gap)))
+  expect_identical(fit$warnings, character())
+  fit <- inla_vanilla(
+    lp_gauss,
+    c(a = 0.3, b = 0.2),
+    grad = gr_gauss,
+    hess = function(theta) -diag(2),
+    silent = TRUE
+  )
+  expect_true(all(is.na(diagnostics(fit, type = "param")$grad_gap)))
+  expect_identical(fit$warnings, character())
+})
+
+test_that("a slow function gets its progress line on time", {
+  # The line is created after the first calls, which count towards its delay,
+  # and every call then updates it, not every 16th.
+  ticks <- 0L
+  local_mocked_bindings(
+    progress_tick = function(p, set = NULL) {
+      ticks <<- ticks + 1L
+      invisible(NULL)
+    }
+  )
+  lp <- function(theta) {
+    Sys.sleep(0.02)
+    lp_gauss(theta)
+  }
+  fit <- suppressMessages(inla_vanilla(
+    lp,
+    c(a = 0.3, b = 0.2),
+    vb = "off",
+    marginals = "gaussian"
+  ))
+  expect_gte(ticks, fit$counts[["logpost"]])
+  ticks <- 0L
+  fit <- suppressMessages(inla_vanilla(
+    lp_gauss,
+    c(a = 0.3, b = 0.2),
+    vb = "off",
+    marginals = "gaussian"
+  ))
+  expect_lte(ticks, fit$counts[["logpost"]] %/% 16L + 1L)
 })
 
 test_that("the gradient check works whatever the scale of the posterior", {
@@ -792,8 +907,8 @@ test_that("the gradient check works whatever the scale of the posterior", {
     gr_twice <- function(theta) 2 * gr_right(theta)
     expect_warning(
       suppressMessages(inla_vanilla(lp, c(a = 0.5 * s), grad = gr_twice)),
-      "does not match finite differences",
-      class = "inlavanilla_warning",
+      "does not match `logpost`",
+      class = "inlavanilla_diagnostics_warning",
       label = paste("a gradient twice too large at posterior SD", s)
     )
     # silent = TRUE muffles warnings, but records them in fit$warnings
@@ -806,21 +921,17 @@ test_that("the gradient check works whatever the scale of the posterior", {
 })
 
 test_that("a gradient that is not a gradient field is caught at the mode", {
-  # A rotation added to the right gradient: zero at the mode (1, 1), where
-  # the fit starts, so the check at init passes, but it is wrong one
-  # curvature scale away, and its Jacobian is not symmetric.
+  # A rotation added to the right gradient: zero at the mode (1, 1), with the
+  # right diagonal, so it matches logpost there, but its Jacobian is not
+  # symmetric.
   gr_rot <- function(theta) {
     d <- theta - 1
     c(-d[[1]] + 0.5 * d[[2]], -d[[2]] - 0.5 * d[[1]])
   }
   fit <- inla_vanilla(lp_gauss, c(a = 1, b = 1), grad = gr_rot, silent = TRUE)
-  expect_length(fit$warnings, 2)
+  expect_length(fit$warnings, 1)
   expect_match(
     fit$warnings[[1]],
-    "does not match finite differences of `logpost` one curvature scale"
-  )
-  expect_match(
-    fit$warnings[[2]],
     "does not look like the gradient of `logpost`"
   )
 })
@@ -845,9 +956,8 @@ test_that("a correct analytic gradient passes the checks silently", {
   )
   expect_identical(fit$warnings, character())
   # Also for a Student-t posterior (5 df) with scale 1e-6, far from
-  # quadratic beyond a few scale units. The check once took differences at a
-  # fixed step of 1e-5, ten scale units here, which gave a gradient 20 times
-  # too small at init and flagged this correct one.
+  # quadratic beyond a few scale units, where the differences of logpost are a
+  # whole scale unit apart.
   s <- 1e-6
   lp_t <- function(theta) -3 * log1p(((theta[[1]] - 1) / s)^2 / 5)
   gr_t <- function(theta) {
@@ -858,7 +968,7 @@ test_that("a correct analytic gradient passes the checks silently", {
   # No gradient warning. (A skew-normal cannot follow the t tails, so the
   # fit-time diagnostics warning reports its NMAD; that is tested elsewhere.)
   expect_false(any(grepl(
-    "does not match finite differences|does not look like the gradient",
+    "does not match `logpost`|does not look like the gradient",
     fit$warnings
   )))
   # A 1 x m matrix, as TMB's obj$gr() returns, is accepted
@@ -1468,8 +1578,8 @@ test_that("a running stage shows its sentence and the time, not a cli bar", {
   loo(fit, loglik)
   expect_length(formats, 4)
   lines <- c(
-    "Finding the posterior mode, {cli::pb_current} calls",
-    "Applying the VB mean correction, {cli::pb_current} calls",
+    paste0("Finding the posterior mode, ", pb_calls),
+    paste0("Applying the VB mean correction, ", pb_calls),
     paste0("Fitting ", pb_item, " skew-normal marginals"),
     "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls"
   )
@@ -1540,16 +1650,17 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_identical(sum(per_stage), fit$counts[["logpost"]])
   expect_match(text, paste("Done:", fit$counts[["logpost"]], "logpost calls"))
 
-  # With a gradient: its check at init and the asymmetry of its Jacobian
+  # With a gradient: the asymmetry of its Jacobian and its gap from logpost
   text <- unwrap_msgs(capture_messages(
     inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
   ))
-  expect_match(
-    text,
-    "Gradient from grad, checked at init: relative discrepancy [0-9.e-]+ \\(warning > 0.001\\), [0-9]+ logpost calls"
-  )
+  expect_match(text, "Gradient from grad")
   expect_match(text, "Hessian by central differences of grad: 4 calls")
   expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning > 0.001\\)")
+  expect_match(
+    text,
+    "Gap between grad and logpost [0-9.e-]+ \\(warning > 0.1\\)"
+  )
   expect_match(text, "Done: [0-9]+ logpost and [0-9]+ grad calls")
 
   # With a Hessian: where it comes from, and its check against the gradient
@@ -2038,6 +2149,10 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     length(grep("^! ", lines))
   }
   trip <- list(
+    grad_gap = function(f) {
+      f$diagnostics$marginals$grad_gap[1] <- 0.5
+      f
+    },
     mode = function(f) {
       f$diagnostics$marginals$mode_shift_sigma[1] <- 0.5
       f
@@ -2097,8 +2212,8 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     fit <- f(fit)
   }
   out <- capture_output(print(fit))
-  expect_match(out, "! 10 checks flagged by `summary()`.", fixed = TRUE)
-  expect_identical(n_flag_lines(fit), 10L)
+  expect_match(out, "! 11 checks flagged by `summary()`.", fixed = TRUE)
+  expect_identical(n_flag_lines(fit), 11L)
 
   # A normal mean with an unknown SD from 12 observations: summary() flags
   # the ridge bend of the mean alone (4 / 12 nats), and nothing in the small
@@ -2321,6 +2436,7 @@ test_that("summary() returns the table and the diagnostics", {
       "alpha",
       "unscanned_mass",
       "vb_step_sigma",
+      "grad_gap",
       "mean_gap",
       "gamma1",
       "tails",
@@ -2980,7 +3096,7 @@ test_that("a gradient wrong by a factor is caught when init is at the mode", {
   fit <- inla_vanilla(lp, init, grad = gr_bad, silent = TRUE)
   expect_match(
     fit$warnings,
-    "does not match finite differences of `logpost` one curvature scale",
+    "does not match `logpost`",
     all = FALSE
   )
   fit <- inla_vanilla(lp, init, grad = gr_ok, silent = TRUE)

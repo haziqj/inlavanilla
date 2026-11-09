@@ -39,15 +39,16 @@ Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
 (\code{mean_gap}) as an internal check (Section 5.1). The mode shift, the
 Hessian condition number and the unscanned mass come from INLAvaan's
-\code{diagnostics()}, not from the paper. \code{vb_step_sigma}, \code{tails} and
-\code{ridge_bend} are inlavanilla's own.
+\code{diagnostics()}, not from the paper. \code{grad_gap}, \code{vb_step_sigma}, \code{tails}
+and \code{ridge_bend} are inlavanilla's own.
 }
 \details{
 A posterior SD here is the Laplace SD at the mode,
 \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 is not the SD column of the summary table, which is the skew-normal's.
 Values that a fit did not compute are \code{NA}: the VB quantities with
-\code{vb = "off"}, and the scan quantities with \code{marginals = "gaussian"}.
+\code{vb = "off"}, the scan quantities with \code{marginals = "gaussian"}, and
+\code{grad_gap} without \code{grad} or with \code{hess}.
 
 \strong{Global diagnostics} (\code{type = "global"}), a named numeric vector:
 \itemize{
@@ -83,6 +84,7 @@ the VB term of the log marginal likelihood.
 
 and then inlavanilla's own:
 \itemize{
+\item \code{grad_gap_max}: the largest \code{grad_gap}. It should be close to 0.
 \item \code{vb_fallback}: 1 if the VB fixed-point iteration handed over to the
 fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 but flags nothing: the fallback is a route of the solver, not a measure
@@ -128,6 +130,13 @@ scanned window.
 
 and then inlavanilla's own:
 \itemize{
+\item \code{grad_gap}: how far a supplied \code{grad} is from \code{logpost} at the mode: the
+larger of the difference in slope per conditional posterior SD (about how
+far it moves the mode, in SDs) and half the relative difference in
+curvature (about the relative error it makes in an SD). It comes from
+central differences of \code{logpost} that the fit takes at the mode anyway, up
+to a posterior SD or so apart, so it costs no calls. It should be close to
+0, and is flagged above 0.1.
 \item \code{vb_step_sigma}: the step still to go at the VB mean, in posterior SDs:
 the fixed-point step there, the Newton step of the VB stationarity
 condition, as \code{mode_shift_sigma} is for the mode. After the fallback
@@ -143,9 +152,8 @@ after a one-step correction, which has no step still to go.
 Some of INLAvaan's diagnostics are left out. \code{nsamp} counts posterior
 draws, which \code{\link[=sampling]{sampling()}} makes on demand rather than during the fit.
 \code{grad_num} and \code{grad_diff} compare an analytic gradient with finite
-differences at the mode, which would take further calls; a supplied
-\code{grad} is checked at \code{init} and through the symmetry of its Jacobian at
-the mode instead, with a warning if either check fails. \code{vb_mcse_max},
+differences at the mode, which would take further calls; \code{grad_gap} makes
+that comparison from differences the fit has already taken. \code{vb_mcse_max},
 \code{vb_mcse_mean} and \code{vb_mcse_sigma} estimate the quadrature error of
 INLAvaan's Sobol points, and the cubature rule of inlavanilla is
 deterministic (INLAvaan gives \code{NA} for its own deterministic rule).

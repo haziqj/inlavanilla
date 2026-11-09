@@ -52,9 +52,12 @@
       invisible(suppressMessages(inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), grad = gr_wrong)))
     Condition
       Warning:
-      `grad` does not match finite differences of `logpost` at `init`.
-      x For b: `grad` gives 1.6, finite differences give 0.8.
-      i A wrong gradient gives a wrong mode and wrong marginals.
+      Fit diagnostics flagged 1 potential issue:
+      x `grad` does not match `logpost` at the mode (gap > 0.1) for `b` (0.50).
+      i A wrong gradient gives a wrong log marginal likelihood, and can move the mode
+        and the covariance.
+      i Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;
+        `vignette("diagnostics", package = "inlavanilla")` explains each check.
 
 # an improper posterior with no mode fails with the Hessian error
 
@@ -104,13 +107,14 @@
       invisible(inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE))
     Message
       i 2 parameters: intercept and slope
-        Gradient from grad, checked at init: relative discrepancy # (warning > 0.001), <n> logpost calls
+        Gradient from grad
         logpost at init #
       v Found the posterior mode in <n> iteration(s) [<time>]
         nlminb: <message>, after <n> iteration(s) (<n> function and <n> gradient evaluations)
         logpost at the mode #, whitened gradient # SD, Newton step <g> SD (warning > 0.1 SD)
         Hessian by central differences of grad: 4 calls, and <n> logpost calls to set the steps
         Jacobian asymmetry # (warning > 0.001)
+        Gap between grad and logpost # (warning > 0.1)
         Posterior correlation matrix: largest correlation # (intercept, slope), smallest eigenvalue #
         Hessian condition number #, in SD units (warning > 1e+08)
         Laplace log marginal likelihood #

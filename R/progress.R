@@ -17,6 +17,7 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
   p$frame <- frame
   p$id <- NULL
   p$calls <- FALSE # whether the log-posterior wrapper should tick the bar
+  p$every <- 16L # it ticks every so many calls, or every call for a slow one
   p$warnings <- character()
   p
 }
@@ -30,13 +31,17 @@ progress_new <- function(show, detail = FALSE, frame = parent.frame()) {
 # the number of calls. The delay is set while the bar is created (cli reads it
 # then) and the option is restored afterwards. A user's own setting is kept,
 # so a knitr or Quarto setup chunk can keep bars, which cannot redraw in place
-# there, out of the document.
-progress_start <- function(p, msg, total = NA) {
+# there, out of the document. `waited` is the seconds already gone before this
+# stage, which count towards the delay.
+progress_start <- function(p, msg, total = NA, waited = 0) {
   if (!p$show) {
     return(invisible(p))
   }
   old <- options(
-    cli.progress_show_after = getOption("cli.progress_show_after", 0.5)
+    cli.progress_show_after = getOption(
+      "cli.progress_show_after",
+      max(0.5 - waited, 0)
+    )
   )
   on.exit(options(old))
   p$id <- cli::cli_progress_bar(
@@ -52,6 +57,14 @@ progress_start <- function(p, msg, total = NA) {
   p$calls <- is.na(total)
   invisible(p)
 }
+
+# A first call longer than this, in seconds, makes every call tick the line. A
+# tick costs a microsecond or two, which matters only beside a very fast
+# function, and 16 calls of less than this are too short to notice.
+progress_slow_s <- 0.01
+
+# The calls so far, in a line that counts them
+pb_calls <- "{cli::pb_current} call{?s}"
 
 # The item being worked on, "4/6", counted from 1 as in INLAvaan
 pb_item <- "{min(cli::pb_current + 1, cli::pb_total)}/{cli::pb_total}"
@@ -215,29 +228,21 @@ format_value <- function(x) {
   format(round(x, 2), nsmall = 2)
 }
 
-# Before the mode search: the parameters, where the derivatives come from,
-# logpost at init, and for a user gradient its check at init.
-report_start <- function(p, init, lp_init, grad_check, calls, has_hess) {
+# Before the mode search: the parameters, where the derivatives come from, and
+# logpost at init.
+report_start <- function(p, init, lp_init, has_grad, has_hess) {
   m <- length(init)
   progress_info(
     p,
     paste0(plural(m, "parameter"), ": ", format_names(names(init)))
   )
-  lines <- if (is.null(grad_check)) {
-    grey("Derivatives by finite differences of logpost")
-  } else {
-    paste0(
-      grey(
-        "Gradient from grad, checked at init: relative discrepancy ",
-        fmt_num(grad_check)
-      ),
-      if (grad_check > 1e-3) flag() else "",
-      grey(
-        " (warning > 0.001), ",
-        format_calls(calls[[1]], calls[[2]], calls[[3]])
-      )
-    )
-  }
+  lines <- grey(
+    if (has_grad) {
+      "Gradient from grad"
+    } else {
+      "Derivatives by finite differences of logpost"
+    }
+  )
   if (has_hess) {
     lines <- c(lines, grey("Hessian from hess, checked at the mode"))
   }
@@ -303,6 +308,11 @@ report_mode <- function(p, lap, calls) {
     )
   )
   hs <- lap$hessian
+  gap <- if (all(is.na(lap$grad_gap))) {
+    NA_real_
+  } else {
+    max(lap$grad_gap, na.rm = TRUE)
+  }
   lines <- c(
     lines,
     if (hs$by == "hess") {
@@ -330,6 +340,11 @@ report_mode <- function(p, lap, calls) {
           grey("Jacobian asymmetry ", fmt_num(lap$asymmetry)),
           if (lap$asymmetry > 1e-3) flag() else "",
           grey(" (warning > 0.001)")
+        ),
+        paste0(
+          grey("Gap between grad and logpost ", fmt_num(gap)),
+          if (isTRUE(off_level(gap, warn_levels$grad_gap))) flag() else "",
+          grey(" (warning > ", warn_levels$grad_gap, ")")
         )
       )
     } else {

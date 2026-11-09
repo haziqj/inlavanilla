@@ -139,7 +139,8 @@ step (\code{one_pass}), whether it fell back to
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb = "off"}. \code{marginals}
 is a data frame with a row per parameter: \code{mode_shift_sigma}, \code{kld},
 \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
-\code{vb_step_sigma}, \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, with
+\code{vb_step_sigma}, \code{grad_gap}, \code{mean_gap}, \code{gamma1}, \code{tails} and
+\code{ridge_bend}, with
 \code{NA} for the checks the fit did not run, and \code{width}, the width method
 of each scan (see the section on the width term).
 \item \code{scan}: the scans the skew-normals were fitted to, for
@@ -338,12 +339,16 @@ gradients, so this takes a little longer: a structural equation model with
 39 parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
 with it and 0.17 s without.
 
-A supplied \code{grad} is checked against finite differences at \code{init}, and
-its Jacobian at the mode is checked for symmetry, with a warning if either
-check fails. A supplied \code{hess} is checked at the mode against central
-differences of \code{grad}, along two directions, with a warning if it does
-not match. Any R function works for \code{logpost}, \code{grad} and \code{hess},
-including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
+The fit goes straight to the mode: at \code{init} it only checks that \code{logpost},
+\code{grad} and \code{hess} return finite values of the right shape. A supplied \code{grad}
+is compared with \code{logpost} at the mode, from differences the fit takes there
+anyway, so at no cost in calls, and its Jacobian there is checked for
+symmetry, with a warning if either check fails (see \code{grad_gap} in
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}). A supplied \code{hess} is checked at the mode against
+central differences of \code{grad}, along two directions, with a warning if it
+does not match; \code{grad} is then not compared with \code{logpost}, since no
+differences of \code{logpost} are taken. Any R function works for \code{logpost},
+\code{grad} and \code{hess}, including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
 An RTMB function can return the log-posterior itself, and its \code{obj$fn},
 \code{obj$gr} and \code{obj$he} are then passed as they are. For a TMB template that
 returns the negative log-posterior, pass \code{function(x) -obj$fn(x)},
@@ -483,16 +488,15 @@ each stage. It reports what the fit computes anyway, with no further calls
 of \code{logpost} or \code{grad}:
 \itemize{
 \item Before the mode search: the parameters, where the derivatives come from,
-\code{logpost} at \code{init}, and for a supplied \code{grad} its largest relative
-discrepancy from finite differences there.
+and \code{logpost} at \code{init}.
 \item The mode: the message, iterations and evaluations of \code{\link[stats:nlminb]{stats::nlminb()}},
 and whether it was restarted with the parameters rescaled; the
 log-posterior at the mode, the whitened gradient there (which decides
 the restart) and the largest Newton step in posterior SDs (which the
 fit-time warning checks); how the Hessian was taken (and, for a
-supplied \code{grad}, the asymmetry of its Jacobian, or, for a supplied
-\code{hess}, how far it is from central differences of \code{grad}); the largest
-posterior
+supplied \code{grad}, the asymmetry of its Jacobian and its gap from
+\code{logpost}, or, for a supplied \code{hess}, how far it is from central
+differences of \code{grad}); the largest posterior
 correlation and the smallest eigenvalue of the correlation matrix, which
 is near zero when some combination of the parameters is poorly
 identified, and the condition number of the Hessian in posterior-SD
