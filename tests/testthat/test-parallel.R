@@ -405,6 +405,12 @@ test_that("cores must be a positive whole number or NULL", {
   expect_identical(check_cores(4), 4L)
 })
 
+test_that("cores takes what future::availableCores() returns", {
+  n <- future::availableCores(omit = 1)
+  expect_identical(check_cores(n), as.integer(n))
+  expect_identical(fit_reg(cores = n)$workers, 1L) # a short scan, so serial
+})
+
 test_that("cores without the future package runs serially and says so", {
   force_workers()
   local_mocked_bindings(par_has_future = function() FALSE)

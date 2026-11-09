@@ -552,7 +552,10 @@ future package. With no random effects, as here, RTMB needs nothing special:
 ```{r}
 #| label: cores
 #| eval: false
-fit_par <- inla_vanilla(obj$fn, init, grad = obj$gr, width = "tk", cores = 4)
+cores <- future::availableCores(omit = 1)
+fit_par <- inla_vanilla(
+  obj$fn, init, grad = obj$gr, width = "tk", cores = cores
+)
 ```
 
 Random effects are the exception. Forked workers, which `cores` uses in a
@@ -588,7 +591,9 @@ grad <- function(theta) {
   rebuild()
   -obj$gr(theta)
 }
-fit_par <- inla_vanilla(logpost, init, grad = grad, width = "tk", cores = 8)
+fit_par <- inla_vanilla(
+  logpost, init, grad = grad, width = "tk", cores = cores
+)
 ```
 
 Whatever `build()` uses, here `model` and `parameters`, is found and sent to the

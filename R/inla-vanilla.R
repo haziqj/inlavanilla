@@ -216,12 +216,15 @@
 #' parallel:
 #'
 #' ```r
-#' fit <- inla_vanilla(logpost, init, width = "tk", cores = 8)
+#' cores <- future::availableCores(omit = 1)
+#' fit <- inla_vanilla(logpost, init, width = "tk", cores = cores)
 #' ```
 #'
-#' The results and the progress line are those of a serial fit. A long scan
-#' uses all the `cores`, a shorter one fewer, and a scan expected to take under
-#' a second stays serial. The mode, the Hessian and the VB correction stay
+#' `availableCores()` counts the cores the machine offers, and `omit = 1` leaves
+#' one free. A fit never asks for more workers than the machine offers. The
+#' results and the progress line are those of a serial fit. A long scan uses all
+#' the `cores`, a shorter one fewer, and a scan expected to take under a second
+#' stays serial. The mode, the Hessian and the VB correction stay
 #' serial, so the gain is largest with `width = "tk"` or `"cmp"`, where the
 #' scans are nearly the whole fit: about 7.5 times faster on 12 cores on test
 #' models. With the default width the scans are about half of a slow fit, and

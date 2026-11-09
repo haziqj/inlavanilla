@@ -387,12 +387,15 @@ converge.
 Set \code{cores} to run the per-parameter scans of the skew-normal marginals in
 parallel:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit <- inla_vanilla(logpost, init, width = "tk", cores = 8)
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{cores <- future::availableCores(omit = 1)
+fit <- inla_vanilla(logpost, init, width = "tk", cores = cores)
 }\if{html}{\out{</div>}}
 
-The results and the progress line are those of a serial fit. A long scan
-uses all the \code{cores}, a shorter one fewer, and a scan expected to take under
-a second stays serial. The mode, the Hessian and the VB correction stay
+\code{availableCores()} counts the cores the machine offers, and \code{omit = 1} leaves
+one free. A fit never asks for more workers than the machine offers. The
+results and the progress line are those of a serial fit. A long scan uses all
+the \code{cores}, a shorter one fewer, and a scan expected to take under a second
+stays serial. The mode, the Hessian and the VB correction stay
 serial, so the gain is largest with \code{width = "tk"} or \code{"cmp"}, where the
 scans are nearly the whole fit: about 7.5 times faster on 12 cores on test
 models. With the default width the scans are about half of a slow fit, and

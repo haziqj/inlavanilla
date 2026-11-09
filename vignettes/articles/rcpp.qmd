@@ -632,7 +632,8 @@ grad <- function(theta, Y) {
   rebuild()
   grad_cpp(theta, Y)
 }
-fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = 8)
+cores <- future::availableCores(omit = 1)
+fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = cores)
 ```
 
 `Rcpp::sourceCpp()` finds in `cache` the code that was compiled above, so a

@@ -483,12 +483,17 @@ several times faster than R.
 
 The skew-normal scans can run in parallel, since no parameter's scan depends
 on another's. We ask for this with `cores`, which needs the optional
-[future](https://future.futureverse.org) package:
+[future](https://future.futureverse.org) package. Its `availableCores()` counts
+the cores this machine offers, and respects any limit set on a shared machine.
+Here `omit = 1` leaves one free for everything else:
 
 ```{r}
 #| label: cores
 #| eval: false
-fit_par <- inla_vanilla(logpost, init, X = X, y = y, width = "tk", cores = 8)
+cores <- future::availableCores(omit = 1)
+fit_par <- inla_vanilla(
+  logpost, init, X = X, y = y, width = "tk", cores = cores
+)
 ```
 
 The results and the progress line are those of a serial fit, and `loo()` and
