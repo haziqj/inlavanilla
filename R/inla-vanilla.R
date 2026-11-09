@@ -211,6 +211,34 @@
 #' (m + 1)(m + 2) + 1 nodes, and hands over to [stats::nlminb()] if it does not
 #' converge.
 #'
+#' @section Parallel computation:
+#' There is no argument for this. A fit follows the plan set with
+#' `future::plan()` from the future package, which is optional, so with no plan
+#' the fit runs serially as usual:
+#'
+#' ```r
+#' future::plan(future::multisession)
+#' fit <- inla_vanilla(logpost, init, width = "tk")
+#' ```
+#'
+#' The per-parameter scans of the skew-normal marginals then run on the
+#' workers, with the same results and the same progress line as a serial fit.
+#' A long scan uses every worker of the plan and a shorter one fewer, and a
+#' scan expected to take under a second stays serial. The mode, the Hessian and
+#' the VB correction stay serial, so the gain is largest with `width = "tk"` or
+#' `"cmp"`, where the scans are nearly the whole fit: about 7.5 times faster on
+#' 12 workers on test models. With the default width the scans are about half
+#' of a slow fit, and it was about 1.5 times at most.
+#'
+#' `future::multisession` runs everywhere, including Windows, RStudio and
+#' Positron, by starting separate R sessions and sending them your functions
+#' and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent that way, so the
+#' fit first checks that a worker gets the same value at the mode, and
+#' otherwise runs serially with a message. `future::multicore` forks the R
+#' session, so it shares everything, compiled code included, but it is not
+#' available on Windows or in RStudio. [loo()] and [waic()] follow the same
+#' plan.
+#'
 #' @section Control:
 #' `control` is a list with any of:
 #' * `n_grid`: number of grid points per skew-normal scan, spread over
@@ -387,6 +415,8 @@
 #'     `width = "tk"`), the width term added to it (`width`, zero at the
 #'     mode), and the log scale factor `logC` of each fit on that grid.
 #'     It is `NULL` for Gaussian marginals.
+#'   * `workers`: the number of parallel jobs the scans ran on, 1 for a serial
+#'     fit (see the section on parallel computation).
 #'   * `timing`: the elapsed time of each stage of the fit, in seconds, which
 #'     [timing()] returns.
 #'   * `warnings`: the messages of the warnings raised during the fit, as a

@@ -142,6 +142,8 @@ parameter: along the CMP, or at the conditional modes for
 \code{width = "tk"}), the width term added to it (\code{width}, zero at the
 mode), and the log scale factor \code{logC} of each fit on that grid.
 It is \code{NULL} for Gaussian marginals.
+\item \code{workers}: the number of parallel jobs the scans ran on, 1 for a serial
+fit (see the section on parallel computation).
 \item \code{timing}: the elapsed time of each stage of the fit, in seconds, which
 \code{\link[=timing]{timing()}} returns.
 \item \code{warnings}: the messages of the warnings raised during the fit, as a
@@ -371,6 +373,35 @@ be closer.
 \code{vb = "full"} iterates to the solution, on a degree-5 rule with at most
 (m + 1)(m + 2) + 1 nodes, and hands over to \code{\link[stats:nlminb]{stats::nlminb()}} if it does not
 converge.
+}
+
+\section{Parallel computation}{
+
+There is no argument for this. A fit follows the plan set with
+\code{future::plan()} from the future package, which is optional, so with no plan
+the fit runs serially as usual:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{future::plan(future::multisession)
+fit <- inla_vanilla(logpost, init, width = "tk")
+}\if{html}{\out{</div>}}
+
+The per-parameter scans of the skew-normal marginals then run on the
+workers, with the same results and the same progress line as a serial fit.
+A long scan uses every worker of the plan and a shorter one fewer, and a
+scan expected to take under a second stays serial. The mode, the Hessian and
+the VB correction stay serial, so the gain is largest with \code{width = "tk"} or
+\code{"cmp"}, where the scans are nearly the whole fit: about 7.5 times faster on
+12 workers on test models. With the default width the scans are about half
+of a slow fit, and it was about 1.5 times at most.
+
+\code{future::multisession} runs everywhere, including Windows, RStudio and
+Positron, by starting separate R sessions and sending them your functions
+and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent that way, so the
+fit first checks that a worker gets the same value at the mode, and
+otherwise runs serially with a message. \code{future::multicore} forks the R
+session, so it shares everything, compiled code included, but it is not
+available on Windows or in RStudio. \code{\link[=loo]{loo()}} and \code{\link[=waic]{waic()}} follow the same
+plan.
 }
 
 \section{Control}{
