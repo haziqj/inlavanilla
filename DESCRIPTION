@@ -35,6 +35,7 @@ Imports:
     stats,
     utils
 Suggests:
+    future,
     knitr,
     loo,
     quarto,

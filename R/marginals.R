@@ -303,7 +303,8 @@ fit_marginals <- function(
   start = function(step) NULL,
   he = NULL,
   width = "trace",
-  tk_fallback = FALSE
+  tk_fallback = FALSE,
+  par = NULL
 ) {
   mode <- lap$mode
   Sigma <- lap$Sigma
@@ -328,7 +329,6 @@ fit_marginals <- function(
   } else {
     NULL
   }
-  start("scans")
 
   ctx <- list(
     lap = lap,
@@ -342,10 +342,53 @@ fit_marginals <- function(
     at_mode = at_mode,
     g1_grad = g1_grad
   )
+
+  # On the user's future plan, if there is one and the scans are long enough.
+  # Before the per-parameter line starts, because it can print a message
+  setup <- list(jobs = 1L)
+  if (!is.null(par) && m > 1L) {
+    data <- c(par[c("logpost", "grad", "hess", "init")], list(ctx = ctx))
+    setup <- par_setup(
+      par[c("logpost", "grad", "hess")],
+      scan_probe,
+      data,
+      est_s = par$call_s *
+        m *
+        scan_calls(m, ctrl$n_grid, width, !is.null(gr), !is.null(he)),
+      n = m,
+      note = par$note,
+      label = "The skew-normal scans",
+      what = "logpost"
+    )
+  }
+  start("scans")
+
+  # A parameter ticks once, however many times its job reports it
+  ticked <- logical(m)
+  tick_once <- function(j) {
+    if (!ticked[[j]]) {
+      ticked[[j]] <<- TRUE
+      tick()
+    }
+  }
   scans <- vector("list", m)
+  if (setup$jobs > 1L) {
+    groups <- par_groups(m, setup$jobs)
+    done <- par_run(groups, scan_job, data, setup, tick_once)
+    for (k in seq_along(groups)) {
+      if (!is.null(done[[k]])) {
+        scans[groups[[k]]] <- done[[k]]$scans
+        par$add_calls(done[[k]]$calls)
+      }
+    }
+  }
+  # Every parameter a worker did not return, and with no workers every one,
+  # is scanned here, so an error reads as it does in a serial fit
   for (j in seq_len(m)) {
-    scans[[j]] <- scan_parameter(j, lp, gr, he, ctx)
-    tick()
+    if (is.null(scans[[j]])) {
+      scans[[j]] <- scan_parameter(j, lp, gr, he, ctx)
+    }
+    tick_once(j)
   }
 
   out <- t(vapply(scans, function(s) s$row, numeric(8)))
@@ -364,7 +407,56 @@ fit_marginals <- function(
     method = stats::setNames(
       vapply(scans, function(s) s$method, character(1)),
       names(mode)
-    )
+    ),
+    workers = setup$jobs
+  )
+}
+
+# The parameters `ids` on a worker, with wrappers of its own: the fit's are tied
+# to the fit's progress line and frame. Returns the scans and the calls made.
+scan_job <- function(ids, data) {
+  fns <- wrap_fns(data$logpost, data$grad, data$hess, data$init)
+  scans <- lapply(ids, function(j) {
+    scan <- scan_parameter(j, fns$lp, fns$gr, fns$he, data$ctx)
+    par_tick(j)
+    scan
+  })
+  list(
+    scans = scans,
+    calls = c(fns$state$n_lp, fns$state$n_gr, fns$state$n_he)
+  )
+}
+
+# The user's functions at the mode, to compare a worker with the parent. It has
+# wrappers of its own so that the check does not show in the fit's counts.
+scan_probe <- function(ids, data) {
+  fns <- wrap_fns(data$logpost, data$grad, data$hess, data$init)
+  x <- data$ctx$lap$mode
+  list(
+    lp = fns$lp(x),
+    gr = if (!is.null(fns$gr)) fns$gr(x),
+    he = if (!is.null(fns$he)) fns$he(x)
+  )
+}
+
+# A rough number of calls per parameter of the user's functions in the scan,
+# from the counts in ?inla_vanilla, to judge whether the scans are long. The
+# conditional optimisations of "tk" took about 12 calls per scan point with a
+# gradient and 7m without one on the fits tried.
+scan_calls <- function(m, n_grid, width, has_grad, has_hess) {
+  n <- n_grid - 1
+  volume <- if (has_hess) {
+    1
+  } else if (has_grad) {
+    2 * (m - 1)
+  } else {
+    m * (m - 1)
+  }
+  switch(
+    width,
+    trace = n + 2 + if (has_grad) 0 else 2 * m + 5,
+    cmp = n + 2 + n * volume,
+    tk = 2 + n * (volume + if (has_grad) 12 else 7 * m)
   )
 }
 

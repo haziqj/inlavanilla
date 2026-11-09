@@ -846,9 +846,30 @@ vanilla_fit <- function(
         start = start_marginals,
         he = he,
         width = width,
-        tk_fallback = tk_fallback
+        tk_fallback = tk_fallback,
+        par = list(
+          logpost = logpost_x,
+          grad = grad_x,
+          hess = hess_x,
+          init = init,
+          # Seconds per call so far, to judge how long the scans will take.
+          # The clock has a resolution of a millisecond
+          call_s = max(elapsed() - t_start, 1e-3) /
+            (st$n_lp + st$n_gr + st$n_he),
+          add_calls = function(n) {
+            st$n_lp <- st$n_lp + n[[1L]]
+            st$n_gr <- st$n_gr + n[[2L]]
+            st$n_he <- st$n_he + n[[3L]]
+          },
+          # A message cannot share the console with a running progress line
+          note = function(text) {
+            progress_close(prog)
+            progress_note(prog, text)
+          }
+        )
       )
     )
+    workers <- mar$workers
     sn <- cbind(
       mar$sn,
       unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
@@ -873,8 +894,12 @@ vanilla_fit <- function(
     )
     if (prog$detail) {
       report_marginals(prog, sn, calls_since(), method, width)
+      if (workers > 1L) {
+        progress_info(prog, paste0("The scans ran on ", workers, " workers"))
+      }
     }
   } else {
+    workers <- 1L
     na <- rep(NA_real_, m)
     sn <- cbind(
       xi = mean_vb,
@@ -971,6 +996,7 @@ vanilla_fit <- function(
     diagnostics = diagnostics,
     scan = scan,
     counts = c(logpost = st$n_lp, grad = st$n_gr, hess = st$n_he),
+    workers = workers,
     timing = c(
       stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
       total = t_total
@@ -998,6 +1024,7 @@ new_inla_vanilla <- function(
   diagnostics,
   scan,
   counts,
+  workers,
   timing,
   vb,
   marginals,
@@ -1022,6 +1049,7 @@ new_inla_vanilla <- function(
       diagnostics = diagnostics,
       scan = scan,
       counts = counts,
+      workers = workers,
       timing = timing,
       vb = vb,
       marginals = marginals,
