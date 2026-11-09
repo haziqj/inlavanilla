@@ -292,8 +292,8 @@
 #'   `vb = "full"`, if two steps in a row are cut, or it has not converged
 #'   after `vb_maxit` steps, [stats::nlminb()] takes over.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
-#'   `iter.max` and `eval.max` default to `1000` and `2000`, and `trace = 1`
-#'   prints its iterations.
+#'   `iter.max` and `eval.max` both default to `5000`, and `trace = 1` prints
+#'   its iterations.
 #'
 #' @section Output:
 #' By default each stage prints one line as it finishes, with the time it
@@ -1233,7 +1233,7 @@ vanilla_control <- function(control) {
     )
   }
   ctrl$nlminb <- utils::modifyList(
-    list(iter.max = 1000L, eval.max = 2000L),
+    list(iter.max = 5000L, eval.max = 5000L),
     ctrl$nlminb
   )
   ctrl

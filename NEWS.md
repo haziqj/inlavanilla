@@ -1,5 +1,9 @@
 # inlavanilla 0.1.1
 
+* The mode search now allows 5000 iterations and 5000 evaluations by default,
+  up from 1000 and 2000, so that slowly converging fits do not stop at the
+  limit. `control$nlminb` still sets them.
+
 * `inla_vanilla()` now goes straight to the mode. A supplied `grad` used to be
   compared with finite differences of `logpost` at `init`, before anything was
   printed, at about 8m to 12m calls of `logpost`: 175 calls and 14% of the time
