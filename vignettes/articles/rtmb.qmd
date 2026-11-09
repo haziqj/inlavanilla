@@ -544,6 +544,59 @@ inside the check of the mode, which asks for a tenth. A supplied
 with a warning if they do not match. With random effects integrated out,
 TMB gives no Hessian.
 
+## Using several cores
+
+The skew-normal scans can run in parallel with `cores`, which needs the optional
+future package. With no random effects, as here, RTMB needs nothing special:
+
+```{r}
+#| label: cores
+#| eval: false
+fit_par <- inla_vanilla(obj$fn, init, grad = obj$gr, width = "tk", cores = 4)
+```
+
+Random effects are the exception. Forked workers, which `cores` uses in a
+terminal on macOS or Linux, share the tape. Separate R sessions, which it uses
+in RStudio, on Windows and in Positron, whose console refuses to fork, do not:
+once `MakeADFun()` integrates random effects out, a copy of `obj$fn` in another
+session returns `NaN`, with no error. The fit checks a worker's value at the
+mode, finds the difference, and runs serially with a message.
+
+To run in parallel there, we build the tape on each worker: the call of
+`MakeADFun()` goes in a function, which is called again when the process is not
+the one that started the fit.
+
+```{r}
+#| label: cores-random
+#| eval: false
+build <- function() {
+  RTMB::MakeADFun(model, parameters, random = "u", silent = TRUE)
+}
+obj <- build()
+pid <- Sys.getpid()
+rebuild <- function() {
+  if (Sys.getpid() != pid) {
+    obj <<- build()
+    pid <<- Sys.getpid()
+  }
+}
+logpost <- function(theta) {
+  rebuild()
+  -obj$fn(theta)
+}
+grad <- function(theta) {
+  rebuild()
+  -obj$gr(theta)
+}
+fit_par <- inla_vanilla(logpost, init, grad = grad, width = "tk", cores = 8)
+```
+
+Whatever `build()` uses, here `model` and `parameters`, is found and sent to the
+workers. On a Poisson model with 21 parameters and 60 random intercepts
+integrated out, a fit with `width = "tk"` took 32 s serially and 4.4 s on 12
+cores from a terminal. In Positron's console it took 9.7 s: building the tapes
+costs each worker some time, and the fit chose seven of the 12.
+
 ## Choosing a route
 
 In order of the work they take, with the first two about equal:
