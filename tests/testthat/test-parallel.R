@@ -456,7 +456,15 @@ test_that("rendered documents and short fits get no hint", {
 ## ----- Separate sessions ----------------------------------------------------------
 
 test_that("separate sessions find global helpers and data passed in the dots", {
-  skip_if(pkgload::is_dev_package("inlavanilla"), "needs an installed copy")
+  # pkgload marks the namespace of a package it has loaded from source
+  skip_if(
+    exists(
+      ".__DEVTOOLS__",
+      envir = asNamespace("inlavanilla"),
+      inherits = FALSE
+    ),
+    "needs an installed copy"
+  )
   force_workers()
   # As a user's script has them: in the global environment
   assign(".par_test_sd", 10, envir = globalenv())
