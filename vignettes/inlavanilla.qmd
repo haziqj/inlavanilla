@@ -479,6 +479,45 @@ structural equation model with 39 parameters. C++ makes each call about ten
 times faster than R. A gradient from RTMB makes the fit more accurate and
 several times faster than R.
 
+## Using several cores
+
+The skew-normal scans can run in parallel, since no parameter's scan depends
+on another's. We ask for this with `cores`, which needs the optional
+[future](https://future.futureverse.org) package. Its `availableCores()` counts
+the cores this machine offers, and respects any limit set on a shared machine.
+Here `omit = 1` leaves one free for everything else:
+
+```{r}
+#| label: cores
+#| eval: false
+cores <- future::availableCores(omit = 1)
+fit_par <- inla_vanilla(
+  logpost, init, X = X, y = y, width = "tk", cores = cores
+)
+```
+
+The results and the progress line are those of a serial fit, and `loo()` and
+`waic()` use the same setting. A long scan uses every core, a shorter one
+fewer, and a scan expected to take under a second stays serial, so `cores`
+changes nothing on a model as small as this one. The gain depends on how much
+of the fit is scanning: the mode, the Hessian and the VB correction stay
+serial. With `width = "tk"` the scans are nearly the whole fit, and a logistic
+regression with 40 parameters went from 25.5 s to 3.6 s on 12 cores. With the
+default width they are about half of a slow fit, and that fit gained about 1.5
+times.
+
+In a terminal on macOS or Linux the workers are forks of the R session, which
+share everything. In RStudio, on Windows and in Positron, whose console refuses
+to fork, they are separate R sessions: these need the package installed, and
+are sent your functions and data. A log-posterior written in R needs nothing
+more. Compiled code cannot always be sent, so the fit first checks that a
+worker gets the same value at the mode, and otherwise runs serially with a
+message. The articles [Speeding up with Rcpp](rcpp.html) and
+[Gradients and Hessians with RTMB](rtmb.html) show what to do then.
+
+With `cores` left unset, a fit follows a plan set with `future::plan()`, and is
+serial if there is none. `cores = 1` is serial whatever the plan.
+
 ## References
 
 Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for structural

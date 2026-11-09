@@ -211,6 +211,70 @@
 #' (m + 1)(m + 2) + 1 nodes, and hands over to [stats::nlminb()] if it does not
 #' converge.
 #'
+#' @section Parallel computation:
+#' Set `cores` to run the per-parameter scans of the skew-normal marginals in
+#' parallel:
+#'
+#' ```r
+#' cores <- future::availableCores(omit = 1)
+#' fit <- inla_vanilla(logpost, init, width = "tk", cores = cores)
+#' ```
+#'
+#' `availableCores()` counts the cores the machine offers, and `omit = 1` leaves
+#' one free. A fit never asks for more workers than the machine offers. The
+#' results and the progress line are those of a serial fit. A long scan uses all
+#' the `cores`, a shorter one fewer, and a scan expected to take under a second
+#' stays serial. The mode, the Hessian and the VB correction stay
+#' serial, so the gain is largest with `width = "tk"` or `"cmp"`, where the
+#' scans are nearly the whole fit: about 7.5 times faster on 12 cores on test
+#' models. With the default width the scans are about half of a slow fit, and
+#' it was about 1.5 times at most.
+#'
+#' `cores` needs the future package, which is optional. It uses forked workers
+#' where those are safe, in a terminal on macOS or Linux, and separate R
+#' sessions elsewhere: on Windows, in RStudio, and in Positron's console, which
+#' refuses to fork. Forks share everything. Separate sessions need the package
+#' installed, not just loaded with `devtools::load_all()`, and are sent your
+#' functions and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent, so the
+#' fit first checks that a worker gets the same value at the mode, and
+#' otherwise runs serially with a message.
+#'
+#' To use separate sessions with compiled code, rebuild it on each worker: put
+#' whatever creates it in a function, and call that function again when the
+#' process is not the one that started the fit. With RTMB and random effects
+#' (without them, RTMB needs none of this):
+#'
+#' ```r
+#' build <- function() {
+#'   RTMB::MakeADFun(model, parameters, random = "u", silent = TRUE)
+#' }
+#' obj <- build()
+#' pid <- Sys.getpid()
+#' rebuild <- function() {
+#'   if (Sys.getpid() != pid) {
+#'     obj <<- build()
+#'     pid <<- Sys.getpid()
+#'   }
+#' }
+#' logpost <- function(theta) {
+#'   rebuild()
+#'   -obj$fn(theta)
+#' }
+#' grad <- function(theta) {
+#'   rebuild()
+#'   -obj$gr(theta)
+#' }
+#' ```
+#'
+#' With Rcpp, `rebuild()` calls `Rcpp::sourceCpp(file, cacheDir = dir)` instead,
+#' with a `dir` of your own so that the workers share one compiled copy. The
+#' RTMB and Rcpp articles on the package website have worked versions.
+#'
+#' With `cores` left at `NULL` the fit follows a plan set with `future::plan()`,
+#' and runs serially if there is none, so a plan can apply to every fit in a
+#' session. `cores = 1` runs serially whatever the plan. [loo()] and [waic()]
+#' use the setting of the fit.
+#'
 #' @section Control:
 #' `control` is a list with any of:
 #' * `n_grid`: number of grid points per skew-normal scan, spread over
@@ -297,8 +361,8 @@
 #' @param ... Further arguments passed to `logpost`, `grad` and `hess`, such
 #'   as the data. As in [stats::nlminb()], they come after the gradient and
 #'   the Hessian, and the arguments after them (`vb`, `marginals`, `width`,
-#'   `tk_fallback`, `verbose`, `silent`, `control`) must be given by their
-#'   full names, so data arguments cannot partially match them. A data
+#'   `tk_fallback`, `cores`, `verbose`, `silent`, `control`) must be given by
+#'   their full names, so data arguments cannot partially match them. A data
 #'   argument cannot take one of those names. The arguments before them can be
 #'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
 #'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
@@ -343,6 +407,11 @@
 #'   marginals whatever its diagnostics. The parameters rescanned are listed
 #'   in `fit$fallback` and by [summary.inla_vanilla()]. Ignored for Gaussian
 #'   marginals and with `width = "tk"`.
+#' @param cores The number of CPU cores for the skew-normal scans, and for
+#'   [loo()] and [waic()] on this fit. `NULL`, the default, follows
+#'   `future::plan()`, and is serial if no plan is set. `1` is serial whatever
+#'   the plan. Needs the future package (see the section on parallel
+#'   computation).
 #' @param verbose Logical. Print a full diagnostic of each stage under its
 #'   progress line? Default `FALSE`. See the section on output.
 #' @param silent Logical. Print nothing at all, and muffle the warnings and
@@ -359,8 +428,8 @@
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
-#'   * `vb`, `marginals`, `width`, `tk_fallback`, `verbose`, `silent`: the
-#'     settings the fit used (`width` is `NA` for Gaussian marginals).
+#'   * `vb`, `marginals`, `width`, `tk_fallback`, `cores`, `verbose`, `silent`:
+#'     the settings the fit used (`width` is `NA` for Gaussian marginals).
 #'   * `fallback`: the parameters that `tk_fallback` rescanned with
 #'     `width = "tk"` (empty when there were none).
 #'   * `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
@@ -387,6 +456,8 @@
 #'     `width = "tk"`), the width term added to it (`width`, zero at the
 #'     mode), and the log scale factor `logC` of each fit on that grid.
 #'     It is `NULL` for Gaussian marginals.
+#'   * `workers`: the number of parallel jobs the scans ran on, 1 for a serial
+#'     fit (see the section on parallel computation).
 #'   * `timing`: the elapsed time of each stage of the fit, in seconds, which
 #'     [timing()] returns.
 #'   * `warnings`: the messages of the warnings raised during the fit, as a
@@ -460,6 +531,7 @@ inla_vanilla <- function(
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
+  cores = NULL,
   verbose = FALSE,
   silent = FALSE,
   control = list()
@@ -485,6 +557,7 @@ inla_vanilla <- function(
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
   width <- check_choice(width, c("trace", "cmp", "tk"), "width")
   check_flag(tk_fallback, "tk_fallback")
+  cores <- check_cores(cores)
   check_flag(verbose, "verbose")
   check_flag(silent, "silent")
   if (verbose && silent) {
@@ -519,6 +592,7 @@ inla_vanilla <- function(
       marginals = marginals,
       width = width,
       tk_fallback = tk_fallback,
+      cores = cores,
       ctrl = ctrl,
       prog = prog,
       call = call,
@@ -543,6 +617,60 @@ inla_vanilla <- function(
   )
 }
 
+# The wrappers the stages call in place of the user's functions, which have
+# `...` already bound. They name the parameters, and count the calls and record
+# the last parameter value in the environment `state`. `on_call` runs at each
+# call, for the progress bar. `gr` and `he` are NULL when the user gave none.
+wrap_fns <- function(
+  logpost_x,
+  grad_x,
+  hess_x,
+  init,
+  on_call = function() NULL
+) {
+  m <- length(init)
+  parnames <- names(init)
+  state <- new.env(parent = emptyenv())
+  state$n_lp <- 0L
+  state$n_gr <- 0L
+  state$n_he <- 0L
+  state$last_x <- init
+  lp <- function(x) {
+    names(x) <- parnames
+    state$last_x <- x
+    state$n_lp <- state$n_lp + 1L
+    on_call()
+    # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
+    v <- logpost_x(x)[[1L]]
+    if (is.na(v)) -Inf else v
+  }
+  gr <- if (is.null(grad_x)) {
+    NULL
+  } else {
+    function(x) {
+      names(x) <- parnames
+      state$last_x <- x
+      state$n_gr <- state$n_gr + 1L
+      on_call()
+      as.numeric(grad_x(x))
+    }
+  }
+  # A plain m x m matrix, whatever the user's function returns (a sparse
+  # matrix from the Matrix package, or a number when m = 1)
+  he <- if (is.null(hess_x)) {
+    NULL
+  } else {
+    function(x) {
+      names(x) <- parnames
+      state$last_x <- x
+      state$n_he <- state$n_he + 1L
+      on_call()
+      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
+    }
+  }
+  list(lp = lp, gr = gr, he = he, state = state)
+}
+
 # The stages of the fit, given the user's functions with `...` already bound,
 # the checked arguments, and the progress reporter `prog`, which also holds
 # the record of warnings.
@@ -555,6 +683,7 @@ vanilla_fit <- function(
   marginals,
   width,
   tk_fallback,
+  cores,
   ctrl,
   prog,
   call,
@@ -565,61 +694,28 @@ vanilla_fit <- function(
   has_grad <- !is.null(grad_x)
   has_hess <- !is.null(hess_x)
 
-  # The engine calls these wrappers, which name the parameters, count the
-  # calls and tick the progress bar. The spinner counts the stage's logpost,
-  # grad and hess calls together, from `stage_calls()`, so stages driven by
-  # grad tick too.
-  n_lp <- 0L
-  n_gr <- 0L
-  n_he <- 0L
+  # The engine calls the wrappers of wrap_fns(), and the progress bar ticks
+  # from them. The spinner counts the stage's logpost, grad and hess calls
+  # together, from `stage_calls()`, so stages driven by grad tick too.
   n_base <- 0L
   stage_calls <- function() {
-    n_base <<- n_lp + n_gr + n_he
+    n_base <<- st$n_lp + st$n_gr + st$n_he
   }
-  last_x <- init
   tick <- function() {
-    n <- n_lp + n_gr + n_he
+    n <- st$n_lp + st$n_gr + st$n_he
     if (prog$calls && n %% 16L == 0L) {
       progress_tick(prog, set = n - n_base)
     }
   }
-  lp <- function(x) {
-    names(x) <- parnames
-    last_x <<- x
-    n_lp <<- n_lp + 1L
-    tick()
-    # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
-    v <- logpost_x(x)[[1L]]
-    if (is.na(v)) -Inf else v
-  }
-  gr <- if (!has_grad) {
-    NULL
-  } else {
-    function(x) {
-      names(x) <- parnames
-      last_x <<- x
-      n_gr <<- n_gr + 1L
-      tick()
-      as.numeric(grad_x(x))
-    }
-  }
-  # A plain m x m matrix, whatever the user's function returns (a sparse
-  # matrix from the Matrix package, or a number when m = 1)
-  he <- if (!has_hess) {
-    NULL
-  } else {
-    function(x) {
-      names(x) <- parnames
-      last_x <<- x
-      n_he <<- n_he + 1L
-      tick()
-      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
-    }
-  }
+  fns <- wrap_fns(logpost_x, grad_x, hess_x, init, on_call = tick)
+  lp <- fns$lp
+  gr <- fns$gr
+  he <- fns$he
+  st <- fns$state
   # The calls since the last stage, for verbose output
   calls_seen <- c(0L, 0L, 0L)
   calls_since <- function() {
-    now <- c(n_lp, n_gr, n_he)
+    now <- c(st$n_lp, st$n_gr, st$n_he)
     out <- now - calls_seen
     calls_seen <<- now
     out
@@ -631,7 +727,7 @@ vanilla_fit <- function(
       if (inherits(e, "inlavanilla_error")) {
         stop(e)
       }
-      at <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
+      at <- paste(parnames, "=", signif(st$last_x, 4), collapse = ", ")
       abort(
         c(
           "The fit stopped with an error while {stage}.",
@@ -752,7 +848,7 @@ vanilla_fit <- function(
         lap$L,
         ctrl,
         method = vb,
-        budget = n_lp + n_gr + n_he
+        budget = st$n_lp + st$n_gr + st$n_he
       )
     )
     # The fallback is a route of the solver, reported but not marked, as in
@@ -825,9 +921,31 @@ vanilla_fit <- function(
         start = start_marginals,
         he = he,
         width = width,
-        tk_fallback = tk_fallback
+        tk_fallback = tk_fallback,
+        par = list(
+          logpost = logpost_x,
+          grad = grad_x,
+          hess = hess_x,
+          init = init,
+          cores = cores,
+          # Seconds per call so far, to judge how long the scans will take.
+          # The clock has a resolution of a millisecond
+          call_s = max(elapsed() - t_start, 1e-3) /
+            (st$n_lp + st$n_gr + st$n_he),
+          add_calls = function(n) {
+            st$n_lp <- st$n_lp + n[[1L]]
+            st$n_gr <- st$n_gr + n[[2L]]
+            st$n_he <- st$n_he + n[[3L]]
+          },
+          # A message cannot share the console with a running progress line
+          note = function(text) {
+            progress_close(prog)
+            progress_note(prog, text)
+          }
+        )
       )
     )
+    workers <- mar$workers
     sn <- cbind(
       mar$sn,
       unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
@@ -852,8 +970,12 @@ vanilla_fit <- function(
     )
     if (prog$detail) {
       report_marginals(prog, sn, calls_since(), method, width)
+      if (workers > 1L) {
+        progress_info(prog, paste0("The scans ran on ", workers, " workers"))
+      }
     }
   } else {
+    workers <- 1L
     na <- rep(NA_real_, m)
     sn <- cbind(
       xi = mean_vb,
@@ -938,7 +1060,7 @@ vanilla_fit <- function(
   t_end <- elapsed()
   t_total <- t_end - t_start
   if (prog$detail) {
-    report_end(prog, n_lp, n_gr, n_he, t_total)
+    report_end(prog, st$n_lp, st$n_gr, st$n_he, t_total)
   }
   new_inla_vanilla(
     sn = sn[, c("xi", "omega", "alpha"), drop = FALSE],
@@ -949,7 +1071,9 @@ vanilla_fit <- function(
     logml_laplace = lap$logml,
     diagnostics = diagnostics,
     scan = scan,
-    counts = c(logpost = n_lp, grad = n_gr, hess = n_he),
+    counts = c(logpost = st$n_lp, grad = st$n_gr, hess = st$n_he),
+    cores = cores,
+    workers = workers,
     timing = c(
       stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
       total = t_total
@@ -977,6 +1101,8 @@ new_inla_vanilla <- function(
   diagnostics,
   scan,
   counts,
+  cores,
+  workers,
   timing,
   vb,
   marginals,
@@ -1001,6 +1127,8 @@ new_inla_vanilla <- function(
       diagnostics = diagnostics,
       scan = scan,
       counts = counts,
+      cores = cores,
+      workers = workers,
       timing = timing,
       vb = vb,
       marginals = marginals,
@@ -1100,6 +1228,25 @@ check_function <- function(f, arg) {
       "{.arg {arg}} must be a function, not {.obj_type_friendly {f}}."
     )
   }
+}
+
+# The `cores` argument, as an integer, or NULL to follow the user's plan.
+check_cores <- function(cores) {
+  if (is.null(cores)) {
+    return(NULL)
+  }
+  ok <- is.numeric(cores) &&
+    length(cores) == 1L &&
+    is.finite(cores) &&
+    cores >= 1 &&
+    cores == round(cores)
+  if (!ok) {
+    abort(
+      "{.arg cores} must be a single positive whole number, or {.code NULL}
+       to follow {.code future::plan()}."
+    )
+  }
+  as.integer(cores)
 }
 
 check_flag <- function(x, arg) {

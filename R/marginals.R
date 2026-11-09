@@ -303,7 +303,8 @@ fit_marginals <- function(
   start = function(step) NULL,
   he = NULL,
   width = "trace",
-  tk_fallback = FALSE
+  tk_fallback = FALSE,
+  par = NULL
 ) {
   mode <- lap$mode
   Sigma <- lap$Sigma
@@ -328,28 +329,157 @@ fit_marginals <- function(
   } else {
     NULL
   }
+
+  ctx <- list(
+    lap = lap,
+    Vscan = Vscan,
+    z = z,
+    # Scan points for the ridge bend (see scan_bend())
+    i_bend = unique(c(which.min(abs(z + 2)), which.min(abs(z - 2)))),
+    width = width,
+    tk_fallback = tk_fallback,
+    log_threshold = ctrl$log_threshold,
+    at_mode = at_mode,
+    g1_grad = g1_grad
+  )
+
+  # On workers, if the fit has `cores` or the user a future plan, and the scans
+  # are long enough. Before the per-parameter line starts, because it can print
+  # a message
+  setup <- list(jobs = 1L)
+  if (!is.null(par) && m > 1L) {
+    data <- c(par[c("logpost", "grad", "hess", "init")], list(ctx = ctx))
+    setup <- par_setup(
+      par[c("logpost", "grad", "hess")],
+      scan_probe,
+      data,
+      est_s = par$call_s *
+        m *
+        scan_calls(m, ctrl$n_grid, width, !is.null(gr), !is.null(he)),
+      n = m,
+      note = par$note,
+      label = "The skew-normal scans",
+      what = "logpost",
+      cores = par$cores
+    )
+    on.exit(setup$restore(), add = TRUE)
+  }
   start("scans")
 
-  out <- matrix(
-    NA_real_,
-    m,
-    8,
-    dimnames = list(
-      names(mode),
-      c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "ridge_bend", "logC")
-    )
+  # A parameter ticks once, however many times its job reports it
+  ticked <- logical(m)
+  tick_once <- function(j) {
+    if (!ticked[[j]]) {
+      ticked[[j]] <<- TRUE
+      tick()
+    }
+  }
+  scans <- vector("list", m)
+  if (setup$jobs > 1L) {
+    groups <- par_groups(m, setup$jobs)
+    done <- par_run(groups, scan_job, data, setup, tick_once)
+    for (k in seq_along(groups)) {
+      if (!is.null(done[[k]])) {
+        scans[groups[[k]]] <- done[[k]]$scans
+        par$add_calls(done[[k]]$calls)
+      }
+    }
+  }
+  # Every parameter a worker did not return, and with no workers every one,
+  # is scanned here, so an error reads as it does in a serial fit
+  for (j in seq_len(m)) {
+    if (is.null(scans[[j]])) {
+      scans[[j]] <- scan_parameter(j, lp, gr, he, ctx)
+    }
+    tick_once(j)
+  }
+
+  out <- t(vapply(scans, function(s) s$row, numeric(8)))
+  dimnames(out) <- list(
+    names(mode),
+    c("xi", "omega", "alpha", "gamma1", "nmad", "tails", "ridge_bend", "logC")
   )
-  heights <- widths <- matrix(
-    NA_real_,
-    length(z),
-    m,
-    dimnames = list(NULL, names(mode))
+  heights <- vapply(scans, function(s) s$raw, numeric(length(z)))
+  widths <- vapply(scans, function(s) s$w, numeric(length(z)))
+  dimnames(heights) <- dimnames(widths) <- list(NULL, names(mode))
+  list(
+    sn = out,
+    z = z,
+    logpost = heights,
+    width = widths,
+    method = stats::setNames(
+      vapply(scans, function(s) s$method, character(1)),
+      names(mode)
+    ),
+    workers = setup$jobs
   )
-  method <- stats::setNames(rep(width, m), names(mode))
-  # Scan points for the ridge bend (see scan_bend())
-  i_bend <- unique(c(which.min(abs(z + 2)), which.min(abs(z - 2))))
+}
+
+# The parameters `ids` on a worker, with wrappers of its own: the fit's are tied
+# to the fit's progress line and frame. Returns the scans and the calls made.
+scan_job <- function(ids, data) {
+  fns <- wrap_fns(data$logpost, data$grad, data$hess, data$init)
+  scans <- lapply(ids, function(j) {
+    scan <- scan_parameter(j, fns$lp, fns$gr, fns$he, data$ctx)
+    par_tick(j)
+    scan
+  })
+  list(
+    scans = scans,
+    calls = c(fns$state$n_lp, fns$state$n_gr, fns$state$n_he)
+  )
+}
+
+# The user's functions at the mode, to compare a worker with the parent. It has
+# wrappers of its own so that the check does not show in the fit's counts.
+scan_probe <- function(ids, data) {
+  fns <- wrap_fns(data$logpost, data$grad, data$hess, data$init)
+  x <- data$ctx$lap$mode
+  list(
+    lp = fns$lp(x),
+    gr = if (!is.null(fns$gr)) fns$gr(x),
+    he = if (!is.null(fns$he)) fns$he(x)
+  )
+}
+
+# A rough number of calls per parameter of the user's functions in the scan,
+# from the counts in ?inla_vanilla, to judge whether the scans are long. The
+# conditional optimisations of "tk" took about 12 calls per scan point with a
+# gradient and 7m without one on the fits tried.
+scan_calls <- function(m, n_grid, width, has_grad, has_hess) {
+  n <- n_grid - 1
+  volume <- if (has_hess) {
+    1
+  } else if (has_grad) {
+    2 * (m - 1)
+  } else {
+    m * (m - 1)
+  }
+  switch(
+    width,
+    trace = n + 2 + if (has_grad) 0 else 2 * m + 5,
+    cmp = n + 2 + n * volume,
+    tk = 2 + n * (volume + if (has_grad) 12 else 7 * m)
+  )
+}
+
+# The scan and skew-normal fit of parameter j. `lp`, `gr` and `he` are wrappers
+# from wrap_fns(), and `ctx` holds what the parameters share, set up by
+# fit_marginals(). Nothing here depends on another parameter's scan. Returns
+# `row`, the parameter's row of `sn`, `raw` and `w`, its log-heights and width
+# term, and `method`, the width method it used.
+scan_parameter <- function(j, lp, gr, he, ctx) {
+  lap <- ctx$lap
+  mode <- lap$mode
+  m <- length(mode)
+  sd_j <- sqrt(lap$Sigma[j, j])
+  Vscan <- ctx$Vscan
+  z <- ctx$z
+  i_bend <- ctx$i_bend
+  width <- ctx$width
+  method <- width
   # Log-posterior along the CMP; the mode's height is known
-  cmp_height <- function(j, t) {
+  cmp_height <- function(t) {
     vapply(
       t,
       function(t) if (t == 0) lap$lp_max else lp(mode + Vscan[, j] * t),
@@ -360,83 +490,82 @@ fit_marginals <- function(
     is.finite(h) && h - max(y[is.finite(y)]) > -3
   }
 
-  for (j in seq_len(m)) {
-    # The heights along the CMP, which "tk" does not need beyond the ridge
-    # bend, and that only without a gradient
-    raw <- if (width != "tk" || m == 1L) {
-      cmp_height(j, z)
-    } else {
-      replace(
-        rep(NA_real_, length(z)),
-        i_bend,
-        if (is.null(gr)) cmp_height(j, z[i_bend]) else NA_real_
-      )
-    }
-    # Without a gradient the volume correction comes first, because its calls
-    # also say which way the ridge bends
-    g1_lp <- if (!is.null(at_mode)) {
-      gamma1_lp(j, lp, mode, lap$lp_max, Vscan, L, at_mode)
-    } else {
-      NULL
-    }
-    bend <- scan_bend(
-      j,
-      lp,
-      gr,
-      lap,
-      Vscan,
-      z[i_bend],
-      raw[i_bend],
-      g1_lp$bend_dir
+  # The heights along the CMP, which "tk" does not need beyond the ridge
+  # bend, and that only without a gradient
+  raw <- if (width != "tk" || m == 1L) {
+    cmp_height(z)
+  } else {
+    replace(
+      rep(NA_real_, length(z)),
+      i_bend,
+      if (is.null(gr)) cmp_height(z[i_bend]) else NA_real_
     )
-    if (tk_fallback && off_level(bend, summary_levels$ridge_bend)) {
-      method[[j]] <- "tk"
-    }
+  }
+  # Without a gradient the volume correction comes first, because its calls
+  # also say which way the ridge bends
+  g1_lp <- if (!is.null(ctx$at_mode)) {
+    gamma1_lp(j, lp, mode, lap$lp_max, Vscan, lap$L, ctx$at_mode)
+  } else {
+    NULL
+  }
+  bend <- scan_bend(
+    j,
+    lp,
+    gr,
+    lap,
+    Vscan,
+    z[i_bend],
+    raw[i_bend],
+    g1_lp$bend_dir
+  )
+  if (ctx$tk_fallback && off_level(bend, summary_levels$ridge_bend)) {
+    method <- "tk"
+  }
 
-    # The width term, and the heights it is added to. With one parameter
-    # there are no others, so the three methods are the same scan, taken by
-    # the linear route as before.
-    use <- if (m == 1L) "trace" else method[[j]]
-    if (use == "trace") {
-      g1 <- if (is.null(gr)) g1_lp$gamma1 else g1_grad[[j]]
-      w <- g1 * z
-    } else if (use == "cmp") {
-      w <- width_cmp(j, lp, gr, he, lap, Vscan, z, raw)
-      g1 <- width_slope(z, w)
-    } else {
-      tk <- scan_tk(j, lp, gr, he, lap, Vscan, z)
-      raw <- tk$height
-      w <- tk$width
-      g1 <- width_slope(z, w)
-    }
+  # The width term, and the heights it is added to. With one parameter
+  # there are no others, so the three methods are the same scan, taken by
+  # the linear route as before.
+  use <- if (m == 1L) "trace" else method
+  if (use == "trace") {
+    g1 <- if (is.null(gr)) g1_lp$gamma1 else ctx$g1_grad[[j]]
+    w <- g1 * z
+  } else if (use == "cmp") {
+    w <- width_cmp(j, lp, gr, he, lap, Vscan, z, raw)
+    g1 <- width_slope(z, w)
+  } else {
+    tk <- scan_tk(j, lp, gr, he, lap, Vscan, z)
+    raw <- tk$height
+    w <- tk$width
+    g1 <- width_slope(z, w)
+  }
 
-    # Corrected log-heights
-    y <- raw + w
-    tails <- !above(y[1], y) && !above(y[length(y)], y)
+  # Corrected log-heights
+  y <- raw + w
+  tails <- !above(y[1], y) && !above(y[length(y)], y)
 
-    ok <- is.finite(y)
-    fit <- fit_skew_normal(
-      x = z[ok],
-      y = y[ok] - max(y[ok]),
-      threshold_log_drop = ctrl$log_threshold
-    )
+  ok <- is.finite(y)
+  fit <- fit_skew_normal(
+    x = z[ok],
+    y = y[ok] - max(y[ok]),
+    threshold_log_drop = ctx$log_threshold
+  )
 
-    # Back from the scan coordinate t to theta_j = mode_j + t sd_j
-    out[j, ] <- c(
-      mode[[j]] + fit$xi * sds[[j]],
-      fit$omega * sds[[j]],
+  # Back from the scan coordinate t to theta_j = mode_j + t sd_j
+  list(
+    row = c(
+      mode[[j]] + fit$xi * sd_j,
+      fit$omega * sd_j,
       fit$alpha,
       g1,
       fit$nmad,
       tails,
       bend,
       fit$logC
-    )
-    heights[, j] <- raw
-    widths[, j] <- w
-    tick()
-  }
-  list(sn = out, z = z, logpost = heights, width = widths, method = method)
+    ),
+    raw = raw,
+    w = w,
+    method = method
+  )
 }
 
 # The mass each fitted marginal puts outside the window that was scanned to

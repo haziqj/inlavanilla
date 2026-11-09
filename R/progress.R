@@ -138,6 +138,15 @@ progress_info <- function(p, text) {
   }
 }
 
+# The same at the default level, for something the user should know. Returns
+# whether it was shown.
+progress_note <- function(p, text) {
+  if (p$show) {
+    message(wrap_detail(paste(col_vanilla(cli::symbol$info), text), 0))
+  }
+  invisible(p$show)
+}
+
 # Detail lines, already styled (grey, with any flags in yellow), indented
 # under the stage line, one message each.
 progress_detail <- function(p, lines) {

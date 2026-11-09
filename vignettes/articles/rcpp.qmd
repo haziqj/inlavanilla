@@ -600,6 +600,45 @@ c(
 )
 ```
 
+## Using several cores
+
+At these speeds the skew-normal scans take a fraction of a second, so `cores`,
+which needs the optional future package, would change nothing here: a scan
+expected to take under a second stays serial. A slower C++ log-posterior is
+another matter. In a terminal on macOS or Linux, forked workers share the
+compiled code, and `cores` needs nothing more.
+
+Separate R sessions cannot use it. These are what `cores` uses in RStudio, on
+Windows and in Positron, whose console refuses to fork, and there the fit finds
+that a worker fails, and runs serially with a message. To run in parallel, we
+load the code on each worker, from the same file and the same cache:
+
+```{r}
+#| label: cores
+#| eval: false
+cache <- tempdir()
+pid <- Sys.getpid()
+rebuild <- function() {
+  if (Sys.getpid() != pid) {
+    Rcpp::sourceCpp(cpp_file, cacheDir = cache)
+    pid <<- Sys.getpid()
+  }
+}
+logpost <- function(theta, Y) {
+  rebuild()
+  logpost_cpp(theta, Y)
+}
+grad <- function(theta, Y) {
+  rebuild()
+  grad_cpp(theta, Y)
+}
+cores <- future::availableCores(omit = 1)
+fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = cores)
+```
+
+`Rcpp::sourceCpp()` finds in `cache` the code that was compiled above, so a
+worker only has to load it.
+
 ## Results
 
 ```{r}
