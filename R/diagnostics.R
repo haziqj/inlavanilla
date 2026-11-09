@@ -5,9 +5,11 @@
 # check_flags() (R/methods.R) on the same numbers, so none of them can
 # disagree. The warning checks, in INLAvaan's order, the mode shift, NMAD,
 # the unscanned mass, the VB shift and the Hessian condition number, at
-# INLAvaan's levels. Two checks are inlavanilla's own: whether the VB
-# correction settled, after the mode shift, since the two together are what
-# print() calls converged, and the heavy tails, after the unscanned mass.
+# INLAvaan's levels. Three checks are inlavanilla's own: the gap between a user
+# gradient and `logpost`, first, since a wrong gradient explains what follows;
+# whether the VB correction settled, after the mode shift, since the two
+# together are what print() calls converged; and the heavy tails, after the
+# unscanned mass.
 # INLAvaan's bullet for a non-zero return code of nlminb() is left out:
 # without a gradient nlminb() reports false convergence at accurate modes.
 # The VB fallback is recorded only, as in INLAvaan: it is a route of the
@@ -25,7 +27,9 @@ warn_levels <- list(
   # inlavanilla's own: the VB correction settles as the mode search does
   vb_step = 0.1,
   # inlavanilla's own: flagged below this, the share of the promised gain
-  vb_gain = 0.5
+  vb_gain = 0.5,
+  # inlavanilla's own: a mode moved by 0.1 SDs, or an SD 10% off
+  grad_gap = 0.1
 )
 # The ridge bend level is a marginal SD about 10% too small,
 # 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
@@ -67,6 +71,8 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
   vb_applied <- !is.null(vb)
   max_na <- function(x) if (all(is.na(x))) NA_real_ else max(x, na.rm = TRUE)
   mean_na <- function(x) if (all(is.na(x))) NA_real_ else mean(x, na.rm = TRUE)
+  # A fit saved before the check existed has no such column
+  grad_gap <- if (is.null(d$grad_gap)) rep(NA_real_, m) else d$grad_gap
 
   global <- c(
     npar = m,
@@ -86,6 +92,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     nmad_mean = mean_na(d$nmad),
     unscanned_mass_max = max_na(d$unscanned_mass),
     # inlavanilla's own
+    grad_gap_max = max_na(grad_gap),
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
     vb_step_max = max_na(d$vb_step_sigma),
     vb_gain_ratio = if (vb_applied && !is.null(vb$gain_ratio)) {
@@ -116,6 +123,7 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     alpha = d$alpha,
     unscanned_mass = d$unscanned_mass,
     # inlavanilla's own
+    grad_gap = grad_gap,
     vb_step_sigma = d$vb_step_sigma,
     mean_gap = d$mean_gap,
     gamma1 = d$gamma1,
@@ -189,7 +197,7 @@ flagged_list <- function(env, key, dg, column, level, n) {
   if (column %in% c("vb_shift_sigma", "mean_gap")) {
     x <- abs(x)
   }
-  bad <- off_level(x, level)
+  bad <- check_ran(x) & off_level(x, level)
   if (column == "ridge_bend") {
     bad <- bad & !scanned_tk(dg)
   }
@@ -214,6 +222,13 @@ problem_text <- function(check, dg, env, n = 3L) {
   glob <- dg$global
   switch(
     check,
+    grad_gap = paste0(
+      "{.arg grad} does not match {.arg logpost} at the mode (gap > ",
+      warn_levels$grad_gap,
+      ") for ",
+      flagged_list(env, "grad", dg, "grad_gap", warn_levels$grad_gap, n),
+      "."
+    ),
     mode = {
       env$mode_worst <- p$names[worst_first(p$mode_shift_sigma)[1L]]
       env$mode_grad <- fmt_g3(glob[["grad_inf"]])
@@ -325,6 +340,7 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   env <- new.env(parent = baseenv())
   out <- character()
   warned <- c(
+    "grad_gap",
     "mode",
     "vb_step",
     "vb_gain",
@@ -336,6 +352,15 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
   )
   for (check in warned[flags[warned]]) {
     out <- c(out, x = problem_text(check, dg, env))
+    if (check == "grad_gap") {
+      out <- c(
+        out,
+        i = paste0(
+          "A wrong gradient gives a wrong log marginal likelihood, and can ",
+          "move the mode and the covariance."
+        )
+      )
+    }
     if (check == "vb_gain") {
       out <- c(
         out,
@@ -433,15 +458,16 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' (Sections 3.1 and 4.4), and the gap between the skew-normal and VB means
 #' (`mean_gap`) as an internal check (Section 5.1). The mode shift, the
 #' Hessian condition number and the unscanned mass come from INLAvaan's
-#' `diagnostics()`, not from the paper. `vb_step_sigma`, `tails` and
-#' `ridge_bend` are inlavanilla's own.
+#' `diagnostics()`, not from the paper. `grad_gap`, `vb_step_sigma`, `tails`
+#' and `ridge_bend` are inlavanilla's own.
 #'
 #' @details
 #' A posterior SD here is the Laplace SD at the mode,
 #' \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 #' is not the SD column of the summary table, which is the skew-normal's.
 #' Values that a fit did not compute are `NA`: the VB quantities with
-#' `vb = "off"`, and the scan quantities with `marginals = "gaussian"`.
+#' `vb = "off"`, the scan quantities with `marginals = "gaussian"`, and
+#' `grad_gap` without `grad` or with `hess`.
 #'
 #' **Global diagnostics** (`type = "global"`), a named numeric vector:
 #' * `npar`: the number of parameters.
@@ -474,6 +500,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' * `unscanned_mass_max`: the largest `unscanned_mass`.
 #'
 #' and then inlavanilla's own:
+#' * `grad_gap_max`: the largest `grad_gap`. It should be close to 0.
 #' * `vb_fallback`: 1 if the VB fixed-point iteration handed over to the
 #'   fallback optimiser, 0 otherwise. Like INLAvaan, inlavanilla records it
 #'   but flags nothing: the fallback is a route of the solver, not a measure
@@ -515,6 +542,13 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   scanned window.
 #'
 #' and then inlavanilla's own:
+#' * `grad_gap`: how far a supplied `grad` is from `logpost` at the mode: the
+#'   larger of the difference in slope per conditional posterior SD (about how
+#'   far it moves the mode, in SDs) and half the relative difference in
+#'   curvature (about the relative error it makes in an SD). It comes from
+#'   central differences of `logpost` that the fit takes at the mode anyway, up
+#'   to a posterior SD or so apart, so it costs no calls. It should be close to
+#'   0, and is flagged above 0.1.
 #' * `vb_step_sigma`: the step still to go at the VB mean, in posterior SDs:
 #'   the fixed-point step there, the Newton step of the VB stationarity
 #'   condition, as `mode_shift_sigma` is for the mode. After the fallback
@@ -529,9 +563,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' Some of INLAvaan's diagnostics are left out. `nsamp` counts posterior
 #' draws, which [sampling()] makes on demand rather than during the fit.
 #' `grad_num` and `grad_diff` compare an analytic gradient with finite
-#' differences at the mode, which would take further calls; a supplied
-#' `grad` is checked at `init` and through the symmetry of its Jacobian at
-#' the mode instead, with a warning if either check fails. `vb_mcse_max`,
+#' differences at the mode, which would take further calls; `grad_gap` makes
+#' that comparison from differences the fit has already taken. `vb_mcse_max`,
 #' `vb_mcse_mean` and `vb_mcse_sigma` estimate the quadrature error of
 #' INLAvaan's Sobol points, and the cubature rule of inlavanilla is
 #' deterministic (INLAvaan gives `NA` for its own deterministic rule).

@@ -63,8 +63,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
 #' gap between the skew-normal and VB means as an internal check (Section
 #' 5.1). The mode shift, the Hessian condition number and the unscanned mass
-#' come from INLAvaan's `diagnostics()`, not from the paper. `vb_step_sigma`,
-#' `tails` and `ridge_bend` are inlavanilla's own.
+#' come from INLAvaan's `diagnostics()`, not from the paper. `grad_gap`,
+#' `vb_step_sigma`, `tails` and `ridge_bend` are inlavanilla's own.
 #'
 #' A posterior SD here is the Laplace SD at the mode,
 #' \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
@@ -77,6 +77,13 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   [stats::nlminb()], whose message is then shown: without a gradient
 #'   `nlminb()` can report failure at an accurate mode, and success short of
 #'   one. With the VB check below, it is what makes the fit converged.
+#' * **Gradient.** `grad_gap`, how far a supplied `grad` is from `logpost` at
+#'   the mode: the larger of the difference in slope per conditional posterior
+#'   SD and half the relative difference in curvature, so about how far it
+#'   moves the mode in SDs and the relative error it makes in an SD. It is
+#'   flagged above 0.1, costs no calls, and is `NA` without `grad` or with
+#'   `hess`. A wrong gradient mostly harms the log marginal likelihood and the
+#'   covariance, since the scans use `logpost` itself.
 #' * **Hessian.** `hess_cond`, the condition number of the Hessian at the
 #'   mode with each parameter in posterior-SD units (the eigenvalue ratio of
 #'   the posterior correlation matrix). It is flagged above \eqn{10^8}: some
@@ -340,6 +347,16 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         "."
       ),
       .envir = env
+    )
+  }
+
+  if (flags[["grad_gap"]]) {
+    flagged_line("grad_gap")
+  } else if (!is.na(glob[["grad_gap_max"]])) {
+    gap <- fmt_num(glob[["grad_gap_max"]])
+    cat_status(
+      "ok",
+      "{.arg grad} matches {.arg logpost} at the mode (gap {gap})."
     )
   }
 
@@ -1084,8 +1101,8 @@ method_label <- function(gaussian, vb) {
   )
 }
 
-# The checks that summary() flags, each TRUE when flagged: the mode, the VB
-# step, the Hessian condition number, the VB shift, and, for skew-normal
+# The checks that summary() flags, each TRUE when flagged: the gap between
+# grad and logpost, the mode, the VB step, the Hessian condition number, the VB shift, and, for skew-normal
 # marginals, NMAD, the unscanned mass, the tails, the ridge bend and the mean
 # gap.
 # `dg` is from diagnostics_internal(). The levels are those of the fit-time
@@ -1097,6 +1114,7 @@ method_label <- function(gaussian, vb) {
 check_flags <- function(dg, gaussian) {
   pf <- param_flags(dg, gaussian)
   c(
+    grad_gap = any(pf[, "grad_gap"]),
     mode = any(pf[, "mode_shift_sigma"]),
     vb_step = any(pf[, "vb_step_sigma"]),
     vb_gain = isTRUE(below_level(
@@ -1120,6 +1138,8 @@ param_flags <- function(dg, gaussian) {
   sn <- !gaussian
   vb <- isTRUE(dg$global[["vb_applied"]] == 1)
   cbind(
+    grad_gap = check_ran(p$grad_gap) &
+      off_level(p$grad_gap, warn_levels$grad_gap),
     mode_shift_sigma = off_level(p$mode_shift_sigma, warn_levels$mode_shift),
     vb_step_sigma = vb &
       check_ran(p$vb_step_sigma) &

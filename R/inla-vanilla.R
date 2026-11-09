@@ -170,12 +170,16 @@
 #' 39 parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
 #' with it and 0.17 s without.
 #'
-#' A supplied `grad` is checked against finite differences at `init`, and
-#' its Jacobian at the mode is checked for symmetry, with a warning if either
-#' check fails. A supplied `hess` is checked at the mode against central
-#' differences of `grad`, along two directions, with a warning if it does
-#' not match. Any R function works for `logpost`, `grad` and `hess`,
-#' including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
+#' The fit goes straight to the mode: at `init` it only checks that `logpost`,
+#' `grad` and `hess` return finite values of the right shape. A supplied `grad`
+#' is compared with `logpost` at the mode, from differences the fit takes there
+#' anyway, so at no cost in calls, and its Jacobian there is checked for
+#' symmetry, with a warning if either check fails (see `grad_gap` in
+#' [summary.inla_vanilla()]). A supplied `hess` is checked at the mode against
+#' central differences of `grad`, along two directions, with a warning if it
+#' does not match; `grad` is then not compared with `logpost`, since no
+#' differences of `logpost` are taken. Any R function works for `logpost`,
+#' `grad` and `hess`, including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
 #' An RTMB function can return the log-posterior itself, and its `obj$fn`,
 #' `obj$gr` and `obj$he` are then passed as they are. For a TMB template that
 #' returns the negative log-posterior, pass `function(x) -obj$fn(x)`,
@@ -306,16 +310,15 @@
 #' each stage. It reports what the fit computes anyway, with no further calls
 #' of `logpost` or `grad`:
 #' * Before the mode search: the parameters, where the derivatives come from,
-#'   `logpost` at `init`, and for a supplied `grad` its largest relative
-#'   discrepancy from finite differences there.
+#'   and `logpost` at `init`.
 #' * The mode: the message, iterations and evaluations of [stats::nlminb()],
 #'   and whether it was restarted with the parameters rescaled; the
 #'   log-posterior at the mode, the whitened gradient there (which decides
 #'   the restart) and the largest Newton step in posterior SDs (which the
 #'   fit-time warning checks); how the Hessian was taken (and, for a
-#'   supplied `grad`, the asymmetry of its Jacobian, or, for a supplied
-#'   `hess`, how far it is from central differences of `grad`); the largest
-#'   posterior
+#'   supplied `grad`, the asymmetry of its Jacobian and its gap from
+#'   `logpost`, or, for a supplied `hess`, how far it is from central
+#'   differences of `grad`); the largest posterior
 #'   correlation and the smallest eigenvalue of the correlation matrix, which
 #'   is near zero when some combination of the parameters is poorly
 #'   identified, and the condition number of the Hessian in posterior-SD
@@ -446,7 +449,8 @@
 #'     the shift (`kld_global`); it is `NULL` when `vb = "off"`. `marginals`
 #'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
 #'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
-#'     `vb_step_sigma`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with
+#'     `vb_step_sigma`, `grad_gap`, `mean_gap`, `gamma1`, `tails` and
+#'     `ridge_bend`, with
 #'     `NA` for the checks the fit did not run, and `width`, the width method
 #'     of each scan (see the section on the width term).
 #'   * `scan`: the scans the skew-normals were fitted to, for
@@ -741,14 +745,16 @@ vanilla_fit <- function(
     })
   }
 
+  # One call of each function, to fail at once with a clear message. Anything
+  # more waits for the mode, where it costs nothing (grad_gap())
   lp_init <- with_context(
     "evaluating logpost at init",
     check_logpost_at_init(logpost_x, init)
   )
-  grad_check <- if (has_grad) {
+  if (has_grad) {
     with_context(
       "evaluating grad at init",
-      check_grad_at_init(grad_x, lp, init)
+      check_grad_at_init(grad_x, init)
     )
   }
   if (has_hess) {
@@ -758,7 +764,7 @@ vanilla_fit <- function(
     )
   }
   if (prog$detail) {
-    report_start(prog, init, lp_init, grad_check, calls_since(), has_hess)
+    report_start(prog, init, lp_init, has_grad, has_hess)
   }
 
   # 1a. Joint Gaussian -------------------------------------------------------
@@ -1034,6 +1040,7 @@ vanilla_fit <- function(
       alpha = if (skew) sn[, "alpha"] else na,
       unscanned_mass = sn[, "unscanned_mass"],
       vb_step_sigma = if (use_vb) vbc$step_sigma else na,
+      grad_gap = lap$grad_gap,
       mean_gap = if (use_vb && skew) (mom$mean - mean_vb) / sds else na,
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
@@ -1364,7 +1371,9 @@ check_hess_at_init <- function(hess, init) {
   invisible(H)
 }
 
-check_grad_at_init <- function(grad, lp, init) {
+# A gradient of the right length, finite at init. Whether it is the gradient of
+# `logpost` is checked at the mode (grad_gap()).
+check_grad_at_init <- function(grad, init) {
   g <- grad(init)
   if (!is.numeric(g) || length(g) != length(init)) {
     abort(
@@ -1379,50 +1388,5 @@ check_grad_at_init <- function(grad, lp, init) {
       "{.arg grad} is not finite at {.arg init}.",
     )
   }
-  # Steps from the local curvature scale, so the check holds for posterior
-  # SDs far from 1; a fixed step where the curvature search fails
-  scales <- fd_scales(lp, init, lp(init))
-  h <- ifelse(attr(scales, "ok"), 1e-3 * scales, 1e-5 * pmax(1, abs(init)))
-  g_fd <- fd_grad(lp, init, h = h)
-  # Compare per curvature scale, the change in log-posterior over about one
-  # posterior SD, so a gradient that is wrong by a factor is caught whatever
-  # the scale of the parameter
-  u <- ifelse(attr(scales, "ok"), scales, 1)
-  score <- function(g, g_fd) abs(g - g_fd) * u / (1 + abs(g_fd) * u)
-  err <- score(g, g_fd)
-  where <- "at {.arg init}"
-  # Near the mode both gradients are close to zero, so a gradient that is
-  # wrong by a factor can still pass there. Check again one curvature scale
-  # away, where the gradient is about one per scale; skip the point if
-  # logpost or grad cannot be evaluated there.
-  x1 <- init + u
-  if (is.finite(lp(x1))) {
-    g1 <- tryCatch(as.numeric(grad(x1)), error = function(e) NULL)
-    if (length(g1) == length(init) && all(is.finite(g1))) {
-      g1_fd <- fd_grad(lp, x1, h = h)
-      err1 <- score(g1, g1_fd)
-      if (all(is.finite(err1)) && max(err1) > max(err)) {
-        err <- err1
-        g <- g1
-        g_fd <- g1_fd
-        where <- "one curvature scale from {.arg init}"
-      }
-    }
-  }
-  if (any(err > 1e-3)) {
-    worst <- which.max(err)
-    warn(c(
-      paste0(
-        "{.arg grad} does not match finite differences of {.arg logpost} ",
-        where,
-        "."
-      ),
-      "x" = "For {.field {names(init)[worst]}}: {.arg grad} gives
-             {.val {signif(g[worst], 4)}}, finite differences give
-             {.val {signif(g_fd[worst], 4)}}.",
-      "i" = "A wrong gradient gives a wrong mode and wrong marginals."
-    ))
-  }
-  # The largest discrepancy, for verbose output
-  invisible(max(err))
+  invisible(g)
 }

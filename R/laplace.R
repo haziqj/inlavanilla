@@ -64,6 +64,7 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
     abort(
       c(
         "The Hessian at the posterior mode {problem}.",
+        if (!is.null(gr) && is.null(he)) grad_sign_hint(H, cur$scales),
         "i" = "The optimiser may have stopped short of the mode, or the
                posterior may be improper or not identified.",
         "i" = "Optimiser message: {.val {opt$message}}."
@@ -92,14 +93,31 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
   )
 }
 
+# The bullet for a Hessian error caused by a gradient of the wrong sign, the
+# easiest mistake with a function that returns minus the log-posterior: the
+# curvature from `grad` is minus that from `logpost`. NULL otherwise.
+grad_sign_hint <- function(H, scales) {
+  ratio <- (diag(H) * as.numeric(scales)^2)[attr(scales, "ok")]
+  if (length(ratio) == 0L || !all(is.finite(ratio) & ratio < 0)) {
+    return(NULL)
+  }
+  c(
+    "x" = "{.arg grad} looks like it has the wrong sign: it must be the
+           gradient of {.arg logpost}, so if you negate one, negate the other."
+  )
+}
+
 # Hessian, its Cholesky factor, the covariance and the whitened gradient at
 # `mode`. With `he` the Hessian is the user's, checked against the gradient
 # by hess_discrepancy(). Otherwise finite-difference steps are set per
 # coordinate from fd_scales(), so they suit each parameter's own scale:
 # central differences of the gradient at 1e-4 of that scale, or, without a
 # gradient, second differences of the log-posterior at a hundredth of it. R
-# is NULL when the Hessian is not positive definite. `hessian` records the
-# method and its calls, those of fd_scales() counted apart.
+# is NULL when the Hessian is not positive definite. `grad_gap` compares a
+# user gradient with `logpost` there, NA when there is no gradient or the
+# Hessian is the user's, since neither takes the differences it reads.
+# `hessian` records the method and its calls, those of fd_scales() counted
+# apart.
 laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
   m <- length(mode)
   mode <- stats::setNames(mode, parnames)
@@ -143,6 +161,7 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
     scales = scales,
     asymmetry = asymmetry,
     hess_error = NA_real_,
+    grad_gap = stats::setNames(rep(NA_real_, m), parnames),
     grad_mode = Inf,
     hessian = list(
       by = if (!is.null(he)) {
@@ -186,6 +205,9 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
     gr(mode)
   }
   out$grad <- stats::setNames(as.numeric(g), parnames)
+  if (!is.null(gr) && is.null(he)) {
+    out$grad_gap[] <- grad_gap(as.numeric(g), H, scales)
+  }
   out$grad_mode <- max(abs(crossprod(out$L, g)))
   out$mode_shift <- stats::setNames(
     abs(as.numeric(out$Sigma %*% g)) / sds,
@@ -219,11 +241,14 @@ hess_discrepancy <- function(gr, mode, L, h = 1e-4) {
 # and 1, a few calls per coordinate. A fixed step fails at the extremes: for
 # a posterior SD of 1e4 the second difference at h = 1e-4 drowns in rounding
 # error, and for an SD of 1e-6 it measures far beyond the quadratic region.
-# The attribute `ok` marks the coordinates where the search succeeded, and
-# `calls` counts the calls of `fn`.
+# The attribute `ok` marks the coordinates where the search succeeded, `slope`
+# holds the central difference of `fn` on the last step tried, which
+# grad_gap() compares with a user gradient, and `calls` counts the calls of
+# `fn`.
 fd_scales <- function(fn, x, f0) {
   m <- length(x)
   s <- numeric(m)
+  slope <- numeric(m)
   ok <- logical(m)
   calls <- 0L
   for (i in seq_len(m)) {
@@ -233,7 +258,10 @@ fd_scales <- function(fn, x, f0) {
       xp <- xm <- x
       xp[i] <- x[i] + h
       xm[i] <- x[i] - h
-      drop <- f0 - 0.5 * (fn(xp) + fn(xm))
+      fp <- fn(xp)
+      fm <- fn(xm)
+      drop <- f0 - 0.5 * (fp + fm)
+      slope[i] <- (fp - fm) / (2 * h)
       calls <- calls + 2L
       if (!is.finite(drop) || drop > 1) {
         h <- h / 10 # too far: out of the quadratic region or the support
@@ -248,7 +276,24 @@ fd_scales <- function(fn, x, f0) {
   }
   # `ok` is FALSE where no step gave a drop in the window, such as where the
   # log-posterior is not locally concave
-  structure(s, ok = ok, calls = calls)
+  structure(s, ok = ok, slope = slope, calls = calls)
+}
+
+# How far a user gradient is from `logpost` at the mode, for each parameter.
+# It costs no calls: fd_scales() has already taken symmetric differences of
+# `logpost` there, for the steps of the Hessian. They give the slope along each
+# coordinate and the curvature 1 / s_j^2, against the gradient `g` and the
+# Hessian `H` taken from the user's gradient. The gap is the larger of the
+# difference in slope per conditional posterior SD, about how far it would move
+# the mode in SDs, and half the relative difference in curvature, about the
+# relative error it makes in an SD. NA where the search for the step failed.
+grad_gap <- function(g, H, scales) {
+  gap <- pmax(
+    abs(g - attr(scales, "slope")) * as.numeric(scales),
+    0.5 * abs(diag(H) * as.numeric(scales)^2 - 1)
+  )
+  gap[!attr(scales, "ok")] <- NA_real_
+  gap
 }
 
 chol_or_null <- function(H) {

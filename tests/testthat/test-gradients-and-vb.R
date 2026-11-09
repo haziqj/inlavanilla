@@ -918,23 +918,6 @@ test_that("the VB shift matches a Gauss-Hermite reference for a skewed 2D poster
   expect_lt(vb_err_fd, laplace_err / 10)
 })
 
-# inla_vanilla() with only the gradient check at init silenced. That check
-# steps 1e-5 whatever the scale of the parameter, so it warns about a correct
-# gradient when the posterior SDs are small (see the test after the next
-# one). Every other warning still gets through: the fit runs at the default
-# output level, since silent = TRUE would muffle them, with its stage lines
-# suppressed.
-fit_past_init_check <- function(logpost, init, grad) {
-  withCallingHandlers(
-    suppressMessages(inla_vanilla(logpost, init, grad = grad)),
-    inlavanilla_warning = function(w) {
-      if (grepl("does not match finite differences", conditionMessage(w))) {
-        invokeRestart("muffleWarning")
-      }
-    }
-  )
-}
-
 test_that("the VB shift in posterior SDs does not depend on the scale of the parameters", {
   # theta = scale * beta for the 2D Poisson regression, so the posterior SDs
   # run from 3e-5 to 4e3. The fixed-point step, its convergence test and the
@@ -952,7 +935,9 @@ test_that("the VB shift in posterior SDs does not depend on the scale of the par
     lp_scaled <- function(theta) mod$logpost(theta / scale)
     gr_scaled <- function(theta) mod$grad(theta / scale) / scale
     for (gr in list(gr_scaled, NULL)) {
-      fit_scaled <- fit_past_init_check(lp_scaled, mod$init, grad = gr)
+      fit_scaled <- suppressMessages(
+        inla_vanilla(lp_scaled, mod$init, grad = gr)
+      )
       expect_false(fit_scaled$diagnostics$vb$fallback)
       # Against the exact VB shift, as for the unscaled model: observed 2.0e-4
       # to 2.6e-4 SDs with the gradient, and 4.2e-3 to 4.6e-3 without, from
