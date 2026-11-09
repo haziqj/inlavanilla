@@ -1,9 +1,11 @@
-# Parallel evaluation through the future package, which is optional. The user's
-# future::plan() is the switch, as in blavaan: with no plan, or a sequential
-# one, nothing here runs and the fit is a plain loop. Whatever the plan, a fit
-# gives the numbers of a serial fit. The work divides into items that do not
-# depend on each other, and anything that goes wrong on a worker is done again
-# in the parent, so parallelism only ever saves time.
+# Parallel evaluation through the future package, which is optional. There are
+# two switches: the `cores` argument of inla_vanilla(), which sets up workers
+# for one fit and restores the user's plan afterwards, and the user's own
+# future::plan(), which applies when `cores` is NULL. With neither, nothing here
+# runs and the fit is a plain loop. Whatever the switch, a fit gives the numbers
+# of a serial fit. The work divides into items that do not depend on each other,
+# and anything that goes wrong on a worker is done again in the parent, so
+# parallelism only ever saves time.
 #
 # The items are spread over the jobs at the start, at most one job per worker,
 # and each job runs to its end. A job signals the parent after each item, so
@@ -15,16 +17,41 @@
 # fits tried the gain was a few hundred milliseconds at best.
 par_min_s <- 1
 
-# Above this estimate, with no plan set, an interactive fit says once per
-# session that a plan would help.
+# Above this estimate, with neither `cores` nor a plan set, an interactive fit
+# says once per session that more cores would help.
 par_hint_s <- 10
 
 # What is kept for the session
 the <- new.env(parent = emptyenv())
 the$hinted <- FALSE
 
-# A function of our own, so that the tests can replace it
+# Functions of our own, so that the tests can replace them
 is_interactive <- function() interactive()
+par_has_future <- function() requireNamespace("future", quietly = TRUE)
+par_available <- function() future::availableCores()
+
+# Forked workers share everything, compiled code included, so they are the
+# choice where they are safe. future's own check knows that forking is not
+# available on Windows and unstable in RStudio, but not that forked children can
+# die silently in Positron's ark kernel, so that is checked here as INLAvaan's
+# fork_is_safe() does.
+par_can_fork <- function() {
+  future::supportsMulticore() &&
+    !identical(Sys.getenv("POSITRON"), "1") &&
+    !identical(tolower(basename(commandArgs(FALSE)[1L])), "ark")
+}
+
+# Put a plan for `cores` workers in place for one fit, with never more workers
+# than the machine offers. Returns a function that puts the old plan back.
+par_local_plan <- function(cores) {
+  workers <- min(cores, par_available())
+  old <- if (par_can_fork()) {
+    future::plan(future::multicore, workers = workers)
+  } else {
+    future::plan(future::multisession, workers = workers)
+  }
+  function() future::plan(old)
+}
 
 # The workers the user's plan gives. Without the future namespace loaded nobody
 # has set a plan, so it is not loaded here, which would cost a whole small fit.
@@ -78,21 +105,58 @@ par_future <- function(job, ids, data, setup) {
 # is run with `data` on a worker and here, and the two values must agree: the
 # user's function may not survive the trip to a separate R session, and may
 # then fail or, worse, return NaN with no error (compiled code does, depending
-# on how it was built). `label` and `what` word the messages. Returns `jobs`,
-# 1 to stay serial, and what par_future() needs.
+# on how it was built). `label`, `what` and `how` word the messages. `cores` is
+# the fit's argument: NULL follows the user's plan, and 1 stays serial whatever
+# the plan. Returns `jobs`, 1 to stay serial, `restore`, which puts the user's
+# plan back and is for the caller to run when done, and what par_future() needs.
 #
 # The elapsed time of the probe is the real cost of reaching one worker, with
 # the real data. The time with w jobs is about est_s / w + cost * w, which is
 # least at w = sqrt(est_s / cost), so a long scan uses every worker of the plan
 # and a shorter one fewer.
-par_setup <- function(functions, probe, data, est_s, n, note, label, what) {
-  serial <- list(jobs = 1L)
-  workers <- par_workers()
-  if (workers < 2L) {
-    par_hint(est_s, note, label)
+par_setup <- function(
+  functions,
+  probe,
+  data,
+  est_s,
+  n,
+  note,
+  label,
+  what,
+  cores = NULL,
+  how = "set the `cores` argument"
+) {
+  serial <- list(jobs = 1L, restore = function() NULL)
+  if (identical(cores, 1L)) {
+    return(serial)
+  }
+  if (is.null(cores) && par_workers() < 2L) {
+    par_hint(est_s, note, label, how)
     return(serial)
   }
   if (est_s < par_min_s || n < 2L) {
+    return(serial)
+  }
+  if (!is.null(cores) && !par_has_future()) {
+    note(paste0(
+      label,
+      " will run serially, because `cores` needs the future package: ",
+      "install.packages(\"future\")."
+    ))
+    return(serial)
+  }
+  restore <- if (is.null(cores)) {
+    function() NULL
+  } else {
+    tryCatch(par_local_plan(cores), error = function(e) NULL)
+  }
+  if (is.null(restore)) {
+    note(paste0(label, " will run serially: the workers could not be started."))
+    return(serial)
+  }
+  workers <- par_workers()
+  if (workers < 2L) {
+    restore()
     return(serial)
   }
   # Only the values matter here. Anything the function says while being
@@ -113,29 +177,37 @@ par_setup <- function(functions, probe, data, est_s, n, note, label, what) {
     error = function(e) FALSE
   )))
   if (!checked) {
+    restore()
     note(paste0(
       label,
       " will run serially, because `",
       what,
       "` did not give the same value on a parallel worker. Compiled code ",
-      "(Rcpp, TMB, RTMB) cannot be sent to a separate R session, but ",
-      "future::plan(future::multicore) can use it where forking is available."
+      "(Rcpp, TMB, RTMB) cannot be sent to a separate R session. It can use ",
+      "forked workers, which need a terminal on macOS or Linux."
     ))
     return(serial)
   }
   jobs <- min(workers, n, ceiling(sqrt(est_s / max(cost, 1e-3))))
-  c(list(jobs = if (jobs < 2L) 1L else as.integer(jobs)), setup)
+  if (jobs < 2L) {
+    restore()
+    return(serial)
+  }
+  c(list(jobs = as.integer(jobs), restore = restore), setup)
 }
 
-# Say once per session, at the console, that a plan would help. `note` returns
-# whether the message was shown, so a silent fit does not use the hint up.
-par_hint <- function(est_s, note, label) {
+# Say once per session, at the console, that more cores would help. `note`
+# returns whether the message was shown, so a silent fit does not use the hint
+# up.
+par_hint <- function(est_s, note, label, how) {
   if (!the$hinted && est_s >= par_hint_s && is_interactive()) {
     the$hinted <- isTRUE(note(paste0(
       label,
       " should take about ",
       format_clock(est_s),
-      ". To use more cores, call future::plan(future::multisession) first."
+      ". To use more cores, ",
+      how,
+      "."
     )))
   }
 }

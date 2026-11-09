@@ -46,10 +46,10 @@
 #' \eqn{m^2 + m + 1} calls of `loglik` for \eqn{m} parameters, each returning
 #' every unit.
 #'
-#' The calls follow the plan set with `future::plan()`, as the scans of
-#' [inla_vanilla()] do (see its section on parallel computation), with the same
-#' results as a serial run. Calls expected to take under a second in all stay
-#' serial.
+#' The calls use the `cores` of the fit, or the plan set with `future::plan()`
+#' when the fit has none, as the scans of [inla_vanilla()] do (see its section
+#' on parallel computation), with the same results as a serial run. Calls
+#' expected to take under a second in all stay serial.
 #'
 #' **Existence and the leverage k.** For each unit, the eigenvalues \eqn{k}
 #' of \eqn{-\Omega H_u} are the shares of the posterior precision the unit
@@ -338,8 +338,9 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     secs[[k]] <- elapsed() - t0
   }
 
-  # On the user's future plan, if there is one and the calls are slow enough.
-  # Before the progress line starts, because it can print a message
+  # On workers, if the fit has `cores` or the user a future plan, and the calls
+  # are slow enough. Before the progress line starts, because it can print a
+  # message
   data <- list(
     loglik = loglik,
     theta = theta,
@@ -356,8 +357,11 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     n = n_calls - 3L,
     note = function(text) progress_note(prog, text),
     label = "Differentiating loglik",
-    what = "loglik"
+    what = "loglik",
+    cores = fit$cores,
+    how = "fit with the `cores` argument or call future::plan() first"
   )
+  on.exit(setup$restore(), add = TRUE)
   progress_start(
     prog,
     "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls",

@@ -343,8 +343,9 @@ fit_marginals <- function(
     g1_grad = g1_grad
   )
 
-  # On the user's future plan, if there is one and the scans are long enough.
-  # Before the per-parameter line starts, because it can print a message
+  # On workers, if the fit has `cores` or the user a future plan, and the scans
+  # are long enough. Before the per-parameter line starts, because it can print
+  # a message
   setup <- list(jobs = 1L)
   if (!is.null(par) && m > 1L) {
     data <- c(par[c("logpost", "grad", "hess", "init")], list(ctx = ctx))
@@ -358,8 +359,10 @@ fit_marginals <- function(
       n = m,
       note = par$note,
       label = "The skew-normal scans",
-      what = "logpost"
+      what = "logpost",
+      cores = par$cores
     )
+    on.exit(setup$restore(), add = TRUE)
   }
   start("scans")
 

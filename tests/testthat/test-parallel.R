@@ -1,12 +1,14 @@
-# The marginals on a future::plan(). Whatever the plan, a fit must give the
-# numbers of a serial fit: the same summaries, diagnostics, counts and warnings.
-# A worker is only ever a saving of time, so anything that goes wrong on one,
-# from a NaN to a killed process, must end in the serial answer.
+# The marginals on workers, through `cores` or a future::plan(). Either way a
+# fit must give the numbers of a serial fit: the same summaries, diagnostics,
+# counts and warnings. A worker is only ever a saving of time, so anything that
+# goes wrong on one, from a NaN to a killed process, must end in the serial
+# answer.
 #
 # The fits here are tiny, so `force_workers()` says the scans will be long, to
-# get past the checks that keep short scans serial and size the jobs. Forks (`multicore`) share the package under test, so
-# they run under devtools::test() too. Separate sessions (`multisession`) load
-# the installed package, so those tests only run on an installed copy.
+# get past the checks that keep short scans serial and size the jobs. Forks
+# (`multicore`) share the package under test, so they run under
+# devtools::test() too. Separate sessions (`multisession`) load the installed
+# package, so those tests only run on an installed copy.
 
 skip_if_not_installed("future")
 
@@ -343,6 +345,94 @@ test_that("a warning from loglik on a worker is recorded", {
   expect_true(any(grepl("a warning from loglik", tp$loglik_warnings)))
 })
 
+## ----- The cores argument -----------------------------------------------------
+
+test_that("cores = n runs on workers, the same as serially, and leaves no plan", {
+  force_workers()
+  old <- future::plan()
+  on.exit(future::plan(old), add = TRUE)
+  future::plan(future::sequential)
+  skip_if(!par_can_fork(), "needs forks to run under devtools::test()")
+  ref <- fit_reg()
+  fit <- fit_reg(cores = 2)
+  expect_identical(fit$workers, 2L)
+  expect_identical(fit$cores, 2L)
+  expect_same_fit(fit, ref)
+  expect_identical(future::nbrOfWorkers(), 1L)
+})
+
+test_that("a short scan with cores stays serial and starts no workers", {
+  old <- future::plan()
+  on.exit(future::plan(old), add = TRUE)
+  future::plan(future::sequential)
+  local_mocked_bindings(
+    par_local_plan = function(cores) stop("no workers should be started")
+  )
+  expect_identical(fit_reg(cores = 2)$workers, 1L)
+})
+
+test_that("cores = 1 is serial whatever the plan", {
+  force_workers()
+  fit <- on_forks(fit_reg(cores = 1))
+  expect_identical(fit$workers, 1L)
+  expect_identical(fit$cores, 1L)
+})
+
+test_that("cores puts the user's own plan back", {
+  force_workers()
+  skip_if(!par_can_fork(), "needs forks to run under devtools::test()")
+  on_forks({
+    fit <- fit_reg(cores = 3)
+    expect_identical(fit$workers, 3L)
+    expect_identical(future::nbrOfWorkers(), 2L)
+  })
+})
+
+test_that("cores never asks for more workers than the machine offers", {
+  force_workers()
+  skip_if(!par_can_fork(), "needs forks to run under devtools::test()")
+  local_mocked_bindings(par_available = function() 2L)
+  expect_identical(fit_reg(cores = 100)$workers, 2L)
+})
+
+test_that("cores must be a positive whole number or NULL", {
+  for (bad in list(0, -1, 1.5, "a", c(1, 2), NA, Inf)) {
+    expect_error(fit_reg(cores = bad), class = "inlavanilla_error")
+  }
+  expect_null(check_cores(NULL))
+  expect_identical(check_cores(4), 4L)
+})
+
+test_that("cores without the future package runs serially and says so", {
+  force_workers()
+  local_mocked_bindings(par_has_future = function() FALSE)
+  msgs <- capture_messages(fit <- fit_reg(cores = 2, silent = FALSE))
+  expect_identical(fit$workers, 1L)
+  expect_true(any(grepl("needs the future package", gsub("\\s+", " ", msgs))))
+})
+
+test_that("cores uses separate sessions where forks are not safe", {
+  for (var in c("POSITRON", "RSTUDIO")) {
+    Sys.setenv(RSTUDIO_TERM = "")
+    do.call(Sys.setenv, stats::setNames(list("1"), var))
+    expect_false(par_can_fork(), label = var)
+    Sys.unsetenv(var)
+  }
+  Sys.unsetenv("RSTUDIO_TERM")
+})
+
+test_that("loo() and waic() use the cores of the fit", {
+  force_workers()
+  force_loo_workers()
+  skip_if(!par_can_fork(), "needs forks to run under devtools::test()")
+  ref <- taylor_pointwise(fit_reg(), ll_reg)
+  fit <- fit_reg(cores = 2)
+  tp <- taylor_pointwise(fit, ll_reg)
+  expect_identical(tp$workers, 2L)
+  expect_identical(tp$lpd_2, ref$lpd_2)
+  expect_identical(future::nbrOfWorkers(), 1L)
+})
+
 ## ----- Choosing the number of jobs ---------------------------------------------
 
 test_that("the jobs grow with the scan and stop at the workers and the items", {
@@ -417,9 +507,9 @@ test_that("a long interactive fit with no plan says once that a plan would help"
   on.exit(the$hinted <- FALSE, add = TRUE)
   local_mocked_bindings(is_interactive = function() TRUE, par_hint_s = 0)
   first <- capture_messages(fit_reg(silent = FALSE))
-  expect_true(any(grepl("future::plan", first)))
+  expect_true(any(grepl("`cores`", first)))
   second <- capture_messages(fit_reg(silent = FALSE))
-  expect_false(any(grepl("future::plan", second)))
+  expect_false(any(grepl("`cores`", second)))
 })
 
 test_that("the hint waits for a fit that can show it", {
@@ -432,7 +522,7 @@ test_that("the hint waits for a fit that can show it", {
   fit_reg()
   expect_false(the$hinted)
   first <- capture_messages(fit_reg(silent = FALSE))
-  expect_true(any(grepl("future::plan", first)))
+  expect_true(any(grepl("`cores`", first)))
 })
 
 test_that("rendered documents and short fits get no hint", {
@@ -454,6 +544,28 @@ test_that("rendered documents and short fits get no hint", {
 })
 
 ## ----- Separate sessions ----------------------------------------------------------
+
+test_that("cores runs separate sessions where forks are not safe", {
+  skip_if(
+    exists(
+      ".__DEVTOOLS__",
+      envir = asNamespace("inlavanilla"),
+      inherits = FALSE
+    ),
+    "needs an installed copy"
+  )
+  force_workers()
+  old <- future::plan()
+  on.exit(future::plan(old), add = TRUE)
+  future::plan(future::sequential)
+  Sys.setenv(POSITRON = "1")
+  on.exit(Sys.unsetenv("POSITRON"), add = TRUE)
+  ref <- fit_reg()
+  fit <- fit_reg(cores = 2)
+  expect_identical(fit$workers, 2L)
+  expect_same_fit(fit, ref)
+  expect_identical(future::nbrOfWorkers(), 1L)
+})
 
 test_that("separate sessions find global helpers and data passed in the dots", {
   # pkgload marks the namespace of a package it has loaded from source

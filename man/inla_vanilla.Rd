@@ -14,6 +14,7 @@ inla_vanilla(
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
+  cores = NULL,
   verbose = FALSE,
   silent = FALSE,
   control = list()
@@ -41,8 +42,8 @@ from the Matrix package, and a number when m = 1, work too). It needs
 \item{...}{Further arguments passed to \code{logpost}, \code{grad} and \code{hess}, such
 as the data. As in \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the gradient and
 the Hessian, and the arguments after them (\code{vb}, \code{marginals}, \code{width},
-\code{tk_fallback}, \code{verbose}, \code{silent}, \code{control}) must be given by their
-full names, so data arguments cannot partially match them. A data
+\code{tk_fallback}, \code{cores}, \code{verbose}, \code{silent}, \code{control}) must be given by
+their full names, so data arguments cannot partially match them. A data
 argument cannot take one of those names. The arguments before them can be
 matched, as in \code{nlminb()}: a data argument named \code{g} or \code{gr} would be
 taken as \code{grad}, and one named \code{h} or \code{he} as \code{hess}, so give it a
@@ -94,6 +95,12 @@ marginals whatever its diagnostics. The parameters rescanned are listed
 in \code{fit$fallback} and by \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. Ignored for Gaussian
 marginals and with \code{width = "tk"}.}
 
+\item{cores}{The number of CPU cores for the skew-normal scans, and for
+\code{\link[=loo]{loo()}} and \code{\link[=waic]{waic()}} on this fit. \code{NULL}, the default, follows
+\code{future::plan()}, and is serial if no plan is set. \code{1} is serial whatever
+the plan. Needs the future package (see the section on parallel
+computation).}
+
 \item{verbose}{Logical. Print a full diagnostic of each stage under its
 progress line? Default \code{FALSE}. See the section on output.}
 
@@ -114,8 +121,8 @@ holding, among other things:
 \item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = "off"}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
 parameter (with \code{alpha = 0} for Gaussian marginals).
-\item \code{vb}, \code{marginals}, \code{width}, \code{tk_fallback}, \code{verbose}, \code{silent}: the
-settings the fit used (\code{width} is \code{NA} for Gaussian marginals).
+\item \code{vb}, \code{marginals}, \code{width}, \code{tk_fallback}, \code{cores}, \code{verbose}, \code{silent}:
+the settings the fit used (\code{width} is \code{NA} for Gaussian marginals).
 \item \code{fallback}: the parameters that \code{tk_fallback} rescanned with
 \code{width = "tk"} (empty when there were none).
 \item \code{logml}: the log marginal likelihood, and \code{logml_laplace} its Laplace
@@ -377,31 +384,31 @@ converge.
 
 \section{Parallel computation}{
 
-There is no argument for this. A fit follows the plan set with
-\code{future::plan()} from the future package, which is optional, so with no plan
-the fit runs serially as usual:
+Set \code{cores} to run the per-parameter scans of the skew-normal marginals in
+parallel:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{future::plan(future::multisession)
-fit <- inla_vanilla(logpost, init, width = "tk")
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{fit <- inla_vanilla(logpost, init, width = "tk", cores = 8)
 }\if{html}{\out{</div>}}
 
-The per-parameter scans of the skew-normal marginals then run on the
-workers, with the same results and the same progress line as a serial fit.
-A long scan uses every worker of the plan and a shorter one fewer, and a
-scan expected to take under a second stays serial. The mode, the Hessian and
-the VB correction stay serial, so the gain is largest with \code{width = "tk"} or
-\code{"cmp"}, where the scans are nearly the whole fit: about 7.5 times faster on
-12 workers on test models. With the default width the scans are about half
-of a slow fit, and it was about 1.5 times at most.
+The results and the progress line are those of a serial fit. A long scan
+uses all the \code{cores}, a shorter one fewer, and a scan expected to take under
+a second stays serial. The mode, the Hessian and the VB correction stay
+serial, so the gain is largest with \code{width = "tk"} or \code{"cmp"}, where the
+scans are nearly the whole fit: about 7.5 times faster on 12 cores on test
+models. With the default width the scans are about half of a slow fit, and
+it was about 1.5 times at most.
 
-\code{future::multisession} runs everywhere, including Windows, RStudio and
-Positron, by starting separate R sessions and sending them your functions
-and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent that way, so the
-fit first checks that a worker gets the same value at the mode, and
-otherwise runs serially with a message. \code{future::multicore} forks the R
-session, so it shares everything, compiled code included, but it is not
-available on Windows or in RStudio. \code{\link[=loo]{loo()}} and \code{\link[=waic]{waic()}} follow the same
-plan.
+\code{cores} needs the future package, which is optional. It uses forked workers
+where those are safe, in a terminal on macOS or Linux, and separate R
+sessions elsewhere (Windows, RStudio, Positron). Forks share everything.
+Separate sessions are sent your functions and data, and compiled code (Rcpp,
+TMB, RTMB) cannot be sent, so the fit first checks that a worker gets the
+same value at the mode, and otherwise runs serially with a message.
+
+With \code{cores} left at \code{NULL} the fit follows a plan set with \code{future::plan()},
+and runs serially if there is none, so a plan can apply to every fit in a
+session. \code{cores = 1} runs serially whatever the plan. \code{\link[=loo]{loo()}} and \code{\link[=waic]{waic()}}
+use the setting of the fit.
 }
 
 \section{Control}{

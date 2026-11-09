@@ -212,32 +212,32 @@
 #' converge.
 #'
 #' @section Parallel computation:
-#' There is no argument for this. A fit follows the plan set with
-#' `future::plan()` from the future package, which is optional, so with no plan
-#' the fit runs serially as usual:
+#' Set `cores` to run the per-parameter scans of the skew-normal marginals in
+#' parallel:
 #'
 #' ```r
-#' future::plan(future::multisession)
-#' fit <- inla_vanilla(logpost, init, width = "tk")
+#' fit <- inla_vanilla(logpost, init, width = "tk", cores = 8)
 #' ```
 #'
-#' The per-parameter scans of the skew-normal marginals then run on the
-#' workers, with the same results and the same progress line as a serial fit.
-#' A long scan uses every worker of the plan and a shorter one fewer, and a
-#' scan expected to take under a second stays serial. The mode, the Hessian and
-#' the VB correction stay serial, so the gain is largest with `width = "tk"` or
-#' `"cmp"`, where the scans are nearly the whole fit: about 7.5 times faster on
-#' 12 workers on test models. With the default width the scans are about half
-#' of a slow fit, and it was about 1.5 times at most.
+#' The results and the progress line are those of a serial fit. A long scan
+#' uses all the `cores`, a shorter one fewer, and a scan expected to take under
+#' a second stays serial. The mode, the Hessian and the VB correction stay
+#' serial, so the gain is largest with `width = "tk"` or `"cmp"`, where the
+#' scans are nearly the whole fit: about 7.5 times faster on 12 cores on test
+#' models. With the default width the scans are about half of a slow fit, and
+#' it was about 1.5 times at most.
 #'
-#' `future::multisession` runs everywhere, including Windows, RStudio and
-#' Positron, by starting separate R sessions and sending them your functions
-#' and data. Compiled code (Rcpp, TMB, RTMB) cannot be sent that way, so the
-#' fit first checks that a worker gets the same value at the mode, and
-#' otherwise runs serially with a message. `future::multicore` forks the R
-#' session, so it shares everything, compiled code included, but it is not
-#' available on Windows or in RStudio. [loo()] and [waic()] follow the same
-#' plan.
+#' `cores` needs the future package, which is optional. It uses forked workers
+#' where those are safe, in a terminal on macOS or Linux, and separate R
+#' sessions elsewhere (Windows, RStudio, Positron). Forks share everything.
+#' Separate sessions are sent your functions and data, and compiled code (Rcpp,
+#' TMB, RTMB) cannot be sent, so the fit first checks that a worker gets the
+#' same value at the mode, and otherwise runs serially with a message.
+#'
+#' With `cores` left at `NULL` the fit follows a plan set with `future::plan()`,
+#' and runs serially if there is none, so a plan can apply to every fit in a
+#' session. `cores = 1` runs serially whatever the plan. [loo()] and [waic()]
+#' use the setting of the fit.
 #'
 #' @section Control:
 #' `control` is a list with any of:
@@ -325,8 +325,8 @@
 #' @param ... Further arguments passed to `logpost`, `grad` and `hess`, such
 #'   as the data. As in [stats::nlminb()], they come after the gradient and
 #'   the Hessian, and the arguments after them (`vb`, `marginals`, `width`,
-#'   `tk_fallback`, `verbose`, `silent`, `control`) must be given by their
-#'   full names, so data arguments cannot partially match them. A data
+#'   `tk_fallback`, `cores`, `verbose`, `silent`, `control`) must be given by
+#'   their full names, so data arguments cannot partially match them. A data
 #'   argument cannot take one of those names. The arguments before them can be
 #'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
 #'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
@@ -371,6 +371,11 @@
 #'   marginals whatever its diagnostics. The parameters rescanned are listed
 #'   in `fit$fallback` and by [summary.inla_vanilla()]. Ignored for Gaussian
 #'   marginals and with `width = "tk"`.
+#' @param cores The number of CPU cores for the skew-normal scans, and for
+#'   [loo()] and [waic()] on this fit. `NULL`, the default, follows
+#'   `future::plan()`, and is serial if no plan is set. `1` is serial whatever
+#'   the plan. Needs the future package (see the section on parallel
+#'   computation).
 #' @param verbose Logical. Print a full diagnostic of each stage under its
 #'   progress line? Default `FALSE`. See the section on output.
 #' @param silent Logical. Print nothing at all, and muffle the warnings and
@@ -387,8 +392,8 @@
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
-#'   * `vb`, `marginals`, `width`, `tk_fallback`, `verbose`, `silent`: the
-#'     settings the fit used (`width` is `NA` for Gaussian marginals).
+#'   * `vb`, `marginals`, `width`, `tk_fallback`, `cores`, `verbose`, `silent`:
+#'     the settings the fit used (`width` is `NA` for Gaussian marginals).
 #'   * `fallback`: the parameters that `tk_fallback` rescanned with
 #'     `width = "tk"` (empty when there were none).
 #'   * `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
@@ -490,6 +495,7 @@ inla_vanilla <- function(
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
+  cores = NULL,
   verbose = FALSE,
   silent = FALSE,
   control = list()
@@ -515,6 +521,7 @@ inla_vanilla <- function(
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
   width <- check_choice(width, c("trace", "cmp", "tk"), "width")
   check_flag(tk_fallback, "tk_fallback")
+  cores <- check_cores(cores)
   check_flag(verbose, "verbose")
   check_flag(silent, "silent")
   if (verbose && silent) {
@@ -549,6 +556,7 @@ inla_vanilla <- function(
       marginals = marginals,
       width = width,
       tk_fallback = tk_fallback,
+      cores = cores,
       ctrl = ctrl,
       prog = prog,
       call = call,
@@ -639,6 +647,7 @@ vanilla_fit <- function(
   marginals,
   width,
   tk_fallback,
+  cores,
   ctrl,
   prog,
   call,
@@ -882,6 +891,7 @@ vanilla_fit <- function(
           grad = grad_x,
           hess = hess_x,
           init = init,
+          cores = cores,
           # Seconds per call so far, to judge how long the scans will take.
           # The clock has a resolution of a millisecond
           call_s = max(elapsed() - t_start, 1e-3) /
@@ -1026,6 +1036,7 @@ vanilla_fit <- function(
     diagnostics = diagnostics,
     scan = scan,
     counts = c(logpost = st$n_lp, grad = st$n_gr, hess = st$n_he),
+    cores = cores,
     workers = workers,
     timing = c(
       stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
@@ -1054,6 +1065,7 @@ new_inla_vanilla <- function(
   diagnostics,
   scan,
   counts,
+  cores,
   workers,
   timing,
   vb,
@@ -1079,6 +1091,7 @@ new_inla_vanilla <- function(
       diagnostics = diagnostics,
       scan = scan,
       counts = counts,
+      cores = cores,
       workers = workers,
       timing = timing,
       vb = vb,
@@ -1179,6 +1192,25 @@ check_function <- function(f, arg) {
       "{.arg {arg}} must be a function, not {.obj_type_friendly {f}}."
     )
   }
+}
+
+# The `cores` argument, as an integer, or NULL to follow the user's plan.
+check_cores <- function(cores) {
+  if (is.null(cores)) {
+    return(NULL)
+  }
+  ok <- is.numeric(cores) &&
+    length(cores) == 1L &&
+    is.finite(cores) &&
+    cores >= 1 &&
+    cores == round(cores)
+  if (!ok) {
+    abort(
+      "{.arg cores} must be a single positive whole number, or {.code NULL}
+       to follow {.code future::plan()}."
+    )
+  }
+  as.integer(cores)
 }
 
 check_flag <- function(x, arg) {
