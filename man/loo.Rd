@@ -103,6 +103,11 @@ principal axes of \eqn{\Omega}, a hundredth of a posterior SD apart:
 \eqn{m^2 + m + 1} calls of \code{loglik} for \eqn{m} parameters, each returning
 every unit.
 
+The calls follow the plan set with \code{future::plan()}, as the scans of
+\code{\link[=inla_vanilla]{inla_vanilla()}} do (see its section on parallel computation), with the same
+results as a serial run. Calls expected to take under a second in all stay
+serial.
+
 \strong{Existence and the leverage k.} For each unit, the eigenvalues \eqn{k}
 of \eqn{-\Omega H_u} are the shares of the posterior precision the unit
 carries along its directions. The second-order \eqn{\log \mathrm{CPO}_u}

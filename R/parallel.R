@@ -95,7 +95,9 @@ par_setup <- function(functions, probe, data, est_s, n, note, label, what) {
   if (est_s < par_min_s || n < 2L) {
     return(serial)
   }
-  checked <- tryCatch(
+  # Only the values matter here. Anything the function says while being
+  # checked it has said already, or will say again in the real run
+  checked <- suppressMessages(suppressWarnings(tryCatch(
     {
       setup <- par_globals(functions)
       t0 <- elapsed()
@@ -109,7 +111,7 @@ par_setup <- function(functions, probe, data, est_s, n, note, label, what) {
       ))
     },
     error = function(e) FALSE
-  )
+  )))
   if (!checked) {
     note(paste0(
       label,

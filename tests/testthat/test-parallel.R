@@ -249,6 +249,100 @@ test_that("an error everywhere reads as in a serial fit", {
   expect_identical(conditionMessage(err), conditionMessage(ref))
 })
 
+## ----- loo() and waic() ------------------------------------------------------
+
+ll_reg <- function(theta) {
+  dnorm(reg_y, drop(reg_x %*% theta[1:3]), exp(theta[[4]]), log = TRUE)
+}
+
+# As if the calls of loglik were slow
+force_loo_workers <- function(env = parent.frame()) {
+  local_mocked_bindings(taylor_est_s = function(...) 1e6, .env = env)
+}
+
+test_that("loo() and waic() on workers are the same as serially", {
+  fit <- fit_reg()
+  ref_loo <- loo(fit, ll_reg)
+  ref_waic <- waic(fit, ll_reg)
+  force_loo_workers()
+  res_loo <- on_forks(loo(fit, ll_reg))
+  res_waic <- on_forks(waic(fit, ll_reg))
+  expect_identical(res_loo$estimates, ref_loo$estimates)
+  expect_identical(res_loo$pointwise, ref_loo$pointwise)
+  expect_identical(res_waic$estimates, ref_waic$estimates)
+  expect_identical(res_waic$pointwise, ref_waic$pointwise)
+})
+
+test_that("the Taylor terms use the workers, and count every call", {
+  fit <- fit_reg()
+  ref <- taylor_pointwise(fit, ll_reg)
+  expect_identical(ref$workers, 1L)
+  force_loo_workers()
+  tp <- on_forks(taylor_pointwise(fit, ll_reg))
+  expect_identical(tp$workers, 2L)
+  expect_identical(tp$calls, ref$calls)
+  m <- length(init_reg)
+  expect_identical(tp$calls, m * m + m + 1L)
+  expect_identical(tp$l0, ref$l0)
+  expect_identical(tp$lpd_2, ref$lpd_2)
+})
+
+test_that("the points of the Taylor terms are the ones the differences need", {
+  U <- taylor_points(3L, 0.5)
+  expect_identical(dim(U), c(3L, 13L))
+  expect_identical(U[, 1], c(0, 0, 0))
+  expect_identical(U[, 2], c(0.5, 0, 0))
+  expect_identical(U[, 3], c(-0.5, 0, 0))
+  expect_identical(U[, 6], c(0, 0, 0.5))
+  expect_identical(U[, 7], c(0, 0, -0.5))
+  expect_identical(U[, 8], c(0.5, 0.5, 0))
+  expect_identical(U[, 13], c(0, -0.5, -0.5))
+})
+
+test_that("a loglik that differs on a worker runs serially", {
+  fit <- fit_reg()
+  force_loo_workers()
+  ll_nan <- function(theta) {
+    if (Sys.getpid() != parent_pid) NaN * reg_y else ll_reg(theta)
+  }
+  tp <- on_forks(taylor_pointwise(fit, ll_nan))
+  expect_identical(tp$workers, 1L)
+  expect_identical(tp$l0, taylor_pointwise(fit, ll_reg)$l0)
+})
+
+test_that("an unusable loglik on a worker gets the usual error", {
+  fit <- fit_reg()
+  ref_err <- function(f) tryCatch(f, error = function(e) conditionMessage(e))
+  # Fine at the centre, where the check looks
+  centre <- fit$mean_vb
+  ll_bad <- function(theta) {
+    v <- ll_reg(theta)
+    if (
+      !isTRUE(all.equal(unname(theta), unname(centre))) && v[[1]] < v[[1]] + 1
+    ) {
+      v[[2]] <- NaN
+    }
+    v
+  }
+  serial <- ref_err(taylor_pointwise(fit, ll_bad))
+  force_loo_workers()
+  on_workers <- ref_err(on_forks(taylor_pointwise(fit, ll_bad)))
+  expect_match(serial, "not finite")
+  expect_identical(on_workers, serial)
+})
+
+test_that("a warning from loglik on a worker is recorded", {
+  fit <- fit_reg()
+  ll_warn <- function(theta) {
+    warning("a warning from loglik")
+    ll_reg(theta)
+  }
+  force_loo_workers()
+  tp <- on_forks(taylor_pointwise(fit, ll_warn))
+  expect_identical(tp$workers, 2L)
+  expect_true(any(grepl("a warning from loglik", tp$loglik_warnings)))
+})
+
 ## ----- Choosing the number of jobs ---------------------------------------------
 
 test_that("the jobs grow with the scan and stop at the workers and the items", {

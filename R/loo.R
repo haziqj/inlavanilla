@@ -46,6 +46,11 @@
 #' \eqn{m^2 + m + 1} calls of `loglik` for \eqn{m} parameters, each returning
 #' every unit.
 #'
+#' The calls follow the plan set with `future::plan()`, as the scans of
+#' [inla_vanilla()] do (see its section on parallel computation), with the same
+#' results as a serial run. Calls expected to take under a second in all stay
+#' serial.
+#'
 #' **Existence and the leverage k.** For each unit, the eigenvalues \eqn{k}
 #' of \eqn{-\Omega H_u} are the shares of the posterior precision the unit
 #' carries along its directions. The second-order \eqn{\log \mathrm{CPO}_u}
@@ -262,17 +267,11 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
   }
 
   prog <- progress_new(!silent)
-  progress_start(
-    prog,
-    "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls",
-    total = n_calls
-  )
   at <- function(u) {
     x <- theta + drop(L %*% u)
     names(x) <- parnames
     last_x <<- x
     calls <<- calls + 1L
-    progress_tick(prog)
     v <- withCallingHandlers(
       tryCatch(loglik(x), error = function(e) {
         where <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
@@ -318,7 +317,12 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     v
   }
 
-  l0 <- at(numeric(m))
+  # The first calls are needed anyway, and say how long the rest will take
+  U <- taylor_points(m, h)
+  secs <- numeric(3L)
+  t0 <- elapsed()
+  l0 <- at(U[, 1L])
+  secs[[1L]] <- elapsed() - t0
   units <- names(l0)
   if (n < 2L) {
     abort(
@@ -326,25 +330,89 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
        log-likelihood term per observation (or unit), not their sum."
     )
   }
-  fp <- fm <- matrix(0, n, m)
-  for (i in seq_len(m)) {
-    e <- numeric(m)
-    e[i] <- h
-    fp[, i] <- at(e)
-    fm[, i] <- at(-e)
+  vals <- matrix(NA_real_, n, n_calls)
+  vals[, 1L] <- l0
+  for (k in 2:3) {
+    t0 <- elapsed()
+    vals[, k] <- at(U[, k])
+    secs[[k]] <- elapsed() - t0
   }
+
+  # On the user's future plan, if there is one and the calls are slow enough.
+  # Before the progress line starts, because it can print a message
+  data <- list(
+    loglik = loglik,
+    theta = theta,
+    parnames = parnames,
+    L = L,
+    U = U,
+    n = n
+  )
+  setup <- par_setup(
+    list(loglik),
+    taylor_probe,
+    data,
+    est_s = taylor_est_s(secs, n_calls),
+    n = n_calls - 3L,
+    note = function(text) progress_note(prog, text),
+    label = "Differentiating loglik",
+    what = "loglik"
+  )
+  progress_start(
+    prog,
+    "Differentiating loglik, {cli::pb_current}/{cli::pb_total} calls",
+    total = n_calls
+  )
+  # A point ticks once, however many times its job reports it
+  ticked <- logical(n_calls)
+  tick_once <- function(k) {
+    if (!ticked[[k]]) {
+      ticked[[k]] <<- TRUE
+      progress_tick(prog)
+    }
+  }
+  for (k in 1:3) {
+    tick_once(k)
+  }
+  done <- seq_len(n_calls) <= 3L
+  if (setup$jobs > 1L) {
+    items <- which(!done)
+    groups <- lapply(
+      par_groups(length(items), setup$jobs),
+      function(i) items[i]
+    )
+    out <- withCallingHandlers(
+      par_run(groups, taylor_job, data, setup, tick_once),
+      warning = on_warning
+    )
+    for (g in seq_along(groups)) {
+      if (!is.null(out[[g]])) {
+        vals[, groups[[g]]] <- out[[g]]
+        done[groups[[g]]] <- TRUE
+        calls <- calls + length(groups[[g]])
+      }
+    }
+  }
+  # Every point a worker did not return, and with no workers every one, is
+  # evaluated here, so an error reads as it does in a serial run
+  for (k in which(!done)) {
+    vals[, k] <- at(U[, k])
+    tick_once(k)
+  }
+
+  fp <- vals[, 2L * seq_len(m), drop = FALSE]
+  fm <- vals[, 2L * seq_len(m) + 1L, drop = FALSE]
   S <- (fp - fm) / (2 * h)
   H <- array(0, c(m, m, n))
   for (i in seq_len(m)) {
     H[i, i, ] <- (fp[, i] - 2 * l0 + fm[, i]) / h^2
   }
   if (m > 1L) {
+    k <- 2L * m + 1L
     for (i in seq_len(m - 1L)) {
       for (j in (i + 1L):m) {
-        e <- numeric(m)
-        e[c(i, j)] <- h
-        hij <- (at(e) +
-          at(-e) -
+        hij <- (vals[, k + 1L] +
+          vals[, k + 2L] -
           fp[, i] -
           fm[, i] -
           fp[, j] -
@@ -353,6 +421,7 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
           (2 * h^2)
         H[i, j, ] <- hij
         H[j, i, ] <- hij
+        k <- k + 2L
       }
     }
   }
@@ -392,8 +461,77 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     k_min = k_min,
     theta = theta,
     calls = calls,
+    workers = setup$jobs,
     loglik_warnings = seen
   )
+}
+
+# The points of taylor_pointwise() in whitened coordinates, a column each: the
+# centre, then +h and -h along each axis, then +h and -h along each pair of
+# axes, m^2 + m + 1 in all.
+taylor_points <- function(m, h) {
+  U <- matrix(0, m, m * m + m + 1L)
+  k <- 1L
+  add <- function(e) {
+    U[, k + 1L] <<- e
+    U[, k + 2L] <<- -e
+    k <<- k + 2L
+  }
+  for (i in seq_len(m)) {
+    e <- numeric(m)
+    e[i] <- h
+    add(e)
+  }
+  if (m > 1L) {
+    for (i in seq_len(m - 1L)) {
+      for (j in (i + 1L):m) {
+        e <- numeric(m)
+        e[c(i, j)] <- h
+        add(e)
+      }
+    }
+  }
+  U
+}
+
+# How long the calls of loglik would take in all, from the times of the first
+# few. The shortest of them, because the byte compiler slows the first calls of
+# a session.
+taylor_est_s <- function(secs, n_calls) {
+  min(secs) * n_calls
+}
+
+# loglik at point k of taylor_points()
+taylor_value <- function(data, k) {
+  x <- data$theta + drop(data$L %*% data$U[, k])
+  names(x) <- data$parnames
+  v <- data$loglik(x)
+  if (is.matrix(v) && ncol(v) == 1L) v[, 1L] else v
+}
+
+# loglik at the centre, to compare a worker with the parent
+taylor_probe <- function(ids, data) {
+  unname(taylor_value(data, 1L))
+}
+
+# The points `ids` on a worker. A value that taylor_pointwise() would reject
+# fails the job, so that the parent evaluates the point and words the error.
+taylor_job <- function(ids, data) {
+  vals <- matrix(NA_real_, data$n, length(ids))
+  for (i in seq_along(ids)) {
+    v <- taylor_value(data, ids[[i]])
+    if (
+      !is.numeric(v) ||
+        is.matrix(v) ||
+        length(v) != data$n ||
+        !all(is.finite(v))
+    ) {
+      stop("loglik gave an unusable value")
+    }
+    vals[, i] <- v
+    par_tick(ids[[i]])
+  }
+  vals
 }
 
 # Name units by label when loglik gave names, by position otherwise.
