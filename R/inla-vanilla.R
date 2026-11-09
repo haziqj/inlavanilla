@@ -543,6 +543,60 @@ inla_vanilla <- function(
   )
 }
 
+# The wrappers the stages call in place of the user's functions, which have
+# `...` already bound. They name the parameters, and count the calls and record
+# the last parameter value in the environment `state`. `on_call` runs at each
+# call, for the progress bar. `gr` and `he` are NULL when the user gave none.
+wrap_fns <- function(
+  logpost_x,
+  grad_x,
+  hess_x,
+  init,
+  on_call = function() NULL
+) {
+  m <- length(init)
+  parnames <- names(init)
+  state <- new.env(parent = emptyenv())
+  state$n_lp <- 0L
+  state$n_gr <- 0L
+  state$n_he <- 0L
+  state$last_x <- init
+  lp <- function(x) {
+    names(x) <- parnames
+    state$last_x <- x
+    state$n_lp <- state$n_lp + 1L
+    on_call()
+    # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
+    v <- logpost_x(x)[[1L]]
+    if (is.na(v)) -Inf else v
+  }
+  gr <- if (is.null(grad_x)) {
+    NULL
+  } else {
+    function(x) {
+      names(x) <- parnames
+      state$last_x <- x
+      state$n_gr <- state$n_gr + 1L
+      on_call()
+      as.numeric(grad_x(x))
+    }
+  }
+  # A plain m x m matrix, whatever the user's function returns (a sparse
+  # matrix from the Matrix package, or a number when m = 1)
+  he <- if (is.null(hess_x)) {
+    NULL
+  } else {
+    function(x) {
+      names(x) <- parnames
+      state$last_x <- x
+      state$n_he <- state$n_he + 1L
+      on_call()
+      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
+    }
+  }
+  list(lp = lp, gr = gr, he = he, state = state)
+}
+
 # The stages of the fit, given the user's functions with `...` already bound,
 # the checked arguments, and the progress reporter `prog`, which also holds
 # the record of warnings.
@@ -565,61 +619,28 @@ vanilla_fit <- function(
   has_grad <- !is.null(grad_x)
   has_hess <- !is.null(hess_x)
 
-  # The engine calls these wrappers, which name the parameters, count the
-  # calls and tick the progress bar. The spinner counts the stage's logpost,
-  # grad and hess calls together, from `stage_calls()`, so stages driven by
-  # grad tick too.
-  n_lp <- 0L
-  n_gr <- 0L
-  n_he <- 0L
+  # The engine calls the wrappers of wrap_fns(), and the progress bar ticks
+  # from them. The spinner counts the stage's logpost, grad and hess calls
+  # together, from `stage_calls()`, so stages driven by grad tick too.
   n_base <- 0L
   stage_calls <- function() {
-    n_base <<- n_lp + n_gr + n_he
+    n_base <<- st$n_lp + st$n_gr + st$n_he
   }
-  last_x <- init
   tick <- function() {
-    n <- n_lp + n_gr + n_he
+    n <- st$n_lp + st$n_gr + st$n_he
     if (prog$calls && n %% 16L == 0L) {
       progress_tick(prog, set = n - n_base)
     }
   }
-  lp <- function(x) {
-    names(x) <- parnames
-    last_x <<- x
-    n_lp <<- n_lp + 1L
-    tick()
-    # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
-    v <- logpost_x(x)[[1L]]
-    if (is.na(v)) -Inf else v
-  }
-  gr <- if (!has_grad) {
-    NULL
-  } else {
-    function(x) {
-      names(x) <- parnames
-      last_x <<- x
-      n_gr <<- n_gr + 1L
-      tick()
-      as.numeric(grad_x(x))
-    }
-  }
-  # A plain m x m matrix, whatever the user's function returns (a sparse
-  # matrix from the Matrix package, or a number when m = 1)
-  he <- if (!has_hess) {
-    NULL
-  } else {
-    function(x) {
-      names(x) <- parnames
-      last_x <<- x
-      n_he <<- n_he + 1L
-      tick()
-      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
-    }
-  }
+  fns <- wrap_fns(logpost_x, grad_x, hess_x, init, on_call = tick)
+  lp <- fns$lp
+  gr <- fns$gr
+  he <- fns$he
+  st <- fns$state
   # The calls since the last stage, for verbose output
   calls_seen <- c(0L, 0L, 0L)
   calls_since <- function() {
-    now <- c(n_lp, n_gr, n_he)
+    now <- c(st$n_lp, st$n_gr, st$n_he)
     out <- now - calls_seen
     calls_seen <<- now
     out
@@ -631,7 +652,7 @@ vanilla_fit <- function(
       if (inherits(e, "inlavanilla_error")) {
         stop(e)
       }
-      at <- paste(parnames, "=", signif(last_x, 4), collapse = ", ")
+      at <- paste(parnames, "=", signif(st$last_x, 4), collapse = ", ")
       abort(
         c(
           "The fit stopped with an error while {stage}.",
@@ -752,7 +773,7 @@ vanilla_fit <- function(
         lap$L,
         ctrl,
         method = vb,
-        budget = n_lp + n_gr + n_he
+        budget = st$n_lp + st$n_gr + st$n_he
       )
     )
     # The fallback is a route of the solver, reported but not marked, as in
@@ -938,7 +959,7 @@ vanilla_fit <- function(
   t_end <- elapsed()
   t_total <- t_end - t_start
   if (prog$detail) {
-    report_end(prog, n_lp, n_gr, n_he, t_total)
+    report_end(prog, st$n_lp, st$n_gr, st$n_he, t_total)
   }
   new_inla_vanilla(
     sn = sn[, c("xi", "omega", "alpha"), drop = FALSE],
@@ -949,7 +970,7 @@ vanilla_fit <- function(
     logml_laplace = lap$logml,
     diagnostics = diagnostics,
     scan = scan,
-    counts = c(logpost = n_lp, grad = n_gr, hess = n_he),
+    counts = c(logpost = st$n_lp, grad = st$n_gr, hess = st$n_he),
     timing = c(
       stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
       total = t_total
