@@ -112,10 +112,12 @@ par_future <- function(job, ids, data, setup) {
 # the plan. Returns `jobs`, 1 to stay serial, `restore`, which puts the user's
 # plan back and is for the caller to run when done, and what par_future() needs.
 #
-# The elapsed time of the probe is the real cost of reaching one worker, with
-# the real data. The time with w jobs is about est_s / w + cost * w, which is
-# least at w = sqrt(est_s / cost), so a long scan uses every worker of the plan
-# and a shorter one fewer.
+# The time to hand the probe to a worker is the real cost of reaching one, with
+# the real data. Jobs are handed over one at a time, but what a worker then
+# does, such as building a compiled model again, happens alongside the others.
+# So the time with w jobs is about est_s / w + cost * w, which is least at
+# w = sqrt(est_s / cost), and a long scan uses every worker of the plan and a
+# shorter one fewer.
 par_setup <- function(
   functions,
   probe,
@@ -167,8 +169,9 @@ par_setup <- function(
     {
       setup <- par_globals(functions)
       t0 <- elapsed()
-      got <- future::value(par_future(probe, 0L, data, setup))
+      fut <- par_future(probe, 0L, data, setup)
       cost <- elapsed() - t0
+      got <- future::value(fut)
       isTRUE(all.equal(
         got,
         probe(0L, data),

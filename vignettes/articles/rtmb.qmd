@@ -599,8 +599,8 @@ fit_par <- inla_vanilla(
 Whatever `build()` uses, here `model` and `parameters`, is found and sent to the
 workers. On a Poisson model with 21 parameters and 60 random intercepts
 integrated out, a fit with `width = "tk"` took 32 s serially and 4.4 s on 12
-cores from a terminal. In Positron's console it took 9.7 s: building the tapes
-costs each worker some time, and the fit chose seven of the 12.
+cores from a terminal. In Positron's console it took 9.7 s: each worker is a new
+R session that has to start up, and the fit chose seven of the 12.
 
 ## Choosing a route
 
