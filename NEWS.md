@@ -1,19 +1,5 @@
 # inlavanilla (development version)
 
-* A fit now records the version of inlavanilla that made it, in `fit$version`,
-  and `print()` and `summary()` show it in their headers
-  ("INLAvanilla 0.1.1").
-
-* When the mode search restarts `nlminb()` with the parameters rescaled, the
-  iterations reported are now the total over both runs, not those of the run
-  that was kept: in the progress line, in `print()` and `summary()`, in
-  `diagnostics()` and in `fit$diagnostics$optim$iterations`. The evaluations
-  in the `verbose = TRUE` report are totals too, and its restart line gives
-  each run's own iterations. On a badly scaled posterior the fit used to
-  report "1 iteration" after a first run of several hundred.
-
-# inlavanilla 0.1.1
-
 * A parameter named for the scale it is on is now reported on its natural
   scale. With `init = c(mu = 0, log_sigma = 0)`, `print()`, `summary()`,
   `coef()` and `plot()` show `sigma`, and `sampling()` returns draws of it.
@@ -32,6 +18,20 @@
   `sampling()` take the same argument to show a fit on the scale of `logpost`.
   The new `fit$transform` lists what was read from the names, and
   `vignette("natural-scale")` explains it.
+
+* A fit now records the version of inlavanilla that made it, in `fit$version`,
+  and `print()` and `summary()` show it in their headers
+  ("INLAvanilla 0.1.1").
+
+* When the mode search restarts `nlminb()` with the parameters rescaled, the
+  iterations reported are now the total over both runs, not those of the run
+  that was kept: in the progress line, in `print()` and `summary()`, in
+  `diagnostics()` and in `fit$diagnostics$optim$iterations`. The evaluations
+  in the `verbose = TRUE` report are totals too, and its restart line gives
+  each run's own iterations. On a badly scaled posterior the fit used to
+  report "1 iteration" after a first run of several hundred.
+
+# inlavanilla 0.1.1
 
 * The mode search now allows 5000 iterations and 5000 evaluations by default,
   up from 1000 and 2000, so that slowly converging fits do not stop at the
