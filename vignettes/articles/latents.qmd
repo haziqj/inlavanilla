@@ -286,19 +286,19 @@ closed form. Each herd has one latent variable, though, so both can be
 computed on a grid.
 
 The integral is the likelihood of herd $j$, averaged over the prior of its
-level. With $u_j = \tau z$, where $z$ is standard normal with density
-$\phi$,
+level. We write the level as $u_j = \tau z_j$, so that $z_j$ is standard
+normal, with density $\phi$, and let $f_j(z)$ be the likelihood of the
+herd's data when $z_j = z$. Then
 
 $$
-p(y_j \mid \theta) = \int p(y_j \mid u_j = \tau z, \theta)\, \phi(z)\, dz
-\approx \sum_k p(y_j \mid u_j = \tau z_k, \theta)\, \phi(z_k)\, h.
+p(y_j \mid \theta) = \int f_j(z)\, \phi(z)\, dz
+\approx \sum_k f_j(z_k)\, \phi(z_k)\, h.
 $$
 
 The sum is the area under the integrand, cut into strips of width $h$: the
 points $z_k$ run from $-6$ to $6$ in steps of $h = 0.1$, and each strip is as
 tall as the integrand at its point. `herd_loglik()` returns
-$\log p(y_j \mid u_j = \tau z_k, \theta)$ for every herd and every point.
-`logpost` adds $\log \phi(z_k) + \log h$ to it, and sums over the points on
+$\log f_j(z_k)$ for every herd and every point. `logpost` adds $\log \phi(z_k) + \log h$ to it, and sums over the points on
 the probability scale. The priors are $N(0, 5^2)$ on each $\beta_t$ and
 half-normal $N(0, 1)$ on $\tau$.
 
@@ -308,7 +308,7 @@ herd <- as.integer(cbpp$herd)
 period <- as.integer(cbpp$period)
 z <- seq(-6, 6, by = 0.1)
 
-# log p(y_j | u_j = tau * z, theta): a row per herd, a column per grid point
+# log f_j(z_k): a row per herd, a column per grid point
 herd_loglik <- function(theta) {
   tau <- exp(theta[["log_tau"]])
   eta <- theta[period] + tau * matrix(z, nrow(cbpp), length(z), byrow = TRUE)
@@ -329,17 +329,24 @@ fit_cbpp <- inla_vanilla(logpost_cbpp, init)
 fit_cbpp
 ```
 
-The distribution of $u_j$ given $\theta$ comes from the same strips. By
-Bayes' theorem it is the integrand itself, divided by its integral:
+The distribution of $z_j$ given $\theta$ comes from the same strips. By
+Bayes' theorem its density is the integrand itself, divided by its integral:
 
 $$
-p(u_j = \tau z \mid y_j, \theta) =
-\frac{p(y_j \mid u_j = \tau z, \theta)\, \phi(z)}{p(y_j \mid \theta)}.
+p(z_j \mid y_j, \theta) =
+\frac{f_j(z_j)\, \phi(z_j)}{p(y_j \mid \theta)}.
 $$
 
-So the area of each strip, as a share of the total area, is the probability
-that $u_j$ lies in that strip. `fun` picks a strip for each herd with these
-probabilities, and a uniform draw places $u_j$ within it:
+A density gives probabilities as areas, so the probability that $z_j$ lies
+in strip $k$ is that strip's share of the total area:
+
+$$
+P(z_j \text{ in strip } k \mid y_j, \theta) \approx
+\frac{f_j(z_k)\, \phi(z_k)}{\sum_l f_j(z_l)\, \phi(z_l)}.
+$$
+
+`fun` picks a strip for each herd with these probabilities, a uniform draw
+places $z_j$ within it, and $u_j = \tau z_j$:
 
 ```{r}
 #| label: cbpp-latent
