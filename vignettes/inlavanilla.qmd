@@ -413,7 +413,8 @@ choose, and scales on which the posterior is closer to Gaussian work better.
 on the natural scale needs the log-Jacobian of the transformation. For the
 share of manual cars $p$, with a uniform prior, on the logit scale
 $\vartheta = \operatorname{logit} p$, the Jacobian is
-$dp / d\vartheta = p(1 - p)$:
+$dp / d\vartheta = p(1 - p)$. We name the parameter `logit_p`, for the scale
+it is on:
 
 ```{r}
 #| label: jacobian
@@ -424,21 +425,24 @@ logpost_p <- function(theta, y) {
     log(p) + log1p(-p) # ... and the Jacobian
 }
 fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, silent = TRUE)
+fit_p
 ```
 
-Natural-scale summaries come from the draws, and match the exact Beta
-posterior:
+A parameter named `log_x`, `logit_x` or `atanh_x` is reported on its natural
+scale, as `x`: here the fit is made on the logit scale and the table gives
+$p$. Only the reporting changes, so `logpost` still receives `logit_p` and
+still needs its Jacobian. The summary matches the exact Beta posterior:
 
 ```{r}
 #| label: jacobian-check
-p_draws <- sampling(fit_p, nsamp = 20000, fun = function(theta) {
-  plogis(theta[["logit_p"]])
-})
 rbind(
-  inlavanilla = quantile(p_draws, c(0.025, 0.5, 0.975)),
+  inlavanilla = fit_p$summary["p", c("2.5%", "50%", "97.5%")],
   exact = qbeta(c(0.025, 0.5, 0.975), 1 + sum(y), 1 + sum(1 - y))
 )
 ```
+
+`vignette("natural-scale", package = "inlavanilla")` has the transforms, what
+is and is not mapped back, and how to switch it off.
 
 ## Gradients for free, and compiled code
 

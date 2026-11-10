@@ -246,7 +246,10 @@ fit <- inla_vanilla(logpost, init, x = x, eta = 2)
 ```
 
 The fit takes about `r signif(fit$timing[["total"]], 1)` seconds, and
-`summary(fit)` flags nothing. The first six CPCs, on the atanh scale:
+`summary(fit)` flags nothing. The parameters are named for the scale they
+are on, `log_sigma_x1` and `atanh_z21`, so the fit reports the standard
+deviations and the CPCs themselves (see the article on [natural-scale
+summaries](natural-scale.html)). The first six CPCs:
 
 ```{r}
 #| label: cpcs

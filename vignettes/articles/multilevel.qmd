@@ -126,23 +126,17 @@ fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
 fit
 ```
 
-The marginals are on the unconstrained scale. Draws give the standard
-deviations and the correlation on their natural scale:
+The fit is made on the unconstrained scale, and the standard deviations and
+the correlation are named for the scale they are on, so they are reported on
+their natural scale, as `tau0`, `tau1`, `rho` and `sigma` (see the article on
+[natural-scale summaries](natural-scale.html)). The draws are on that
+scale too:
 
 ```{r}
 #| label: natural
-natural <- function(theta) {
-  c(
-    b0 = theta[["b0"]],
-    b1 = theta[["b1"]],
-    tau0 = exp(theta[["log_tau0"]]),
-    tau1 = exp(theta[["log_tau1"]]),
-    rho = tanh(theta[["atanh_rho"]]),
-    sigma = exp(theta[["log_sigma"]])
-  )
-}
 set.seed(1)
-draws <- sampling(fit, nsamp = 20000, fun = natural)
+draws <- sampling(fit, nsamp = 20000)
+head(draws, 3)
 ```
 
 ## Checking against brms
@@ -301,7 +295,7 @@ determined:
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
 set.seed(1)
-draws_6 <- sampling(fit_6, nsamp = 20000, fun = natural)
+draws_6 <- sampling(fit_6, nsamp = 20000)
 round(compare(draws_6, ref$subjects_6), 3)
 ```
 
