@@ -11,8 +11,13 @@
 #' the mode when `vb = "off"`).
 #'
 #' Draws never call the log-posterior, so they are cheap: large `nsamp` costs
-#' little. Use `fun` for natural-scale or derived quantities, such as
-#' `exp(log_sigma)` or a covariance matrix built from several parameters.
+#' little. A parameter named for its scale (`log_sigma`, `logit_p`,
+#' `atanh_rho`) is returned on its natural scale, in a column named `sigma`,
+#' `p` or `rho` (see the section on natural-scale summaries in
+#' [inla_vanilla()]). Use `fun` for quantities of several parameters, such as
+#' a ratio or a covariance matrix. `fun` is written as `logpost` is: it
+#' receives each draw on the scale of `logpost`, under the names in `init`,
+#' whatever `transform`.
 #'
 #' @param object An object to draw from.
 #' @param nsamp Number of draws.
@@ -24,9 +29,13 @@
 #'   `fun`. As in [stats::optim()], a name that abbreviates `nsamp` or `fun`
 #'   would be taken as that argument: a data argument named `n` would set the
 #'   number of draws. Give such data a longer name, or wrap it in `fun`.
+#' @param transform Logical. Return the transformed parameters on their
+#'   natural scale? Default `TRUE`. `FALSE` returns every parameter on the
+#'   scale of `logpost`. It must be named in full, and has no effect on what
+#'   `fun` receives.
 #'
-#' @returns A numeric matrix with one row per draw: the parameters on the
-#'   unconstrained scale, or the values of `fun`.
+#' @returns A numeric matrix with one row per draw: the parameters, with the
+#'   transformed ones on their natural scale, or the values of `fun`.
 #'
 #' @examples
 #' set.seed(1)
@@ -39,8 +48,12 @@
 #' }
 #' fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 #'
+#' # Draws of mu and sigma: the parameter named log_sigma comes back as sigma
 #' draws <- sampling(fit, nsamp = 2000)
 #' head(draws)
+#'
+#' # The same draws as logpost sees them
+#' head(sampling(fit, nsamp = 2000, transform = FALSE))
 #'
 #' # A derived quantity: the coefficient of variation sigma / mu
 #' cv <- sampling(fit, nsamp = 2000, fun = function(theta) {
@@ -54,7 +67,13 @@ sampling <- function(object, ...) {
 
 #' @rdname sampling
 #' @export
-sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
+sampling.inla_vanilla <- function(
+  object,
+  nsamp = 1000L,
+  fun = NULL,
+  ...,
+  transform = TRUE
+) {
   if (
     !is.numeric(nsamp) || length(nsamp) != 1L || !is.finite(nsamp) || nsamp < 1
   ) {
@@ -64,6 +83,7 @@ sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
   if (!is.null(fun)) {
     check_function(fun, "fun")
   }
+  check_flag(transform, "transform")
 
   sn <- object$sn
   m <- nrow(sn)
@@ -81,7 +101,8 @@ sampling.inla_vanilla <- function(object, nsamp = 1000L, fun = NULL, ...) {
     }
   }
   if (is.null(fun)) {
-    return(theta)
+    tr <- active_transforms(object, transform)
+    return(if (is.null(tr)) theta else natural_draws(theta, tr))
   }
   # Bind `...` here rather than forwarding it, so an argument meant for `fun`
   # cannot partially match a formal of apply_draws()

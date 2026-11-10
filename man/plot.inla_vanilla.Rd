@@ -9,13 +9,16 @@
   pars = NULL,
   type = c("marg_pdf", "sn_fit", "sn_fit_log"),
   laplace = TRUE,
+  transform = TRUE,
   ...
 )
 }
 \arguments{
 \item{x}{An object of class \code{inla_vanilla}.}
 
-\item{pars}{Parameters to plot, by name or position. Defaults to all.}
+\item{pars}{Parameters to plot, by position or by name: the name in
+\code{init} or, for a transformed parameter, its natural-scale name. Defaults
+to all.}
 
 \item{type}{The plot: \code{"marg_pdf"} (the default) for the marginal
 densities, \code{"sn_fit"} for each skew-normal fit against its scan, or
@@ -24,6 +27,10 @@ densities, \code{"sn_fit"} for each skew-normal fit against its scan, or
 \item{laplace}{Logical. Overlay the Laplace (Gaussian) marginals? Default
 \code{TRUE}; ignored when the marginals are the Laplace ones, and by the
 \code{"sn_fit"} plots.}
+
+\item{transform}{Logical. Draw the transformed parameters on their natural
+scale? Default \code{TRUE}. \code{FALSE} draws every marginal on the scale of
+\code{logpost}. Ignored by the \code{"sn_fit"} plots.}
 
 \item{...}{Further graphical parameters passed to \code{\link[graphics:plot]{graphics::plot()}} for
 each panel, such as \code{xlab} or \code{main}; they replace the defaults (the
@@ -35,11 +42,14 @@ axis).}
 }
 \description{
 By default (\code{type = "marg_pdf"}), draws the marginal density of each
-parameter, on the unconstrained scale, with the Gaussian marginal of the
-Laplace approximation for comparison. The vertical line marks the
-posterior mean. For a fit with \code{marginals = "gaussian"} the marginals are
-Gaussian: centred at the VB mean, or, with \code{vb = "off"}, the Laplace
-marginals themselves, drawn without a second copy.
+parameter, with the Gaussian marginal of the Laplace approximation for
+comparison. The vertical line marks the posterior mean. A parameter named
+for its scale (\code{log_sigma}) is drawn on its natural scale, as \code{sigma}:
+both densities are carried there by the change of variables, so the
+Laplace curve is the density that a Gaussian \code{log_sigma} gives \code{sigma}.
+For a fit with \code{marginals = "gaussian"} the marginals are Gaussian on the
+scale of \code{logpost}: centred at the VB mean, or, with \code{vb = "off"}, the
+Laplace marginals themselves, drawn without a second copy.
 }
 \details{
 \code{type = "sn_fit"} shows each skew-normal fit against the scan it was
@@ -52,5 +62,6 @@ it was fitted at. The largest gap between the last two, as a fraction of
 the peak, is the NMAD of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. \code{type = "sn_fit_log"}
 draws the same on a base-10 log scale, which shows the tails. Both use the
 scans kept in the fit, with no further calls of \code{logpost}, and need
-skew-normal marginals.
+skew-normal marginals. They show the scale the fit was made on, whatever
+\code{transform}.
 }

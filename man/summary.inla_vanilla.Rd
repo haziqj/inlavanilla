@@ -4,26 +4,36 @@
 \alias{summary.inla_vanilla}
 \title{Summarise an INLAvanilla fit}
 \usage{
-\method{summary}{inla_vanilla}(object, probs = c(0.025, 0.5, 0.975), ...)
+\method{summary}{inla_vanilla}(object, probs = c(0.025, 0.5, 0.975), transform = TRUE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{inla_vanilla}.}
 
 \item{probs}{Probabilities for the reported quantiles.}
 
+\item{transform}{Logical. Summarise the transformed parameters on their
+natural scale? Default \code{TRUE}. \code{FALSE} gives every parameter on the
+scale of \code{logpost}, whatever the fit was asked for.}
+
 \item{...}{Unused.}
 }
 \value{
 An object of class \code{summary.inla_vanilla}: a list with the summary
-table \code{table}, the log marginal likelihood \code{logml} (and its Laplace part
-\code{logml_laplace}), the per-parameter diagnostics \code{diagnostics}, and
-details of the optimiser, the VB correction, the number of calls and the
-timing.
+table \code{table}, the transforms behind its natural-scale rows \code{transform}
+(\code{NULL} when there are none), the log marginal likelihood \code{logml} (and
+its Laplace part \code{logml_laplace}), the per-parameter diagnostics
+\code{diagnostics}, and details of the optimiser, the VB correction, the
+number of calls and the timing.
 }
 \description{
-Posterior summaries from the skew-normal marginals, on the unconstrained
-scale of \code{logpost}, together with diagnostics of each stage of the
-approximation.
+Posterior summaries from the skew-normal marginals, together with
+diagnostics of each stage of the approximation. A parameter named for its
+scale (\code{log_sigma}, \code{logit_p}, \code{atanh_rho}) is summarised on its natural
+scale, as \code{sigma}, \code{p} or \code{rho}, and the others on the scale of \code{logpost}
+(see the section on natural-scale summaries in \code{\link[=inla_vanilla]{inla_vanilla()}}). A line
+under the table says which rows were mapped. The diagnostics always refer
+to the scale of \code{logpost}, where the approximation is made, and name the
+parameters as \code{init} does.
 }
 \details{
 Printed, the summary gives the fit first (the log marginal likelihood

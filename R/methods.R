@@ -27,11 +27,16 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
     scale = x$summary[, "SD"],
     rowid = TRUE
   )
-  # Whether to trust the table: shown only when something is off
+  # Which rows are on the natural scale, then whether to trust the table,
+  # shown only when something is off
+  tr <- active_transforms(x)
   n_warnings <- length(x$warnings)
   n_flagged <- sum(flags)
-  if (n_warnings > 0L || n_flagged > 0L) {
+  if (!is.null(tr) || n_warnings > 0L || n_flagged > 0L) {
     cli::cat_line()
+  }
+  if (!is.null(tr)) {
+    cat_transform_note(tr)
   }
   if (n_warnings > 0L) {
     cat_status(
@@ -47,9 +52,14 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 
 #' Summarise an INLAvanilla fit
 #'
-#' Posterior summaries from the skew-normal marginals, on the unconstrained
-#' scale of `logpost`, together with diagnostics of each stage of the
-#' approximation.
+#' Posterior summaries from the skew-normal marginals, together with
+#' diagnostics of each stage of the approximation. A parameter named for its
+#' scale (`log_sigma`, `logit_p`, `atanh_rho`) is summarised on its natural
+#' scale, as `sigma`, `p` or `rho`, and the others on the scale of `logpost`
+#' (see the section on natural-scale summaries in [inla_vanilla()]). A line
+#' under the table says which rows were mapped. The diagnostics always refer
+#' to the scale of `logpost`, where the approximation is made, and name the
+#' parameters as `init` does.
 #'
 #' Printed, the summary gives the fit first (the log marginal likelihood
 #' and whether the fit converged, the parts of the log marginal likelihood,
@@ -198,13 +208,17 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'
 #' @param object An object of class `inla_vanilla`.
 #' @param probs Probabilities for the reported quantiles.
+#' @param transform Logical. Summarise the transformed parameters on their
+#'   natural scale? Default `TRUE`. `FALSE` gives every parameter on the
+#'   scale of `logpost`, whatever the fit was asked for.
 #' @param ... Unused.
 #'
 #' @returns An object of class `summary.inla_vanilla`: a list with the summary
-#'   table `table`, the log marginal likelihood `logml` (and its Laplace part
-#'   `logml_laplace`), the per-parameter diagnostics `diagnostics`, and
-#'   details of the optimiser, the VB correction, the number of calls and the
-#'   timing.
+#'   table `table`, the transforms behind its natural-scale rows `transform`
+#'   (`NULL` when there are none), the log marginal likelihood `logml` (and
+#'   its Laplace part `logml_laplace`), the per-parameter diagnostics
+#'   `diagnostics`, and details of the optimiser, the VB correction, the
+#'   number of calls and the timing.
 #'
 #' @references
 #' Jamil, H., & Rue, H. (2026). *Approximate Bayesian inference for
@@ -219,6 +233,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 summary.inla_vanilla <- function(
   object,
   probs = c(0.025, 0.5, 0.975),
+  transform = TRUE,
   ...
 ) {
   if (!is.numeric(probs) || any(!is.finite(probs) | probs <= 0 | probs >= 1)) {
@@ -226,9 +241,12 @@ summary.inla_vanilla <- function(
       "{.arg probs} must be probabilities strictly between 0 and 1."
     )
   }
+  check_flag(transform, "transform")
+  tr <- active_transforms(object, transform)
   structure(
     list(
-      table = sn_summary(object$sn, probs = probs),
+      table = sn_summary(object$sn, probs = probs, transform = tr),
+      transform = tr,
       logml = object$logml,
       logml_laplace = object$logml_laplace,
       diagnostics = object$diagnostics$marginals,
@@ -292,6 +310,10 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cat_heading("Posterior marginals")
   cat_table(x$table, digits = digits, scale = x$table[, "SD"], rowid = TRUE)
   cli::cat_line()
+  if (!is.null(x$transform)) {
+    cat_transform_note(x$transform)
+    cli::cat_line()
+  }
 
   cat_heading("Diagnostics")
   # VB first, then the skew-normal checks in the order of their status
@@ -532,12 +554,15 @@ cat_width <- function(x, diag, env) {
 
 #' Posterior means of an INLAvanilla fit
 #'
-#' The posterior mean of each parameter, from its skew-normal marginal, on
-#' the unconstrained scale of `logpost`: the `Mean` column of
-#' [summary.inla_vanilla()]. These are the estimates INLAvaan's `coef()`
-#' gives. For a fit with `marginals = "gaussian"` they are the VB-corrected
-#' means, or, with `vb = "off"`, the mode. The joint posterior mode is
-#' `fit$mode`, and the VB-corrected mean `fit$mean_vb`.
+#' The posterior mean of each parameter, from its skew-normal marginal: the
+#' `Mean` column of the fit's summary table. A parameter named for its scale
+#' (`log_sigma`) is on its natural scale, under its natural name (`sigma`),
+#' unless the fit was made with `transform = FALSE`; the others are on the
+#' scale of `logpost`. These are the estimates INLAvaan's `coef()` gives. For
+#' a fit with `marginals = "gaussian"` and no transformed parameters they are
+#' the VB-corrected means, or, with `vb = "off"`, the mode. The joint
+#' posterior mode is `fit$mode`, and the VB-corrected mean `fit$mean_vb`,
+#' both on the scale of `logpost`.
 #'
 #' @param object An object of class `inla_vanilla`.
 #' @param ... Unused.
@@ -552,11 +577,14 @@ coef.inla_vanilla <- function(object, ...) {
 #' Plot an INLAvanilla fit
 #'
 #' By default (`type = "marg_pdf"`), draws the marginal density of each
-#' parameter, on the unconstrained scale, with the Gaussian marginal of the
-#' Laplace approximation for comparison. The vertical line marks the
-#' posterior mean. For a fit with `marginals = "gaussian"` the marginals are
-#' Gaussian: centred at the VB mean, or, with `vb = "off"`, the Laplace
-#' marginals themselves, drawn without a second copy.
+#' parameter, with the Gaussian marginal of the Laplace approximation for
+#' comparison. The vertical line marks the posterior mean. A parameter named
+#' for its scale (`log_sigma`) is drawn on its natural scale, as `sigma`:
+#' both densities are carried there by the change of variables, so the
+#' Laplace curve is the density that a Gaussian `log_sigma` gives `sigma`.
+#' For a fit with `marginals = "gaussian"` the marginals are Gaussian on the
+#' scale of `logpost`: centred at the VB mean, or, with `vb = "off"`, the
+#' Laplace marginals themselves, drawn without a second copy.
 #'
 #' `type = "sn_fit"` shows each skew-normal fit against the scan it was
 #' fitted to, as INLAvaan's `plot(type = "sn_fit")` does. The x axis is the
@@ -568,16 +596,22 @@ coef.inla_vanilla <- function(object, ...) {
 #' the peak, is the NMAD of [summary.inla_vanilla()]. `type = "sn_fit_log"`
 #' draws the same on a base-10 log scale, which shows the tails. Both use the
 #' scans kept in the fit, with no further calls of `logpost`, and need
-#' skew-normal marginals.
+#' skew-normal marginals. They show the scale the fit was made on, whatever
+#' `transform`.
 #'
 #' @param x An object of class `inla_vanilla`.
-#' @param pars Parameters to plot, by name or position. Defaults to all.
+#' @param pars Parameters to plot, by position or by name: the name in
+#'   `init` or, for a transformed parameter, its natural-scale name. Defaults
+#'   to all.
 #' @param type The plot: `"marg_pdf"` (the default) for the marginal
 #'   densities, `"sn_fit"` for each skew-normal fit against its scan, or
 #'   `"sn_fit_log"` for the same on a log scale, as INLAvaan names them.
 #' @param laplace Logical. Overlay the Laplace (Gaussian) marginals? Default
 #'   `TRUE`; ignored when the marginals are the Laplace ones, and by the
 #'   `"sn_fit"` plots.
+#' @param transform Logical. Draw the transformed parameters on their natural
+#'   scale? Default `TRUE`. `FALSE` draws every marginal on the scale of
+#'   `logpost`. Ignored by the `"sn_fit"` plots.
 #' @param ... Further graphical parameters passed to [graphics::plot()] for
 #'   each panel, such as `xlab` or `main`; they replace the defaults (the
 #'   parameter name as the title, no axis labels, and for `"marg_pdf"` no y
@@ -590,18 +624,23 @@ plot.inla_vanilla <- function(
   pars = NULL,
   type = c("marg_pdf", "sn_fit", "sn_fit_log"),
   laplace = TRUE,
+  transform = TRUE,
   ...
 ) {
   type <- check_choice(type, c("marg_pdf", "sn_fit", "sn_fit_log"), "type")
   check_flag(laplace, "laplace")
+  check_flag(transform, "transform")
   sn <- x$sn
+  tr <- active_transforms(x, transform)
   idx <- if (is.null(pars)) seq_len(nrow(sn)) else pars
   if (is.character(idx)) {
-    bad <- setdiff(idx, rownames(sn))
+    # By the name in logpost or, for a transformed parameter, its natural one
+    known <- c(rownames(sn), x$transform$name)
+    bad <- setdiff(idx, known)
     if (length(bad) > 0L) {
       abort("Unknown parameter{?s}: {.val {bad}}.")
     }
-    idx <- match(idx, rownames(sn))
+    idx <- (match(idx, known) - 1L) %% nrow(sn) + 1L
   }
   if (
     !is.numeric(idx) ||
@@ -612,7 +651,7 @@ plot.inla_vanilla <- function(
     abort("{.arg pars} must name or index parameters of the fit.")
   }
   if (type == "marg_pdf") {
-    plot_marginals(x, idx, laplace, ...)
+    plot_marginals(x, idx, laplace, tr, ...)
   } else {
     if (is.null(x$scan)) {
       abort(c(
@@ -659,8 +698,11 @@ plot_panels <- function(idx, draw, legend = NULL, mar = c(2.5, 1, 2, 1)) {
   }
 }
 
-# The marginal densities, with the Laplace marginals overlaid.
-plot_marginals <- function(x, idx, laplace, ...) {
+# The marginal densities, with the Laplace marginals overlaid. A parameter
+# with a transform in `tr` is drawn on its natural scale: both densities
+# through natural_density(), on a grid that is even on that scale, with the
+# line at the natural-scale mean.
+plot_marginals <- function(x, idx, laplace, tr = NULL, ...) {
   sn <- x$sn
   col_sn <- "#C2410C"
   col_lap <- "#0F766E"
@@ -684,16 +726,39 @@ plot_marginals <- function(x, idx, laplace, ...) {
     )
     q_lap <- stats::qnorm(c(0.0005, 0.9995), x$mode[j], lap_sd)
     lims <- if (laplace) range(q_sn, q_lap) else q_sn
+    d_sn <- function(t) dsnorm(t, sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
+    d_lap <- function(t) stats::dnorm(t, x$mode[j], lap_sd)
+    mean_j <- mom$mean[j]
+    title <- rownames(sn)[j]
+    if (!is.null(tr) && tr$transform[j] != "identity") {
+      tf <- transform_dict[[tr$transform[j]]]
+      lims <- tf$inverse(lims)
+      theta_sn <- d_sn
+      theta_lap <- d_lap
+      d_sn <- function(t) natural_density(t, theta_sn, tf)
+      d_lap <- function(t) natural_density(t, theta_lap, tf)
+      mean_j <- if (tr$transform[j] == "log") {
+        lognormal_moments(sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])$mean
+      } else {
+        natural_moments(
+          sn[j, "xi"],
+          sn[j, "omega"],
+          sn[j, "alpha"],
+          tf$inverse
+        )$mean
+      }
+      title <- tr$name[j]
+    }
     tt <- seq(lims[1], lims[2], length.out = 400)
-    f_sn <- dsnorm(tt, sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
-    f_lap <- stats::dnorm(tt, x$mode[j], lap_sd)
+    f_sn <- d_sn(tt)
+    f_lap <- d_lap(tt)
     args <- utils::modifyList(
       list(
         x = tt,
         y = f_sn,
         type = "n",
         ylim = c(0, max(f_sn, if (laplace) f_lap) * 1.05),
-        main = rownames(sn)[j],
+        main = title,
         font.main = 1,
         xlab = "",
         ylab = "",
@@ -713,14 +778,7 @@ plot_marginals <- function(x, idx, laplace, ...) {
     if (laplace) {
       graphics::lines(tt, f_lap, lty = 2, lwd = 1.5, col = col_lap)
     }
-    graphics::segments(
-      mom$mean[j],
-      0,
-      mom$mean[j],
-      dsnorm(mom$mean[j], sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"]),
-      col = col_sn,
-      lty = 3
-    )
+    graphics::segments(mean_j, 0, mean_j, d_sn(mean_j), col = col_sn, lty = 3)
   }
   legend <- if (laplace) {
     list(

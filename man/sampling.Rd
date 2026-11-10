@@ -7,7 +7,7 @@
 \usage{
 sampling(object, ...)
 
-\method{sampling}{inla_vanilla}(object, nsamp = 1000L, fun = NULL, ...)
+\method{sampling}{inla_vanilla}(object, nsamp = 1000L, fun = NULL, ..., transform = TRUE)
 }
 \arguments{
 \item{object}{An object to draw from.}
@@ -23,10 +23,15 @@ number of draws. Give such data a longer name, or wrap it in \code{fun}.}
 named numeric vector, like \code{logpost}, and returns a numeric vector of a
 fixed length (named, ideally). When \code{NULL}, the parameters themselves are
 returned.}
+
+\item{transform}{Logical. Return the transformed parameters on their
+natural scale? Default \code{TRUE}. \code{FALSE} returns every parameter on the
+scale of \code{logpost}. It must be named in full, and has no effect on what
+\code{fun} receives.}
 }
 \value{
-A numeric matrix with one row per draw: the parameters on the
-unconstrained scale, or the values of \code{fun}.
+A numeric matrix with one row per draw: the parameters, with the
+transformed ones on their natural scale, or the values of \code{fun}.
 }
 \description{
 Draws from the approximate joint posterior by a Gaussian copula: the
@@ -41,8 +46,13 @@ Gaussian \eqn{N(\tilde\vartheta, \Omega)}, centred at the VB mean (or at
 the mode when \code{vb = "off"}).
 
 Draws never call the log-posterior, so they are cheap: large \code{nsamp} costs
-little. Use \code{fun} for natural-scale or derived quantities, such as
-\code{exp(log_sigma)} or a covariance matrix built from several parameters.
+little. A parameter named for its scale (\code{log_sigma}, \code{logit_p},
+\code{atanh_rho}) is returned on its natural scale, in a column named \code{sigma},
+\code{p} or \code{rho} (see the section on natural-scale summaries in
+\code{\link[=inla_vanilla]{inla_vanilla()}}). Use \code{fun} for quantities of several parameters, such as
+a ratio or a covariance matrix. \code{fun} is written as \code{logpost} is: it
+receives each draw on the scale of \code{logpost}, under the names in \code{init},
+whatever \code{transform}.
 }
 \examples{
 set.seed(1)
@@ -55,8 +65,12 @@ logpost <- function(theta, y) {
 }
 fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 
+# Draws of mu and sigma: the parameter named log_sigma comes back as sigma
 draws <- sampling(fit, nsamp = 2000)
 head(draws)
+
+# The same draws as logpost sees them
+head(sampling(fit, nsamp = 2000, transform = FALSE))
 
 # A derived quantity: the coefficient of variation sigma / mu
 cv <- sampling(fit, nsamp = 2000, fun = function(theta) {

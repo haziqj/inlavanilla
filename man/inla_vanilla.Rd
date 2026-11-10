@@ -14,6 +14,7 @@ inla_vanilla(
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
+  transform = TRUE,
   cores = NULL,
   verbose = FALSE,
   silent = FALSE,
@@ -42,8 +43,9 @@ from the Matrix package, and a number when m = 1, work too). It needs
 \item{...}{Further arguments passed to \code{logpost}, \code{grad} and \code{hess}, such
 as the data. As in \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the gradient and
 the Hessian, and the arguments after them (\code{vb}, \code{marginals}, \code{width},
-\code{tk_fallback}, \code{cores}, \code{verbose}, \code{silent}, \code{control}) must be given by
-their full names, so data arguments cannot partially match them. A data
+\code{tk_fallback}, \code{transform}, \code{cores}, \code{verbose}, \code{silent}, \code{control}) must
+be given by their full names, so data arguments cannot partially match
+them. A data
 argument cannot take one of those names. The arguments before them can be
 matched, as in \code{nlminb()}: a data argument named \code{g} or \code{gr} would be
 taken as \code{grad}, and one named \code{h} or \code{he} as \code{hess}, so give it a
@@ -95,6 +97,11 @@ marginals whatever its diagnostics. The parameters rescanned are listed
 in \code{fit$fallback} and by \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. Ignored for Gaussian
 marginals and with \code{width = "tk"}.}
 
+\item{transform}{Logical. Report a parameter named \code{log_x}, \code{logit_x} or
+\code{atanh_x} on its natural scale, as \code{x}? Default \code{TRUE}. \code{FALSE} reports
+every parameter on the scale of \code{logpost}. Either way the fit itself is
+the same (see the section on natural-scale summaries).}
+
 \item{cores}{The number of CPU cores for the skew-normal scans, and for
 \code{\link[=loo]{loo()}} and \code{\link[=waic]{waic()}} on this fit. \code{NULL}, the default, follows
 \code{future::plan()}, and is serial if no plan is set. \code{1} is serial whatever
@@ -116,8 +123,14 @@ An object of class \code{inla_vanilla}, with methods for \code{\link[=print]{pri
 \code{\link[=timing]{timing()}}. It is a list
 holding, among other things:
 \itemize{
-\item \code{summary}: the posterior summary table (mean, SD, quantiles, mode).
-\item \code{mode}, \code{cov}: the Laplace mode and covariance.
+\item \code{summary}: the posterior summary table (mean, SD, quantiles, mode),
+with the transformed parameters on their natural scale.
+\item \code{transform}: a data frame with a row per parameter: its name in \code{init}
+(\code{parameter}), the name it is reported under (\code{name}) and its
+transform (\code{transform}: \code{"log"}, \code{"logit"}, \code{"atanh"}, or \code{"identity"}
+for none).
+\item \code{mode}, \code{cov}: the Laplace mode and covariance, on the scale of
+\code{logpost}, as is everything below.
 \item \code{mean_vb}: the VB-corrected mean (the mode when \code{vb = "off"}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
 parameter (with \code{alpha = 0} for Gaussian marginals).
@@ -213,13 +226,60 @@ the same one, and nothing downstream can detect it.
 The choice of parameterisation also sets the quality of the approximation,
 since each parameter gets its own skew-normal on the scale you choose.
 Scales on which the posterior is close to Gaussian (log standard
-deviations, Fisher-\eqn{z} correlations, logits) work best. Natural-scale or
-derived quantities are available through \code{sampling(fit, fun = ...)}.
+deviations, Fisher-\eqn{z} correlations, logits) work best. A parameter
+named for its scale is reported on the natural one (see the next section),
+and other derived quantities are available through
+\code{sampling(fit, fun = ...)}.
 
 The log marginal likelihood is an estimate of \eqn{\log p(y)} only when
 \code{logpost} returns the full \eqn{\log p(y, \vartheta)}, including every
 normalising constant of the likelihood and the prior. Otherwise it is off by
 the missing constants.
+}
+
+\section{Natural-scale summaries}{
+
+Name a parameter for the scale it is on and the results are reported on
+its natural scale. The name is a prefix from the table, an underscore, and
+the name of the natural-scale parameter:\tabular{lll}{
+   Name in \code{init} \tab \code{logpost} receives \tab Reported as \cr
+   \code{log_sigma} \tab \eqn{\log\sigma}{log(sigma)} \tab \code{sigma}, \eqn{e^\vartheta}{exp(theta)} \cr
+   \code{logit_p} \tab \eqn{\log\{p / (1 - p)\}}{log(p / (1 - p))} \tab \code{p}, \eqn{1 / (1 + e^{-\vartheta})}{plogis(theta)} \cr
+   \code{atanh_rho} \tab \eqn{\operatorname{artanh}\rho}{atanh(rho)} \tab \code{rho}, \eqn{\tanh\vartheta}{tanh(theta)} \cr
+}
+
+
+The log suits a positive parameter (an SD, a variance, a precision, a
+rate or a shape), the logit one between 0 and 1 (a probability), and the
+inverse hyperbolic tangent, Fisher's \eqn{z}, one between -1 and 1 (a
+correlation).
+These are the scales R-INLA itself works on, for nearly all of its
+hyperparameters: the log, the logit, and for a correlation
+\eqn{\log\{(1 + \rho) / (1 - \rho)\}}{log((1 + rho) / (1 - rho))}, which
+is twice Fisher's \eqn{z}.
+
+Nothing changes in the fit. \code{logpost}, \code{grad}, \code{hess}, the \code{loglik} of
+\code{\link[=loo]{loo()}} and the \code{fun} of \code{\link[=sampling]{sampling()}} all receive the parameter under the
+name and on the scale of \code{init}, and \code{logpost} must still include the
+log-Jacobian of a prior stated on the natural scale. Only the results are
+mapped back, each from its own skew-normal marginal: \code{\link[=print]{print()}},
+\code{\link[=summary]{summary()}}, \code{\link[=coef]{coef()}} and \code{\link[=plot]{plot()}} show \code{sigma}, and \code{\link[=sampling]{sampling()}} returns
+draws of it. The quantiles are the fitted quantiles mapped through the
+transform. The mean, SD and mode are those of the natural-scale
+distribution, so the mean of \code{sigma} is not the exponential of the mean of
+\code{log_sigma}. A line under the table says which rows were mapped, and
+\code{fit$transform} lists them. The diagnostics stay on the scale of the
+computation, under the names in \code{init}.
+
+A prefix counts only when an underscore and a name follow it, in lower
+case, so \code{logistic}, \code{log_} and \code{Log_sigma} are left alone. A name that
+would clash, such as \code{log_sigma} beside a parameter called \code{sigma}, is
+left on its own scale with a warning. Only these one-to-one maps of a
+single parameter are recognised: a quantity that depends on several
+parameters, such as a covariance, comes from \code{sampling(fit, fun = ...)}.
+\code{transform = FALSE} reports every parameter as \code{logpost} receives it, and
+\code{summary()}, \code{plot()} and \code{sampling()} take the same argument for a fit
+already made.
 }
 
 \section{Accuracy}{
@@ -542,12 +602,18 @@ logpost <- function(theta, y) {
     theta[["log_sigma"]] # ... and its Jacobian
 }
 
+# The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
 fit
 
-# The posterior of sigma itself, through the draws
-sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
-quantile(sigma, c(0.025, 0.5, 0.975))
+# The same fit as logpost sees it
+summary(fit, transform = FALSE)$table
+
+# A quantity of several parameters, through the draws
+cv <- sampling(fit, fun = function(theta) {
+  exp(theta[["log_sigma"]]) / theta[["mu"]]
+})
+quantile(cv, c(0.025, 0.5, 0.975))
 
 # A full diagnostic of each stage
 fit <- inla_vanilla(

@@ -52,13 +52,58 @@
 #' The choice of parameterisation also sets the quality of the approximation,
 #' since each parameter gets its own skew-normal on the scale you choose.
 #' Scales on which the posterior is close to Gaussian (log standard
-#' deviations, Fisher-\eqn{z} correlations, logits) work best. Natural-scale or
-#' derived quantities are available through `sampling(fit, fun = ...)`.
+#' deviations, Fisher-\eqn{z} correlations, logits) work best. A parameter
+#' named for its scale is reported on the natural one (see the next section),
+#' and other derived quantities are available through
+#' `sampling(fit, fun = ...)`.
 #'
 #' The log marginal likelihood is an estimate of \eqn{\log p(y)} only when
 #' `logpost` returns the full \eqn{\log p(y, \vartheta)}, including every
 #' normalising constant of the likelihood and the prior. Otherwise it is off by
 #' the missing constants.
+#'
+#' @section Natural-scale summaries:
+#' Name a parameter for the scale it is on and the results are reported on
+#' its natural scale. The name is a prefix from the table, an underscore, and
+#' the name of the natural-scale parameter:
+#'
+#' | Name in `init` | `logpost` receives | Reported as |
+#' |---|---|---|
+#' | `log_sigma` | \eqn{\log\sigma}{log(sigma)} | `sigma`, \eqn{e^\vartheta}{exp(theta)} |
+#' | `logit_p` | \eqn{\log\{p / (1 - p)\}}{log(p / (1 - p))} | `p`, \eqn{1 / (1 + e^{-\vartheta})}{plogis(theta)} |
+#' | `atanh_rho` | \eqn{\operatorname{artanh}\rho}{atanh(rho)} | `rho`, \eqn{\tanh\vartheta}{tanh(theta)} |
+#'
+#' The log suits a positive parameter (an SD, a variance, a precision, a
+#' rate or a shape), the logit one between 0 and 1 (a probability), and the
+#' inverse hyperbolic tangent, Fisher's \eqn{z}, one between -1 and 1 (a
+#' correlation).
+#' These are the scales R-INLA itself works on, for nearly all of its
+#' hyperparameters: the log, the logit, and for a correlation
+#' \eqn{\log\{(1 + \rho) / (1 - \rho)\}}{log((1 + rho) / (1 - rho))}, which
+#' is twice Fisher's \eqn{z}.
+#'
+#' Nothing changes in the fit. `logpost`, `grad`, `hess`, the `loglik` of
+#' [loo()] and the `fun` of [sampling()] all receive the parameter under the
+#' name and on the scale of `init`, and `logpost` must still include the
+#' log-Jacobian of a prior stated on the natural scale. Only the results are
+#' mapped back, each from its own skew-normal marginal: [print()],
+#' [summary()], [coef()] and [plot()] show `sigma`, and [sampling()] returns
+#' draws of it. The quantiles are the fitted quantiles mapped through the
+#' transform. The mean, SD and mode are those of the natural-scale
+#' distribution, so the mean of `sigma` is not the exponential of the mean of
+#' `log_sigma`. A line under the table says which rows were mapped, and
+#' `fit$transform` lists them. The diagnostics stay on the scale of the
+#' computation, under the names in `init`.
+#'
+#' A prefix counts only when an underscore and a name follow it, in lower
+#' case, so `logistic`, `log_` and `Log_sigma` are left alone. A name that
+#' would clash, such as `log_sigma` beside a parameter called `sigma`, is
+#' left on its own scale with a warning. Only these one-to-one maps of a
+#' single parameter are recognised: a quantity that depends on several
+#' parameters, such as a covariance, comes from `sampling(fit, fun = ...)`.
+#' `transform = FALSE` reports every parameter as `logpost` receives it, and
+#' `summary()`, `plot()` and `sampling()` take the same argument for a fit
+#' already made.
 #'
 #' @section Accuracy:
 #' The skew-normal marginals capture skewness that the Laplace approximation
@@ -364,8 +409,9 @@
 #' @param ... Further arguments passed to `logpost`, `grad` and `hess`, such
 #'   as the data. As in [stats::nlminb()], they come after the gradient and
 #'   the Hessian, and the arguments after them (`vb`, `marginals`, `width`,
-#'   `tk_fallback`, `cores`, `verbose`, `silent`, `control`) must be given by
-#'   their full names, so data arguments cannot partially match them. A data
+#'   `tk_fallback`, `transform`, `cores`, `verbose`, `silent`, `control`) must
+#'   be given by their full names, so data arguments cannot partially match
+#'   them. A data
 #'   argument cannot take one of those names. The arguments before them can be
 #'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
 #'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
@@ -410,6 +456,10 @@
 #'   marginals whatever its diagnostics. The parameters rescanned are listed
 #'   in `fit$fallback` and by [summary.inla_vanilla()]. Ignored for Gaussian
 #'   marginals and with `width = "tk"`.
+#' @param transform Logical. Report a parameter named `log_x`, `logit_x` or
+#'   `atanh_x` on its natural scale, as `x`? Default `TRUE`. `FALSE` reports
+#'   every parameter on the scale of `logpost`. Either way the fit itself is
+#'   the same (see the section on natural-scale summaries).
 #' @param cores The number of CPU cores for the skew-normal scans, and for
 #'   [loo()] and [waic()] on this fit. `NULL`, the default, follows
 #'   `future::plan()`, and is serial if no plan is set. `1` is serial whatever
@@ -426,8 +476,14 @@
 #'   [summary()], [coef()], [plot()], [sampling()], [diagnostics()] and
 #'   [timing()]. It is a list
 #'   holding, among other things:
-#'   * `summary`: the posterior summary table (mean, SD, quantiles, mode).
-#'   * `mode`, `cov`: the Laplace mode and covariance.
+#'   * `summary`: the posterior summary table (mean, SD, quantiles, mode),
+#'     with the transformed parameters on their natural scale.
+#'   * `transform`: a data frame with a row per parameter: its name in `init`
+#'     (`parameter`), the name it is reported under (`name`) and its
+#'     transform (`transform`: `"log"`, `"logit"`, `"atanh"`, or `"identity"`
+#'     for none).
+#'   * `mode`, `cov`: the Laplace mode and covariance, on the scale of
+#'     `logpost`, as is everything below.
 #'   * `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
@@ -501,12 +557,18 @@
 #'     theta[["log_sigma"]] # ... and its Jacobian
 #' }
 #'
+#' # The parameter named log_sigma is reported as sigma
 #' fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
 #' fit
 #'
-#' # The posterior of sigma itself, through the draws
-#' sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
-#' quantile(sigma, c(0.025, 0.5, 0.975))
+#' # The same fit as logpost sees it
+#' summary(fit, transform = FALSE)$table
+#'
+#' # A quantity of several parameters, through the draws
+#' cv <- sampling(fit, fun = function(theta) {
+#'   exp(theta[["log_sigma"]]) / theta[["mu"]]
+#' })
+#' quantile(cv, c(0.025, 0.5, 0.975))
 #'
 #' # A full diagnostic of each stage
 #' fit <- inla_vanilla(
@@ -535,6 +597,7 @@ inla_vanilla <- function(
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
+  transform = TRUE,
   cores = NULL,
   verbose = FALSE,
   silent = FALSE,
@@ -561,6 +624,7 @@ inla_vanilla <- function(
   marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
   width <- check_choice(width, c("trace", "cmp", "tk"), "width")
   check_flag(tk_fallback, "tk_fallback")
+  check_flag(transform, "transform")
   cores <- check_cores(cores)
   check_flag(verbose, "verbose")
   check_flag(silent, "silent")
@@ -596,6 +660,7 @@ inla_vanilla <- function(
       marginals = marginals,
       width = width,
       tk_fallback = tk_fallback,
+      transform = transform,
       cores = cores,
       ctrl = ctrl,
       prog = prog,
@@ -687,6 +752,7 @@ vanilla_fit <- function(
   marginals,
   width,
   tk_fallback,
+  transform,
   cores,
   ctrl,
   prog,
@@ -695,6 +761,9 @@ vanilla_fit <- function(
 ) {
   m <- length(init)
   parnames <- names(init)
+  # Which parameters are reported on the natural scale, read from their names.
+  # Only the methods use it: every stage below works on the scale of logpost.
+  transform <- detect_transforms(parnames, transform)
   has_grad <- !is.null(grad_x)
   has_hess <- !is.null(hess_x)
 
@@ -1100,6 +1169,7 @@ vanilla_fit <- function(
     width = if (skew) width else NA_character_,
     tk_fallback = tk_fallback,
     fallback = if (skew) parnames[method != width] else character(),
+    transform = transform,
     has_grad = has_grad,
     verbose = prog$detail,
     silent = !prog$show,
@@ -1126,6 +1196,7 @@ new_inla_vanilla <- function(
   width,
   tk_fallback,
   fallback,
+  transform,
   has_grad,
   verbose,
   silent,
@@ -1134,7 +1205,7 @@ new_inla_vanilla <- function(
 ) {
   structure(
     list(
-      summary = sn_summary(sn),
+      summary = sn_summary(sn, transform = transform),
       sn = sn,
       mode = mode,
       cov = cov,
@@ -1152,6 +1223,7 @@ new_inla_vanilla <- function(
       width = width,
       tk_fallback = tk_fallback,
       fallback = fallback,
+      transform = transform,
       has_grad = has_grad,
       verbose = verbose,
       silent = silent,
@@ -1163,8 +1235,10 @@ new_inla_vanilla <- function(
 }
 
 # Posterior summary table from the skew-normal marginals: moments in closed
-# form, quantiles by inversion, and the mode numerically.
-sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975)) {
+# form, quantiles by inversion, and the mode numerically. With `transform`
+# (from detect_transforms()), the rows of its transformed parameters are on
+# the natural scale, under their natural names (see natural_summary()).
+sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975), transform = NULL) {
   m <- nrow(sn)
   mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
   qq <- matrix(NA_real_, m, length(probs))
@@ -1178,6 +1252,18 @@ sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975)) {
     rownames(sn),
     c("Mean", "SD", format_probs(probs), "Mode")
   )
+  if (!is.null(transform)) {
+    for (j in which(transform$transform != "identity")) {
+      tab[j, ] <- natural_summary(
+        sn[j, "xi"],
+        sn[j, "omega"],
+        sn[j, "alpha"],
+        transform$transform[j],
+        probs
+      )
+    }
+    rownames(tab) <- transform$name
+  }
   tab
 }
 

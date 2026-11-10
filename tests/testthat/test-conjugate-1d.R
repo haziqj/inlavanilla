@@ -627,16 +627,20 @@ expect_stages_exact <- function(fit, model, gradient, vb_tol, vb_logml_tol) {
 }
 
 fit_both_ways <- function(model, init) {
+  # On the scale of logpost, where the references are: a parameter named
+  # log_lambda would otherwise be reported as lambda (see test-transform.R)
   list(
     finite_differences = inla_vanilla(
       model$logpost,
       init = init,
+      transform = FALSE,
       silent = TRUE
     ),
     analytic = inla_vanilla(
       model$logpost,
       init = init,
       grad = model$grad,
+      transform = FALSE,
       silent = TRUE
     )
   )

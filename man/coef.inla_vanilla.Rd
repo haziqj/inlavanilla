@@ -15,10 +15,13 @@
 A named numeric vector, with one posterior mean per parameter.
 }
 \description{
-The posterior mean of each parameter, from its skew-normal marginal, on
-the unconstrained scale of \code{logpost}: the \code{Mean} column of
-\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. These are the estimates INLAvaan's \code{coef()}
-gives. For a fit with \code{marginals = "gaussian"} they are the VB-corrected
-means, or, with \code{vb = "off"}, the mode. The joint posterior mode is
-\code{fit$mode}, and the VB-corrected mean \code{fit$mean_vb}.
+The posterior mean of each parameter, from its skew-normal marginal: the
+\code{Mean} column of the fit's summary table. A parameter named for its scale
+(\code{log_sigma}) is on its natural scale, under its natural name (\code{sigma}),
+unless the fit was made with \code{transform = FALSE}; the others are on the
+scale of \code{logpost}. These are the estimates INLAvaan's \code{coef()} gives. For
+a fit with \code{marginals = "gaussian"} and no transformed parameters they are
+the VB-corrected means, or, with \code{vb = "off"}, the mode. The joint
+posterior mode is \code{fit$mode}, and the VB-corrected mean \code{fit$mean_vb},
+both on the scale of \code{logpost}.
 }

@@ -544,6 +544,7 @@ test_that("normal data with unknown mean and variance give the exact Laplace ste
       nig$logpost,
       init = c(mu = 0, log_sigma = 0),
       grad = gr,
+      transform = FALSE,
       silent = TRUE
     )
     sds <- sqrt(diag(nig$joint_cov))
@@ -569,6 +570,7 @@ test_that("normal data with unknown mean and variance give accurate marginals", 
       nig$logpost,
       init = c(mu = 0, log_sigma = 0),
       grad = gr,
+      transform = FALSE,
       silent = TRUE
     )
 
@@ -889,6 +891,7 @@ test_that("a non-conjugate Weibull posterior is recovered against 2D quadrature"
       weib$logpost,
       init = c(log_shape = 0, log_scale = 0),
       grad = gr,
+      transform = FALSE,
       silent = TRUE
     )
     err_shape <- marginal_errors(fit, "log_shape", ref$log_shape)
@@ -1021,6 +1024,7 @@ test_that("permuting the parameters permutes the marginals (analytic gradient)",
     weib$logpost,
     init = c(log_shape = 0, log_scale = 0),
     grad = weib$grad,
+    transform = FALSE,
     silent = TRUE
   )
   logpost_perm <- function(theta) {
@@ -1033,6 +1037,7 @@ test_that("permuting the parameters permutes the marginals (analytic gradient)",
     logpost_perm,
     init = c(log_scale = 0, log_shape = 0),
     grad = grad_perm,
+    transform = FALSE,
     silent = TRUE
   )
   expect_equal(rownames(fit2$summary), c("log_scale", "log_shape"))
