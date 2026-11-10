@@ -1,5 +1,10 @@
 # inlavanilla (development version)
 
+* A new article, "Latent variables", shows how to draw random effects, class
+  memberships and other latent variables after a fit, with
+  `sampling(fit, fun = )`: from a closed form, by summing over classes, from
+  a grid, and from an RTMB object with random effects.
+
 * A parameter named for the scale it is on is now reported on its natural
   scale. With `init = c(mu = 0, log_sigma = 0)`, `print()`, `summary()`,
   `coef()` and `plot()` show `sigma`, and `sampling()` returns draws of it.
