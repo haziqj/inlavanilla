@@ -453,7 +453,7 @@ test_that("print() and summary() say which rows are on the natural scale", {
   expect_true(all(nchar(capture.output(print(nm_fit))) <= 80))
 })
 
-test_that("many transformed parameters are counted, not listed", {
+test_that("many transformed parameters are grouped by transform", {
   nms <- c(paste0("log_s", 1:4), "atanh_r", "b")
   lp <- function(theta) sum(dnorm(theta, 0, 0.3, log = TRUE))
   fit <- inla_vanilla(
@@ -466,7 +466,7 @@ test_that("many transformed parameters are counted, not listed", {
   out <- capture.output(print(fit))
   expect_match(
     out[length(out)],
-    "Natural scale: exp\\(\\) of 4 log_ parameters, tanh\\(\\) of 1 atanh_ parameter\\.$"
+    "Natural scale: exp\\(\\) for s1, s2, s3, s4; tanh\\(\\) for r\\.$"
   )
   expect_true(all(nchar(out) <= 80))
   # four or fewer are listed in full
@@ -479,6 +479,21 @@ test_that("many transformed parameters are counted, not listed", {
   )
   note <- gsub(" +", " ", paste(capture.output(print(fit)), collapse = " "))
   expect_match(note, "s4 = exp\\(log_s4\\), r = tanh\\(atanh_r\\)\\.")
+  # a long group names its first five and counts the rest
+  nms <- c(paste0("log_s", 1:8), "logit_p")
+  fit <- inla_vanilla(
+    lp,
+    stats::setNames(numeric(9), nms),
+    marginals = "gaussian",
+    vb = "off",
+    silent = TRUE
+  )
+  out <- capture.output(print(fit))
+  expect_match(
+    out[length(out)],
+    "exp\\(\\) for s1, s2, s3, s4, s5 and 3 more; plogis\\(\\) for p\\.$"
+  )
+  expect_true(all(nchar(out) <= 80))
 })
 
 test_that("sampling() returns natural-scale draws, and fun still gets theta", {

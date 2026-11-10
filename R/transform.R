@@ -193,18 +193,21 @@ natural_draws <- function(theta, tr) {
 }
 
 # The line under a table that has natural-scale rows, saying which they are
-# and how each was obtained: each one in full when there are at most `n`, and
-# otherwise a count for each transform. The names are pasted as plain text and
-# never pass through a cli template.
-cat_transform_note <- function(tr, n = 4L) {
+# and how each was obtained. With at most `n` of them each is given in full
+# ("sigma = exp(log_sigma)"). With more, they are grouped by transform under
+# their natural names ("exp() for sigma_1, sigma_2, tau"), which loses nothing,
+# since the name in `init` is the prefix and the name shown. A group shows at
+# most `each` names and counts the rest. The names are pasted as plain text
+# and never pass through a cli template.
+cat_transform_note <- function(tr, n = 4L, each = 5L) {
   rows <- which(tr$transform != "identity")
   calls <- vapply(
     names(transform_dict),
     function(k) transform_dict[[k]]$call,
     ""
   )
-  items <- if (length(rows) <= n) {
-    paste0(
+  if (length(rows) <= n) {
+    items <- paste0(
       tr$name[rows],
       " = ",
       calls[tr$transform[rows]],
@@ -212,23 +215,34 @@ cat_transform_note <- function(tr, n = 4L) {
       tr$parameter[rows],
       ")"
     )
+    sep <- ", "
   } else {
-    count <- table(factor(tr$transform[rows], names(transform_dict)))
-    count <- count[count > 0]
-    paste0(
-      calls[names(count)],
-      "() of ",
-      count,
-      " ",
-      names(count),
-      "_ parameter",
-      ifelse(count == 1, "", "s")
+    groups <- split(
+      tr$name[rows],
+      factor(tr$transform[rows], names(transform_dict)),
+      drop = TRUE
     )
+    items <- vapply(
+      names(groups),
+      function(k) {
+        nms <- groups[[k]]
+        more <- length(nms) - each
+        shown <- paste(utils::head(nms, each), collapse = ", ")
+        paste0(
+          calls[[k]],
+          "() for ",
+          shown,
+          if (more > 0) paste0(" and ", more, " more")
+        )
+      },
+      ""
+    )
+    sep <- "; "
   }
   cat_wrap(
     paste0(
       col_vanilla(cli::symbol$info),
-      cli::col_grey(" Natural scale: ", paste(items, collapse = ", "), ".")
+      cli::col_grey(" Natural scale: ", paste(items, collapse = sep), ".")
     ),
     exdent = 2
   )
