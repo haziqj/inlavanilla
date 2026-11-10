@@ -1,5 +1,12 @@
 # inlavanilla (development version)
 
+* New `rtmb_latent()` draws the random effects of an RTMB or TMB object after
+  a fit: `sampling(fit, fun = rtmb_latent(obj))` gives the posterior of the
+  latent variables that the object integrates out, from the Gaussian
+  approximation at their mode given each draw of the parameters. The package
+  still calls nothing of RTMB itself. Matrix and RTMB are in Suggests, for
+  the sparse Cholesky factor and for the tests.
+
 * A new article, "Latent variables", shows how to draw random effects, class
   memberships and other latent variables after a fit, with
   `sampling(fit, fun = )`: from a closed form, by summing over classes, from
