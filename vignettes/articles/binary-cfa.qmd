@@ -154,15 +154,13 @@ fit <- inla_vanilla(
 fit
 ```
 
-Quantiles carry over through $\tanh$, so the loadings' 95% intervals and
-medians are those of $\operatorname{atanh} \lambda_j$, transformed. Next to
-the true values:
+The loadings are named for the scale they are on, `atanh_lambda1` and so
+on, so the fit reports them as the loadings themselves (see the article on
+[natural-scale summaries](natural-scale.html)). Next to the true values:
 
 ```{r}
 #| label: truth
 q <- fit$summary[, c("2.5%", "50%", "97.5%")]
-q[1:6, ] <- tanh(q[1:6, ])
-rownames(q) <- c(paste0("lambda", 1:6), paste0("tau", 1:6))
 round(cbind(true = c(lambda, tau), q), 3)
 ```
 

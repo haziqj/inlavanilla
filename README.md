@@ -62,7 +62,8 @@ and bounded at zero.
 
 `inla_vanilla()` works on an unconstrained scale, so we write the
 log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
-stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$:
+stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$.
+Naming the parameter `logit_p` says which scale it is on:
 
 ``` r
 library(inlavanilla)
@@ -75,41 +76,42 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.17σ [13ms]
-#> ✔ Fitted 1 skew-normal marginal [18ms]
+#> ✔ Found the posterior mode in 6 iterations [3ms]
+#> ✔ VB mean correction, max shift 0.17σ [15ms]
+#> ✔ Fitted 1 skew-normal marginal [19ms]
 fit
 #> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (37ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (42ms)
 #> 
-#>              Mean     SD    2.5%     50%   97.5%    Mode
-#> 1 logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494
+#>        Mean      SD    2.5%     50%   97.5%    Mode
+#> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
+#> 
+#> ℹ Natural scale: p = plogis(logit_p).
 ```
 
-The summary is on the logit scale. `sampling()` draws from the
-approximate posterior, and its `fun` argument maps each draw back to
-$p$, or to any other quantity of interest:
+The fit is made on the logit scale, and because of its name the
+parameter is reported as $p$ itself. The same goes for `log_` and
+`atanh_`, as in `log_sigma` and `atanh_rho`. The summary matches the
+exact posterior:
+
+``` r
+rbind(
+  inlavanilla = fit$summary["p", c("2.5%", "50%", "97.5%")],
+  exact = qbeta(c(0.025, 0.5, 0.975), 4, 18)
+)
+#>                   2.5%       50%    97.5%
+#> inlavanilla 0.05491963 0.1722897 0.363167
+#> exact       0.05446357 0.1720895 0.363424
+```
+
+`sampling()` draws from the approximate posterior, and its `fun`
+argument maps each draw to any other quantity of interest. The draws
+have the skew of the exact posterior:
 
 ``` r
 set.seed(1)
-p <- sampling(
-  fit,
-  nsamp = 1e5,
-  fun = function(theta) plogis(theta[["logit_p"]])
-)
-rbind(
-  inlavanilla = quantile(p, c(0.025, 0.5, 0.975)),
-  exact = qbeta(c(0.025, 0.5, 0.975), 4, 18)
-)
-#>                   2.5%       50%     97.5%
-#> inlavanilla 0.05443460 0.1723549 0.3645844
-#> exact       0.05446357 0.1720895 0.3634240
-```
-
-The approximation matches the exact posterior, skew included:
-
-``` r
+p <- sampling(fit, nsamp = 1e5)[, "p"]
 hist(p, breaks = 80, freq = FALSE, border = NA, col = "#F5D0BE",
      main = NULL, xlab = "Response rate p", ylab = NULL, yaxt = "n")
 curve(dbeta(x, 4, 18), add = TRUE, lwd = 2, col = "#C2410C")
@@ -122,7 +124,9 @@ curve(dbeta(x, 4, 18), add = TRUE, lwd = 2, col = "#C2410C")
 started](http://haziqj.ml/inlavanilla/articles/inlavanilla.html)
 vignette works through a multi-parameter example: it checks the
 approximation against the exact posterior, and covers gradients, derived
-quantities and model comparison.
+quantities and model comparison. [Natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html)
+explains the naming of parameters.
 
 ## References
 

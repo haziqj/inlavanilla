@@ -180,10 +180,13 @@ gp_logpost <- function(theta) {
     theta[[1]]
 }
 gp_grad <- function(theta) gp_S - gp_R * exp(theta[[1]])
+# On the scale of logpost, which these tests check: the draws of a parameter
+# named log_lambda would otherwise be those of lambda (see test-transform.R)
 gp_fit <- inla_vanilla(
   gp_logpost,
   c(log_lambda = 0),
   grad = gp_grad,
+  transform = FALSE,
   silent = TRUE
 )
 

@@ -1,6 +1,7 @@
 # Skew-normal utilities, ported from INLAvaan. Everything here is internal: the
-# fitted marginals are summarised by the package itself, and users who want
-# densities or quantiles on another scale go through sampling().
+# fitted marginals are summarised by the package itself, on the natural scale
+# for the transforms of R/transform.R, and users who want densities or
+# quantiles on any other scale go through sampling().
 
 # Log or plain density of SN(xi, omega, alpha), with an optional log-constant.
 dsnorm <- function(x, xi, omega, alpha, logC = 0, log = FALSE) {
