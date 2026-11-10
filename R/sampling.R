@@ -26,9 +26,10 @@
 #'   fixed length (named, ideally). When `NULL`, the parameters themselves are
 #'   returned.
 #' @param ... For the `inla_vanilla` method, further arguments passed to
-#'   `fun`. As in [stats::optim()], a name that abbreviates `nsamp` or `fun`
-#'   would be taken as that argument: a data argument named `n` would set the
-#'   number of draws. Give such data a longer name, or wrap it in `fun`.
+#'   `fun`. As in [stats::optim()], a name that abbreviates `object`, `nsamp`
+#'   or `fun` would be taken as that argument: a data argument named `n` would
+#'   set the number of draws, and one named `obj` would be taken for the fit.
+#'   Give such data another name, or wrap it in `fun`.
 #' @param transform Logical. Return the transformed parameters on their
 #'   natural scale? Default `TRUE`. `FALSE` returns every parameter on the
 #'   scale of `logpost`. It must be named in full, and has no effect on what

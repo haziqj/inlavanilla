@@ -13,9 +13,10 @@ sampling(object, ...)
 \item{object}{An object to draw from.}
 
 \item{...}{For the \code{inla_vanilla} method, further arguments passed to
-\code{fun}. As in \code{\link[stats:optim]{stats::optim()}}, a name that abbreviates \code{nsamp} or \code{fun}
-would be taken as that argument: a data argument named \code{n} would set the
-number of draws. Give such data a longer name, or wrap it in \code{fun}.}
+\code{fun}. As in \code{\link[stats:optim]{stats::optim()}}, a name that abbreviates \code{object}, \code{nsamp}
+or \code{fun} would be taken as that argument: a data argument named \code{n} would
+set the number of draws, and one named \code{obj} would be taken for the fit.
+Give such data another name, or wrap it in \code{fun}.}
 
 \item{nsamp}{Number of draws.}
 
