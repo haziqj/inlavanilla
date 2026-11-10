@@ -65,7 +65,7 @@ logpost_pois <- function(theta, X, y) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
-#> ✔ Found the posterior mode in 29 iterations [12ms]
+#> ✔ Found the posterior mode in 29 iterations [16ms]
 #> ✔ VB mean correction, max shift 0.025σ [17ms]
 #> ✔ Fitted 6 skew-normal marginals [24ms]
 ```
@@ -246,7 +246,7 @@ time_loo <- system.time(loo(fit_nb, loglik_nb, X = X, y = y))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  4.820  0.004
+#>  4.482  0.005
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1478
