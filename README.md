@@ -78,12 +78,12 @@ logpost <- function(theta, y, n) {
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 #> ✔ Found the posterior mode in 6 iterations [3ms]
-#> ✔ VB mean correction, max shift 0.17σ [15ms]
-#> ✔ Fitted 1 skew-normal marginal [21ms]
+#> ✔ VB mean correction, max shift 0.17σ [14ms]
+#> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (45ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (41ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
@@ -91,26 +91,13 @@ fit
 #> ℹ Natural scale: p = plogis(logit_p).
 ```
 
-The table has a row for `p`, not `logit_p`. The fit is made on the logit
-scale, and because of the parameter’s name the results are reported for
-$p$ itself, as the last line of the output says. Three prefixes are read
-this way:
-
-| Name in `init` | Reported as | Through    |
-|:---------------|:------------|:-----------|
-| `log_sigma`    | `sigma`     | `exp()`    |
-| `logit_p`      | `p`         | `plogis()` |
-| `atanh_rho`    | `rho`       | `tanh()`   |
-
-Only the reporting changes. `logpost` still receives the parameter on
-the unconstrained scale, under the name given in `init`, and a prior
-stated on the natural scale still needs its Jacobian. Any other name is
-reported as it is, and `transform = FALSE` turns the renaming off. See
-[Natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) for
-the details, including models with several such parameters.
-
-The summary matches the exact posterior:
+The fit is made on the logit scale, and because of its name the
+parameter is reported as $p$ itself. The same goes for `log_` and
+`atanh_`, as in `log_sigma` and `atanh_rho`. Only the reporting changes:
+`logpost` still receives `logit_p`, and `transform = FALSE` turns the
+renaming off. [Natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) has
+the details. The summary matches the exact posterior:
 
 ``` r
 rbind(
