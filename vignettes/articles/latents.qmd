@@ -50,7 +50,7 @@ the latent variables are, given the parameters:
 | [Gaussian, in closed form](#gaussian-latent-variables) | draws from that Gaussian |
 | [discrete](#discrete-latent-variables) | sums over the classes |
 | [continuous, with no closed form](#no-closed-form) | draws from a grid |
-| [too many, or too dependent, for a grid](#with-rtmb) | asks RTMB for a Gaussian |
+| [too many, or too dependent, for a grid](#with-rtmb) | is `rtmb_latent()`, a Gaussian from RTMB |
 
 Each section below is one row, with a small model.
 
@@ -407,16 +407,25 @@ round(rbind(grid = coef(fit_cbpp), RTMB = coef(fit_rtmb)), 3)
 ```
 
 The two fits agree, so the Laplace approximation of the integral is accurate
-here. For the latent variables, `fun` calls `obj$fn()` at the draw of
-$\theta$, reads the mode from `obj$env$last.par` and the precision from
-`obj$env$spHess()`, and draws from that Gaussian with a sparse Cholesky
-factor:
+here. For the latent variables, `rtmb_latent()` builds `fun` from the
+object:
 
 ```{r}
 #| label: rtmb-latent
-#| message: false
-library(Matrix)
+set.seed(1)
+u_rtmb <- sampling(fit_rtmb, nsamp = 10000, fun = rtmb_latent(obj))
+```
 
+It has nothing of the model in it. It serves any object built with
+`random =`, and returns all of its random effects, in the object's order.
+At each draw of $\theta$ it calls `obj$fn()`, reads the mode from
+`obj$env$last.par` and the precision from `obj$env$spHess()`, and draws from
+that Gaussian with a sparse Cholesky factor. Written out, with the Matrix
+package attached:
+
+```{r}
+#| label: rtmb-latent-inside
+#| eval: false
 draw_latent <- function(theta, obj) {
   obj$fn(unname(theta))
   par <- obj$env$last.par
@@ -429,21 +438,13 @@ draw_latent <- function(theta, obj) {
   e <- solve(ch, rnorm(length(random)), system = "Lt")
   par[random] + as.vector(solve(ch, e, system = "Pt"))
 }
-set.seed(1)
-u_rtmb <- sampling(
-  fit_rtmb, nsamp = 10000, fun = \(theta) draw_latent(theta, obj)
-)
 ```
 
-`draw_latent()` has nothing of the model in it. It serves any object built
-with `random =`, and returns all of its random effects, in the object's
-order. The object goes in through a small function, because an argument
-named `obj` would be taken for the `object` of `sampling()` itself.
-
-Two lines of `draw_latent()` are easy to get wrong, and neither fails with an
-error. Without the copy `1 *`, every draw reuses the Cholesky factor of the
-first. Without the last `solve()`, which undoes the reordering that
-`Cholesky()` applies, the draws have the wrong covariance.
+Two of these lines are easy to get wrong, and neither fails with an error,
+which is why the package has the function. Without the copy `1 *`, every
+draw reuses the Cholesky factor of the first. Without the last `solve()`,
+which undoes the reordering that `Cholesky()` applies, the draws have the
+wrong covariance.
 
 Against the grid of the last section, in grey:
 
@@ -486,9 +487,9 @@ Gaussian given $\theta$, as in the growth model, there is no gap at all.
 
 The object need not be the one that was fitted. A model with a closed form
 is faster to fit without RTMB, as the growth model was. An object built from
-its joint density, only for this step, goes to the same `draw_latent()` with
-draws from that fit, provided the object's parameters are those of `init`, in
-the same order.
+its joint density, only for this step, goes to `rtmb_latent()` in the same
+way, provided the object's parameters are those of `init`, in the same
+order.
 
 RTMB's precision matrix is sparse, so this route is the one for latent
 variables that depend on each other in their thousands, as in a spatial or
@@ -502,9 +503,9 @@ temporal field, where neither a closed form per unit nor a grid applies.
   and returning the probability beats drawing the class.
 * **One or two per unit, not Gaussian.** Reuse the grid that integrated them
   out. It is exact to the grid.
-* **Many, or dependent.** Write the joint density in RTMB and draw from its
-  Gaussian. It is an approximation, and it is at its best when each latent
-  variable has plenty of data.
+* **Many, or dependent.** Write the joint density in RTMB and pass the
+  object to `rtmb_latent()`. It is an approximation, and it is at its best
+  when each latent variable has plenty of data.
 
 In every case `fun` and `logpost` must describe the same model. Building
 both on one helper, as `unpack()`, `log_joint()` and `herd_loglik()` are
