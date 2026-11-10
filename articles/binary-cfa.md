@@ -127,13 +127,13 @@ fit <- inla_vanilla(
   count = count,
   nodes = nodes
 )
-#> ✔ Found the posterior mode in 35 iterations [188ms]
-#> ✔ VB mean correction, max shift 0.18σ [56ms]
-#> ✔ Fitted 12 skew-normal marginals [145ms]
+#> ✔ Found the posterior mode in 35 iterations [145ms]
+#> ✔ VB mean correction, max shift 0.18σ [54ms]
+#> ✔ Fitted 12 skew-normal marginals [127ms]
 fit
-#> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (409ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (342ms)
 #> 
 #>                Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842
@@ -149,7 +149,8 @@ fit
 #> 11 tau5      0.4523  0.0579   0.3390   0.4522   0.5662   0.4519
 #> 12 tau6      0.8627  0.0641   0.7379   0.8624   0.9893   0.8618
 #> 
-#> ℹ Natural scale: tanh() of 6 atanh_ parameters.
+#> ℹ Natural scale: tanh() for lambda1, lambda2, lambda3, lambda4, lambda5 and
+#>   1 more.
 ```
 
 The loadings are named for the scale they are on, `atanh_lambda1` and so

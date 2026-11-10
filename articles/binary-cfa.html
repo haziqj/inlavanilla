@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -186,13 +186,13 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span>  count <span class="op">=</span> <span class="va">count</span>,</span>
 <span>  nodes <span class="op">=</span> <span class="va">nodes</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [188ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.18σ [56ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [145ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [145ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.18σ [54ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [127ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (409ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (342ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt;  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842</span></span>
@@ -208,7 +208,8 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span><span class="co">#&gt; 11 tau5      0.4523  0.0579   0.3390   0.4522   0.5662   0.4519</span></span>
 <span><span class="co">#&gt; 12 tau6      0.8627  0.0641   0.7379   0.8624   0.9893   0.8618</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; ℹ Natural scale: tanh() of 6 atanh_ parameters.</span></span></code></pre></div>
+<span><span class="co">#&gt; ℹ Natural scale: tanh() for lambda1, lambda2, lambda3, lambda4, lambda5 and</span></span>
+<span><span class="co">#&gt;   1 more.</span></span></code></pre></div>
 </div>
 <p>The loadings are named for the scale they are on, <code>atanh_lambda1</code> and so on, so the fit reports them as the loadings themselves (see the article on <a href="natural-scale.html">natural-scale summaries</a>). Next to the true values:</p>
 <div class="cell" data-layout-align="center">

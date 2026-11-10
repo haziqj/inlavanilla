@@ -241,9 +241,9 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
 fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count, vb = "full")
-#> ✔ Found the posterior mode in 30 iterations [45ms]
-#> ✔ VB mean correction, max shift 0.37σ [51ms]
-#> ✔ Fitted 11 skew-normal marginals [56ms]
+#> ✔ Found the posterior mode in 30 iterations [30ms]
+#> ✔ VB mean correction, max shift 0.37σ [43ms]
+#> ✔ Fitted 11 skew-normal marginals [54ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
@@ -252,9 +252,9 @@ fit_lcre <- inla_vanilla(
   gh = gh,
   vb = "full"
 )
-#> ✔ Found the posterior mode in 29 iterations [251ms]
-#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.3s]
-#> ✔ Fitted 13 skew-normal marginals [307ms]
+#> ✔ Found the posterior mode in 29 iterations [187ms]
+#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [971ms]
+#> ✔ Fitted 13 skew-normal marginals [229ms]
 start_fm <- c(
   start[1],
   logit_eta1 = qlogis(0.2),
@@ -263,9 +263,9 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
 fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count, vb = "full")
-#> ✔ Found the posterior mode in 25 iterations [67ms]
-#> ✔ VB mean correction, max shift 0.44σ [107ms]
-#> ✔ Fitted 13 skew-normal marginals [100ms]
+#> ✔ Found the posterior mode in 25 iterations [49ms]
+#> ✔ VB mean correction, max shift 0.44σ [100ms]
+#> ✔ Fitted 13 skew-normal marginals [71ms]
 ```
 
 The seconds each fit took:
@@ -275,7 +275,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.17 1.87 0.29
+#> 0.14 1.41 0.24
 ```
 
 ## Results

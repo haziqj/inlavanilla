@@ -74,8 +74,8 @@ or with `hess`.
   instead.
 
 - `iterations`: the iterations of
-  [`nlminb()`](https://rdrr.io/r/stats/nlminb.html), in the run that was
-  kept if it was restarted.
+  [`nlminb()`](https://rdrr.io/r/stats/nlminb.html), the total over both
+  runs if it was restarted.
 
 - `grad_inf`, `grad_inf_rel`, `grad_l2`: the largest absolute value, the
   largest relative value and the Euclidean norm of `grad` (see below).
