@@ -4,6 +4,15 @@
   and `print()` and `summary()` show it in their headers
   ("INLAvanilla 0.1.1").
 
+* When the mode search restarts `nlminb()` with the parameters rescaled, the
+  iterations reported are now the total over both runs, not those of the run
+  that was kept: in the progress line, which also says "(restarted once)", in
+  `print()` and `summary()`, in `diagnostics()` and in
+  `fit$diagnostics$optim$iterations`. The evaluations in the `verbose = TRUE`
+  report are totals too, and its restart line gives each run's own
+  iterations. On a badly scaled posterior the fit used to report "1 iteration"
+  after a first run of several hundred.
+
 # inlavanilla 0.1.1
 
 * A parameter named for the scale it is on is now reported on its natural
