@@ -1788,12 +1788,10 @@ test_that("a restarted mode search reports the iterations of both runs", {
   text <- gsub("\\s+", " ", cli::ansi_strip(paste(msgs, collapse = "")))
   expect_identical(fit$diagnostics$optim$iterations, total)
   expect_identical(diagnostics(fit)[["iterations"]], as.numeric(total))
+  # The progress line gives the total, and leaves the restart to verbose
   expect_match(
     text,
-    sprintf(
-      "Found the posterior mode in %d iterations \\(restarted once\\)",
-      total
-    )
+    sprintf("Found the posterior mode in %d iterations \\[", total)
   )
   expect_match(text, sprintf("nlminb: .+, after %d iterations \\(", total))
   # The restart line keeps each run's own count
