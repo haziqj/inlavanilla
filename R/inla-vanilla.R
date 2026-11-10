@@ -894,7 +894,8 @@ vanilla_fit <- function(
         "Found the posterior mode in ",
         hl(lap$opt$iterations),
         " iteration",
-        if (lap$opt$iterations == 1L) "" else "s"
+        if (lap$opt$iterations == 1L) "" else "s",
+        if (is.null(lap$restart)) "" else " (restarted once)"
       )
     } else {
       paste0(

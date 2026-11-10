@@ -280,6 +280,8 @@ report_mode <- function(p, lap, calls) {
         plural(rs$iterations, "iteration"),
         ", ",
         first,
+        ", restart: ",
+        plural(rs$restart_iterations, "iteration"),
         "); ",
         if (rs$kept) "kept the restart" else "kept the first run"
       )

@@ -10,7 +10,8 @@
 # the mode with the checks built on it, the condition number of the Hessian
 # in posterior-SD units, and the Laplace log marginal likelihood. For verbose
 # output it also says how the Hessian was taken (`hessian`) and whether
-# nlminb() was restarted (`restart`, NULL when it was not).
+# nlminb() was restarted (`restart`, NULL when it was not). After a restart
+# the iterations and evaluations of `opt` are the totals over both runs.
 laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
   ob <- function(x) {
     v <- lp(x)
@@ -46,12 +47,20 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
     restart <- list(
       grad_mode = cur$grad_mode,
       iterations = opt$iterations,
+      restart_iterations = opt2$iterations,
       kept = opt2$objective <= opt$objective
     )
+    # The iterations and evaluations reported are the work of both runs,
+    # whichever is kept. The return code and the message are those of the run
+    # that is kept, and `restart` holds each run's own iterations.
+    iterations <- opt$iterations + opt2$iterations
+    evaluations <- opt$evaluations + opt2$evaluations
     if (restart$kept) {
       opt <- opt2
       cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), he)
     }
+    opt$iterations <- iterations
+    opt$evaluations <- evaluations
   }
 
   if (is.null(cur$R)) {
