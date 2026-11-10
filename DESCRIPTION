@@ -38,7 +38,9 @@ Suggests:
     future,
     knitr,
     loo,
+    Matrix,
     quarto,
+    RTMB,
     testthat (>= 3.0.0)
 VignetteBuilder:
     quarto
