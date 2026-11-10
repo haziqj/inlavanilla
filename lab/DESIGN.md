@@ -89,6 +89,10 @@ Parked by the owner in November 2026, after one-step VB (`lab/ideas/2026-11-one-
 - **`loo()` under one-step VB.** Compared only with `vb = "full"`, where elpd moved by 0.006 to 0.57, not with brute-force leave-one-out.
 - **Without a gradient.** The axis rule on numerical gradients beat one Stein pass on the means of the three diagnostic-test models (0.14 against 0.16, 0.82 against 0.92, 0.30 against 0.36 SDs), at about twice the calls. It has not been tested more widely.
 
+Raised by the owner in November 2026:
+
+- **One whitening factor.** The stages do not agree on the square root of Σ. `axis_nodes()`, `vb_nodes()` and `gamma1_grad()` use `principal_axes()`, which does not depend on the order of the parameters. `gamma1_lp()` and `whitened_lp()` (the volume correction without a gradient), the ridge bend (`scan_bend()`, `bend_along()`) and the whitened coordinates of the VB fallback still use `lap$L`, the triangular factor from the Cholesky of the precision, which does. The split is history, not a decision: the gradient route took the principal axes when it was rewritten, and the route without a gradient was not rewritten. For consistency, every stage should whiten with the principal axes. The trace and the bend direction of the route without a gradient share their coordinates, so they have to change together. The order dependence of that route has not been measured (about 1e-5 with a gradient, before the change there), and its steps are wider.
+
 ## Findings to discuss
 
 - **Linear scan path at small n.** The skew-normal scan follows the conditional mode path (CMP) of the Laplace Gaussian, which is a straight line (Lemma 3.1). When another parameter's conditional mode bends along that path, the scanned heights are too low in the tails. A common case is a noise scale, where σ̂²(K) ∝ SSR(K) bends quadratically. The marginal then comes out too narrow, by a factor that shrinks as O(1/n).
