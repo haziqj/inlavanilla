@@ -1,3 +1,9 @@
+# inlavanilla (development version)
+
+* A fit now records the version of inlavanilla that made it, in `fit$version`,
+  and `print()` and `summary()` show it in their headers
+  ("INLAvanilla 0.1.1").
+
 # inlavanilla 0.1.1
 
 * A parameter named for the scale it is on is now reported on its natural

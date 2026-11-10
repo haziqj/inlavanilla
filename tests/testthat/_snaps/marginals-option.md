@@ -11,7 +11,7 @@
     Code
       print(fit_g_vb)
     Output
-      -- INLAvanilla ---------------------------------------- Laplace + one-step VB --
+      -- INLAvanilla <version> -- Laplace + one-step VB --
       
       Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
       
@@ -24,7 +24,7 @@
     Code
       print(summary(fit_g_vb))
     Output
-      -- INLAvanilla summary -------------------------------- Laplace + one-step VB --
+      -- INLAvanilla <version> summary -- Laplace + one-step VB --
       
       Log marginal likelihood: -16.246 | Converged in <n> iteration(s) (<time>)
       Laplace -16.277 + VB term 0.031
@@ -52,7 +52,7 @@
     Code
       print(summary(fit_g))
     Output
-      -- INLAvanilla summary ---------------------------------------------- Laplace --
+      -- INLAvanilla <version> summary -- Laplace --
       
       Log marginal likelihood: -16.277 | Converged in <n> iteration(s) (<time>)
       <n> logpost calls: mode <time>, VB <time>, marginals <time>

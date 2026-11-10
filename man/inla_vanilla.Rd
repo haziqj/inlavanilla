@@ -140,6 +140,9 @@ the settings the fit used (\code{width} is \code{NA} for Gaussian marginals).
 \code{width = "tk"} (empty when there were none).
 \item \code{logml}: the log marginal likelihood, and \code{logml_laplace} its Laplace
 part.
+\item \code{version}: the version of inlavanilla that made the fit, as
+\code{\link[utils:packageVersion]{utils::packageVersion()}} returns it. \code{print()} and \code{summary()} show it
+in their headers.
 \item \code{diagnostics}: the checks of each stage, which \code{\link[=diagnostics]{diagnostics()}}
 returns under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} explains.
 \code{optim} holds the return code, message and iterations of
