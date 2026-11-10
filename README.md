@@ -60,7 +60,7 @@ A trial records 3 responders out of 20 patients. With a uniform prior on
 the response rate $p$, the posterior is $\text{Beta}(4, 18)$: skewed,
 and bounded at zero.
 
-`inla_vanilla()` works on an unconstrained scale, so we write the
+`inla_vanilla()` works best on an unconstrained scale, so we write the
 log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
 stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$.
 The names of `init` name the parameters, and calling this one `logit_p`
@@ -77,13 +77,13 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [3ms]
+#> ✔ Found the posterior mode in 6 iterations [4ms]
 #> ✔ VB mean correction, max shift 0.17σ [14ms]
 #> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (41ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (43ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
@@ -91,13 +91,15 @@ fit
 #> ℹ Natural scale: p = plogis(logit_p).
 ```
 
-The fit is made on the logit scale, and because of its name the
-parameter is reported as $p$ itself. The same goes for `log_` and
-`atanh_`, as in `log_sigma` and `atanh_rho`. Only the reporting changes:
-`logpost` still receives `logit_p`, and `transform = FALSE` turns the
-renaming off. [Natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) has
-the details. The summary matches the exact posterior:
+Due to the name given to the `init` vector, `inlavanilla` recognises
+that the fit is made on the logit scale and reports back on the natural
+scale $p$. Only the reporting changes: `logpost` still receives
+`logit_p`, and `transform = FALSE` turns the renaming off. See the
+[natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html)
+vignettes for details.
+
+The summary matches the exact posterior:
 
 ``` r
 rbind(
@@ -109,9 +111,8 @@ rbind(
 #> exact       0.05446357 0.1720895 0.363424
 ```
 
-`sampling()` draws from the approximate posterior, and its `fun`
-argument maps each draw to any other quantity of interest. The draws
-have the skew of the exact posterior:
+`sampling()` draws from the approximate posterior. Here, they are seen
+to have the skew of the exact posterior:
 
 ``` r
 set.seed(1)

@@ -75,7 +75,7 @@ A trial records 3 responders out of 20 patients. With a uniform prior on the
 response rate $p$, the posterior is $\text{Beta}(4, 18)$: skewed, and bounded
 at zero.
 
-`inla_vanilla()` works on an unconstrained scale, so we write the
+`inla_vanilla()` works best on an unconstrained scale, so we write the
 log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
 stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$.
 The names of `init` name the parameters, and calling this one `logit_p` says
@@ -95,13 +95,13 @@ fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 fit
 ```
 
-The fit is made on the logit scale, and because of its name the parameter is
-reported as $p$ itself. The same goes for `log_` and `atanh_`, as in
-`log_sigma` and `atanh_rho`. Only the reporting changes: `logpost` still
-receives `logit_p`, and `transform = FALSE` turns the renaming off.
-[Natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) has the
-details. The summary matches the exact posterior:
+Due to the name given to the `init` vector, `inlavanilla` recognises that the 
+fit is made on the logit scale and reports back on the natural scale $p$. Only 
+the reporting changes: `logpost` still receives `logit_p`, and 
+`transform = FALSE` turns the renaming off. See the [natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) vignettes for details. 
+
+The summary matches the exact posterior:
 
 ```{r exact}
 rbind(
@@ -110,9 +110,8 @@ rbind(
 )
 ```
 
-`sampling()` draws from the approximate posterior, and its `fun` argument maps
-each draw to any other quantity of interest. The draws have the skew of the
-exact posterior:
+`sampling()` draws from the approximate posterior. Here, they are seen to have 
+the skew of the exact posterior:
 
 ```{r density, fig.height = 3.5, fig.alt = "Histogram of draws of p, skewed to the right, with the exact Beta(4, 18) density overlaid and matching it."}
 set.seed(1)
