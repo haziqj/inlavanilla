@@ -127,13 +127,13 @@ fit <- inla_vanilla(
   count = count,
   nodes = nodes
 )
-#> ✔ Found the posterior mode in 35 iterations [136ms]
-#> ✔ VB mean correction, max shift 0.18σ [51ms]
-#> ✔ Fitted 12 skew-normal marginals [118ms]
+#> ✔ Found the posterior mode in 35 iterations [188ms]
+#> ✔ VB mean correction, max shift 0.18σ [56ms]
+#> ✔ Fitted 12 skew-normal marginals [145ms]
 fit
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (319ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (409ms)
 #> 
 #>                Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842

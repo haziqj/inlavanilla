@@ -114,7 +114,7 @@
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
 <p>A trial records 3 responders out of 20 patients. With a uniform prior on the response rate <span class="math inline">\(p\)</span>, the posterior is <span class="math inline">\(\text{Beta}(4, 18)\)</span>: skewed, and bounded at zero.</p>
-<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works on an unconstrained scale, so we write the log-posterior in terms of <span class="math inline">\(\vartheta = \text{logit}(p)\)</span>. The prior is stated for <span class="math inline">\(p\)</span>, so it carries the Jacobian <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>. The names of <code>init</code> name the parameters, and calling this one <code>logit_p</code> says which scale it is on:</p>
+<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works best on an unconstrained scale, so we write the log-posterior in terms of <span class="math inline">\(\vartheta = \text{logit}(p)\)</span>. The prior is stated for <span class="math inline">\(p\)</span>, so it carries the Jacobian <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>. The names of <code>init</code> name the parameters, and calling this one <code>logit_p</code> says which scale it is on:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span></span>
@@ -126,19 +126,20 @@
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [3ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [4ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [14ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [20ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (41ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (43ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;        Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ℹ Natural scale: p = plogis(logit_p).</span></span></code></pre></div>
-<p>The fit is made on the logit scale, and because of its name the parameter is reported as <span class="math inline">\(p\)</span> itself. The same goes for <code>log_</code> and <code>atanh_</code>, as in <code>log_sigma</code> and <code>atanh_rho</code>. Only the reporting changes: <code>logpost</code> still receives <code>logit_p</code>, and <code>transform = FALSE</code> turns the renaming off. <a href="http://haziqj.ml/inlavanilla/articles/natural-scale.html">Natural-scale summaries</a> has the details. The summary matches the exact posterior:</p>
+<p>Due to the name given to the <code>init</code> vector, <code>inlavanilla</code> recognises that the fit is made on the logit scale and reports back on the natural scale <span class="math inline">\(p\)</span>. Only the reporting changes: <code>logpost</code> still receives <code>logit_p</code>, and <code>transform = FALSE</code> turns the renaming off. See the <a href="http://haziqj.ml/inlavanilla/articles/natural-scale.html">natural-scale summaries</a> vignettes for details.</p>
+<p>The summary matches the exact posterior:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
 <span>  inlavanilla <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="st">"p"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2.5%"</span>, <span class="st">"50%"</span>, <span class="st">"97.5%"</span><span class="op">)</span><span class="op">]</span>,</span>
@@ -147,7 +148,7 @@
 <span><span class="co">#&gt;                   2.5%       50%    97.5%</span></span>
 <span><span class="co">#&gt; inlavanilla 0.05491963 0.1722897 0.363167</span></span>
 <span><span class="co">#&gt; exact       0.05446357 0.1720895 0.363424</span></span></code></pre></div>
-<p><code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw to any other quantity of interest. The draws have the skew of the exact posterior:</p>
+<p><code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior. Here, they are seen to have the skew of the exact posterior:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">1e5</span><span class="op">)</span><span class="op">[</span>, <span class="st">"p"</span><span class="op">]</span></span>

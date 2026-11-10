@@ -93,13 +93,13 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [108ms]
-#> ✔ VB mean correction, max shift 0.3σ [52ms]
-#> ✔ Fitted 6 skew-normal marginals [124ms]
+#> ✔ Found the posterior mode in 20 iterations [143ms]
+#> ✔ VB mean correction, max shift 0.3σ [53ms]
+#> ✔ Fitted 6 skew-normal marginals [153ms]
 fit
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -894.66 · Converged in 20 iterations (307ms)
+#> Log marginal likelihood: -894.66 · Converged in 20 iterations (378ms)
 #> 
 #>             Mean     SD     2.5%      50%    97.5%     Mode
 #> 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 
@@ -127,9 +127,9 @@ set.seed(1)
 draws <- sampling(fit, nsamp = 20000)
 head(draws, 3)
 #>            b0       b1     tau0     tau1         rho    sigma
-#> [1,] 247.0624 10.98041 24.86399 6.881332 -0.33075050 26.93531
-#> [2,] 252.6071 10.80077 28.48175 7.007579  0.08917977 26.35683
-#> [3,] 245.6301  9.67959 27.23634 6.566233  0.36778021 25.16078
+#> [1,] 247.0624 10.98041 24.86400 6.881330 -0.33075089 26.93531
+#> [2,] 252.6071 10.80077 28.48176 7.007577  0.08917924 26.35683
+#> [3,] 245.6301  9.67959 27.23636 6.566232  0.36777966 25.16078
 ```
 
 ## Checking against brms
@@ -294,9 +294,9 @@ determined:
 
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [40ms]
-#> ✔ VB mean correction, max shift 0.42σ [14ms]
-#> ✔ Fitted 6 skew-normal marginals [62ms]
+#> ✔ Found the posterior mode in 20 iterations [54ms]
+#> ✔ VB mean correction, max shift 0.42σ [15ms]
+#> ✔ Fitted 6 skew-normal marginals [65ms]
 set.seed(1)
 draws_6 <- sampling(fit_6, nsamp = 20000)
 round(compare(draws_6, ref$subjects_6), 3)
@@ -322,9 +322,9 @@ ridge bend:
 summary(fit_6)
 #> ── INLAvanilla 0.1.1.9002 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -322.676 · Converged in 20 iterations (119ms)
+#> Log marginal likelihood: -322.676 · Converged in 20 iterations (137ms)
 #> Laplace -322.994 + VB term 0.32
-#> 665 logpost calls: mode 41ms, VB 14ms, marginals 62ms
+#> 665 logpost calls: mode 55ms, VB 15ms, marginals 65ms
 #> 
 #> ── Posterior marginals ──
 #> 
