@@ -25,9 +25,10 @@ sampling(object, nsamp = 1000L, fun = NULL, ..., transform = TRUE)
 
   For the `inla_vanilla` method, further arguments passed to `fun`. As
   in [`stats::optim()`](https://rdrr.io/r/stats/optim.html), a name that
-  abbreviates `nsamp` or `fun` would be taken as that argument: a data
-  argument named `n` would set the number of draws. Give such data a
-  longer name, or wrap it in `fun`.
+  abbreviates `object`, `nsamp` or `fun` would be taken as that
+  argument: a data argument named `n` would set the number of draws, and
+  one named `obj` would be taken for the fit. Give such data another
+  name, or wrap it in `fun`.
 
 - nsamp:
 

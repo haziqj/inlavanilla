@@ -49,6 +49,12 @@
 - [Model comparison with LOO and
   WAIC](http://haziqj.ml/inlavanilla/articles/model-comparison.md):
 
+- [Latent variables](http://haziqj.ml/inlavanilla/articles/latents.md):
+
+  Random effects, class memberships and other latent variables are
+  integrated out of the log-posterior. Four ways to draw them back after
+  the fit.
+
 - [Speeding up with
   Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md):
 

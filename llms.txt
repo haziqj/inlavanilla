@@ -154,6 +154,8 @@ INLA-based approximate Bayesian structural equation modelling*
   Leave-one-out cross-validation and WAIC for an INLAvanilla fit
 - [`plot(`*`<inla_vanilla>`*`)`](http://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.md)
   : Plot an INLAvanilla fit
+- [`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
+  : Draw latent variables from an RTMB object
 - [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) :
   Draw from an approximate posterior
 - [`summary(`*`<inla_vanilla>`*`)`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
@@ -211,6 +213,12 @@ INLA-based approximate Bayesian structural equation modelling*
 
 - [Model comparison with LOO and
   WAIC](http://haziqj.ml/inlavanilla/articles/model-comparison.md):
+
+- [Latent variables](http://haziqj.ml/inlavanilla/articles/latents.md):
+
+  Random effects, class memberships and other latent variables are
+  integrated out of the log-posterior. Four ways to draw them back after
+  the fit.
 
 - [Speeding up with
   Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md):

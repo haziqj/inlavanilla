@@ -2,6 +2,20 @@
 
 ## inlavanilla (development version)
 
+- New
+  [`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
+  draws the random effects of an RTMB or TMB object after a fit:
+  `sampling(fit, fun = rtmb_latent(obj))` gives the posterior of the
+  latent variables that the object integrates out, from the Gaussian
+  approximation at their mode given each draw of the parameters. The
+  package still calls nothing of RTMB itself. Matrix and RTMB are in
+  Suggests, for the sparse Cholesky factor and for the tests.
+
+- A new article, “Latent variables”, shows how to draw random effects,
+  class memberships and other latent variables after a fit, with
+  `sampling(fit, fun = )`: from a closed form, by summing over classes,
+  from a grid, and from an RTMB object with random effects.
+
 - A parameter named for the scale it is on is now reported on its
   natural scale. With `init = c(mu = 0, log_sigma = 0)`,
   [`print()`](https://rdrr.io/r/base/print.html),

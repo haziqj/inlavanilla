@@ -44,6 +44,7 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\)."><meta proper
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
     <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
+    <li><a class="dropdown-item" href="../articles/latents.html">Latent variables</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
     <li><hr class="dropdown-divider"></li>
@@ -91,9 +92,10 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\).</p>
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>For the <code>inla_vanilla</code> method, further arguments passed to
-<code>fun</code>. As in <code><a href="https://rdrr.io/r/stats/optim.html" class="external-link">stats::optim()</a></code>, a name that abbreviates <code>nsamp</code> or <code>fun</code>
-would be taken as that argument: a data argument named <code>n</code> would set the
-number of draws. Give such data a longer name, or wrap it in <code>fun</code>.</p></dd>
+<code>fun</code>. As in <code><a href="https://rdrr.io/r/stats/optim.html" class="external-link">stats::optim()</a></code>, a name that abbreviates <code>object</code>, <code>nsamp</code>
+or <code>fun</code> would be taken as that argument: a data argument named <code>n</code> would
+set the number of draws, and one named <code>obj</code> would be taken for the fit.
+Give such data another name, or wrap it in <code>fun</code>.</p></dd>
 
 
 <dt id="arg-nsamp">nsamp<a class="anchor" aria-label="anchor" href="#arg-nsamp"></a></dt>
