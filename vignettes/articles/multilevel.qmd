@@ -283,7 +283,9 @@ plot_caterpillar(u_draws, ref$subjects_18)
 ```
 
 The means agree with brms to within 1% of the interval's width, and the
-intervals are at most 5% narrower.
+intervals are at most 5% narrower. The article on
+[latent variables](latents.html) has the recipes for latent variables that
+are not Gaussian given the parameters.
 
 ## With fewer subjects
 
