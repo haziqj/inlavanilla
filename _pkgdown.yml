@@ -41,6 +41,7 @@ articles:
 - title: Articles
   navbar: ~
   contents:
+  - natural-scale
   - diagnostics
   - model-comparison
   - articles/rcpp
