@@ -282,10 +282,24 @@ y_{jt} \sim \operatorname{Binomial}\left(n_{jt},\
 $$
 
 Neither the integral over $u_j$ nor its distribution given $\theta$ has a
-closed form. Each herd has one latent variable, though, so a grid does both
-jobs. With $u_j = \tau z$, `herd_loglik()` evaluates each herd's
-log-likelihood at 121 values of $z$. `logpost` weights them by the standard
-normal density and sums. The priors are $N(0, 5^2)$ on each $\beta_t$ and
+closed form. Each herd has one latent variable, though, so both can be
+computed on a grid.
+
+The integral is the likelihood of herd $j$, averaged over the prior of its
+level. With $u_j = \tau z$, where $z$ is standard normal with density
+$\phi$,
+
+$$
+p(y_j \mid \theta) = \int p(y_j \mid u_j = \tau z, \theta)\, \phi(z)\, dz
+\approx \sum_k p(y_j \mid u_j = \tau z_k, \theta)\, \phi(z_k)\, h.
+$$
+
+The sum is the area under the integrand, cut into strips of width $h$: the
+points $z_k$ run from $-6$ to $6$ in steps of $h = 0.1$, and each strip is as
+tall as the integrand at its point. `herd_loglik()` returns
+$\log p(y_j \mid u_j = \tau z_k, \theta)$ for every herd and every point.
+`logpost` adds $\log \phi(z_k) + \log h$ to it, and sums over the points on
+the probability scale. The priors are $N(0, 5^2)$ on each $\beta_t$ and
 half-normal $N(0, 1)$ on $\tau$.
 
 ```{r}
@@ -315,15 +329,25 @@ fit_cbpp <- inla_vanilla(logpost_cbpp, init)
 fit_cbpp
 ```
 
-The same grid holds the distribution of each $u_j$ given $\theta$: the
-weights that `logpost` summed, before the sum. `fun` picks a grid point for
-each herd with those weights, and a uniform draw spreads it over its cell:
+The distribution of $u_j$ given $\theta$ comes from the same strips. By
+Bayes' theorem it is the integrand itself, divided by its integral:
+
+$$
+p(u_j = \tau z \mid y_j, \theta) =
+\frac{p(y_j \mid u_j = \tau z, \theta)\, \phi(z)}{p(y_j \mid \theta)}.
+$$
+
+So the area of each strip, as a share of the total area, is the probability
+that $u_j$ lies in that strip. `fun` picks a strip for each herd with these
+probabilities, and a uniform draw places $u_j$ within it:
 
 ```{r}
 #| label: cbpp-latent
 draw_herd <- function(theta) {
+  # The height of each strip, up to a constant for each herd
   l <- sweep(herd_loglik(theta), 2, dnorm(z, log = TRUE), "+")
   w <- exp(l - apply(l, 1, max))
+  # The running share of the area, and the strip where a uniform draw falls
   cdf <- t(apply(w, 1, cumsum)) / rowSums(w)
   k <- rowSums(cdf < runif(nrow(w))) + 1
   u <- exp(theta[["log_tau"]]) * (z[k] + runif(nrow(w), -0.05, 0.05))
@@ -334,7 +358,7 @@ u_grid <- sampling(fit_cbpp, nsamp = 10000, fun = draw_herd)
 round(head(intervals(u_grid), 4), 2)
 ```
 
-Nothing here is approximated beyond the grid, so these draws are the
+Nothing here is approximated beyond the strips, so these draws are the
 reference for the next section. A grid works for one or two latent variables
 per unit. Beyond that its size grows too fast.
 
