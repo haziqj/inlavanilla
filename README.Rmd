@@ -78,7 +78,8 @@ at zero.
 `inla_vanilla()` works on an unconstrained scale, so we write the
 log-posterior in terms of $\vartheta = \text{logit}(p)$. The prior is
 stated for $p$, so it carries the Jacobian $dp / d\vartheta = p(1 - p)$.
-Naming the parameter `logit_p` says which scale it is on:
+The names of `init` name the parameters, and calling this one `logit_p` says
+which scale it is on:
 
 ```{r example}
 library(inlavanilla)
@@ -94,9 +95,24 @@ fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 fit
 ```
 
-The fit is made on the logit scale, and because of its name the parameter is
-reported as $p$ itself. The same goes for `log_` and `atanh_`, as in
-`log_sigma` and `atanh_rho`. The summary matches the exact posterior:
+The table has a row for `p`, not `logit_p`. The fit is made on the logit
+scale, and because of the parameter's name the results are reported for $p$
+itself, as the last line of the output says. Three prefixes are read this way:
+
+| Name in `init` | Reported as | Through    |
+|:---------------|:------------|:-----------|
+| `log_sigma`    | `sigma`     | `exp()`    |
+| `logit_p`      | `p`         | `plogis()` |
+| `atanh_rho`    | `rho`       | `tanh()`   |
+
+Only the reporting changes. `logpost` still receives the parameter on the
+unconstrained scale, under the name given in `init`, and a prior stated on the
+natural scale still needs its Jacobian. Any other name is reported as it is,
+and `transform = FALSE` turns the renaming off. See [Natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) for the
+details, including models with several such parameters.
+
+The summary matches the exact posterior:
 
 ```{r exact}
 rbind(
@@ -122,9 +138,7 @@ curve(dbeta(x, 4, 18), add = TRUE, lwd = 2, col = "#C2410C")
 [Get started](http://haziqj.ml/inlavanilla/articles/inlavanilla.html)
 vignette works through a multi-parameter example: it checks the approximation
 against the exact posterior, and covers gradients, derived quantities and
-model comparison. [Natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) explains
-the naming of parameters.
+model comparison.
 
 ## References
 
