@@ -1,0 +1,492 @@
+---
+title: "Latent variables"
+description: >
+  Random effects, class memberships and other latent variables are integrated
+  out of the log-posterior. Four ways to draw them back after the fit.
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: '#>'
+    fig.width: 7
+    fig.height: 4.5
+    fig.align: center
+---
+
+```{r}
+#| label: setup
+#| include: false
+# Plain output and no progress bars in the rendered page. Output is 76
+# columns wide, so that with knitr's "#> " it fits pkgdown's code box.
+options(
+  width = 76,
+  cli.num_colors = 1,
+  cli.dynamic = FALSE,
+  cli.progress_show_after = Inf
+)
+```
+
+`inla_vanilla()` fits the parameters $\theta$ of a model. Its latent variables
+$u$ (random effects, factor scores, class memberships) are integrated out
+inside `logpost`, so the fit holds nothing about them. They come back
+afterwards, through
+
+$$
+p(u \mid y) = \int p(u \mid \theta, y)\, p(\theta \mid y)\, d\theta.
+$$
+
+The fit gives $p(\theta \mid y)$, and the model gives $p(u \mid \theta, y)$.
+So a draw of $\theta$ from the fit, followed by a draw of $u$ given that
+$\theta$, is a draw from the posterior of the latent variables.
+`sampling(fit, fun = )` does exactly this: it draws $\theta$ and hands each
+draw to `fun`, which returns $u$.
+
+`fun` is written as `logpost` is. It receives one draw of $\theta$ on the
+scale of `logpost`, under the names of `init`, and it returns a numeric
+vector of the same length every time. What goes inside it depends on what
+the latent variables are, given the parameters:
+
+| Given $\theta$, the latent variables are | `fun` |
+|:-----------------------------------------|:------|
+| [Gaussian, in closed form](#gaussian-latent-variables) | draws from that Gaussian |
+| [discrete](#discrete-latent-variables) | sums over the classes |
+| [continuous, with no closed form](#no-closed-form) | draws from a grid |
+| [too many, or too dependent, for a grid](#with-rtmb) | asks RTMB for a Gaussian |
+
+Each section below is one row, with a small model.
+
+```{r}
+#| label: packages
+library(inlavanilla)
+data(Orthodont, package = "nlme")
+data(cbpp, package = "lme4")
+
+# Posterior mean and 95% interval of each column of draws
+intervals <- function(draws) {
+  cbind(
+    mean = colMeans(draws),
+    t(apply(draws, 2, quantile, c(0.025, 0.975)))
+  )
+}
+```
+
+## Gaussian latent variables
+
+The `Orthodont` data (Potthoff & Roy, 1964) hold a dental distance $y_{ij}$
+for 27 children at ages 8, 10, 12 and 14. Each child $i$ has their own level:
+
+$$
+y_{ij} = \beta_0 + \beta_1 (\text{age}_j - 11) + u_i + \epsilon_{ij},
+\qquad u_i \sim N(0, \tau^2),
+\qquad \epsilon_{ij} \sim N(0, \sigma^2).
+$$
+
+Integrating out $u_i$ leaves a normal distribution for each child's four
+distances, with covariance $\sigma^2 I + \tau^2 \mathbf{1}\mathbf{1}^\top$.
+The priors are $N(0, 100^2)$ on $\beta_0$ and $\beta_1$, and half-normal
+$N(0, 10^2)$ on $\tau$ and $\sigma$.
+
+```{r}
+#| label: growth
+Y <- matrix(
+  Orthodont$distance, ncol = 4, byrow = TRUE,
+  dimnames = list(unique(as.character(Orthodont$Subject)), NULL)
+)
+age <- c(8, 10, 12, 14) - 11
+
+# The residuals (one row per child) and the two standard deviations
+unpack <- function(theta) {
+  mu <- theta[["b0"]] + theta[["b1"]] * age
+  list(
+    resid = Y - rep(mu, each = nrow(Y)),
+    tau = exp(theta[["log_tau"]]),
+    sigma = exp(theta[["log_sigma"]])
+  )
+}
+
+logpost_growth <- function(theta) {
+  p <- unpack(theta)
+  total <- p$sigma^2 + 4 * p$tau^2
+  quad <- rowSums(p$resid^2) - p$tau^2 / total * rowSums(p$resid)^2
+  loglik <- -0.5 *
+    (4 * log(2 * pi) + 6 * log(p$sigma) + log(total) + quad / p$sigma^2)
+  # Half-normal prior on a standard deviation, with the log-Jacobian
+  lp_sd <- function(s) dnorm(s, 0, 10, log = TRUE) + log(2) + log(s)
+  sum(loglik) +
+    sum(dnorm(c(theta[["b0"]], theta[["b1"]]), 0, 100, log = TRUE)) +
+    lp_sd(p$tau) +
+    lp_sd(p$sigma)
+}
+
+fit_growth <- inla_vanilla(
+  logpost_growth,
+  c(b0 = 24, b1 = 0.5, log_tau = 0, log_sigma = 0)
+)
+fit_growth
+```
+
+Given $\theta$, the children are independent and each $u_i$ is Gaussian:
+
+$$
+u_i \mid y, \theta \sim N(m_i, v),
+\qquad
+v = \left(\frac{1}{\tau^2} + \frac{4}{\sigma^2}\right)^{-1},
+\qquad
+m_i = \frac{v}{\sigma^2} \sum_{j} \left(y_{ij} - \beta_0 -
+\beta_1 (\text{age}_j - 11)\right).
+$$
+
+`fun` is those two formulas and one call of `rnorm()`:
+
+```{r}
+#| label: growth-latent
+draw_level <- function(theta) {
+  p <- unpack(theta)
+  v <- 1 / (1 / p$tau^2 + 4 / p$sigma^2)
+  m <- v * rowSums(p$resid) / p$sigma^2
+  m + sqrt(v) * rnorm(length(m))
+}
+set.seed(1)
+u_growth <- sampling(fit_growth, nsamp = 4000, fun = draw_level)
+round(head(intervals(u_growth), 4), 2)
+```
+
+Each row of `u_growth` is one draw of all 27 levels, so it also answers
+questions about several children at once, such as the probability that child
+`M01` has a higher level than child `M04`:
+
+```{r}
+#| label: growth-compare
+mean(u_growth[, "M01"] > u_growth[, "M04"])
+```
+
+The article on [multilevel models](multilevel.html) uses this recipe for
+correlated random intercepts and slopes, and checks it against brms.
+
+## Discrete latent variables
+
+A discrete latent variable has no density to draw from, but it has few
+values, and the model can be evaluated at each of them. The time between
+eruptions of the Old Faithful geyser (`faithful`; Azzalini & Bowman, 1990) is
+short after a short eruption and long after a long one. A mixture of two
+normal distributions gives each waiting time $y_i$ a latent class $c_i$:
+
+$$
+y_i \mid c_i = k \sim N(\mu_k, \sigma_k^2),
+\qquad P(c_i = 2) = \pi,
+\qquad \mu_2 = \mu_1 + \delta,\ \delta > 0.
+$$
+
+`log_joint()` returns $\log p(y_i, c_i = k \mid \theta)$, one column for each
+class. `logpost` sums the two columns on the probability scale, which
+integrates the class out. The priors are $N(60, 30^2)$ on $\mu_1$,
+half-normal $N(0, 30^2)$ on $\delta$, half-normal $N(0, 20^2)$ on the
+standard deviations, and uniform on $\pi$.
+
+```{r}
+#| label: mixture
+wait <- faithful$waiting
+
+log_joint <- function(theta, y) {
+  mu1 <- theta[["mu1"]]
+  mu2 <- mu1 + exp(theta[["log_gap"]])
+  sigma <- exp(c(theta[["log_sigma1"]], theta[["log_sigma2"]]))
+  p <- plogis(theta[["logit_p"]])
+  cbind(
+    log1p(-p) + dnorm(y, mu1, sigma[1], log = TRUE),
+    log(p) + dnorm(y, mu2, sigma[2], log = TRUE)
+  )
+}
+
+logpost_mix <- function(theta) {
+  lj <- log_joint(theta, wait)
+  top <- pmax(lj[, 1], lj[, 2])
+  gap <- exp(theta[["log_gap"]])
+  sigma <- exp(c(theta[["log_sigma1"]], theta[["log_sigma2"]]))
+  p <- plogis(theta[["logit_p"]])
+  sum(top + log(rowSums(exp(lj - top)))) +
+    dnorm(theta[["mu1"]], 60, 30, log = TRUE) +
+    dnorm(gap, 0, 30, log = TRUE) + log(2) + log(gap) +
+    sum(dnorm(sigma, 0, 20, log = TRUE) + log(2) + log(sigma)) +
+    log(p) + log1p(-p)
+}
+
+fit_mix <- inla_vanilla(
+  logpost_mix,
+  c(
+    mu1 = 55, log_gap = log(25), log_sigma1 = log(6), log_sigma2 = log(6),
+    logit_p = 0
+  )
+)
+fit_mix
+```
+
+Given $\theta$, the probability of each class is its column of `log_joint()`
+on the probability scale, divided by the sum of the two:
+
+$$
+P(c_i = 2 \mid y_i, \theta) =
+\frac{p(y_i, c_i = 2 \mid \theta)}
+{p(y_i, c_i = 1 \mid \theta) + p(y_i, c_i = 2 \mid \theta)}.
+$$
+
+`fun` returns this probability, not a draw of the class. Its average over
+the draws of $\theta$ is the posterior probability of the class, with less
+Monte Carlo error than an average of drawn classes. `sampling()` passes `y`
+on to `fun`, so the same function classifies waiting times that were never
+observed:
+
+```{r}
+#| label: membership
+#| fig-alt: "Posterior probability of the long class rising from 0 at 55 minutes to 1 at 80 minutes, with a shaded 95% band that is widest near 67 minutes."
+prob_long <- function(theta, y) {
+  lj <- log_joint(theta, y)
+  1 / (1 + exp(lj[, 1] - lj[, 2]))
+}
+minutes <- 45:95
+set.seed(1)
+prob <- sampling(fit_mix, nsamp = 4000, fun = prob_long, y = minutes)
+band <- apply(prob, 2, quantile, c(0.025, 0.975))
+
+plot(
+  minutes, colMeans(prob), type = "n", ylim = c(0, 1),
+  xlab = "Waiting time (minutes)", ylab = "Probability of the long class"
+)
+polygon(
+  c(minutes, rev(minutes)), c(band[1, ], rev(band[2, ])),
+  col = "#B5772E40", border = NA
+)
+lines(minutes, colMeans(prob), lwd = 1.5, col = "#B5772E")
+rug(jitter(wait), col = "grey50")
+```
+
+A waiting time of `r minutes[which.min(abs(colMeans(prob) - 0.5))]` minutes
+is about as likely to be of either class, and the band shows how little the
+data say there. For a draw of the class itself,
+`fun` would return `rbinom(length(y), 1, prob)`.
+
+With several binary attributes there is a class for every pattern, and the
+sum runs over all of them. The article on
+[cognitive diagnostic models](cdm.html) classifies examinees over 8 classes
+in this way.
+
+## No closed form
+
+The `cbpp` data (Lesnoff et al., 2004) count cases of a cattle disease in 15
+herds over four periods. Herd $j$ has $y_{jt}$ cases among $n_{jt}$ animals
+in period $t$, and its own level on the logit scale:
+
+$$
+y_{jt} \sim \operatorname{Binomial}\left(n_{jt},\
+\operatorname{logit}^{-1}(\beta_t + u_j)\right),
+\qquad u_j \sim N(0, \tau^2).
+$$
+
+Neither the integral over $u_j$ nor its distribution given $\theta$ has a
+closed form. Each herd has one latent variable, though, so a grid does both
+jobs. With $u_j = \tau z$, `herd_loglik()` evaluates each herd's
+log-likelihood at 121 values of $z$. `logpost` weights them by the standard
+normal density and sums. The priors are $N(0, 5^2)$ on each $\beta_t$ and
+half-normal $N(0, 1)$ on $\tau$.
+
+```{r}
+#| label: cbpp
+herd <- as.integer(cbpp$herd)
+period <- as.integer(cbpp$period)
+z <- seq(-6, 6, by = 0.1)
+
+# log p(y_j | u_j = tau * z, theta): a row per herd, a column per grid point
+herd_loglik <- function(theta) {
+  tau <- exp(theta[["log_tau"]])
+  eta <- theta[period] + tau * matrix(z, nrow(cbpp), length(z), byrow = TRUE)
+  rowsum(dbinom(cbpp$incidence, cbpp$size, plogis(eta), log = TRUE), herd)
+}
+
+logpost_cbpp <- function(theta) {
+  l <- sweep(herd_loglik(theta), 2, dnorm(z, log = TRUE) + log(0.1), "+")
+  top <- apply(l, 1, max)
+  tau <- exp(theta[["log_tau"]])
+  sum(top + log(rowSums(exp(l - top)))) +
+    sum(dnorm(theta[1:4], 0, 5, log = TRUE)) +
+    dnorm(tau, 0, 1, log = TRUE) + log(2) + log(tau)
+}
+
+init <- c(b1 = -1.5, b2 = -2, b3 = -2, b4 = -2, log_tau = log(0.5))
+fit_cbpp <- inla_vanilla(logpost_cbpp, init)
+fit_cbpp
+```
+
+The same grid holds the distribution of each $u_j$ given $\theta$: the
+weights that `logpost` summed, before the sum. `fun` picks a grid point for
+each herd with those weights, and a uniform draw spreads it over its cell:
+
+```{r}
+#| label: cbpp-latent
+draw_herd <- function(theta) {
+  l <- sweep(herd_loglik(theta), 2, dnorm(z, log = TRUE), "+")
+  w <- exp(l - apply(l, 1, max))
+  cdf <- t(apply(w, 1, cumsum)) / rowSums(w)
+  k <- rowSums(cdf < runif(nrow(w))) + 1
+  u <- exp(theta[["log_tau"]]) * (z[k] + runif(nrow(w), -0.05, 0.05))
+  setNames(u, paste("herd", rownames(w)))
+}
+set.seed(1)
+u_grid <- sampling(fit_cbpp, nsamp = 10000, fun = draw_herd)
+round(head(intervals(u_grid), 4), 2)
+```
+
+Nothing here is approximated beyond the grid, so these draws are the
+reference for the next section. A grid works for one or two latent variables
+per unit. Beyond that its size grows too fast.
+
+## With RTMB
+
+[RTMB](https://github.com/kaskr/RTMB) (Kristensen, 2026) takes a different
+route to the same integral. The model is written with the latent variables in
+it, as a *joint* negative log-density of $\theta$ and $u$, and `random = "u"`
+tells `RTMB::MakeADFun()` to integrate $u$ out by a Laplace approximation.
+Each call of `obj$fn(theta)` finds the mode of $u$ given $\theta$ and the
+curvature there. That mode and curvature are a Gaussian approximation of
+$p(u \mid \theta, y)$, which is what `fun` needs.
+
+The `cbpp` model again, with nothing integrated by hand:
+
+```{r}
+#| label: rtmb
+nll <- function(p) {
+  tau <- exp(p$log_tau)
+  eta <- p$b[period] + p$u[herd]
+  -sum(RTMB::dbinom_robust(cbpp$incidence, cbpp$size, eta, log = TRUE)) -
+    sum(RTMB::dnorm(p$u, 0, tau, log = TRUE)) -
+    sum(RTMB::dnorm(p$b, 0, 5, log = TRUE)) -
+    (RTMB::dnorm(tau, 0, 1, log = TRUE) + log(2) + p$log_tau)
+}
+obj <- RTMB::MakeADFun(
+  nll,
+  list(b = unname(init[1:4]), log_tau = init[[5]], u = numeric(15)),
+  random = "u",
+  silent = TRUE
+)
+
+fit_rtmb <- inla_vanilla(
+  function(theta) -obj$fn(unname(theta)),
+  init,
+  grad = function(theta) -as.vector(obj$gr(unname(theta)))
+)
+round(rbind(grid = coef(fit_cbpp), RTMB = coef(fit_rtmb)), 3)
+```
+
+The two fits agree, so the Laplace approximation of the integral is accurate
+here. For the latent variables, `fun` calls `obj$fn()` at the draw of
+$\theta$, reads the mode from `obj$env$last.par` and the precision from
+`obj$env$spHess()`, and draws from that Gaussian with a sparse Cholesky
+factor:
+
+```{r}
+#| label: rtmb-latent
+#| message: false
+library(Matrix)
+
+draw_latent <- function(theta) {
+  obj$fn(unname(theta))
+  par <- obj$env$last.par
+  random <- obj$env$random
+  # A new matrix each time: Cholesky() keeps its factor in the matrix it is
+  # given, and RTMB hands back the same matrix at every call
+  H <- 1 * obj$env$spHess(par, random = TRUE)
+  ch <- Cholesky(H, perm = TRUE, LDL = FALSE)
+  # H = P' L L' P, so mode + P' L^-T e has precision H
+  e <- solve(ch, rnorm(length(random)), system = "Lt")
+  par[random] + as.vector(solve(ch, e, system = "Pt"))
+}
+set.seed(1)
+u_rtmb <- sampling(fit_rtmb, nsamp = 10000, fun = draw_latent)
+```
+
+Two lines of `draw_latent()` are easy to get wrong, and neither fails with an
+error. Without the copy `1 *`, every draw reuses the Cholesky factor of the
+first. Without the last `solve()`, which undoes the reordering that
+`Cholesky()` applies, the draws have the wrong covariance.
+
+Against the grid of the last section, in grey:
+
+```{r}
+#| label: herds
+#| fig-alt: "Posterior means and 95% intervals of the 15 herd levels from the grid and from RTMB. They overlap closely, and the RTMB intervals sit slightly higher at their lower ends."
+est_grid <- intervals(u_grid)
+est_rtmb <- intervals(u_rtmb)
+o <- order(est_grid[, 1])
+y <- seq_along(o)
+plot(
+  est_grid[o, 1], y, type = "n", xlim = range(est_grid, est_rtmb),
+  xlab = "Herd level, u", ylab = "Herd", yaxt = "n"
+)
+axis(2, at = y, labels = o, las = 1, cex.axis = 0.7)
+abline(v = 0, col = "grey85")
+segments(est_grid[o, 2], y, est_grid[o, 3], y, lwd = 4, col = "grey75")
+segments(est_rtmb[o, 2], y, est_rtmb[o, 3], y, lwd = 1.5, col = "#B5772E")
+points(est_rtmb[o, 1], y, pch = 19, cex = 0.6, col = "#B5772E")
+```
+
+```{r}
+#| label: gaussian-gap
+#| include: false
+sd_grid <- apply(u_grid, 2, sd)
+gap_mean <- abs(est_rtmb[, 1] - est_grid[, 1]) / sd_grid
+gap_lower <- (est_rtmb[, 2] - est_grid[, 2]) / sd_grid
+rate <- rowsum(cbpp$incidence, herd) / rowsum(cbpp$size, herd)
+low <- rate < median(rate)
+two <- function(x) format(round(x, 2), nsmall = 2)
+```
+
+The Gaussian is close but not exact. Its means are within
+`r two(max(gap_mean))` posterior standard deviations of the grid's. Its lower
+limits are up to `r two(max(gap_lower))` standard deviations too high,
+because a herd with few cases has a longer left tail than a Gaussian allows:
+the gap averages `r two(mean(gap_lower[low]))` in the herds with the lower
+case rates and `r two(mean(gap_lower[!low]))` in the others. When $u$ is
+Gaussian given $\theta$, as in the growth model, there is no gap at all.
+
+The object need not be the one that was fitted. A model with a closed form
+is faster to fit without RTMB, as the growth model was. An object built from
+its joint density, only for this step, serves the same `draw_latent()` with
+draws from that fit, provided the object's parameters are those of `init`, in
+the same order.
+
+RTMB's precision matrix is sparse, so this route is the one for latent
+variables that depend on each other in their thousands, as in a spatial or
+temporal field, where neither a closed form per unit nor a grid applies.
+
+## In short
+
+* **Gaussian given the parameters.** Write the mean and variance, and draw.
+  It is exact.
+* **Discrete.** Evaluate the model at each class and normalise. It is exact,
+  and returning the probability beats drawing the class.
+* **One or two per unit, not Gaussian.** Reuse the grid that integrated them
+  out. It is exact to the grid.
+* **Many, or dependent.** Write the joint density in RTMB and draw from its
+  Gaussian. It is an approximation, and it is at its best when each latent
+  variable has plenty of data.
+
+In every case `fun` and `logpost` must describe the same model. Building
+both on one helper, as `unpack()`, `log_joint()` and `herd_loglik()` are
+here, keeps them in step.
+
+## References
+
+Azzalini, A., & Bowman, A. W. (1990). A look at some data on the Old Faithful
+geyser. *Applied Statistics*, *39*(3), 357–365.
+<https://doi.org/10.2307/2347385>
+
+Kristensen, K. (2026). *RTMB: R bindings for TMB* (Version 2.0) [Computer
+software]. <https://doi.org/10.32614/CRAN.package.RTMB>
+
+Lesnoff, M., Laval, G., Bonnet, P., Abdicho, S., Workalemahu, A., Kifle, D.,
+Peyraud, A., Lancelot, R., & Thiaucourt, F. (2004). Within-herd spread of
+contagious bovine pleuropneumonia in Ethiopian highlands. *Preventive
+Veterinary Medicine*, *64*(1), 27–40.
+<https://doi.org/10.1016/j.prevetmed.2004.03.005>
+
+Potthoff, R. F., & Roy, S. N. (1964). A generalized multivariate analysis of
+variance model useful especially for growth curve problems. *Biometrika*,
+*51*(3–4), 313–326. <https://doi.org/10.1093/biomet/51.3-4.313>
