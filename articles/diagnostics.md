@@ -78,16 +78,18 @@ logpost_pois <- function(theta, y) {
 }
 fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
-#> ── INLAvanilla summary ──────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (16ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (20ms)
 #> Laplace -12.362 + VB term 0.0085
-#> 68 logpost calls: mode 5ms, VB 2ms, marginals 4ms
+#> 68 logpost calls: mode 7ms, VB 2ms, marginals 6ms
 #> 
 #> ── Posterior marginals ──
 #> 
-#>              Mean     SD   2.5%    50%  97.5%   Mode
-#> 1 log_rate  0.595  0.263  0.047  0.607  1.078  0.631
+#>          Mean     SD   2.5%    50%  97.5%   Mode
+#> 1 rate  1.875  0.485  1.048  1.834  2.940  1.758
+#> 
+#> ℹ Natural scale: rate = exp(log_rate).
 #> 
 #> ── Diagnostics ──
 #> 
@@ -100,10 +102,14 @@ summary(fit_pois)
 #>   mean gap 0.00053σ.
 ```
 
-Every check passes. The marginal is mildly skewed (its skew-normal shape
-`alpha`, in `diagnostics(fit_pois, type = "param")`, is about -1.4), the
-skew-normal matches the scan to within 1% of its peak (NMAD), and its
-mean agrees with the VB-corrected mean.
+Every check passes. The parameter is named `log_rate`, so the table of
+posterior marginals gives the rate itself (see
+[`vignette("natural-scale", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/natural-scale.md)).
+The diagnostics refer to the scale the fit is made on, the log rate, and
+keep that name. On that scale the marginal is mildly skewed (its
+skew-normal shape `alpha`, in `diagnostics(fit_pois, type = "param")`,
+is about -1.4), the skew-normal matches the scan to within 1% of its
+peak (NMAD), and its mean agrees with the VB-corrected mean.
 
 ## The mode, the Hessian and the VB correction
 
@@ -216,9 +222,9 @@ logpost_mix <- function(theta) {
   log(0.7 * dnorm(theta[[1]], 0, 1) + 0.3 * dnorm(theta[[1]], 3, 1))
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
-#> ✔ Found the posterior mode in 4 iterations [3ms]
-#> ✔ VB mean correction, max shift 0.19σ [10ms]
-#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> ✔ Found the posterior mode in 4 iterations [4ms]
+#> ✔ VB mean correction, max shift 0.19σ [13ms]
+#> ✔ Fitted 1 skew-normal marginal [6ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
 #>   `theta` (0.20).
@@ -494,8 +500,8 @@ fit <- withCallingHandlers(
     invokeRestart("muffleWarning")
   }
 )
-#> ✔ Found the posterior mode in 4 iterations [0ms]
-#> ✔ VB mean correction, max shift 0.19σ [1ms]
+#> ✔ Found the posterior mode in 4 iterations [1ms]
+#> ✔ VB mean correction, max shift 0.19σ [2ms]
 #> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Check this fit.
 ```

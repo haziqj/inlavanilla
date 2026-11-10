@@ -67,7 +67,7 @@ approximation with the VB correction."><meta property="og:image" content="http:/
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,8 @@ approximation with the VB correction."><meta property="og:image" content="http:/
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -106,7 +107,7 @@ approximation with the VB correction."><meta property="og:image" content="http:/
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>INLA-style posterior approximation for any log-posterior</h1>
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/R/inla-vanilla.R" class="external-link"><code>R/inla-vanilla.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/R/inla-vanilla.R" class="external-link"><code>R/inla-vanilla.R</code></a></small>
       <div class="d-none name"><code>inla_vanilla.Rd</code></div>
     </div>
 
@@ -150,6 +151,7 @@ approximation with the VB correction.</p>
 <span>  marginals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"skewnormal"</span>, <span class="st">"gaussian"</span><span class="op">)</span>,</span>
 <span>  width <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"trace"</span>, <span class="st">"cmp"</span>, <span class="st">"tk"</span><span class="op">)</span>,</span>
 <span>  tk_fallback <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  transform <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  cores <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  silent <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -191,8 +193,9 @@ from the Matrix package, and a number when m = 1, work too). It needs
 <dd><p>Further arguments passed to <code>logpost</code>, <code>grad</code> and <code>hess</code>, such
 as the data. As in <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code>, they come after the gradient and
 the Hessian, and the arguments after them (<code>vb</code>, <code>marginals</code>, <code>width</code>,
-<code>tk_fallback</code>, <code>cores</code>, <code>verbose</code>, <code>silent</code>, <code>control</code>) must be given by
-their full names, so data arguments cannot partially match them. A data
+<code>tk_fallback</code>, <code>transform</code>, <code>cores</code>, <code>verbose</code>, <code>silent</code>, <code>control</code>) must
+be given by their full names, so data arguments cannot partially match
+them. A data
 argument cannot take one of those names. The arguments before them can be
 matched, as in <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">nlminb()</a></code>: a data argument named <code>g</code> or <code>gr</code> would be
 taken as <code>grad</code>, and one named <code>h</code> or <code>he</code> as <code>hess</code>, so give it a
@@ -249,6 +252,13 @@ in <code>fit$fallback</code> and by <code><a href="summary.inla_vanilla.html">su
 marginals and with <code>width = "tk"</code>.</p></dd>
 
 
+<dt id="arg-transform">transform<a class="anchor" aria-label="anchor" href="#arg-transform"></a></dt>
+<dd><p>Logical. Report a parameter named <code>log_x</code>, <code>logit_x</code> or
+<code>atanh_x</code> on its natural scale, as <code>x</code>? Default <code>TRUE</code>. <code>FALSE</code> reports
+every parameter on the scale of <code>logpost</code>. Either way the fit itself is
+the same (see the section on natural-scale summaries).</p></dd>
+
+
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
 <dd><p>The number of CPU cores for the skew-normal scans, and for
 <code><a href="loo.html">loo()</a></code> and <code><a href="loo.html">waic()</a></code> on this fit. <code>NULL</code>, the default, follows
@@ -277,8 +287,14 @@ recorded in <code>fit$warnings</code>. Cannot be combined with <code>verbose = T
     <p>An object of class <code>inla_vanilla</code>, with methods for <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>,
 <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code>, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, <code><a href="sampling.html">sampling()</a></code>, <code><a href="diagnostics.html">diagnostics()</a></code> and
 <code><a href="timing.html">timing()</a></code>. It is a list
-holding, among other things:</p><ul><li><p><code>summary</code>: the posterior summary table (mean, SD, quantiles, mode).</p></li>
-<li><p><code>mode</code>, <code>cov</code>: the Laplace mode and covariance.</p></li>
+holding, among other things:</p><ul><li><p><code>summary</code>: the posterior summary table (mean, SD, quantiles, mode),
+with the transformed parameters on their natural scale.</p></li>
+<li><p><code>transform</code>: a data frame with a row per parameter: its name in <code>init</code>
+(<code>parameter</code>), the name it is reported under (<code>name</code>) and its
+transform (<code>transform</code>: <code>"log"</code>, <code>"logit"</code>, <code>"atanh"</code>, or <code>"identity"</code>
+for none).</p></li>
+<li><p><code>mode</code>, <code>cov</code>: the Laplace mode and covariance, on the scale of
+<code>logpost</code>, as is everything below.</p></li>
 <li><p><code>mean_vb</code>: the VB-corrected mean (the mode when <code>vb = "off"</code>).</p></li>
 <li><p><code>sn</code>: the skew-normal parameters <code>xi</code>, <code>omega</code> and <code>alpha</code> per
 parameter (with <code>alpha = 0</code> for Gaussian marginals).</p></li>
@@ -288,6 +304,9 @@ the settings the fit used (<code>width</code> is <code>NA</code> for Gaussian ma
 <code>width = "tk"</code> (empty when there were none).</p></li>
 <li><p><code>logml</code>: the log marginal likelihood, and <code>logml_laplace</code> its Laplace
 part.</p></li>
+<li><p><code>version</code>: the version of inlavanilla that made the fit, as
+<code><a href="https://rdrr.io/r/utils/packageDescription.html" class="external-link">utils::packageVersion()</a></code> returns it. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> show it
+in their headers.</p></li>
 <li><p><code>diagnostics</code>: the checks of each stage, which <code><a href="diagnostics.html">diagnostics()</a></code>
 returns under INLAvaan's names and <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> explains.
 <code>optim</code> holds the return code, message and iterations of
@@ -341,12 +360,50 @@ the same one, and nothing downstream can detect it.</p>
 <p>The choice of parameterisation also sets the quality of the approximation,
 since each parameter gets its own skew-normal on the scale you choose.
 Scales on which the posterior is close to Gaussian (log standard
-deviations, Fisher-\(z\) correlations, logits) work best. Natural-scale or
-derived quantities are available through <code>sampling(fit, fun = ...)</code>.</p>
+deviations, Fisher-\(z\) correlations, logits) work best. A parameter
+named for its scale is reported on the natural one (see the next section),
+and other derived quantities are available through
+<code>sampling(fit, fun = ...)</code>.</p>
 <p>The log marginal likelihood is an estimate of \(\log p(y)\) only when
 <code>logpost</code> returns the full \(\log p(y, \vartheta)\), including every
 normalising constant of the likelihood and the prior. Otherwise it is off by
 the missing constants.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="natural-scale-summaries">Natural-scale summaries<a class="anchor" aria-label="anchor" href="#natural-scale-summaries"></a></h2>
+
+
+<p>Name a parameter for the scale it is on and the results are reported on
+its natural scale. The name is a prefix from the table, an underscore, and
+the name of the natural-scale parameter:</p><table class="table table"><tr><td>Name in <code>init</code></td><td><code>logpost</code> receives</td><td>Reported as</td></tr><tr><td><code>log_sigma</code></td><td>\(\log\sigma\)</td><td><code>sigma</code>, \(e^\vartheta\)</td></tr><tr><td><code>logit_p</code></td><td>\(\log\{p / (1 - p)\}\)</td><td><code>p</code>, \(1 / (1 + e^{-\vartheta})\)</td></tr><tr><td><code>atanh_rho</code></td><td>\(\operatorname{artanh}\rho\)</td><td><code>rho</code>, \(\tanh\vartheta\)</td></tr></table><p>The log suits a positive parameter (an SD, a variance, a precision, a
+rate or a shape), the logit one between 0 and 1 (a probability), and the
+inverse hyperbolic tangent, Fisher's \(z\), one between -1 and 1 (a
+correlation).
+These are the scales R-INLA itself works on, for nearly all of its
+hyperparameters: the log, the logit, and for a correlation
+\(\log\{(1 + \rho) / (1 - \rho)\}\), which
+is twice Fisher's \(z\).</p>
+<p>Nothing changes in the fit. <code>logpost</code>, <code>grad</code>, <code>hess</code>, the <code>loglik</code> of
+<code><a href="loo.html">loo()</a></code> and the <code>fun</code> of <code><a href="sampling.html">sampling()</a></code> all receive the parameter under the
+name and on the scale of <code>init</code>, and <code>logpost</code> must still include the
+log-Jacobian of a prior stated on the natural scale. Only the results are
+mapped back, each from its own skew-normal marginal: <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>,
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> show <code>sigma</code>, and <code><a href="sampling.html">sampling()</a></code> returns
+draws of it. The quantiles are the fitted quantiles mapped through the
+transform. The mean, SD and mode are those of the natural-scale
+distribution, so the mean of <code>sigma</code> is not the exponential of the mean of
+<code>log_sigma</code>. A line under the table says which rows were mapped, and
+<code>fit$transform</code> lists them. The diagnostics stay on the scale of the
+computation, under the names in <code>init</code>.</p>
+<p>A prefix counts only when an underscore and a name follow it, in lower
+case, so <code>logistic</code>, <code>log_</code> and <code>Log_sigma</code> are left alone. A name that
+would clash, such as <code>log_sigma</code> beside a parameter called <code>sigma</code>, is
+left on its own scale with a warning. Only these one-to-one maps of a
+single parameter are recognised: a quantity that depends on several
+parameters, such as a covariance, comes from <code>sampling(fit, fun = ...)</code>.
+<code>transform = FALSE</code> reports every parameter as <code>logpost</code> receives it, and
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> and <code><a href="sampling.html">sampling()</a></code> take the same argument for a fit
+already made.</p>
     </div>
     <div class="section level2">
     <h2 id="accuracy">Accuracy<a class="anchor" aria-label="anchor" href="#accuracy"></a></h2>
@@ -665,24 +722,35 @@ Association</em>, <em>81</em>(393), 82–86.
 <span class="r-in"><span>    <span class="va">theta</span><span class="op">[[</span><span class="st">"log_sigma"</span><span class="op">]</span><span class="op">]</span> <span class="co"># ... and its Jacobian</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The parameter named log_sigma is reported as sigma</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.25σ</span> <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[5ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
 <span class="r-in"><span><span class="va">fit</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> <span style="color: #D7875F;">────────────────────────────────</span> <span style="color: #555555;">Skew-normal + one-step VB</span> <span style="color: #D7875F;">──</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> 0.1.1.9002 <span style="color: #D7875F;">─────────────────────</span> <span style="color: #555555;">Skew-normal + one-step VB</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (12ms)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (14ms)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>              <span style="font-weight: bold;"> Mean</span>  <span style="font-weight: bold;">   SD</span>  <span style="font-weight: bold;"> 2.5%</span>  <span style="font-weight: bold;">  50%</span>  <span style="font-weight: bold;">97.5%</span>  <span style="font-weight: bold;"> Mode</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">1</span> mu         5.159  <span style="color: #555555;">0.</span>327  4.517  5.159  5.800  5.159</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">2</span> log_sigma  <span style="color: #555555;">0.</span>616  <span style="color: #555555;">0.</span>129  <span style="color: #555555;">0.</span>377  <span style="color: #555555;">0.</span>610  <span style="color: #555555;">0.</span>885  <span style="color: #555555;">0.</span>599</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          <span style="font-weight: bold;"> Mean</span>  <span style="font-weight: bold;">   SD</span>  <span style="font-weight: bold;"> 2.5%</span>  <span style="font-weight: bold;">  50%</span>  <span style="font-weight: bold;">97.5%</span>  <span style="font-weight: bold;"> Mode</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">1</span> mu     5.159  <span style="color: #555555;">0.</span>327  4.517  5.159  5.800  5.159</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">2</span> sigma  1.867  <span style="color: #555555;">0.</span>246  1.458  1.841  2.422  1.793</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span><span style="color: #555555;"> Natural scale: sigma = exp(log_sigma).</span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># The posterior of sigma itself, through the draws</span></span></span>
-<span class="r-in"><span><span class="va">sigma</span> <span class="op">&lt;-</span> <span class="fu"><a href="sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"log_sigma"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">sigma</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     2.5%      50%    97.5% </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1.444354 1.832695 2.455869 </span>
+<span class="r-in"><span><span class="co"># The same fit as logpost sees it</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span>, transform <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">$</span><span class="va">table</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                Mean        SD      2.5%       50%     97.5%      Mode</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> mu        5.1588166 0.3272992 4.5168194 5.1589904 5.7998267 5.1593379</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> log_sigma 0.6157719 0.1293211 0.3767418 0.6103815 0.8847449 0.5993436</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A quantity of several parameters, through the draws</span></span></span>
+<span class="r-in"><span><span class="va">cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"log_sigma"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span> <span class="op">/</span> <span class="va">theta</span><span class="op">[[</span><span class="st">"mu"</span><span class="op">]</span><span class="op">]</span></span></span>
+<span class="r-in"><span><span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">cv</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      2.5%       50%     97.5% </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.2688632 0.3571155 0.4917361 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A full diagnostic of each stage</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span></span></span>
@@ -697,8 +765,8 @@ Association</em>, <em>81</em>(393), 82–86.
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">nlminb: relative convergence (4), after 10 iterations (14 function and 26</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">gradient evaluations)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">(warning &gt; 0.1σ)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">8.8e-08σ (warning &gt; 0.1σ)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian by second differences of logpost: 6 calls, and 12 more to set the</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">steps</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Posterior correlation matrix: largest correlation -0.0042 (mu,</span></span>
@@ -713,14 +781,14 @@ Association</em>, <em>81</em>(393), 82–86.
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Largest shift 0.25σ, for log_sigma (warning &gt; 1σ)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">KL term 0.031, giving a log marginal likelihood of -66.38</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">16 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">           Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">mu       </span>  <span style="color: #555555;">-0.25</span>  <span style="color: #555555;">4.2e-05</span>  <span style="color: #555555;">      0.13</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;">  6.4e-05</span>  <span style="color: #555555;">-0.00014</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">log_sigma</span>  <span style="color: #555555;"> 1.32</span>  <span style="color: #555555;"> 0.0076</span>  <span style="color: #555555;">   3.6e-06</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;">  0.00057</span>  <span style="color: #555555;">    0.13</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #BBBB00;">!</span><span style="color: #555555;"> marks what summary() flags: NMAD &gt; 0.1, ridge bend &gt; 0.25, heavy tails,</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">unscanned mass &gt; 0.05</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">68 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 147 logpost calls in 25ms</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 147 logpost calls in 26ms</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Nothing printed, as in a simulation; any warnings are kept in the fit</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span></span></span>

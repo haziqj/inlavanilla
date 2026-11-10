@@ -225,24 +225,28 @@ init <- c(
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
 fit <- inla_vanilla(logpost, init, x = x, eta = 2)
-#> ✔ Found the posterior mode in 34 iterations [1.3s]
-#> ✔ VB mean correction, max shift 0.39σ [659ms]
-#> ✔ Fitted 54 skew-normal marginals [1.7s]
+#> ✔ Found the posterior mode in 34 iterations [1.6s]
+#> ✔ VB mean correction, max shift 0.39σ [838ms]
+#> ✔ Fitted 54 skew-normal marginals [2.1s]
 ```
 
-The fit takes about 4 seconds, and `summary(fit)` flags nothing. The
-first six CPCs, on the atanh scale:
+The fit takes about 5 seconds, and `summary(fit)` flags nothing. The
+parameters are named for the scale they are on, `log_sigma_x1` and
+`atanh_z21`, so the fit reports the standard deviations and the CPCs
+themselves (see the article on [natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)). The
+first six CPCs:
 
 ``` r
 
 round(fit$summary[19:24, ], 3)
-#>             Mean    SD   2.5%    50% 97.5%   Mode
-#> atanh_z21  0.285 0.056  0.176  0.285 0.394  0.285
-#> atanh_z31  0.447 0.056  0.338  0.447 0.557  0.447
-#> atanh_z32  0.241 0.057  0.130  0.241 0.351  0.241
-#> atanh_z41  0.364 0.055  0.256  0.364 0.472  0.364
-#> atanh_z42  0.044 0.056 -0.065  0.044 0.153  0.044
-#> atanh_z43 -0.018 0.056 -0.127 -0.018 0.092 -0.018
+#>       Mean    SD   2.5%    50% 97.5%   Mode
+#> z21  0.277 0.051  0.174  0.278 0.375  0.279
+#> z31  0.419 0.046  0.326  0.420 0.506  0.422
+#> z32  0.235 0.053  0.129  0.236 0.338  0.237
+#> z41  0.348 0.048  0.250  0.349 0.439  0.350
+#> z42  0.044 0.055 -0.065  0.044 0.152  0.044
+#> z43 -0.018 0.056 -0.127 -0.018 0.092 -0.018
 ```
 
 Only the CPCs in the first column of \\L\\ are correlations. The others

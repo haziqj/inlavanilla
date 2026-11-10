@@ -48,6 +48,7 @@ inla_vanilla(
   marginals = c("skewnormal", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
+  transform = TRUE,
   cores = NULL,
   verbose = FALSE,
   silent = FALSE,
@@ -89,11 +90,11 @@ inla_vanilla(
   Further arguments passed to `logpost`, `grad` and `hess`, such as the
   data. As in [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
   they come after the gradient and the Hessian, and the arguments after
-  them (`vb`, `marginals`, `width`, `tk_fallback`, `cores`, `verbose`,
-  `silent`, `control`) must be given by their full names, so data
-  arguments cannot partially match them. A data argument cannot take one
-  of those names. The arguments before them can be matched, as in
-  [`nlminb()`](https://rdrr.io/r/stats/nlminb.html): a data argument
+  them (`vb`, `marginals`, `width`, `tk_fallback`, `transform`, `cores`,
+  `verbose`, `silent`, `control`) must be given by their full names, so
+  data arguments cannot partially match them. A data argument cannot
+  take one of those names. The arguments before them can be matched, as
+  in [`nlminb()`](https://rdrr.io/r/stats/nlminb.html): a data argument
   named `g` or `gr` would be taken as `grad`, and one named `h` or `he`
   as `hess`, so give it a longer name.
 
@@ -155,6 +156,13 @@ inla_vanilla(
   [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
   Ignored for Gaussian marginals and with `width = "tk"`.
 
+- transform:
+
+  Logical. Report a parameter named `log_x`, `logit_x` or `atanh_x` on
+  its natural scale, as `x`? Default `TRUE`. `FALSE` reports every
+  parameter on the scale of `logpost`. Either way the fit itself is the
+  same (see the section on natural-scale summaries).
+
 - cores:
 
   The number of CPU cores for the skew-normal scans, and for
@@ -192,9 +200,16 @@ An object of class `inla_vanilla`, with methods for
 and [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md). It
 is a list holding, among other things:
 
-- `summary`: the posterior summary table (mean, SD, quantiles, mode).
+- `summary`: the posterior summary table (mean, SD, quantiles, mode),
+  with the transformed parameters on their natural scale.
 
-- `mode`, `cov`: the Laplace mode and covariance.
+- `transform`: a data frame with a row per parameter: its name in `init`
+  (`parameter`), the name it is reported under (`name`) and its
+  transform (`transform`: `"log"`, `"logit"`, `"atanh"`, or `"identity"`
+  for none).
+
+- `mode`, `cov`: the Laplace mode and covariance, on the scale of
+  `logpost`, as is everything below.
 
 - `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
 
@@ -210,6 +225,12 @@ is a list holding, among other things:
 
 - `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
   part.
+
+- `version`: the version of inlavanilla that made the fit, as
+  [`utils::packageVersion()`](https://rdrr.io/r/utils/packageDescription.html)
+  returns it. [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) show it in their
+  headers.
 
 - `diagnostics`: the checks of each stage, which
   [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
@@ -274,13 +295,64 @@ The choice of parameterisation also sets the quality of the
 approximation, since each parameter gets its own skew-normal on the
 scale you choose. Scales on which the posterior is close to Gaussian
 (log standard deviations, Fisher-\\z\\ correlations, logits) work best.
-Natural-scale or derived quantities are available through
+A parameter named for its scale is reported on the natural one (see the
+next section), and other derived quantities are available through
 `sampling(fit, fun = ...)`.
 
 The log marginal likelihood is an estimate of \\\log p(y)\\ only when
 `logpost` returns the full \\\log p(y, \vartheta)\\, including every
 normalising constant of the likelihood and the prior. Otherwise it is
 off by the missing constants.
+
+## Natural-scale summaries
+
+Name a parameter for the scale it is on and the results are reported on
+its natural scale. The name is a prefix from the table, an underscore,
+and the name of the natural-scale parameter:
+
+|  |  |  |
+|----|----|----|
+| Name in `init` | `logpost` receives | Reported as |
+| `log_sigma` | \\\log\sigma\\ | `sigma`, \\e^\vartheta\\ |
+| `logit_p` | \\\log\\p / (1 - p)\\\\ | `p`, \\1 / (1 + e^{-\vartheta})\\ |
+| `atanh_rho` | \\\operatorname{artanh}\rho\\ | `rho`, \\\tanh\vartheta\\ |
+
+The log suits a positive parameter (an SD, a variance, a precision, a
+rate or a shape), the logit one between 0 and 1 (a probability), and the
+inverse hyperbolic tangent, Fisher's \\z\\, one between -1 and 1 (a
+correlation). These are the scales R-INLA itself works on, for nearly
+all of its hyperparameters: the log, the logit, and for a correlation
+\\\log\\(1 + \rho) / (1 - \rho)\\\\, which is twice Fisher's \\z\\.
+
+Nothing changes in the fit. `logpost`, `grad`, `hess`, the `loglik` of
+[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
+of [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+all receive the parameter under the name and on the scale of `init`, and
+`logpost` must still include the log-Jacobian of a prior stated on the
+natural scale. Only the results are mapped back, each from its own
+skew-normal marginal: [`print()`](https://rdrr.io/r/base/print.html),
+[`summary()`](https://rdrr.io/r/base/summary.html),
+[`coef()`](https://rdrr.io/r/stats/coef.html) and
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) show `sigma`,
+and [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+returns draws of it. The quantiles are the fitted quantiles mapped
+through the transform. The mean, SD and mode are those of the
+natural-scale distribution, so the mean of `sigma` is not the
+exponential of the mean of `log_sigma`. A line under the table says
+which rows were mapped, and `fit$transform` lists them. The diagnostics
+stay on the scale of the computation, under the names in `init`.
+
+A prefix counts only when an underscore and a name follow it, in lower
+case, so `logistic`, `log_` and `Log_sigma` are left alone. A name that
+would clash, such as `log_sigma` beside a parameter called `sigma`, is
+left on its own scale with a warning. Only these one-to-one maps of a
+single parameter are recognised: a quantity that depends on several
+parameters, such as a covariance, comes from `sampling(fit, fun = ...)`.
+`transform = FALSE` reports every parameter as `logpost` receives it,
+and [`summary()`](https://rdrr.io/r/base/summary.html),
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
+[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) take
+the same argument for a fit already made.
 
 ## Accuracy
 
@@ -657,24 +729,35 @@ logpost <- function(theta, y) {
     theta[["log_sigma"]] # ... and its Jacobian
 }
 
+# The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 fit
-#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (12ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (14ms)
 #> 
-#>               Mean     SD   2.5%    50%  97.5%   Mode
-#> 1 mu         5.159  0.327  4.517  5.159  5.800  5.159
-#> 2 log_sigma  0.616  0.129  0.377  0.610  0.885  0.599
+#>           Mean     SD   2.5%    50%  97.5%   Mode
+#> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
+#> 2 sigma  1.867  0.246  1.458  1.841  2.422  1.793
+#> 
+#> ℹ Natural scale: sigma = exp(log_sigma).
 
-# The posterior of sigma itself, through the draws
-sigma <- sampling(fit, fun = function(theta) exp(theta[["log_sigma"]]))
-quantile(sigma, c(0.025, 0.5, 0.975))
-#>     2.5%      50%    97.5% 
-#> 1.444354 1.832695 2.455869 
+# The same fit as logpost sees it
+summary(fit, transform = FALSE)$table
+#>                Mean        SD      2.5%       50%     97.5%      Mode
+#> mu        5.1588166 0.3272992 4.5168194 5.1589904 5.7998267 5.1593379
+#> log_sigma 0.6157719 0.1293211 0.3767418 0.6103815 0.8847449 0.5993436
+
+# A quantity of several parameters, through the draws
+cv <- sampling(fit, fun = function(theta) {
+  exp(theta[["log_sigma"]]) / theta[["mu"]]
+})
+quantile(cv, c(0.025, 0.5, 0.975))
+#>      2.5%       50%     97.5% 
+#> 0.2688632 0.3571155 0.4917361 
 
 # A full diagnostic of each stage
 fit <- inla_vanilla(
@@ -689,8 +772,8 @@ fit <- inla_vanilla(
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
-#>     (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
+#>     8.8e-08σ (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -705,14 +788,14 @@ fit <- inla_vanilla(
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 25ms
+#> ℹ Done: 147 logpost calls in 26ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

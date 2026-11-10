@@ -1,6 +1,46 @@
 # Changelog
 
+## inlavanilla (development version)
+
+- A fit now records the version of inlavanilla that made it, in
+  `fit$version`, and [`print()`](https://rdrr.io/r/base/print.html) and
+  [`summary()`](https://rdrr.io/r/base/summary.html) show it in their
+  headers (“INLAvanilla 0.1.1”).
+
 ## inlavanilla 0.1.1
+
+- A parameter named for the scale it is on is now reported on its
+  natural scale. With `init = c(mu = 0, log_sigma = 0)`,
+  [`print()`](https://rdrr.io/r/base/print.html),
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`coef()`](https://rdrr.io/r/stats/coef.html) and
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) show `sigma`,
+  and [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  returns draws of it. The prefixes are `log_` (reported through
+  [`exp()`](https://rdrr.io/r/base/Log.html)), `logit_`
+  ([`plogis()`](https://rdrr.io/r/stats/Logistic.html)) and `atanh_`
+  ([`tanh()`](https://rdrr.io/r/base/Hyperbolic.html)), the scales
+  R-INLA itself uses for nearly all of its hyperparameters. The fit does
+  not change: `logpost`, `grad`, `hess`, the `loglik` of
+  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
+  of [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  receive the parameter as before, a prior stated on the natural scale
+  still needs its Jacobian in `logpost`, and the diagnostics keep the
+  names of `init`. The quantiles are mapped through the transform, and
+  the mean, SD and mode are those of the natural-scale distribution.
+  This changes the output of existing code that uses such names:
+  `fit$summary["log_sigma", ]` and `sampling(fit)[, "log_sigma"]` now
+  stop with a subscript error, since the row and the column are called
+  `sigma`. `transform = FALSE` in
+  [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  restores the old behaviour, and
+  [`summary()`](https://rdrr.io/r/base/summary.html),
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
+  [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  take the same argument to show a fit on the scale of `logpost`. The
+  new `fit$transform` lists what was read from the names, and
+  [`vignette("natural-scale")`](http://haziqj.ml/inlavanilla/articles/natural-scale.md)
+  explains it.
 
 - The mode search now allows 5000 iterations and 5000 evaluations by
   default, up from 1000 and 2000, so that slowly converging fits do not

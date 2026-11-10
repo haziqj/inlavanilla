@@ -41,6 +41,9 @@
 
 ### Articles
 
+- [Natural-scale
+  summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md):
+
 - [Diagnostics](http://haziqj.ml/inlavanilla/articles/diagnostics.md):
 
 - [Model comparison with LOO and

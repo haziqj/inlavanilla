@@ -5,17 +5,23 @@
       fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
     }
   };
-</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Posterior means of an INLAvanilla fit — coef.inla_vanilla"><meta name="description" content="The posterior mean of each parameter, from its skew-normal marginal, on
-the unconstrained scale of logpost: the Mean column of
-summary.inla_vanilla(). These are the estimates INLAvaan's coef()
-gives. For a fit with marginals = &quot;gaussian&quot; they are the VB-corrected
-means, or, with vb = &quot;off&quot;, the mode. The joint posterior mode is
-fit$mode, and the VB-corrected mean fit$mean_vb."><meta property="og:description" content="The posterior mean of each parameter, from its skew-normal marginal, on
-the unconstrained scale of logpost: the Mean column of
-summary.inla_vanilla(). These are the estimates INLAvaan's coef()
-gives. For a fit with marginals = &quot;gaussian&quot; they are the VB-corrected
-means, or, with vb = &quot;off&quot;, the mode. The joint posterior mode is
-fit$mode, and the VB-corrected mean fit$mean_vb."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Posterior means of an INLAvanilla fit — coef.inla_vanilla"><meta name="description" content="The posterior mean of each parameter, from its skew-normal marginal: the
+Mean column of the fit's summary table. A parameter named for its scale
+(log_sigma) is on its natural scale, under its natural name (sigma),
+unless the fit was made with transform = FALSE; the others are on the
+scale of logpost. These are the estimates INLAvaan's coef() gives. For
+a fit with marginals = &quot;gaussian&quot; and no transformed parameters they are
+the VB-corrected means, or, with vb = &quot;off&quot;, the mode. The joint
+posterior mode is fit$mode, and the VB-corrected mean fit$mean_vb,
+both on the scale of logpost."><meta property="og:description" content="The posterior mean of each parameter, from its skew-normal marginal: the
+Mean column of the fit's summary table. A parameter named for its scale
+(log_sigma) is on its natural scale, under its natural name (sigma),
+unless the fit was made with transform = FALSE; the others are on the
+scale of logpost. These are the estimates INLAvaan's coef() gives. For
+a fit with marginals = &quot;gaussian&quot; and no transformed parameters they are
+the VB-corrected means, or, with vb = &quot;off&quot;, the mode. The joint
+posterior mode is fit$mode, and the VB-corrected mean fit$mean_vb,
+both on the scale of logpost."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +29,7 @@ fit$mode, and the VB-corrected mean fit$mean_vb."><meta property="og:image" cont
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,7 +49,8 @@ fit$mode, and the VB-corrected mean fit$mean_vb."><meta property="og:image" cont
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -62,17 +69,20 @@ fit$mode, and the VB-corrected mean fit$mean_vb."><meta property="og:image" cont
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Posterior means of an INLAvanilla fit</h1>
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/R/methods.R" class="external-link"><code>R/methods.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/R/methods.R" class="external-link"><code>R/methods.R</code></a></small>
       <div class="d-none name"><code>coef.inla_vanilla.Rd</code></div>
     </div>
 
     <div class="ref-description section level2">
-    <p>The posterior mean of each parameter, from its skew-normal marginal, on
-the unconstrained scale of <code>logpost</code>: the <code>Mean</code> column of
-<code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>. These are the estimates INLAvaan's <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code>
-gives. For a fit with <code>marginals = "gaussian"</code> they are the VB-corrected
-means, or, with <code>vb = "off"</code>, the mode. The joint posterior mode is
-<code>fit$mode</code>, and the VB-corrected mean <code>fit$mean_vb</code>.</p>
+    <p>The posterior mean of each parameter, from its skew-normal marginal: the
+<code>Mean</code> column of the fit's summary table. A parameter named for its scale
+(<code>log_sigma</code>) is on its natural scale, under its natural name (<code>sigma</code>),
+unless the fit was made with <code>transform = FALSE</code>; the others are on the
+scale of <code>logpost</code>. These are the estimates INLAvaan's <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> gives. For
+a fit with <code>marginals = "gaussian"</code> and no transformed parameters they are
+the VB-corrected means, or, with <code>vb = "off"</code>, the mode. The joint
+posterior mode is <code>fit$mode</code>, and the VB-corrected mean <code>fit$mean_vb</code>,
+both on the scale of <code>logpost</code>.</p>
     </div>
 
     <div class="section level2">

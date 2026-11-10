@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/diagnostics.html">Diagnostics</a></li>
+<li><a class="dropdown-item" href="articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -113,7 +114,7 @@
 <h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
 </h2>
 <p>A trial records 3 responders out of 20 patients. With a uniform prior on the response rate <span class="math inline">\(p\)</span>, the posterior is <span class="math inline">\(\text{Beta}(4, 18)\)</span>: skewed, and bounded at zero.</p>
-<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works on an unconstrained scale, so we write the log-posterior in terms of <span class="math inline">\(\vartheta = \text{logit}(p)\)</span>. The prior is stated for <span class="math inline">\(p\)</span>, so it carries the Jacobian <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>:</p>
+<p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works on an unconstrained scale, so we write the log-posterior in terms of <span class="math inline">\(\vartheta = \text{logit}(p)\)</span>. The prior is stated for <span class="math inline">\(p\)</span>, so it carries the Jacobian <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>. Naming the parameter <code>logit_p</code> says which scale it is on:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span></span>
@@ -125,38 +126,36 @@
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [2ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [3ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [13ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [18ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (37ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (39ms)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;              Mean     SD    2.5%     50%   97.5%    Mode</span></span>
-<span><span class="co">#&gt; 1 logit_p  -1.605  0.582  -2.845  -1.569  -0.562  -1.494</span></span></code></pre></div>
-<p>The summary is on the logit scale. <code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw back to <span class="math inline">\(p\)</span>, or to any other quantity of interest:</p>
+<span><span class="co">#&gt;        Mean      SD    2.5%     50%   97.5%    Mode</span></span>
+<span><span class="co">#&gt; 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ℹ Natural scale: p = plogis(logit_p).</span></span></code></pre></div>
+<p>The fit is made on the logit scale, and because of its name the parameter is reported as <span class="math inline">\(p\)</span> itself. The same goes for <code>log_</code> and <code>atanh_</code>, as in <code>log_sigma</code> and <code>atanh_rho</code>. The summary matches the exact posterior:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span></span>
-<span>  <span class="va">fit</span>,</span>
-<span>  nsamp <span class="op">=</span> <span class="fl">1e5</span>,</span>
-<span>  fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
-<span>  inlavanilla <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span>,</span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  inlavanilla <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="st">"p"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2.5%"</span>, <span class="st">"50%"</span>, <span class="st">"97.5%"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  exact <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">qbeta</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, <span class="fl">4</span>, <span class="fl">18</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;                   2.5%       50%     97.5%</span></span>
-<span><span class="co">#&gt; inlavanilla 0.05443460 0.1723549 0.3645844</span></span>
-<span><span class="co">#&gt; exact       0.05446357 0.1720895 0.3634240</span></span></code></pre></div>
-<p>The approximation matches the exact posterior, skew included:</p>
+<span><span class="co">#&gt;                   2.5%       50%    97.5%</span></span>
+<span><span class="co">#&gt; inlavanilla 0.05491963 0.1722897 0.363167</span></span>
+<span><span class="co">#&gt; exact       0.05446357 0.1720895 0.363424</span></span></code></pre></div>
+<p><code><a href="reference/sampling.html">sampling()</a></code> draws from the approximate posterior, and its <code>fun</code> argument maps each draw to any other quantity of interest. The draws have the skew of the exact posterior:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">p</span>, breaks <span class="op">=</span> <span class="fl">80</span>, freq <span class="op">=</span> <span class="cn">FALSE</span>, border <span class="op">=</span> <span class="cn">NA</span>, col <span class="op">=</span> <span class="st">"#F5D0BE"</span>,</span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">1e5</span><span class="op">)</span><span class="op">[</span>, <span class="st">"p"</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="va">p</span>, breaks <span class="op">=</span> <span class="fl">80</span>, freq <span class="op">=</span> <span class="cn">FALSE</span>, border <span class="op">=</span> <span class="cn">NA</span>, col <span class="op">=</span> <span class="st">"#F5D0BE"</span>,</span>
 <span>     main <span class="op">=</span> <span class="cn">NULL</span>, xlab <span class="op">=</span> <span class="st">"Response rate p"</span>, ylab <span class="op">=</span> <span class="cn">NULL</span>, yaxt <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html" class="external-link">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">dbeta</a></span><span class="op">(</span><span class="va">x</span>, <span class="fl">4</span>, <span class="fl">18</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, lwd <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="st">"#C2410C"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-density-1.png" alt="Histogram of draws of p, skewed to the right, with the exact Beta(4, 18) density overlaid and matching it." width="100%"></p>
-<p><code>summary(fit)</code> adds diagnostics for each stage of the approximation, and <code>plot(fit)</code> draws the marginals. The <a href="http://haziqj.ml/inlavanilla/articles/inlavanilla.html">Get started</a> vignette works through a multi-parameter example: it checks the approximation against the exact posterior, and covers gradients, derived quantities and model comparison.</p>
+<p><code>summary(fit)</code> adds diagnostics for each stage of the approximation, and <code>plot(fit)</code> draws the marginals. The <a href="http://haziqj.ml/inlavanilla/articles/inlavanilla.html">Get started</a> vignette works through a multi-parameter example: it checks the approximation against the exact posterior, and covers gradients, derived quantities and model comparison. <a href="http://haziqj.ml/inlavanilla/articles/natural-scale.html">Natural-scale summaries</a> explains the naming of parameters.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

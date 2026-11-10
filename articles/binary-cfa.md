@@ -127,38 +127,40 @@ fit <- inla_vanilla(
   count = count,
   nodes = nodes
 )
-#> ✔ Found the posterior mode in 35 iterations [141ms]
-#> ✔ VB mean correction, max shift 0.18σ [53ms]
-#> ✔ Fitted 12 skew-normal marginals [117ms]
+#> ✔ Found the posterior mode in 35 iterations [176ms]
+#> ✔ VB mean correction, max shift 0.18σ [51ms]
+#> ✔ Fitted 12 skew-normal marginals [137ms]
 fit
-#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (327ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (384ms)
 #> 
-#>                      Mean      SD     2.5%      50%    97.5%     Mode
-#>  1 atanh_lambda1   0.4016  0.0832   0.2402   0.4009   0.5665   0.3996
-#>  2 atanh_lambda2   0.5854  0.0819   0.4279   0.5843   0.7491   0.5821
-#>  3 atanh_lambda3   0.940   0.104    0.747    0.936    1.155    0.927 
-#>  4 atanh_lambda4   0.8750  0.0952   0.6955   0.8724   1.0695   0.8670
-#>  5 atanh_lambda5   1.377   0.188    1.058    1.358    1.794    1.317 
-#>  6 atanh_lambda6   0.6151  0.0916   0.4396   0.6135   0.7992   0.6104
-#>  7 tau1           -0.8395  0.0637  -0.9652  -0.8392  -0.7153  -0.8386
-#>  8 tau2           -0.4339  0.0579  -0.5477  -0.4338  -0.3207  -0.4335
-#>  9 tau3            0.0050  0.0559  -0.1046   0.0050   0.1146   0.0050
-#> 10 tau4            0.1462  0.0562   0.0362   0.1461   0.2563   0.1461
-#> 11 tau5            0.4523  0.0579   0.3390   0.4522   0.5662   0.4519
-#> 12 tau6            0.8627  0.0641   0.7379   0.8624   0.9893   0.8618
+#>                Mean      SD     2.5%      50%    97.5%     Mode
+#>  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842
+#>  2 lambda2   0.5240  0.0590   0.4036   0.5258   0.6346   0.5292
+#>  3 lambda3   0.7314  0.0475   0.6333   0.7332   0.8193   0.7365
+#>  4 lambda4   0.7007  0.0480   0.6015   0.7026   0.7893   0.7062
+#>  5 lambda5   0.8735  0.0418   0.7849   0.8759   0.9462   0.8798
+#>  6 lambda6   0.5445  0.0639   0.4133   0.5466   0.6636   0.5508
+#>  7 tau1     -0.8395  0.0637  -0.9652  -0.8392  -0.7153  -0.8386
+#>  8 tau2     -0.4339  0.0579  -0.5477  -0.4338  -0.3207  -0.4335
+#>  9 tau3      0.0050  0.0559  -0.1046   0.0050   0.1146   0.0050
+#> 10 tau4      0.1462  0.0562   0.0362   0.1461   0.2563   0.1461
+#> 11 tau5      0.4523  0.0579   0.3390   0.4522   0.5662   0.4519
+#> 12 tau6      0.8627  0.0641   0.7379   0.8624   0.9893   0.8618
+#> 
+#> ℹ Natural scale: tanh() of 6 atanh_ parameters.
 ```
 
-Quantiles carry over through \\\tanh\\, so the loadings’ 95% intervals
-and medians are those of \\\operatorname{atanh} \lambda_j\\,
-transformed. Next to the true values:
+The loadings are named for the scale they are on, `atanh_lambda1` and so
+on, so the fit reports them as the loadings themselves (see the article
+on [natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)).
+Next to the true values:
 
 ``` r
 
 q <- fit$summary[, c("2.5%", "50%", "97.5%")]
-q[1:6, ] <- tanh(q[1:6, ])
-rownames(q) <- c(paste0("lambda", 1:6), paste0("tau", 1:6))
 round(cbind(true = c(lambda, tau), q), 3)
 #>          true   2.5%    50%  97.5%
 #> lambda1  0.50  0.236  0.381  0.513

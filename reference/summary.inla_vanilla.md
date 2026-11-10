@@ -1,14 +1,20 @@
 # Summarise an INLAvanilla fit
 
-Posterior summaries from the skew-normal marginals, on the unconstrained
-scale of `logpost`, together with diagnostics of each stage of the
-approximation.
+Posterior summaries from the skew-normal marginals, together with
+diagnostics of each stage of the approximation. A parameter named for
+its scale (`log_sigma`, `logit_p`, `atanh_rho`) is summarised on its
+natural scale, as `sigma`, `p` or `rho`, and the others on the scale of
+`logpost` (see the section on natural-scale summaries in
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+A line under the table says which rows were mapped. The diagnostics
+always refer to the scale of `logpost`, where the approximation is made,
+and name the parameters as `init` does.
 
 ## Usage
 
 ``` r
 # S3 method for class 'inla_vanilla'
-summary(object, probs = c(0.025, 0.5, 0.975), ...)
+summary(object, probs = c(0.025, 0.5, 0.975), transform = TRUE, ...)
 ```
 
 ## Arguments
@@ -21,6 +27,12 @@ summary(object, probs = c(0.025, 0.5, 0.975), ...)
 
   Probabilities for the reported quantiles.
 
+- transform:
+
+  Logical. Summarise the transformed parameters on their natural scale?
+  Default `TRUE`. `FALSE` gives every parameter on the scale of
+  `logpost`, whatever the fit was asked for.
+
 - ...:
 
   Unused.
@@ -28,10 +40,11 @@ summary(object, probs = c(0.025, 0.5, 0.975), ...)
 ## Value
 
 An object of class `summary.inla_vanilla`: a list with the summary table
-`table`, the log marginal likelihood `logml` (and its Laplace part
-`logml_laplace`), the per-parameter diagnostics `diagnostics`, and
-details of the optimiser, the VB correction, the number of calls and the
-timing.
+`table`, the transforms behind its natural-scale rows `transform`
+(`NULL` when there are none), the log marginal likelihood `logml` (and
+its Laplace part `logml_laplace`), the per-parameter diagnostics
+`diagnostics`, and details of the optimiser, the VB correction, the
+number of calls and the timing.
 
 ## Details
 

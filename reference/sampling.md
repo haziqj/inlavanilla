@@ -12,7 +12,7 @@ parameter's skew-normal quantile, \\\vartheta_j = Q_j(u_j)\\.
 sampling(object, ...)
 
 # S3 method for class 'inla_vanilla'
-sampling(object, nsamp = 1000L, fun = NULL, ...)
+sampling(object, nsamp = 1000L, fun = NULL, ..., transform = TRUE)
 ```
 
 ## Arguments
@@ -40,10 +40,17 @@ sampling(object, nsamp = 1000L, fun = NULL, ...)
   a fixed length (named, ideally). When `NULL`, the parameters
   themselves are returned.
 
+- transform:
+
+  Logical. Return the transformed parameters on their natural scale?
+  Default `TRUE`. `FALSE` returns every parameter on the scale of
+  `logpost`. It must be named in full, and has no effect on what `fun`
+  receives.
+
 ## Value
 
-A numeric matrix with one row per draw: the parameters on the
-unconstrained scale, or the values of `fun`.
+A numeric matrix with one row per draw: the parameters, with the
+transformed ones on their natural scale, or the values of `fun`.
 
 ## Details
 
@@ -52,8 +59,14 @@ Gaussian \\N(\tilde\vartheta, \Omega)\\, centred at the VB mean (or at
 the mode when `vb = "off"`).
 
 Draws never call the log-posterior, so they are cheap: large `nsamp`
-costs little. Use `fun` for natural-scale or derived quantities, such as
-`exp(log_sigma)` or a covariance matrix built from several parameters.
+costs little. A parameter named for its scale (`log_sigma`, `logit_p`,
+`atanh_rho`) is returned on its natural scale, in a column named
+`sigma`, `p` or `rho` (see the section on natural-scale summaries in
+[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+Use `fun` for quantities of several parameters, such as a ratio or a
+covariance matrix. `fun` is written as `logpost` is: it receives each
+draw on the scale of `logpost`, under the names in `init`, whatever
+`transform`.
 
 ## Examples
 
@@ -68,15 +81,26 @@ logpost <- function(theta, y) {
 }
 fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 
+# Draws of mu and sigma: the parameter named log_sigma comes back as sigma
 draws <- sampling(fit, nsamp = 2000)
 head(draws)
+#>            mu    sigma
+#> [1,] 5.603356 1.677596
+#> [2,] 5.125348 1.732507
+#> [3,] 5.285843 1.760798
+#> [4,] 5.141380 1.826636
+#> [5,] 4.707959 2.303939
+#> [6,] 5.023140 2.180450
+
+# The same draws as logpost sees them
+head(sampling(fit, nsamp = 2000, transform = FALSE))
 #>            mu log_sigma
-#> [1,] 5.603356 0.5173617
-#> [2,] 5.125348 0.5495693
-#> [3,] 5.285843 0.5657669
-#> [4,] 5.141380 0.6024758
-#> [5,] 4.707959 0.8346202
-#> [6,] 5.023140 0.7795313
+#> [1,] 4.621822 0.5056868
+#> [2,] 5.253538 0.3865430
+#> [3,] 5.908196 0.7070464
+#> [4,] 5.444282 0.5663662
+#> [5,] 5.037834 0.4417673
+#> [6,] 5.583696 0.5130578
 
 # A derived quantity: the coefficient of variation sigma / mu
 cv <- sampling(fit, nsamp = 2000, fun = function(theta) {
@@ -84,5 +108,5 @@ cv <- sampling(fit, nsamp = 2000, fun = function(theta) {
 })
 quantile(cv, c(0.025, 0.5, 0.975))
 #>      2.5%       50%     97.5% 
-#> 0.2716513 0.3583291 0.4832763 
+#> 0.2785661 0.3576390 0.4836230 
 ```

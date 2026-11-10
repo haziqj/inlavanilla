@@ -77,13 +77,13 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
-#> ✔ Found the posterior mode in 10 iterations [6ms]
-#> ✔ VB mean correction, max shift 0.49σ [13ms]
-#> ✔ Fitted 3 skew-normal marginals [9ms]
+#> ✔ Found the posterior mode in 10 iterations [9ms]
+#> ✔ VB mean correction, max shift 0.49σ [16ms]
+#> ✔ Fitted 3 skew-normal marginals [12ms]
 fit
-#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.59 · Converged in 10 iterations (33ms)
+#> Log marginal likelihood: -11.59 · Converged in 10 iterations (44ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -110,11 +110,11 @@ each stage:
 ``` r
 
 summary(fit)
-#> ── INLAvanilla summary ──────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.591 · Converged in 10 iterations (33ms)
+#> Log marginal likelihood: -11.591 · Converged in 10 iterations (44ms)
 #> Laplace -11.709 + VB term 0.12
-#> 233 logpost calls: mode 7ms, VB 13ms, marginals 9ms
+#> 233 logpost calls: mode 11ms, VB 16ms, marginals 13ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -370,7 +370,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008176
+#> [1,] -0.7657929 -5.309342 0.3008175
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```
@@ -468,7 +468,8 @@ Gaussian work better.
 stated on the natural scale needs the log-Jacobian of the
 transformation. For the share of manual cars \\p\\, with a uniform
 prior, on the logit scale \\\vartheta = \operatorname{logit} p\\, the
-Jacobian is \\dp / d\vartheta = p(1 - p)\\:
+Jacobian is \\dp / d\vartheta = p(1 - p)\\. We name the parameter
+`logit_p`, for the scale it is on:
 
 ``` r
 
@@ -479,24 +480,37 @@ logpost_p <- function(theta, y) {
     log(p) + log1p(-p) # ... and the Jacobian
 }
 fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, silent = TRUE)
+fit_p
+#> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
+#> 
+#> Log marginal likelihood: -23.17 · Converged in 4 iterations (13ms)
+#> 
+#>        Mean      SD    2.5%     50%   97.5%    Mode
+#> 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063
+#> 
+#> ℹ Natural scale: p = plogis(logit_p).
 ```
 
-Natural-scale summaries come from the draws, and match the exact Beta
-posterior:
+A parameter named `log_x`, `logit_x` or `atanh_x` is reported on its
+natural scale, as `x`: here the fit is made on the logit scale and the
+table gives \\p\\. Only the reporting changes, so `logpost` still
+receives `logit_p` and still needs its Jacobian. The summary matches the
+exact Beta posterior:
 
 ``` r
 
-p_draws <- sampling(fit_p, nsamp = 20000, fun = function(theta) {
-  plogis(theta[["logit_p"]])
-})
 rbind(
-  inlavanilla = quantile(p_draws, c(0.025, 0.5, 0.975)),
+  inlavanilla = fit_p$summary["p", c("2.5%", "50%", "97.5%")],
   exact = qbeta(c(0.025, 0.5, 0.975), 1 + sum(y), 1 + sum(1 - y))
 )
 #>                  2.5%       50%     97.5%
-#> inlavanilla 0.2546500 0.4104370 0.5794388
+#> inlavanilla 0.2549610 0.4100506 0.5781525
 #> exact       0.2547618 0.4100149 0.5786063
 ```
+
+[`vignette("natural-scale", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/natural-scale.md)
+has the transforms, what is and is not mapped back, and how to switch it
+off.
 
 ## Gradients for free, and compiled code
 

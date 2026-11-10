@@ -6,16 +6,22 @@
     }
   };
 </script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Plot an INLAvanilla fit — plot.inla_vanilla"><meta name="description" content="By default (type = &quot;marg_pdf&quot;), draws the marginal density of each
-parameter, on the unconstrained scale, with the Gaussian marginal of the
-Laplace approximation for comparison. The vertical line marks the
-posterior mean. For a fit with marginals = &quot;gaussian&quot; the marginals are
-Gaussian: centred at the VB mean, or, with vb = &quot;off&quot;, the Laplace
-marginals themselves, drawn without a second copy."><meta property="og:description" content="By default (type = &quot;marg_pdf&quot;), draws the marginal density of each
-parameter, on the unconstrained scale, with the Gaussian marginal of the
-Laplace approximation for comparison. The vertical line marks the
-posterior mean. For a fit with marginals = &quot;gaussian&quot; the marginals are
-Gaussian: centred at the VB mean, or, with vb = &quot;off&quot;, the Laplace
-marginals themselves, drawn without a second copy."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
+parameter, with the Gaussian marginal of the Laplace approximation for
+comparison. The vertical line marks the posterior mean. A parameter named
+for its scale (log_sigma) is drawn on its natural scale, as sigma:
+both densities are carried there by the change of variables, so the
+Laplace curve is the density that a Gaussian log_sigma gives sigma.
+For a fit with marginals = &quot;gaussian&quot; the marginals are Gaussian on the
+scale of logpost: centred at the VB mean, or, with vb = &quot;off&quot;, the
+Laplace marginals themselves, drawn without a second copy."><meta property="og:description" content="By default (type = &quot;marg_pdf&quot;), draws the marginal density of each
+parameter, with the Gaussian marginal of the Laplace approximation for
+comparison. The vertical line marks the posterior mean. A parameter named
+for its scale (log_sigma) is drawn on its natural scale, as sigma:
+both densities are carried there by the change of variables, so the
+Laplace curve is the density that a Gaussian log_sigma gives sigma.
+For a fit with marginals = &quot;gaussian&quot; the marginals are Gaussian on the
+scale of logpost: centred at the VB mean, or, with vb = &quot;off&quot;, the
+Laplace marginals themselves, drawn without a second copy."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +29,7 @@ marginals themselves, drawn without a second copy."><meta property="og:image" co
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,7 +49,8 @@ marginals themselves, drawn without a second copy."><meta property="og:image" co
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -62,17 +69,20 @@ marginals themselves, drawn without a second copy."><meta property="og:image" co
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Plot an INLAvanilla fit</h1>
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/R/methods.R" class="external-link"><code>R/methods.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/R/methods.R" class="external-link"><code>R/methods.R</code></a></small>
       <div class="d-none name"><code>plot.inla_vanilla.Rd</code></div>
     </div>
 
     <div class="ref-description section level2">
     <p>By default (<code>type = "marg_pdf"</code>), draws the marginal density of each
-parameter, on the unconstrained scale, with the Gaussian marginal of the
-Laplace approximation for comparison. The vertical line marks the
-posterior mean. For a fit with <code>marginals = "gaussian"</code> the marginals are
-Gaussian: centred at the VB mean, or, with <code>vb = "off"</code>, the Laplace
-marginals themselves, drawn without a second copy.</p>
+parameter, with the Gaussian marginal of the Laplace approximation for
+comparison. The vertical line marks the posterior mean. A parameter named
+for its scale (<code>log_sigma</code>) is drawn on its natural scale, as <code>sigma</code>:
+both densities are carried there by the change of variables, so the
+Laplace curve is the density that a Gaussian <code>log_sigma</code> gives <code>sigma</code>.
+For a fit with <code>marginals = "gaussian"</code> the marginals are Gaussian on the
+scale of <code>logpost</code>: centred at the VB mean, or, with <code>vb = "off"</code>, the
+Laplace marginals themselves, drawn without a second copy.</p>
     </div>
 
     <div class="section level2">
@@ -83,6 +93,7 @@ marginals themselves, drawn without a second copy.</p>
 <span>  pars <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"marg_pdf"</span>, <span class="st">"sn_fit"</span>, <span class="st">"sn_fit_log"</span><span class="op">)</span>,</span>
 <span>  laplace <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  transform <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -96,7 +107,9 @@ marginals themselves, drawn without a second copy.</p>
 
 
 <dt id="arg-pars">pars<a class="anchor" aria-label="anchor" href="#arg-pars"></a></dt>
-<dd><p>Parameters to plot, by name or position. Defaults to all.</p></dd>
+<dd><p>Parameters to plot, by position or by name: the name in
+<code>init</code> or, for a transformed parameter, its natural-scale name. Defaults
+to all.</p></dd>
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
@@ -109,6 +122,12 @@ densities, <code>"sn_fit"</code> for each skew-normal fit against its scan, or
 <dd><p>Logical. Overlay the Laplace (Gaussian) marginals? Default
 <code>TRUE</code>; ignored when the marginals are the Laplace ones, and by the
 <code>"sn_fit"</code> plots.</p></dd>
+
+
+<dt id="arg-transform">transform<a class="anchor" aria-label="anchor" href="#arg-transform"></a></dt>
+<dd><p>Logical. Draw the transformed parameters on their natural
+scale? Default <code>TRUE</code>. <code>FALSE</code> draws every marginal on the scale of
+<code>logpost</code>. Ignored by the <code>"sn_fit"</code> plots.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -134,7 +153,8 @@ it was fitted at. The largest gap between the last two, as a fraction of
 the peak, is the NMAD of <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>. <code>type = "sn_fit_log"</code>
 draws the same on a base-10 log scale, which shows the tails. Both use the
 scans kept in the fit, with no further calls of <code>logpost</code>, and need
-skew-normal marginals.</p>
+skew-normal marginals. They show the scale the fit was made on, whatever
+<code>transform</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

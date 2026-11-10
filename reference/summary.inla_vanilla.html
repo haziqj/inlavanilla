@@ -5,11 +5,21 @@
       fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
     }
   };
-</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Summarise an INLAvanilla fit — summary.inla_vanilla"><meta name="description" content="Posterior summaries from the skew-normal marginals, on the unconstrained
-scale of logpost, together with diagnostics of each stage of the
-approximation."><meta property="og:description" content="Posterior summaries from the skew-normal marginals, on the unconstrained
-scale of logpost, together with diagnostics of each stage of the
-approximation."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Summarise an INLAvanilla fit — summary.inla_vanilla"><meta name="description" content="Posterior summaries from the skew-normal marginals, together with
+diagnostics of each stage of the approximation. A parameter named for its
+scale (log_sigma, logit_p, atanh_rho) is summarised on its natural
+scale, as sigma, p or rho, and the others on the scale of logpost
+(see the section on natural-scale summaries in inla_vanilla()). A line
+under the table says which rows were mapped. The diagnostics always refer
+to the scale of logpost, where the approximation is made, and name the
+parameters as init does."><meta property="og:description" content="Posterior summaries from the skew-normal marginals, together with
+diagnostics of each stage of the approximation. A parameter named for its
+scale (log_sigma, logit_p, atanh_rho) is summarised on its natural
+scale, as sigma, p or rho, and the others on the scale of logpost
+(see the section on natural-scale summaries in inla_vanilla()). A line
+under the table says which rows were mapped. The diagnostics always refer
+to the scale of logpost, where the approximation is made, and name the
+parameters as init does."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -17,7 +27,7 @@ approximation."><meta property="og:image" content="http://haziqj.ml/inlavanilla/
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +47,8 @@ approximation."><meta property="og:image" content="http://haziqj.ml/inlavanilla/
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -56,20 +67,25 @@ approximation."><meta property="og:image" content="http://haziqj.ml/inlavanilla/
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Summarise an INLAvanilla fit</h1>
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/R/methods.R" class="external-link"><code>R/methods.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/R/methods.R" class="external-link"><code>R/methods.R</code></a></small>
       <div class="d-none name"><code>summary.inla_vanilla.Rd</code></div>
     </div>
 
     <div class="ref-description section level2">
-    <p>Posterior summaries from the skew-normal marginals, on the unconstrained
-scale of <code>logpost</code>, together with diagnostics of each stage of the
-approximation.</p>
+    <p>Posterior summaries from the skew-normal marginals, together with
+diagnostics of each stage of the approximation. A parameter named for its
+scale (<code>log_sigma</code>, <code>logit_p</code>, <code>atanh_rho</code>) is summarised on its natural
+scale, as <code>sigma</code>, <code>p</code> or <code>rho</code>, and the others on the scale of <code>logpost</code>
+(see the section on natural-scale summaries in <code><a href="inla_vanilla.html">inla_vanilla()</a></code>). A line
+under the table says which rows were mapped. The diagnostics always refer
+to the scale of <code>logpost</code>, where the approximation is made, and name the
+parameters as <code>init</code> does.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="co"># S3 method for class 'inla_vanilla'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">object</span>, probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">object</span>, probs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span>, transform <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -84,6 +100,12 @@ approximation.</p>
 <dd><p>Probabilities for the reported quantiles.</p></dd>
 
 
+<dt id="arg-transform">transform<a class="anchor" aria-label="anchor" href="#arg-transform"></a></dt>
+<dd><p>Logical. Summarise the transformed parameters on their
+natural scale? Default <code>TRUE</code>. <code>FALSE</code> gives every parameter on the
+scale of <code>logpost</code>, whatever the fit was asked for.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Unused.</p></dd>
 
@@ -91,10 +113,11 @@ approximation.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>summary.inla_vanilla</code>: a list with the summary
-table <code>table</code>, the log marginal likelihood <code>logml</code> (and its Laplace part
-<code>logml_laplace</code>), the per-parameter diagnostics <code>diagnostics</code>, and
-details of the optimiser, the VB correction, the number of calls and the
-timing.</p>
+table <code>table</code>, the transforms behind its natural-scale rows <code>transform</code>
+(<code>NULL</code> when there are none), the log marginal likelihood <code>logml</code> (and
+its Laplace part <code>logml_laplace</code>), the per-parameter diagnostics
+<code>diagnostics</code>, and details of the optimiser, the VB correction, the
+number of calls and the timing.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

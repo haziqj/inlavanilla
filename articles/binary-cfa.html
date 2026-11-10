@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+<li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -85,7 +86,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/vignettes/articles/binary-cfa.qmd" class="external-link"><code>vignettes/articles/binary-cfa.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/binary-cfa.qmd" class="external-link"><code>vignettes/articles/binary-cfa.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -185,34 +186,34 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span>  count <span class="op">=</span> <span class="va">count</span>,</span>
 <span>  nodes <span class="op">=</span> <span class="va">nodes</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [141ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.18σ [53ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [117ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [176ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.18σ [51ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [137ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (327ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (384ms)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;                      Mean      SD     2.5%      50%    97.5%     Mode</span></span>
-<span><span class="co">#&gt;  1 atanh_lambda1   0.4016  0.0832   0.2402   0.4009   0.5665   0.3996</span></span>
-<span><span class="co">#&gt;  2 atanh_lambda2   0.5854  0.0819   0.4279   0.5843   0.7491   0.5821</span></span>
-<span><span class="co">#&gt;  3 atanh_lambda3   0.940   0.104    0.747    0.936    1.155    0.927 </span></span>
-<span><span class="co">#&gt;  4 atanh_lambda4   0.8750  0.0952   0.6955   0.8724   1.0695   0.8670</span></span>
-<span><span class="co">#&gt;  5 atanh_lambda5   1.377   0.188    1.058    1.358    1.794    1.317 </span></span>
-<span><span class="co">#&gt;  6 atanh_lambda6   0.6151  0.0916   0.4396   0.6135   0.7992   0.6104</span></span>
-<span><span class="co">#&gt;  7 tau1           -0.8395  0.0637  -0.9652  -0.8392  -0.7153  -0.8386</span></span>
-<span><span class="co">#&gt;  8 tau2           -0.4339  0.0579  -0.5477  -0.4338  -0.3207  -0.4335</span></span>
-<span><span class="co">#&gt;  9 tau3            0.0050  0.0559  -0.1046   0.0050   0.1146   0.0050</span></span>
-<span><span class="co">#&gt; 10 tau4            0.1462  0.0562   0.0362   0.1461   0.2563   0.1461</span></span>
-<span><span class="co">#&gt; 11 tau5            0.4523  0.0579   0.3390   0.4522   0.5662   0.4519</span></span>
-<span><span class="co">#&gt; 12 tau6            0.8627  0.0641   0.7379   0.8624   0.9893   0.8618</span></span></code></pre></div>
+<span><span class="co">#&gt;                Mean      SD     2.5%      50%    97.5%     Mode</span></span>
+<span><span class="co">#&gt;  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842</span></span>
+<span><span class="co">#&gt;  2 lambda2   0.5240  0.0590   0.4036   0.5258   0.6346   0.5292</span></span>
+<span><span class="co">#&gt;  3 lambda3   0.7314  0.0475   0.6333   0.7332   0.8193   0.7365</span></span>
+<span><span class="co">#&gt;  4 lambda4   0.7007  0.0480   0.6015   0.7026   0.7893   0.7062</span></span>
+<span><span class="co">#&gt;  5 lambda5   0.8735  0.0418   0.7849   0.8759   0.9462   0.8798</span></span>
+<span><span class="co">#&gt;  6 lambda6   0.5445  0.0639   0.4133   0.5466   0.6636   0.5508</span></span>
+<span><span class="co">#&gt;  7 tau1     -0.8395  0.0637  -0.9652  -0.8392  -0.7153  -0.8386</span></span>
+<span><span class="co">#&gt;  8 tau2     -0.4339  0.0579  -0.5477  -0.4338  -0.3207  -0.4335</span></span>
+<span><span class="co">#&gt;  9 tau3      0.0050  0.0559  -0.1046   0.0050   0.1146   0.0050</span></span>
+<span><span class="co">#&gt; 10 tau4      0.1462  0.0562   0.0362   0.1461   0.2563   0.1461</span></span>
+<span><span class="co">#&gt; 11 tau5      0.4523  0.0579   0.3390   0.4522   0.5662   0.4519</span></span>
+<span><span class="co">#&gt; 12 tau6      0.8627  0.0641   0.7379   0.8624   0.9893   0.8618</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ℹ Natural scale: tanh() of 6 atanh_ parameters.</span></span></code></pre></div>
 </div>
-<p>Quantiles carry over through <span class="math inline">\(\tanh\)</span>, so the loadings’ 95% intervals and medians are those of <span class="math inline">\(\operatorname{atanh} \lambda_j\)</span>, transformed. Next to the true values:</p>
+<p>The loadings are named for the scale they are on, <code>atanh_lambda1</code> and so on, so the fit reports them as the loadings themselves (see the article on <a href="natural-scale.html">natural-scale summaries</a>). Next to the true values:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">q</span> <span class="op">&lt;-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2.5%"</span>, <span class="st">"50%"</span>, <span class="st">"97.5%"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="va">q</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Hyperbolic.html" class="external-link">tanh</a></span><span class="op">(</span><span class="va">q</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, <span class="op">]</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"lambda"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"tau"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>true <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lambda</span>, <span class="va">tau</span><span class="op">)</span>, <span class="va">q</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;          true   2.5%    50%  97.5%</span></span>
 <span><span class="co">#&gt; lambda1  0.50  0.236  0.381  0.513</span></span>

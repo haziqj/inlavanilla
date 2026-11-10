@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -57,7 +57,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+<li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -85,7 +86,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/vignettes/articles/correlation.qmd" class="external-link"><code>vignettes/articles/correlation.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/correlation.qmd" class="external-link"><code>vignettes/articles/correlation.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -245,21 +246,21 @@ p(L) \propto \prod_{i=2}^{d} L_{ii}^{\, d - i + 2\eta - 2},
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">36</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"atanh_z"</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">2</span><span class="op">:</span><span class="fl">9</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">8</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/sequence.html" class="external-link">sequence</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">8</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, x <span class="op">=</span> <span class="va">x</span>, eta <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 34 iterations [1.3s]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [659ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 54 skew-normal marginals [1.7s]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 34 iterations [1.6s]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [838ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 54 skew-normal marginals [2.1s]</span></span></code></pre></div>
 </div>
-<p>The fit takes about 4 seconds, and <code>summary(fit)</code> flags nothing. The first six CPCs, on the atanh scale:</p>
+<p>The fit takes about 5 seconds, and <code>summary(fit)</code> flags nothing. The parameters are named for the scale they are on, <code>log_sigma_x1</code> and <code>atanh_z21</code>, so the fit reports the standard deviations and the CPCs themselves (see the article on <a href="natural-scale.html">natural-scale summaries</a>). The first six CPCs:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="fl">19</span><span class="op">:</span><span class="fl">24</span>, <span class="op">]</span>, <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt;             Mean    SD   2.5%    50% 97.5%   Mode</span></span>
-<span><span class="co">#&gt; atanh_z21  0.285 0.056  0.176  0.285 0.394  0.285</span></span>
-<span><span class="co">#&gt; atanh_z31  0.447 0.056  0.338  0.447 0.557  0.447</span></span>
-<span><span class="co">#&gt; atanh_z32  0.241 0.057  0.130  0.241 0.351  0.241</span></span>
-<span><span class="co">#&gt; atanh_z41  0.364 0.055  0.256  0.364 0.472  0.364</span></span>
-<span><span class="co">#&gt; atanh_z42  0.044 0.056 -0.065  0.044 0.153  0.044</span></span>
-<span><span class="co">#&gt; atanh_z43 -0.018 0.056 -0.127 -0.018 0.092 -0.018</span></span></code></pre></div>
+<span><span class="co">#&gt;       Mean    SD   2.5%    50% 97.5%   Mode</span></span>
+<span><span class="co">#&gt; z21  0.277 0.051  0.174  0.278 0.375  0.279</span></span>
+<span><span class="co">#&gt; z31  0.419 0.046  0.326  0.420 0.506  0.422</span></span>
+<span><span class="co">#&gt; z32  0.235 0.053  0.129  0.236 0.338  0.237</span></span>
+<span><span class="co">#&gt; z41  0.348 0.048  0.250  0.349 0.439  0.350</span></span>
+<span><span class="co">#&gt; z42  0.044 0.055 -0.065  0.044 0.152  0.044</span></span>
+<span><span class="co">#&gt; z43 -0.018 0.056 -0.127 -0.018 0.092 -0.018</span></span></code></pre></div>
 </div>
 <p>Only the CPCs in the first column of <span class="math inline">\(L\)</span> are correlations. The others are partial correlations: <span class="math inline">\(z_{32}\)</span> is the correlation of <span class="math inline">\(x_3\)</span> and <span class="math inline">\(x_2\)</span> given <span class="math inline">\(x_1\)</span>, and <span class="math inline">\(z_{43}\)</span> that of <span class="math inline">\(x_4\)</span> and <span class="math inline">\(x_3\)</span> given <span class="math inline">\(x_1\)</span> and <span class="math inline">\(x_2\)</span>. They are hard to read, which is what draws are for.</p>
 </section><section class="level2"><h2 id="back-to-the-correlations">Back to the correlations<a class="anchor" aria-label="anchor" href="#back-to-the-correlations"></a>

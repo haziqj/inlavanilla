@@ -1,11 +1,15 @@
 # Plot an INLAvanilla fit
 
 By default (`type = "marg_pdf"`), draws the marginal density of each
-parameter, on the unconstrained scale, with the Gaussian marginal of the
-Laplace approximation for comparison. The vertical line marks the
-posterior mean. For a fit with `marginals = "gaussian"` the marginals
-are Gaussian: centred at the VB mean, or, with `vb = "off"`, the Laplace
-marginals themselves, drawn without a second copy.
+parameter, with the Gaussian marginal of the Laplace approximation for
+comparison. The vertical line marks the posterior mean. A parameter
+named for its scale (`log_sigma`) is drawn on its natural scale, as
+`sigma`: both densities are carried there by the change of variables, so
+the Laplace curve is the density that a Gaussian `log_sigma` gives
+`sigma`. For a fit with `marginals = "gaussian"` the marginals are
+Gaussian on the scale of `logpost`: centred at the VB mean, or, with
+`vb = "off"`, the Laplace marginals themselves, drawn without a second
+copy.
 
 ## Usage
 
@@ -16,6 +20,7 @@ plot(
   pars = NULL,
   type = c("marg_pdf", "sn_fit", "sn_fit_log"),
   laplace = TRUE,
+  transform = TRUE,
   ...
 )
 ```
@@ -28,7 +33,8 @@ plot(
 
 - pars:
 
-  Parameters to plot, by name or position. Defaults to all.
+  Parameters to plot, by position or by name: the name in `init` or, for
+  a transformed parameter, its natural-scale name. Defaults to all.
 
 - type:
 
@@ -41,6 +47,12 @@ plot(
   Logical. Overlay the Laplace (Gaussian) marginals? Default `TRUE`;
   ignored when the marginals are the Laplace ones, and by the `"sn_fit"`
   plots.
+
+- transform:
+
+  Logical. Draw the transformed parameters on their natural scale?
+  Default `TRUE`. `FALSE` draws every marginal on the scale of
+  `logpost`. Ignored by the `"sn_fit"` plots.
 
 - ...:
 
@@ -67,4 +79,5 @@ fraction of the peak, is the NMAD of
 [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
 `type = "sn_fit_log"` draws the same on a base-10 log scale, which shows
 the tails. Both use the scans kept in the fit, with no further calls of
-`logpost`, and need skew-normal marginals.
+`logpost`, and need skew-normal marginals. They show the scale the fit
+was made on, whatever `transform`.

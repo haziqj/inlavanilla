@@ -93,42 +93,43 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [106ms]
-#> ✔ VB mean correction, max shift 0.3σ [53ms]
-#> ✔ Fitted 6 skew-normal marginals [124ms]
+#> ✔ Found the posterior mode in 20 iterations [135ms]
+#> ✔ VB mean correction, max shift 0.3σ [51ms]
+#> ✔ Fitted 6 skew-normal marginals [146ms]
 fit
-#> ── INLAvanilla ──────────────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -894.66 · Converged in 20 iterations (305ms)
+#> Log marginal likelihood: -894.66 · Converged in 20 iterations (360ms)
 #> 
-#>                  Mean      SD      2.5%       50%     97.5%      Mode
-#> 1 b0         251.35    6.84    237.93    251.35    264.75    251.36  
-#> 2 b1          10.47    1.56      7.41     10.47     13.52     10.47  
-#> 3 log_tau0     3.263   0.239     2.787     3.266     3.724     3.271 
-#> 4 log_tau1     1.860   0.219     1.444     1.855     2.303     1.845 
-#> 5 atanh_rho    0.102   0.313    -0.464     0.084     0.767     0.046 
-#> 6 log_sigma    3.2520  0.0593    3.1390    3.2509    3.3715    3.2486
+#>             Mean     SD     2.5%      50%    97.5%     Mode
+#> 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 
+#> 2 b1      10.47   1.56     7.41    10.47    13.52    10.47 
+#> 3 tau0    26.88   6.46    16.23    26.20    41.42    24.89 
+#> 4 tau1     6.58   1.48     4.24     6.39    10.01     6.04 
+#> 5 rho      0.091  0.283   -0.433    0.084    0.645    0.056
+#> 6 sigma   25.89   1.54    23.08    25.81    29.12    25.67 
 #> 
+#> ℹ Natural scale: tau0 = exp(log_tau0), tau1 = exp(log_tau1), rho =
+#>   tanh(atanh_rho), sigma = exp(log_sigma).
 #> ! 1 check flagged by `summary()`.
 ```
 
-The marginals are on the unconstrained scale. Draws give the standard
-deviations and the correlation on their natural scale:
+The fit is made on the unconstrained scale, and the standard deviations
+and the correlation are named for the scale they are on, so they are
+reported on their natural scale, as `tau0`, `tau1`, `rho` and `sigma`
+(see the article on [natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)). The
+draws are on that scale too:
 
 ``` r
 
-natural <- function(theta) {
-  c(
-    b0 = theta[["b0"]],
-    b1 = theta[["b1"]],
-    tau0 = exp(theta[["log_tau0"]]),
-    tau1 = exp(theta[["log_tau1"]]),
-    rho = tanh(theta[["atanh_rho"]]),
-    sigma = exp(theta[["log_sigma"]])
-  )
-}
 set.seed(1)
-draws <- sampling(fit, nsamp = 20000, fun = natural)
+draws <- sampling(fit, nsamp = 20000)
+head(draws, 3)
+#>            b0       b1     tau0     tau1         rho    sigma
+#> [1,] 247.0624 10.98041 24.86400 6.881330 -0.33075089 26.93531
+#> [2,] 252.6071 10.80077 28.48176 7.007577  0.08917924 26.35683
+#> [3,] 245.6301  9.67959 27.23636 6.566232  0.36777966 25.16078
 ```
 
 ## Checking against brms
@@ -293,11 +294,11 @@ determined:
 
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [39ms]
-#> ✔ VB mean correction, max shift 0.42σ [15ms]
-#> ✔ Fitted 6 skew-normal marginals [62ms]
+#> ✔ Found the posterior mode in 20 iterations [50ms]
+#> ✔ VB mean correction, max shift 0.42σ [13ms]
+#> ✔ Fitted 6 skew-normal marginals [60ms]
 set.seed(1)
-draws_6 <- sampling(fit_6, nsamp = 20000, fun = natural)
+draws_6 <- sampling(fit_6, nsamp = 20000)
 round(compare(draws_6, ref$subjects_6), 3)
 #>       brms_mean vanilla_mean brms_sd vanilla_sd
 #> b0      248.014      248.294  19.398     15.581
@@ -319,21 +320,24 @@ ridge bend:
 ``` r
 
 summary(fit_6)
-#> ── INLAvanilla summary ──────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 0.1.1.9002 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -322.676 · Converged in 20 iterations (119ms)
+#> Log marginal likelihood: -322.676 · Converged in 20 iterations (127ms)
 #> Laplace -322.994 + VB term 0.32
-#> 665 logpost calls: mode 40ms, VB 15ms, marginals 63ms
+#> 665 logpost calls: mode 51ms, VB 14ms, marginals 61ms
 #> 
 #> ── Posterior marginals ──
 #> 
-#>                 Mean      SD     2.5%      50%    97.5%     Mode
-#> 1 b0         248.4    15.6    217.8    248.4    278.8    248.5  
-#> 2 b1           8.00    3.10     1.92     8.00    14.08     8.00 
-#> 3 log_tau0     3.592   0.414    2.728    3.610    4.355    3.647
-#> 4 log_tau1     2.111   0.477    1.200    2.102    3.070    2.085
-#> 5 atanh_rho    0.360   0.595   -0.626    0.293    1.692    0.142
-#> 6 log_sigma    3.573   0.102    3.381    3.570    3.783    3.563
+#>             Mean      SD     2.5%      50%    97.5%     Mode
+#> 1 b0     248.4    15.6    217.8    248.4    278.8    248.5  
+#> 2 b1       8.00    3.10     1.92     8.00    14.08     8.00 
+#> 3 tau0    39.4    16.2     15.3     37.0     77.9     32.4  
+#> 4 tau1     9.26    4.82     3.32     8.18    21.54     6.47 
+#> 5 rho      0.262   0.424   -0.555    0.285    0.934    0.433
+#> 6 sigma   35.80    3.71    29.39    35.50    43.95    34.92 
+#> 
+#> ℹ Natural scale: tau0 = exp(log_tau0), tau1 = exp(log_tau1), rho =
+#>   tanh(atanh_rho), sigma = exp(log_sigma).
 #> 
 #> ── Diagnostics ──
 #> 

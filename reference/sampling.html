@@ -21,7 +21,7 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\)."><meta proper
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9002</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,7 +41,8 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\)."><meta proper
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/natural-scale.html">Natural-scale summaries</a></li>
+    <li><a class="dropdown-item" href="../articles/diagnostics.html">Diagnostics</a></li>
     <li><a class="dropdown-item" href="../articles/model-comparison.html">Model comparison with LOO and WAIC</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
@@ -60,7 +61,7 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\)."><meta proper
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Draw from an approximate posterior</h1>
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v0.1.1/R/sampling.R" class="external-link"><code>R/sampling.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/R/sampling.R" class="external-link"><code>R/sampling.R</code></a></small>
       <div class="d-none name"><code>sampling.Rd</code></div>
     </div>
 
@@ -77,7 +78,7 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\).</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">sampling</span><span class="op">(</span><span class="va">object</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'inla_vanilla'</span></span>
-<span><span class="fu">sampling</span><span class="op">(</span><span class="va">object</span>, nsamp <span class="op">=</span> <span class="fl">1000L</span>, fun <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">sampling</span><span class="op">(</span><span class="va">object</span>, nsamp <span class="op">=</span> <span class="fl">1000L</span>, fun <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span>, transform <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -105,11 +106,18 @@ named numeric vector, like <code>logpost</code>, and returns a numeric vector of
 fixed length (named, ideally). When <code>NULL</code>, the parameters themselves are
 returned.</p></dd>
 
+
+<dt id="arg-transform">transform<a class="anchor" aria-label="anchor" href="#arg-transform"></a></dt>
+<dd><p>Logical. Return the transformed parameters on their
+natural scale? Default <code>TRUE</code>. <code>FALSE</code> returns every parameter on the
+scale of <code>logpost</code>. It must be named in full, and has no effect on what
+<code>fun</code> receives.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A numeric matrix with one row per draw: the parameters on the
-unconstrained scale, or the values of <code>fun</code>.</p>
+    <p>A numeric matrix with one row per draw: the parameters, with the
+transformed ones on their natural scale, or the values of <code>fun</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -117,8 +125,13 @@ unconstrained scale, or the values of <code>fun</code>.</p>
 Gaussian \(N(\tilde\vartheta, \Omega)\), centred at the VB mean (or at
 the mode when <code>vb = "off"</code>).</p>
 <p>Draws never call the log-posterior, so they are cheap: large <code>nsamp</code> costs
-little. Use <code>fun</code> for natural-scale or derived quantities, such as
-<code>exp(log_sigma)</code> or a covariance matrix built from several parameters.</p>
+little. A parameter named for its scale (<code>log_sigma</code>, <code>logit_p</code>,
+<code>atanh_rho</code>) is returned on its natural scale, in a column named <code>sigma</code>,
+<code>p</code> or <code>rho</code> (see the section on natural-scale summaries in
+<code><a href="inla_vanilla.html">inla_vanilla()</a></code>). Use <code>fun</code> for quantities of several parameters, such as
+a ratio or a covariance matrix. <code>fun</code> is written as <code>logpost</code> is: it
+receives each draw on the scale of <code>logpost</code>, under the names in <code>init</code>,
+whatever <code>transform</code>.</p>
     </div>
 
     <div class="section level2">
@@ -133,15 +146,26 @@ little. Use <code>fun</code> for natural-scale or derived quantities, such as
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Draws of mu and sigma: the parameter named log_sigma comes back as sigma</span></span></span>
 <span class="r-in"><span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu">sampling</span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">2000</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            mu    sigma</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] 5.603356 1.677596</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] 5.125348 1.732507</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] 5.285843 1.760798</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4,] 5.141380 1.826636</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [5,] 4.707959 2.303939</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [6,] 5.023140 2.180450</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># The same draws as logpost sees them</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">sampling</span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">2000</span>, transform <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>            mu log_sigma</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] 5.603356 0.5173617</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] 5.125348 0.5495693</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] 5.285843 0.5657669</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [4,] 5.141380 0.6024758</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [5,] 4.707959 0.8346202</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [6,] 5.023140 0.7795313</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] 4.621822 0.5056868</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] 5.253538 0.3865430</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] 5.908196 0.7070464</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4,] 5.444282 0.5663662</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [5,] 5.037834 0.4417673</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [6,] 5.583696 0.5130578</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A derived quantity: the coefficient of variation sigma / mu</span></span></span>
 <span class="r-in"><span><span class="va">cv</span> <span class="op">&lt;-</span> <span class="fu">sampling</span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">2000</span>, fun <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span></span>
@@ -149,7 +173,7 @@ little. Use <code>fun</code> for natural-scale or derived quantities, such as
 <span class="r-in"><span><span class="op">}</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">cv</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      2.5%       50%     97.5% </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0.2716513 0.3583291 0.4832763 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.2785661 0.3576390 0.4836230 </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
