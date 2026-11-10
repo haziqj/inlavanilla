@@ -193,15 +193,37 @@ natural_draws <- function(theta, tr) {
 }
 
 # The line under a table that has natural-scale rows, saying which they are
-# and how each was obtained: at most `n` in full, then a count. The names are
-# pasted as plain text and never pass through a cli template.
+# and how each was obtained: each one in full when there are at most `n`, and
+# otherwise a count for each transform. The names are pasted as plain text and
+# never pass through a cli template.
 cat_transform_note <- function(tr, n = 4L) {
   rows <- which(tr$transform != "identity")
-  calls <- vapply(tr$transform[rows], function(k) transform_dict[[k]]$call, "")
-  items <- paste0(tr$name[rows], " = ", calls, "(", tr$parameter[rows], ")")
-  more <- length(items) - n
-  if (more > 0L) {
-    items <- c(items[seq_len(n)], paste("and", more, "more"))
+  calls <- vapply(
+    names(transform_dict),
+    function(k) transform_dict[[k]]$call,
+    ""
+  )
+  items <- if (length(rows) <= n) {
+    paste0(
+      tr$name[rows],
+      " = ",
+      calls[tr$transform[rows]],
+      "(",
+      tr$parameter[rows],
+      ")"
+    )
+  } else {
+    count <- table(factor(tr$transform[rows], names(transform_dict)))
+    count <- count[count > 0]
+    paste0(
+      calls[names(count)],
+      "() of ",
+      count,
+      " ",
+      names(count),
+      "_ parameter",
+      ifelse(count == 1, "", "s")
+    )
   }
   cat_wrap(
     paste0(

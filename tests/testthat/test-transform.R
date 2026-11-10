@@ -453,20 +453,32 @@ test_that("print() and summary() say which rows are on the natural scale", {
   expect_true(all(nchar(capture.output(print(nm_fit))) <= 80))
 })
 
-test_that("a long list of transformed parameters is cut short", {
-  nms <- paste0("log_s", 1:7)
+test_that("many transformed parameters are counted, not listed", {
+  nms <- c(paste0("log_s", 1:4), "atanh_r", "b")
   lp <- function(theta) sum(dnorm(theta, 0, 0.3, log = TRUE))
   fit <- inla_vanilla(
     lp,
-    stats::setNames(numeric(7), nms),
+    stats::setNames(numeric(6), nms),
     marginals = "gaussian",
     vb = "off",
     silent = TRUE
   )
   out <- capture.output(print(fit))
-  note <- gsub(" +", " ", paste(out, collapse = " "))
-  expect_match(note, "s4 = exp\\(log_s4\\), and 3 more\\.")
+  expect_match(
+    out[length(out)],
+    "Natural scale: exp\\(\\) of 4 log_ parameters, tanh\\(\\) of 1 atanh_ parameter\\.$"
+  )
   expect_true(all(nchar(out) <= 80))
+  # four or fewer are listed in full
+  fit <- inla_vanilla(
+    lp,
+    stats::setNames(numeric(5), nms[-1]),
+    marginals = "gaussian",
+    vb = "off",
+    silent = TRUE
+  )
+  note <- gsub(" +", " ", paste(capture.output(print(fit)), collapse = " "))
+  expect_match(note, "s4 = exp\\(log_s4\\), r = tanh\\(atanh_r\\)\\.")
 })
 
 test_that("sampling() returns natural-scale draws, and fun still gets theta", {
