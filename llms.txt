@@ -52,8 +52,9 @@ skewed, and bounded at zero.
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 works on an unconstrained scale, so we write the log-posterior in terms
 of \\\vartheta = \text{logit}(p)\\. The prior is stated for \\p\\, so it
-carries the Jacobian \\dp / d\vartheta = p(1 - p)\\. Naming the
-parameter `logit_p` says which scale it is on:
+carries the Jacobian \\dp / d\vartheta = p(1 - p)\\. The names of `init`
+name the parameters, and calling this one `logit_p` says which scale it
+is on:
 
 ``` r
 
@@ -68,12 +69,12 @@ logpost <- function(theta, y, n) {
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 #> ✔ Found the posterior mode in 6 iterations [3ms]
-#> ✔ VB mean correction, max shift 0.17σ [13ms]
-#> ✔ Fitted 1 skew-normal marginal [18ms]
+#> ✔ VB mean correction, max shift 0.17σ [14ms]
+#> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (39ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (41ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
@@ -83,8 +84,11 @@ fit
 
 The fit is made on the logit scale, and because of its name the
 parameter is reported as \\p\\ itself. The same goes for `log_` and
-`atanh_`, as in `log_sigma` and `atanh_rho`. The summary matches the
-exact posterior:
+`atanh_`, as in `log_sigma` and `atanh_rho`. Only the reporting changes:
+`logpost` still receives `logit_p`, and `transform = FALSE` turns the
+renaming off. [Natural-scale
+summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md) has
+the details. The summary matches the exact posterior:
 
 ``` r
 
@@ -120,9 +124,7 @@ it.](reference/figures/README-density-1.png)
 started](http://haziqj.ml/inlavanilla/articles/inlavanilla.md) vignette
 works through a multi-parameter example: it checks the approximation
 against the exact posterior, and covers gradients, derived quantities
-and model comparison. [Natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)
-explains the naming of parameters.
+and model comparison.
 
 ## References
 

@@ -51,7 +51,7 @@ fit <- inla_vanilla(logpost, init = c(log_rate = 0), y = y, silent = TRUE)
 fit
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.35 · Converged in 7 iterations (20ms)
+#> Log marginal likelihood: -12.35 · Converged in 7 iterations (15ms)
 #> 
 #>          Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 rate  1.875  0.485  1.048  1.834  2.940  1.758
@@ -184,7 +184,7 @@ fit_bvn <- inla_vanilla(logpost_bvn, init, x = x, silent = TRUE)
 fit_bvn
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -39.67 · Converged in 33 iterations (49ms)
+#> Log marginal likelihood: -39.67 · Converged in 33 iterations (46ms)
 #> 
 #>             Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 mu1     5.0058  0.0493  4.9091  5.0058  5.1024  5.0058
@@ -260,7 +260,7 @@ derived <- sampling(fit_bvn, nsamp = 10000, fun = function(theta) {
 t(apply(derived, 2, quantile, c(0.025, 0.5, 0.975)))
 #>                  2.5%        50%     97.5%
 #> covariance 0.06124972 0.09913891 0.1600525
-#> slope      0.58066256 0.77928684 0.9984040
+#> slope      0.58066257 0.77928684 0.9984041
 ```
 
 The sample covariance is 0.099 and the least-squares slope 0.799, both
@@ -334,7 +334,7 @@ fit_off <- inla_vanilla(
 fit_off
 #> ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.35 · Converged in 7 iterations (8ms)
+#> Log marginal likelihood: -12.35 · Converged in 7 iterations (7ms)
 #> 
 #>              Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 log_rate  0.595  0.263  0.047  0.607  1.078  0.631
@@ -352,7 +352,7 @@ other scale:
 set.seed(1)
 head(sampling(fit_bvn, nsamp = 3, transform = FALSE))
 #>           mu1      mu2 log_sigma1 log_sigma2 atanh_rho
-#> [1,] 4.974906 3.460932 -0.9823351 -0.9596206 0.8800905
+#> [1,] 4.974906 3.460932 -0.9823351 -0.9596205 0.8800905
 #> [2,] 5.014849 3.446804 -0.9559824 -0.7805312 0.7876613
 #> [3,] 4.964592 3.365724 -0.9730748 -0.8940833 1.1111349
 ```

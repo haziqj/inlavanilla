@@ -167,13 +167,13 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span>  atanh_rho <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">25</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [135ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [51ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [146ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [108ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [52ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [124ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9002 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -894.66 · Converged in 20 iterations (360ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -894.66 · Converged in 20 iterations (307ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;             Mean     SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 </span></span>
@@ -194,9 +194,9 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">20000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            b0       b1     tau0     tau1         rho    sigma</span></span>
-<span><span class="co">#&gt; [1,] 247.0624 10.98041 24.86400 6.881330 -0.33075089 26.93531</span></span>
-<span><span class="co">#&gt; [2,] 252.6071 10.80077 28.48176 7.007577  0.08917924 26.35683</span></span>
-<span><span class="co">#&gt; [3,] 245.6301  9.67959 27.23636 6.566232  0.36777966 25.16078</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] 247.0624 10.98041 24.86399 6.881332 -0.33075050 26.93531</span></span>
+<span><span class="co">#&gt; [2,] 252.6071 10.80077 28.48175 7.007579  0.08917977 26.35683</span></span>
+<span><span class="co">#&gt; [3,] 245.6301  9.67959 27.23634 6.566233  0.36778021 25.16078</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checking-against-brms">Checking against brms<a class="anchor" aria-label="anchor" href="#checking-against-brms"></a>
 </h2>
@@ -342,9 +342,9 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span></span>
 <span><span class="va">fit_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [50ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [13ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [60ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [40ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [62ms]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">draws_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_6</span>, nsamp <span class="op">=</span> <span class="fl">20000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu">compare</span><span class="op">(</span><span class="va">draws_6</span>, <span class="va">ref</span><span class="op">$</span><span class="va">subjects_6</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -362,9 +362,9 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9002 summary ───────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -322.676 · Converged in 20 iterations (127ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -322.676 · Converged in 20 iterations (119ms)</span></span>
 <span><span class="co">#&gt; Laplace -322.994 + VB term 0.32</span></span>
-<span><span class="co">#&gt; 665 logpost calls: mode 51ms, VB 14ms, marginals 61ms</span></span>
+<span><span class="co">#&gt; 665 logpost calls: mode 41ms, VB 14ms, marginals 62ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
