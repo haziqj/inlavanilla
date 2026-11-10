@@ -475,7 +475,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   0), 0 otherwise, as INLAvaan defines it. No check uses it: without a
 #'   gradient `nlminb()` can report false convergence at an accurate mode.
 #'   `mode_shift_max` checks the mode instead.
-#' * `iterations`: the iterations of `nlminb()`, in the run that was kept if
+#' * `iterations`: the iterations of `nlminb()`, the total over both runs if
 #'   it was restarted.
 #' * `grad_inf`, `grad_inf_rel`, `grad_l2`: the largest absolute value, the
 #'   largest relative value and the Euclidean norm of `grad` (see below).

@@ -357,7 +357,9 @@
 #' * Before the mode search: the parameters, where the derivatives come from,
 #'   and `logpost` at `init`.
 #' * The mode: the message, iterations and evaluations of [stats::nlminb()],
-#'   and whether it was restarted with the parameters rescaled; the
+#'   and whether it was restarted with the parameters rescaled (the
+#'   iterations and evaluations are then the totals over both runs, and the
+#'   restart line gives each run's own iterations); the
 #'   log-posterior at the mode, the whitened gradient there (which decides
 #'   the restart) and the largest Newton step in posterior SDs (which the
 #'   fit-time warning checks); how the Hessian was taken (and, for a
@@ -499,9 +501,11 @@
 #'   * `diagnostics`: the checks of each stage, which [diagnostics()]
 #'     returns under INLAvaan's names and [summary.inla_vanilla()] explains.
 #'     `optim` holds the return code, message and iterations of
-#'     [stats::nlminb()], the gradient of minus the log-posterior at the mode
-#'     (`grad`), the whitened gradient there (`grad_mode`), and the condition
-#'     number of the Hessian in posterior-SD units (`hess_cond`). `vb` holds
+#'     [stats::nlminb()] (the iterations of both runs if it was restarted,
+#'     the code and message of the run that was kept), the gradient of minus
+#'     the log-posterior at the mode (`grad`), the whitened gradient there
+#'     (`grad_mode`), and the condition number of the Hessian in posterior-SD
+#'     units (`hess_cond`). `vb` holds
 #'     the iterations of the VB correction, whether it stopped at the first
 #'     step (`one_pass`), whether it fell back to
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of

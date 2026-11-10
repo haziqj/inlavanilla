@@ -146,9 +146,11 @@ in their headers.
 \item \code{diagnostics}: the checks of each stage, which \code{\link[=diagnostics]{diagnostics()}}
 returns under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} explains.
 \code{optim} holds the return code, message and iterations of
-\code{\link[stats:nlminb]{stats::nlminb()}}, the gradient of minus the log-posterior at the mode
-(\code{grad}), the whitened gradient there (\code{grad_mode}), and the condition
-number of the Hessian in posterior-SD units (\code{hess_cond}). \code{vb} holds
+\code{\link[stats:nlminb]{stats::nlminb()}} (the iterations of both runs if it was restarted,
+the code and message of the run that was kept), the gradient of minus
+the log-posterior at the mode (\code{grad}), the whitened gradient there
+(\code{grad_mode}), and the condition number of the Hessian in posterior-SD
+units (\code{hess_cond}). \code{vb} holds
 the iterations of the VB correction, whether it stopped at the first
 step (\code{one_pass}), whether it fell back to
 \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
@@ -553,7 +555,9 @@ of \code{logpost} or \code{grad}:
 \item Before the mode search: the parameters, where the derivatives come from,
 and \code{logpost} at \code{init}.
 \item The mode: the message, iterations and evaluations of \code{\link[stats:nlminb]{stats::nlminb()}},
-and whether it was restarted with the parameters rescaled; the
+and whether it was restarted with the parameters rescaled (the
+iterations and evaluations are then the totals over both runs, and the
+restart line gives each run's own iterations); the
 log-posterior at the mode, the whitened gradient there (which decides
 the restart) and the largest Newton step in posterior SDs (which the
 fit-time warning checks); how the Hessian was taken (and, for a

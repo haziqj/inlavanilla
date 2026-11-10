@@ -57,7 +57,7 @@ Values that a fit did not compute are \code{NA}: the VB quantities with
 0), 0 otherwise, as INLAvaan defines it. No check uses it: without a
 gradient \code{nlminb()} can report false convergence at an accurate mode.
 \code{mode_shift_max} checks the mode instead.
-\item \code{iterations}: the iterations of \code{nlminb()}, in the run that was kept if
+\item \code{iterations}: the iterations of \code{nlminb()}, the total over both runs if
 it was restarted.
 \item \code{grad_inf}, \code{grad_inf_rel}, \code{grad_l2}: the largest absolute value, the
 largest relative value and the Euclidean norm of \code{grad} (see below).
