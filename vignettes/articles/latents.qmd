@@ -417,7 +417,7 @@ factor:
 #| message: false
 library(Matrix)
 
-draw_latent <- function(theta) {
+draw_latent <- function(theta, obj) {
   obj$fn(unname(theta))
   par <- obj$env$last.par
   random <- obj$env$random
@@ -430,8 +430,15 @@ draw_latent <- function(theta) {
   par[random] + as.vector(solve(ch, e, system = "Pt"))
 }
 set.seed(1)
-u_rtmb <- sampling(fit_rtmb, nsamp = 10000, fun = draw_latent)
+u_rtmb <- sampling(
+  fit_rtmb, nsamp = 10000, fun = \(theta) draw_latent(theta, obj)
+)
 ```
+
+`draw_latent()` has nothing of the model in it. It serves any object built
+with `random =`, and returns all of its random effects, in the object's
+order. The object goes in through a small function, because an argument
+named `obj` would be taken for the `object` of `sampling()` itself.
 
 Two lines of `draw_latent()` are easy to get wrong, and neither fails with an
 error. Without the copy `1 *`, every draw reuses the Cholesky factor of the
@@ -479,7 +486,7 @@ Gaussian given $\theta$, as in the growth model, there is no gap at all.
 
 The object need not be the one that was fitted. A model with a closed form
 is faster to fit without RTMB, as the growth model was. An object built from
-its joint density, only for this step, serves the same `draw_latent()` with
+its joint density, only for this step, goes to the same `draw_latent()` with
 draws from that fit, provided the object's parameters are those of `init`, in
 the same order.
 
