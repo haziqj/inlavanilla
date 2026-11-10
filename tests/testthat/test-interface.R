@@ -83,6 +83,8 @@ fit_reg_novb <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
 # floating-point differences between platforms could change, and the gradient
 # at the mode is at the level of finite-difference noise.
 scrub_output <- function(x) {
+  # The version, and the rule after it, whose length depends on the version's
+  x <- gsub("(INLAvanilla) [0-9.]+( summary)? -+", "\\1 <version>\\2 --", x)
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
@@ -2056,7 +2058,10 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   expect_identical(res$value, fit_reg)
   # The rule names the approximation, not the time it took, which the
   # headline under it gives, with the log marginal likelihood
-  expect_match(out, "^-- INLAvanilla -+ Skew-normal \\+ one-step VB --\n")
+  expect_match(
+    out,
+    "^-- INLAvanilla [0-9.]+ -+ Skew-normal \\+ one-step VB --\n"
+  )
   expect_no_match(strsplit(out, "\n")[[1]][1], "[0-9](ms|s)\\b|parameters")
   expect_match(
     out,
@@ -2066,7 +2071,25 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   expect_match(out, format(round(fit_reg$logml, 2), nsmall = 2), fixed = TRUE)
 
   out <- capture_output(print(fit_reg_novb))
-  expect_match(out, "^-- INLAvanilla -+ Skew-normal --\n")
+  expect_match(out, "^-- INLAvanilla [0-9.]+ -+ Skew-normal --\n")
+
+  # The fit records the version that made it, and both headers show it
+  ver <- utils::packageVersion("inlavanilla")
+  expect_identical(fit_reg$version, ver)
+  expect_identical(summary(fit_reg)$version, ver)
+  expect_match(out, paste0("^-- INLAvanilla ", ver, " -"), fixed = FALSE)
+  expect_match(
+    capture_output(print(summary(fit_reg))),
+    paste0("^-- INLAvanilla ", ver, " summary -")
+  )
+  # A fit saved before the version was stored still prints
+  old <- fit_reg
+  old$version <- NULL
+  expect_match(capture_output(print(old)), "^-- INLAvanilla -+ Skew-normal")
+  expect_match(
+    capture_output(print(summary(old))),
+    "^-- INLAvanilla summary -+ Skew-normal"
+  )
   expect_match(
     capture_output(print(summary(fit_reg_novb))),
     "-- Skew-normal --"
@@ -2414,7 +2437,7 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     expect_false(any(grepl("[^\001-\177]", out, useBytes = TRUE)))
     expect_match(
       out,
-      "-- INLAvanilla -+ Skew-normal \\+ one-step VB --",
+      "-- INLAvanilla [0-9.]+ -+ Skew-normal \\+ one-step VB --",
       all = FALSE
     )
     expect_match(out, "max shift [0-9.e-]+ SD", all = FALSE)
@@ -2423,7 +2446,11 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
   local({
     testthat::local_reproducible_output(unicode = TRUE)
     out <- fit_text()
-    expect_match(out, "\u2500 INLAvanilla \u2500+ Skew-normal", all = FALSE)
+    expect_match(
+      out,
+      "\u2500 INLAvanilla [0-9.]+ \u2500+ Skew-normal",
+      all = FALSE
+    )
     expect_match(out, "max shift [0-9.e-]+\u03c3", all = FALSE)
     expect_match(out, "Largest shift [0-9.e-]+\u03c3", all = FALSE)
   })

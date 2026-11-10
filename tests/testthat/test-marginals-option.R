@@ -35,6 +35,8 @@ fit_g <- inla_vanilla(
 )
 
 scrub_output <- function(x) {
+  # The version, and the rule after it, whose length depends on the version's
+  x <- gsub("(INLAvanilla) [0-9.]+( summary)? -+", "\\1 <version>\\2 --", x)
   x <- gsub("[0-9.]+(ms|s)\\b", "<time>", x)
   x <- gsub("[0-9]+ (logpost|grad)\\b", "<n> \\1", x)
   x <- gsub("[0-9]+ iterations?\\b", "<n> iteration(s)", x)
@@ -240,10 +242,10 @@ test_that("print() and summary() describe Gaussian marginals", {
   testthat::local_reproducible_output(width = 80, crayon = FALSE)
   # Gaussian marginals are the Laplace approximation's
   out <- capture_output(print(fit_g_vb))
-  expect_match(out, "-- INLAvanilla -+ Laplace \\+ one-step VB --")
+  expect_match(out, "-- INLAvanilla [0-9.]+ -+ Laplace \\+ one-step VB --")
   expect_no_match(out, "Skew-normal")
   out <- capture_output(print(fit_g))
-  expect_match(out, "-- INLAvanilla -+ Laplace --")
+  expect_match(out, "-- INLAvanilla [0-9.]+ -+ Laplace --")
   expect_match(capture_output(print(summary(fit_g))), "-- Laplace --")
 
   expect_snapshot(print(fit_g_vb), transform = scrub_output)

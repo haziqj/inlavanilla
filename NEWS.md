@@ -1,3 +1,9 @@
+# inlavanilla (development version)
+
+* A fit now records the version of inlavanilla that made it, in `fit$version`,
+  and `print()` and `summary()` show it in their headers
+  ("INLAvanilla 0.1.1").
+
 # inlavanilla 0.1.1
 
 * The mode search now allows 5000 iterations and 5000 evaluations by default,

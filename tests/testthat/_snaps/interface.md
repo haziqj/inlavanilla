@@ -139,7 +139,7 @@
     Code
       print(fit_reg)
     Output
-      -- INLAvanilla ------------------------------------ Skew-normal + one-step VB --
+      -- INLAvanilla <version> -- Skew-normal + one-step VB --
       
       Log marginal likelihood: -16.25 | Converged in <n> iteration(s) (<time>)
       
@@ -152,7 +152,7 @@
     Code
       print(summary(fit_reg))
     Output
-      -- INLAvanilla summary ---------------------------- Skew-normal + one-step VB --
+      -- INLAvanilla <version> summary -- Skew-normal + one-step VB --
       
       Log marginal likelihood: -16.246 | Converged in <n> iteration(s) (<time>)
       Laplace -16.277 + VB term 0.031
@@ -181,7 +181,7 @@
     Code
       print(summary(fit_reg_novb))
     Output
-      -- INLAvanilla summary ------------------------------------------ Skew-normal --
+      -- INLAvanilla <version> summary -- Skew-normal --
       
       Log marginal likelihood: -16.277 | Converged in <n> iteration(s) (<time>)
       <n> logpost calls: mode <time>, VB <time>, marginals <time>

@@ -2,7 +2,7 @@
 print.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
     width = out_width(),
-    left = cli::style_bold("INLAvanilla"),
+    left = header_title(x$version),
     right = cli::col_grey(method_label(is_gaussian(x), x$vb)),
     line_col = vanilla_hex
   )
@@ -235,6 +235,7 @@ summary.inla_vanilla <- function(
       optim = object$diagnostics$optim,
       vb = object$diagnostics$vb,
       vb_method = object$vb,
+      version = object$version,
       counts = object$counts,
       timing = object$timing,
       marginals = object$marginals,
@@ -249,7 +250,7 @@ summary.inla_vanilla <- function(
 print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
     width = out_width(),
-    left = cli::style_bold("INLAvanilla summary"),
+    left = header_title(x$version, "summary"),
     right = cli::col_grey(method_label(is_gaussian(x), x$vb_method)),
     line_col = vanilla_hex
   )
@@ -1089,6 +1090,20 @@ cat_wrap <- function(text, exdent = 0) {
 # Whether a fit has Gaussian marginals (marginals = "gaussian").
 is_gaussian <- function(x) {
   identical(x$marginals, "gaussian")
+}
+
+# The left of the headers of print() and summary(): the package, the version
+# that made the fit, and what is shown ("INLAvanilla 0.1.1 summary"). A fit
+# from before the version was stored has none, and the title goes without.
+header_title <- function(version, what = NULL) {
+  paste(
+    c(
+      cli::style_bold("INLAvanilla"),
+      if (!is.null(version)) as.character(version),
+      if (!is.null(what)) cli::style_bold(what)
+    ),
+    collapse = " "
+  )
 }
 
 # The approximation, as the headers of print() and summary() name it: the
