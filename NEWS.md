@@ -1,5 +1,24 @@
 # inlavanilla 0.1.1
 
+* A parameter named for the scale it is on is now reported on its natural
+  scale. With `init = c(mu = 0, log_sigma = 0)`, `print()`, `summary()`,
+  `coef()` and `plot()` show `sigma`, and `sampling()` returns draws of it.
+  The prefixes are `log_` (reported through `exp()`), `logit_` (`plogis()`)
+  and `atanh_` (`tanh()`), the scales R-INLA itself uses for nearly all of its
+  hyperparameters. The fit does not change: `logpost`, `grad`, `hess`, the
+  `loglik` of `loo()` and the `fun` of `sampling()` receive the parameter as
+  before, a prior stated on the natural scale still needs its Jacobian in
+  `logpost`, and the diagnostics keep the names of `init`. The quantiles are
+  mapped through the transform, and the mean, SD and mode are those of the
+  natural-scale distribution. This changes the output of existing code that
+  uses such names: `fit$summary["log_sigma", ]` and
+  `sampling(fit)[, "log_sigma"]` now stop with a subscript error, since the
+  row and the column are called `sigma`. `transform = FALSE` in
+  `inla_vanilla()` restores the old behaviour, and `summary()`, `plot()` and
+  `sampling()` take the same argument to show a fit on the scale of `logpost`.
+  The new `fit$transform` lists what was read from the names, and
+  `vignette("natural-scale")` explains it.
+
 * The mode search now allows 5000 iterations and 5000 evaluations by default,
   up from 1000 and 2000, so that slowly converging fits do not stop at the
   limit. `control$nlminb` still sets them.
