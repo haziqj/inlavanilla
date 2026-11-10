@@ -1743,3 +1743,70 @@ test_that("with a Hessian, nlminb() reaches a badly scaled mode without a restar
   expect_lt(max(abs(lap_hess$mode - mu) / s), 1e-10) # observed 0
   expect_lt(lap_hess$hess_error, 1e-6)
 })
+
+test_that("a restarted mode search reports the iterations of both runs", {
+  # The badly scaled Gaussian of the test above, with the gradient alone:
+  # nlminb() stops short and is restarted. The iterations and evaluations
+  # reported are the totals over both runs, not those of the run that is kept.
+  s <- 10^c(-6, -3, 0, 2, 4)
+  P <- diag(1 / s) %*% solve(0.6^abs(outer(1:5, 1:5, "-"))) %*% diag(1 / s)
+  mu <- 10^c(-5, -2, 1, 3, 5)
+  lp <- function(x) -0.5 * drop(crossprod(x - mu, P %*% (x - mu)))
+  gr <- function(x) -drop(P %*% (x - mu))
+  init <- stats::setNames(mu + 1, paste0("x", 1:5))
+  ctrl <- vanilla_control(list())
+  lap <- laplace_fit(lp, gr, init, ctrl)
+  rs <- lap$restart
+  expect_false(is.null(rs))
+  # The first run, repeated here, and the restart from where it stopped
+  first <- stats::nlminb(
+    unname(init),
+    function(x) -lp(x),
+    function(x) -gr(x),
+    control = ctrl$nlminb
+  )
+  second <- stats::nlminb(
+    first$par,
+    function(x) -lp(x),
+    function(x) -gr(x),
+    scale = sqrt(diag(lap$H)),
+    control = ctrl$nlminb
+  )
+  expect_identical(rs$iterations, first$iterations)
+  expect_gt(rs$restart_iterations, 0L)
+  total <- rs$iterations + rs$restart_iterations
+  expect_identical(lap$opt$iterations, total)
+  expect_gt(lap$opt$evaluations[["function"]], first$evaluations[["function"]])
+  expect_gt(lap$opt$evaluations[["gradient"]], first$evaluations[["gradient"]])
+  # The return code and the message are those of the run that was kept
+  expect_true(rs$kept)
+  expect_identical(lap$opt$message, second$message)
+
+  msgs <- capture_messages(
+    fit <- inla_vanilla(lp, init, grad = gr, verbose = TRUE)
+  )
+  text <- gsub("\\s+", " ", cli::ansi_strip(paste(msgs, collapse = "")))
+  expect_identical(fit$diagnostics$optim$iterations, total)
+  expect_identical(diagnostics(fit)[["iterations"]], as.numeric(total))
+  expect_match(
+    text,
+    sprintf(
+      "Found the posterior mode in %d iterations \\(restarted once\\)",
+      total
+    )
+  )
+  expect_match(text, sprintf("nlminb: .+, after %d iterations \\(", total))
+  # The restart line keeps each run's own count
+  expect_match(
+    text,
+    sprintf(
+      "first run: %d iterations?, .+, restart: %d iterations?\\); kept the restart",
+      rs$iterations,
+      rs$restart_iterations
+    )
+  )
+  expect_match(
+    capture_output(print(fit)),
+    sprintf("Converged in %d iterations", total)
+  )
+})
