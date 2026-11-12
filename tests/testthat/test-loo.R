@@ -8,6 +8,10 @@
 #     quadrature.
 # (c) The fallback to first order, the loo package's layout, the interface
 #     and the printed output.
+# (d) The diagonal shortcut. For the linear regression its terms have closed
+#     forms too: a unit's leverages add up to its hat value, and the score
+#     term is its squared residual times that. With many units it is close
+#     to the exact LOO.
 
 set.seed(20)
 lin_n <- 25
@@ -392,4 +396,151 @@ test_that("print() shows the estimates and the leverage", {
   out <- NULL
   expect_output(out <- withVisible(print(res)))
   expect_false(out$visible)
+})
+
+# A larger regression of the same kind, where every unit's leverage is small
+set.seed(21)
+big_n <- 400
+big_X <- cbind(1, rnorm(big_n), runif(big_n))
+big_y <- drop(big_X %*% c(1, -0.5, 2) + rnorm(big_n, 0, lin_sigma))
+fit_big <- inla_vanilla(
+  lpost_lin,
+  c(a = 0, b = 0, c = 0),
+  X = big_X,
+  y = big_y,
+  silent = TRUE
+)
+
+test_that("the diagonal shortcut gives the score term and the trace", {
+  res <- loo(fit_big, ll_lin, X = big_X, y = big_y, hessian = "diagonal")
+  expect_identical(res$calls, 7L)
+  expect_identical(res$order, 1L)
+  expect_identical(res$hessian, "diagonal")
+  expect_length(res$trace_units, 0)
+  V <- solve(crossprod(big_X) / lin_sigma^2 + diag(3) / lin_tau^2)
+  m <- drop(V %*% crossprod(big_X, big_y)) / lin_sigma^2
+  # The leverages of a unit add up to x' V x / sigma^2
+  hat <- rowSums((big_X %*% V) * big_X) / lin_sigma^2
+  resid <- big_y - drop(big_X %*% m)
+  score <- resid^2 / lin_sigma^2 * hat
+  l0 <- dnorm(big_y, drop(big_X %*% m), lin_sigma, log = TRUE)
+  # observed 2e-9
+  expect_equal(unname(res$pointwise[, "k"]), hat, tolerance = 1e-6)
+  expect_equal(unname(res$pointwise[, "p_loo"]), score, tolerance = 1e-6)
+  expect_equal(
+    unname(res$pointwise[, "elpd_loo"]),
+    l0 - 0.5 * score - 0.5 * hat,
+    tolerance = 1e-6
+  )
+  expect_equal(
+    res$estimates[, "Estimate"],
+    c(
+      elpd_loo = sum(l0 - 0.5 * score - 0.5 * hat),
+      p_loo = sum(score),
+      looic = -2 * sum(l0 - 0.5 * score - 0.5 * hat)
+    ),
+    tolerance = 1e-6
+  )
+})
+
+test_that("the diagonal shortcut is close to the full expansion for small leverages", {
+  full <- loo(fit_big, ll_lin, X = big_X, y = big_y)
+  short <- loo(fit_big, ll_lin, X = big_X, y = big_y, hessian = "diagonal")
+  expect_identical(full$calls, 13L)
+  expect_identical(full$hessian, "full")
+  elpd_full <- full$estimates["elpd_loo", "Estimate"]
+  elpd_short <- short$estimates["elpd_loo", "Estimate"]
+  # What is left out is of second order in the leverages: observed 0.024
+  expect_lt(abs(elpd_short - elpd_full), 0.05)
+  # Without the trace, the first-order total is off by about half the number
+  # of parameters
+  first <- elpd_short + 0.5 * sum(short$pointwise[, "k"])
+  expect_gt(first - elpd_full, 1.3)
+  expect_equal(
+    short$estimates["elpd_loo", "SE"],
+    full$estimates["elpd_loo", "SE"],
+    tolerance = 0.01
+  )
+  # With few units the leverages are larger, and so is what is left out:
+  # observed 0.58
+  few_full <- loo(fit_lin, ll_lin, X = lin_X, y = lin_y)
+  few_short <- loo(fit_lin, ll_lin, X = lin_X, y = lin_y, hessian = "diag")
+  expect_gt(
+    abs(
+      few_short$estimates["elpd_loo", "Estimate"] -
+        few_full$estimates["elpd_loo", "Estimate"]
+    ),
+    0.05
+  )
+})
+
+test_that("with the diagonal shortcut the WAIC equals the LOO", {
+  l <- loo(fit_big, ll_lin, X = big_X, y = big_y, hessian = "diagonal")
+  w <- waic(fit_big, ll_lin, X = big_X, y = big_y, hessian = "diagonal")
+  expect_s3_class(w, c("inla_vanilla_waic", "waic", "loo"), exact = TRUE)
+  expect_identical(w$calls, 7L)
+  expect_identical(colnames(w$pointwise), c("elpd_waic", "p_waic", "waic"))
+  expect_equal(
+    unname(w$pointwise[, "elpd_waic"]),
+    unname(l$pointwise[, "elpd_loo"])
+  )
+  expect_equal(unname(w$estimates), unname(l$estimates))
+})
+
+test_that("leverages that add up to 1 or more are warned about", {
+  tp <- list(
+    n = 3L,
+    units = c("u1", "u2", "u3"),
+    l0 = c(-1, -2, -3),
+    quad1 = c(0.1, 0.2, 0.3),
+    trace = c(-0.2, -1.3, -0.1),
+    log_cpo_1 = c(-1.05, -2.1, -3.15),
+    lpd_1 = c(-0.95, -1.9, -2.85),
+    hessian = "diagonal",
+    theta = c(a = 0),
+    calls = 3L
+  )
+  expect_warning(
+    res <- loo_from_taylor(tp),
+    "trace may not stand in",
+    class = "inlavanilla_warning"
+  )
+  expect_identical(res$trace_units, "u2")
+  expect_equal(
+    unname(res$pointwise[, "elpd_loo"]),
+    tp$log_cpo_1 + 0.5 * tp$trace
+  )
+  expect_equal(unname(res$pointwise[, "k"]), -tp$trace)
+  expect_match(res$warnings, "trace may not stand in")
+  expect_warning(
+    waic_from_taylor(tp),
+    "trace may not stand in",
+    class = "inlavanilla_warning"
+  )
+  # Silent: no warning, but recorded
+  expect_no_warning(res <- loo_from_taylor(tp, silent = TRUE))
+  expect_match(res$warnings, "trace may not stand in")
+})
+
+test_that("hessian is checked", {
+  expect_error(
+    loo(fit_lin, ll_lin, X = lin_X, y = lin_y, hessian = "none"),
+    "`hessian` must be one of",
+    class = "inlavanilla_error"
+  )
+  expect_error(
+    waic(fit_lin, ll_lin, X = lin_X, y = lin_y, hessian = 1),
+    "`hessian` must be one of",
+    class = "inlavanilla_error"
+  )
+})
+
+test_that("print() names the diagonal shortcut", {
+  testthat::local_reproducible_output(width = 80, crayon = FALSE)
+  expect_snapshot(
+    print(loo(fit_big, ll_lin, X = big_X, y = big_y, hessian = "diagonal"))
+  )
+  expect_snapshot(
+    print(waic(fit_big, ll_lin, X = big_X, y = big_y, hessian = "diagonal"))
+  )
 })

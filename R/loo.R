@@ -46,6 +46,25 @@
 #' \eqn{m^2 + m + 1} calls of `loglik` for \eqn{m} parameters, each returning
 #' every unit.
 #'
+#' **The diagonal shortcut.** With `hessian = "diagonal"` only the
+#' \eqn{2m + 1} calls along the axes are made. They give each score and the
+#' diagonal of each Hessian in those axes, and so the trace
+#' \eqn{\mathrm{tr}(\Omega H_u)}. To first order in the leverages,
+#' \eqn{\log |I + \Omega H_u| = \mathrm{tr}(\Omega H_u)}, and then
+#' \deqn{\log \mathrm{CPO}_u = \ell_u - \tfrac12 s_u^\top \Omega s_u
+#'   + \tfrac12 \mathrm{tr}(\Omega H_u),}
+#' with \eqn{p_u = s_u^\top \Omega s_u} for both criteria, which then agree
+#' unit by unit. Summed over the units, the trace is minus the effective number
+#' of parameters of the likelihood,
+#' \eqn{p_D = \mathrm{tr}(-\Omega \sum_u H_u)}, so the total is the
+#' first-order one less \eqn{p_D / 2}, which is what the first order alone
+#' leaves out (Alhyari et al., 2026). The terms dropped are of second order in
+#' the leverages, about \eqn{m^2 / n} in all for \eqn{n} units of similar
+#' weight. Use it when every unit is a small part of the data and
+#' \eqn{m^2} calls are too many. The `k` reported is then the sum of a unit's
+#' leverages, \eqn{-\mathrm{tr}(\Omega H_u)}, and a unit at 1 or more gives
+#' a warning.
+#'
 #' The calls use the `cores` of the fit, or the plan set with `future::plan()`
 #' when the fit has none, as the scans of [inla_vanilla()] do (see its section
 #' on parallel computation), with the same results as a serial run. Calls
@@ -101,16 +120,25 @@
 #'   `loo(x, ...)` and `waic(x, ...)` are the ones called, and they take an
 #'   argument named `x` as the fit: then do not name data `x`, or call
 #'   `inlavanilla::loo()`.
+#' @param hessian `"full"` (the default) takes every second derivative of each
+#'   unit's log-likelihood, with \eqn{m^2 + m + 1} calls of `loglik`.
+#'   `"diagonal"` takes the scores and the trace only, with \eqn{2m + 1}
+#'   calls: see the Details. It comes after the dots, so it must be named in
+#'   full.
 #'
 #' @returns `loo()` returns an object of class `inla_vanilla_loo`, which also
 #'   has class `loo`: a list with
 #'   * `estimates`: a matrix with rows `elpd_loo`, `p_loo` and `looic` and
 #'     columns `Estimate` and `SE`;
 #'   * `pointwise`: a matrix with one row per unit and columns `elpd_loo` (the
-#'     log CPO), `p_loo`, `looic` and `k` (the unit's largest leverage);
-#'   * `order`: the order of the expansion used, 2 or 1;
+#'     log CPO), `p_loo`, `looic` and `k` (the unit's largest leverage, or the
+#'     sum of its leverages with `hessian = "diagonal"`);
+#'   * `order`: the order of the expansion used, 2 or 1 (1 with
+#'     `hessian = "diagonal"`, where the trace is added to the first order);
+#'   * `hessian`: `"full"` or `"diagonal"`;
 #'   * `first_order_units`: the units whose second-order term does not exist,
-#'     if any;
+#'     if any, and with `hessian = "diagonal"`, `trace_units`: the units whose
+#'     leverages add up to 1 or more;
 #'   * `theta`: the point of the expansion, and `calls`: the number of calls
 #'     of `loglik`;
 #'   * `warnings`: the messages of any warnings raised.
@@ -191,7 +219,12 @@ waic.default <- function(object, ...) {
 
 #' @rdname loo
 #' @export
-loo.inla_vanilla <- function(object, loglik, ...) {
+loo.inla_vanilla <- function(
+  object,
+  loglik,
+  ...,
+  hessian = c("full", "diagonal")
+) {
   if (missing(loglik)) {
     abort(
       "{.arg loglik} is missing: a function returning one log-likelihood
@@ -199,16 +232,22 @@ loo.inla_vanilla <- function(object, loglik, ...) {
     )
   }
   check_function(loglik, "loglik")
+  hessian <- check_choice(hessian, c("full", "diagonal"), "hessian")
   # Bind `...` here, so a data argument cannot partially match a formal of
   # an internal helper
   loglik_x <- function(theta) loglik(theta, ...)
-  tp <- taylor_pointwise(object, loglik_x)
+  tp <- taylor_pointwise(object, loglik_x, hessian = hessian)
   loo_from_taylor(tp, silent = isTRUE(object$silent))
 }
 
 #' @rdname loo
 #' @export
-waic.inla_vanilla <- function(object, loglik, ...) {
+waic.inla_vanilla <- function(
+  object,
+  loglik,
+  ...,
+  hessian = c("full", "diagonal")
+) {
   if (missing(loglik)) {
     abort(
       "{.arg loglik} is missing: a function returning one log-likelihood
@@ -216,8 +255,9 @@ waic.inla_vanilla <- function(object, loglik, ...) {
     )
   }
   check_function(loglik, "loglik")
+  hessian <- check_choice(hessian, c("full", "diagonal"), "hessian")
   loglik_x <- function(theta) loglik(theta, ...)
-  tp <- taylor_pointwise(object, loglik_x)
+  tp <- taylor_pointwise(object, loglik_x, hessian = hessian)
   waic_from_taylor(tp, silent = isTRUE(object$silent))
 }
 
@@ -227,13 +267,23 @@ waic.inla_vanilla <- function(object, loglik, ...) {
 # generics a data argument named `x` would bind to the fit, which is why
 # inlavanilla's own generics call it `object`.)
 #' @rawNamespace S3method(loo::loo, inla_vanilla, loo_x_inla_vanilla)
-loo_x_inla_vanilla <- function(x, loglik, ...) {
-  loo.inla_vanilla(x, loglik, ...)
+loo_x_inla_vanilla <- function(
+  x,
+  loglik,
+  ...,
+  hessian = c("full", "diagonal")
+) {
+  loo.inla_vanilla(x, loglik, ..., hessian = hessian)
 }
 
 #' @rawNamespace S3method(loo::waic, inla_vanilla, waic_x_inla_vanilla)
-waic_x_inla_vanilla <- function(x, loglik, ...) {
-  waic.inla_vanilla(x, loglik, ...)
+waic_x_inla_vanilla <- function(
+  x,
+  loglik,
+  ...,
+  hessian = c("full", "diagonal")
+) {
+  waic.inla_vanilla(x, loglik, ..., hessian = hessian)
 }
 
 # The per-unit Taylor terms at the fit's Gaussian N(theta, Omega). Finite
@@ -242,13 +292,17 @@ waic_x_inla_vanilla <- function(x, loglik, ...) {
 # L' H_u L directly; every formula below is invariant to the choice of L.
 # Steps of h = 0.01 posterior SDs: in these units the terms of an expansion
 # shrink with the amount of data, so truncation error is negligible, and
-# rounding error is about 1e-12 |l_u|.
-taylor_pointwise <- function(fit, loglik, h = 0.01) {
+# rounding error is about 1e-12 |l_u|. With hessian = "diagonal" only the
+# centre and the points along the axes are evaluated, 2m + 1 in all, which
+# give the scores and the diagonal of each whitened Hessian, and with it the
+# trace of Omega H_u.
+taylor_pointwise <- function(fit, loglik, h = 0.01, hessian = "full") {
   theta <- fit$mean_vb
   parnames <- names(theta)
   m <- length(theta)
   L <- t(chol(fit$cov))
-  n_calls <- m * m + m + 1L
+  full <- hessian == "full"
+  n_calls <- if (full) m * m + m + 1L else 2L * m + 1L
   calls <- 0L
   last_x <- theta
   n <- NA_integer_
@@ -318,7 +372,7 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
   }
 
   # The first calls are needed anyway, and say how long the rest will take
-  U <- taylor_points(m, h)
+  U <- taylor_points(m, h, pairs = full)
   secs <- numeric(3L)
   t0 <- elapsed()
   l0 <- at(U[, 1L])
@@ -407,9 +461,31 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
   fp <- vals[, 2L * seq_len(m), drop = FALSE]
   fm <- vals[, 2L * seq_len(m) + 1L, drop = FALSE]
   S <- (fp - fm) / (2 * h)
+  # The diagonal of each unit's whitened Hessian, a row per unit. Its sum is
+  # the trace of Omega H_u.
+  D <- (fp - 2 * l0 + fm) / h^2
+  trace <- rowSums(D)
+  quad1 <- rowSums(S^2)
+  if (!full) {
+    progress_close(prog)
+    return(list(
+      n = n,
+      units = units,
+      l0 = unname(l0),
+      quad1 = quad1,
+      trace = trace,
+      log_cpo_1 = unname(l0) - 0.5 * quad1,
+      lpd_1 = unname(l0) + 0.5 * quad1,
+      hessian = hessian,
+      theta = theta,
+      calls = calls,
+      workers = setup$jobs,
+      loglik_warnings = seen
+    ))
+  }
   H <- array(0, c(m, m, n))
   for (i in seq_len(m)) {
-    H[i, i, ] <- (fp[, i] - 2 * l0 + fm[, i]) / h^2
+    H[i, i, ] <- D[, i]
   }
   if (m > 1L) {
     k <- 2L * m + 1L
@@ -431,8 +507,7 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
   }
   progress_close(prog)
 
-  # s' Omega s in whitened coordinates
-  quad1 <- rowSums(S^2)
+  # quad1 is s' Omega s in whitened coordinates
   log_cpo_2 <- lpd_2 <- k_max <- k_min <- ssq <- rep(NA_real_, n)
   for (u in seq_len(n)) {
     eg <- eigen(H[,, u], symmetric = TRUE)
@@ -457,12 +532,14 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
     l0 = unname(l0),
     quad1 = quad1,
     ssq = ssq,
+    trace = trace,
     log_cpo_1 = unname(l0) - 0.5 * quad1,
     lpd_1 = unname(l0) + 0.5 * quad1,
     log_cpo_2 = log_cpo_2,
     lpd_2 = lpd_2,
     k_max = k_max,
     k_min = k_min,
+    hessian = hessian,
     theta = theta,
     calls = calls,
     workers = setup$jobs,
@@ -472,9 +549,9 @@ taylor_pointwise <- function(fit, loglik, h = 0.01) {
 
 # The points of taylor_pointwise() in whitened coordinates, a column each: the
 # centre, then +h and -h along each axis, then +h and -h along each pair of
-# axes, m^2 + m + 1 in all.
-taylor_points <- function(m, h) {
-  U <- matrix(0, m, m * m + m + 1L)
+# axes, m^2 + m + 1 in all. Without the pairs, the first 2m + 1 of them.
+taylor_points <- function(m, h, pairs = TRUE) {
+  U <- matrix(0, m, if (pairs) m * m + m + 1L else 2L * m + 1L)
   k <- 1L
   add <- function(e) {
     U[, k + 1L] <<- e
@@ -486,7 +563,7 @@ taylor_points <- function(m, h) {
     e[i] <- h
     add(e)
   }
-  if (m > 1L) {
+  if (pairs && m > 1L) {
     for (i in seq_len(m - 1L)) {
       for (j in (i + 1L):m) {
         e <- numeric(m)
@@ -554,6 +631,9 @@ loo_se <- function(v) {
 # first order instead. A missing second-order lpd is an artefact of the
 # quadratic, so p_loo uses that unit's first-order term (as INLAvaan does).
 loo_from_taylor <- function(tp, silent = FALSE) {
+  if (identical(tp$hessian, "diagonal")) {
+    return(trace_from_taylor(tp, "loo", silent))
+  }
   cpo_ok <- !is.na(tp$log_cpo_2)
   lpd_ok <- !is.na(tp$lpd_2)
   second <- all(cpo_ok)
@@ -599,6 +679,7 @@ loo_from_taylor <- function(tp, silent = FALSE) {
       estimates = est,
       pointwise = pointwise,
       order = if (second) 2L else 1L,
+      hessian = "full",
       first_order_units = bad,
       theta = tp$theta,
       calls = tp$calls,
@@ -608,10 +689,81 @@ loo_from_taylor <- function(tp, silent = FALSE) {
   )
 }
 
+# The LOO and the WAIC from the scores and the trace alone. To first order
+# in the leverages, log |I + Omega H_u| is tr(Omega H_u) and the quadratic
+# form is s' Omega s, so
+#   log CPO_u = l_u - s' Omega s / 2 + tr(Omega H_u) / 2,
+#   lpd_u     = l_u + s' Omega s / 2 + tr(Omega H_u) / 2,
+# and p_u = s' Omega s for both criteria, which then agree unit by unit.
+# Summed over the units the trace is minus the effective number of parameters
+# of the likelihood, tr(-Omega sum_u H_u), so this is the first-order total
+# less half of it. What is left out is of second order in the leverages, so
+# the sum of a unit's leverages, -tr(Omega H_u), is reported as its k, and a
+# unit at 1 or more is warned about.
+trace_from_taylor <- function(tp, what, silent = FALSE) {
+  k_sum <- -tp$trace
+  elpd_u <- tp$log_cpo_1 + 0.5 * tp$trace
+  p_u <- tp$quad1
+  warnings <- tp$loglik_warnings
+  bad <- unit_labels(tp, which(k_sum >= 1))
+  if (length(bad) > 0L) {
+    n_bad <- length(bad)
+    msg <- c(
+      "The trace may not stand in for the second-order term.",
+      "i" = "{n_bad} unit{?s} {?has/have} leverages that add up to 1 or
+             more: {.val {bad}}.",
+      "i" = "Use {.code hessian = \"full\"} to check {cli::qty(n_bad)}
+             {?it/them}."
+    )
+    warnings <- c(warnings, cli::ansi_strip(cli::format_inline(msg[[1]])))
+    if (!silent) {
+      warn(msg)
+    }
+  }
+  names_est <- if (what == "loo") {
+    c("elpd_loo", "p_loo", "looic")
+  } else {
+    c("elpd_waic", "p_waic", "waic")
+  }
+  est <- rbind(
+    c(sum(elpd_u), loo_se(elpd_u)),
+    c(sum(p_u), loo_se(p_u)),
+    c(-2 * sum(elpd_u), 2 * loo_se(elpd_u))
+  )
+  dimnames(est) <- list(names_est, c("Estimate", "SE"))
+  pointwise <- cbind(elpd_u, p_u, -2 * elpd_u)
+  colnames(pointwise) <- names_est
+  if (what == "loo") {
+    pointwise <- cbind(pointwise, k = k_sum)
+  }
+  rownames(pointwise) <- tp$units
+  structure(
+    list(
+      estimates = est,
+      pointwise = pointwise,
+      order = 1L,
+      hessian = "diagonal",
+      first_order_units = character(),
+      trace_units = bad,
+      theta = tp$theta,
+      calls = tp$calls,
+      warnings = warnings
+    ),
+    class = if (what == "loo") {
+      c("inla_vanilla_loo", "loo")
+    } else {
+      c("inla_vanilla_waic", "waic", "loo")
+    }
+  )
+}
+
 # Assemble the WAIC from the same terms. It reads no case-deletion term, so
 # only the lpd must exist; where it does not, every estimate falls to first
 # order, where elpd_waic equals the first-order LOO exactly.
 waic_from_taylor <- function(tp, silent = FALSE) {
+  if (identical(tp$hessian, "diagonal")) {
+    return(trace_from_taylor(tp, "waic", silent))
+  }
   lpd_ok <- !is.na(tp$lpd_2)
   second <- all(lpd_ok)
   warnings <- tp$loglik_warnings
@@ -643,6 +795,7 @@ waic_from_taylor <- function(tp, silent = FALSE) {
       estimates = est,
       pointwise = pointwise,
       order = if (second) 2L else 1L,
+      hessian = "full",
       first_order_units = bad,
       theta = tp$theta,
       calls = tp$calls,
@@ -659,7 +812,12 @@ print.inla_vanilla_loo <- function(x, digits = 1, ...) {
   worst <- which.max(pw[, "k"])
   unit <- if (is.null(rownames(pw))) worst else rownames(pw)[worst]
   k_worst <- pw[worst, "k"]
-  if (x$order == 2L) {
+  if (identical(x$hessian, "diagonal")) {
+    cat_status(
+      if (length(x$trace_units) > 0L) "warn" else "ok",
+      "First-order expansion with the trace of the second-order term. Largest summed leverage k = {fmt_num(k_worst)}, for unit {unit}."
+    )
+  } else if (x$order == 2L) {
     cat_status(
       "ok",
       "Second-order expansion for every unit. Largest leverage k = {fmt_num(k_worst)}, for unit {unit}."
@@ -677,7 +835,12 @@ print.inla_vanilla_loo <- function(x, digits = 1, ...) {
 #' @export
 print.inla_vanilla_waic <- function(x, digits = 1, ...) {
   print_taylor_header(x, "WAIC", digits)
-  if (x$order == 2L) {
+  if (identical(x$hessian, "diagonal")) {
+    cat_status(
+      if (length(x$trace_units) > 0L) "warn" else "ok",
+      "First-order expansion with the trace of the second-order term."
+    )
+  } else if (x$order == 2L) {
     cat_status("ok", "Second-order expansion for every unit.")
   } else {
     bad <- x$first_order_units

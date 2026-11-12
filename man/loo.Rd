@@ -17,9 +17,9 @@ waic(object, ...)
 
 \method{waic}{default}(object, ...)
 
-\method{loo}{inla_vanilla}(object, loglik, ...)
+\method{loo}{inla_vanilla}(object, loglik, ..., hessian = c("full", "diagonal"))
 
-\method{waic}{inla_vanilla}(object, loglik, ...)
+\method{waic}{inla_vanilla}(object, loglik, ..., hessian = c("full", "diagonal"))
 }
 \arguments{
 \item{object}{An object of class \code{inla_vanilla}.}
@@ -36,6 +36,12 @@ argument named \code{x} as the fit: then do not name data \code{x}, or call
 terms, one per observation or independent unit, at the named parameter
 vector \code{theta} (on the scale of \code{logpost}). Their sum plus the log-prior
 is \code{logpost}. Names, if any, label the units.}
+
+\item{hessian}{\code{"full"} (the default) takes every second derivative of each
+unit's log-likelihood, with \eqn{m^2 + m + 1} calls of \code{loglik}.
+\code{"diagonal"} takes the scores and the trace only, with \eqn{2m + 1}
+calls: see the Details. It comes after the dots, so it must be named in
+full.}
 }
 \value{
 \code{loo()} returns an object of class \code{inla_vanilla_loo}, which also
@@ -44,10 +50,14 @@ has class \code{loo}: a list with
 \item \code{estimates}: a matrix with rows \code{elpd_loo}, \code{p_loo} and \code{looic} and
 columns \code{Estimate} and \code{SE};
 \item \code{pointwise}: a matrix with one row per unit and columns \code{elpd_loo} (the
-log CPO), \code{p_loo}, \code{looic} and \code{k} (the unit's largest leverage);
-\item \code{order}: the order of the expansion used, 2 or 1;
+log CPO), \code{p_loo}, \code{looic} and \code{k} (the unit's largest leverage, or the
+sum of its leverages with \code{hessian = "diagonal"});
+\item \code{order}: the order of the expansion used, 2 or 1 (1 with
+\code{hessian = "diagonal"}, where the trace is added to the first order);
+\item \code{hessian}: \code{"full"} or \code{"diagonal"};
 \item \code{first_order_units}: the units whose second-order term does not exist,
-if any;
+if any, and with \code{hessian = "diagonal"}, \code{trace_units}: the units whose
+leverages add up to 1 or more;
 \item \code{theta}: the point of the expansion, and \code{calls}: the number of calls
 of \code{loglik};
 \item \code{warnings}: the messages of any warnings raised.
@@ -102,6 +112,25 @@ The scores and Hessians come from finite differences of \code{loglik} along the
 principal axes of \eqn{\Omega}, a hundredth of a posterior SD apart:
 \eqn{m^2 + m + 1} calls of \code{loglik} for \eqn{m} parameters, each returning
 every unit.
+
+\strong{The diagonal shortcut.} With \code{hessian = "diagonal"} only the
+\eqn{2m + 1} calls along the axes are made. They give each score and the
+diagonal of each Hessian in those axes, and so the trace
+\eqn{\mathrm{tr}(\Omega H_u)}. To first order in the leverages,
+\eqn{\log |I + \Omega H_u| = \mathrm{tr}(\Omega H_u)}, and then
+\deqn{\log \mathrm{CPO}_u = \ell_u - \tfrac12 s_u^\top \Omega s_u
+  + \tfrac12 \mathrm{tr}(\Omega H_u),}
+with \eqn{p_u = s_u^\top \Omega s_u} for both criteria, which then agree
+unit by unit. Summed over the units, the trace is minus the effective number
+of parameters of the likelihood,
+\eqn{p_D = \mathrm{tr}(-\Omega \sum_u H_u)}, so the total is the
+first-order one less \eqn{p_D / 2}, which is what the first order alone
+leaves out (Alhyari et al., 2026). The terms dropped are of second order in
+the leverages, about \eqn{m^2 / n} in all for \eqn{n} units of similar
+weight. Use it when every unit is a small part of the data and
+\eqn{m^2} calls are too many. The \code{k} reported is then the sum of a unit's
+leverages, \eqn{-\mathrm{tr}(\Omega H_u)}, and a unit at 1 or more gives
+a warning.
 
 The calls use the \code{cores} of the fit, or the plan set with \code{future::plan()}
 when the fit has none, as the scans of \code{\link[=inla_vanilla]{inla_vanilla()}} do (see its section
