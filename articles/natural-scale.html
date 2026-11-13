@@ -159,7 +159,7 @@
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -12.35 · Converged in 7 iterations (19ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -12.35 · Converged in 7 iterations (17ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Mean     SD   2.5%    50%  97.5%   Mode</span></span>
 <span><span class="co">#&gt; 1 rate  1.875  0.485  1.048  1.834  2.940  1.758</span></span>
@@ -255,7 +255,7 @@
 <span><span class="va">fit_bvn</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -39.67 · Converged in 33 iterations (52ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -39.67 · Converged in 33 iterations (56ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;             Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 mu1     5.0058  0.0493  4.9091  5.0058  5.1024  5.0058</span></span>
@@ -316,7 +316,7 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">derived</span>, <span class="fl">2</span>, <span class="va">quantile</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  2.5%        50%     97.5%</span></span>
 <span><span class="co">#&gt; covariance 0.06124972 0.09913891 0.1600525</span></span>
-<span><span class="co">#&gt; slope      0.58066256 0.77928684 0.9984040</span></span></code></pre></div>
+<span><span class="co">#&gt; slope      0.58066257 0.77928684 0.9984041</span></span></code></pre></div>
 </div>
 <p>The sample covariance is 0.099 and the least-squares slope 0.799, both well inside their intervals.</p>
 <p>This is also the answer for anything that is not a one-to-one map of a single parameter. A covariance matrix, for one, ties its entries together, and no entry can be mapped back on its own. The <a href="correlation.html">correlation matrices article</a> builds one from unconstrained parameters and reads it back through the draws.</p>
@@ -361,7 +361,7 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_bvn</span>, nsamp <span class="op">=</span> <span class="fl">3</span>, transform <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           mu1      mu2 log_sigma1 log_sigma2 atanh_rho</span></span>
-<span><span class="co">#&gt; [1,] 4.974906 3.460932 -0.9823351 -0.9596206 0.8800905</span></span>
+<span><span class="co">#&gt; [1,] 4.974906 3.460932 -0.9823351 -0.9596205 0.8800905</span></span>
 <span><span class="co">#&gt; [2,] 5.014849 3.446804 -0.9559824 -0.7805312 0.7876613</span></span>
 <span><span class="co">#&gt; [3,] 4.964592 3.365724 -0.9730748 -0.8940833 1.1111349</span></span></code></pre></div>
 </div>

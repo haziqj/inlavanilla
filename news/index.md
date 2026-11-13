@@ -2,6 +2,15 @@
 
 ## inlavanilla (development version)
 
+- [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
+  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) have a new
+  argument `hessian`. With `hessian = "diagonal"` they take the scores
+  and the trace of each unit’s Hessian only, with 2m + 1 calls of
+  `loglik` in place of m^2 + m + 1: the first-order LOO less half the
+  effective number of parameters, unit by unit. It is meant for models
+  with many parameters in which every unit is a small part of the data.
+  The default, `"full"`, is unchanged.
+
 - New
   [`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
   draws the random effects of an RTMB or TMB object after a fit:

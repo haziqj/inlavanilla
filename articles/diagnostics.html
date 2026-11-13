@@ -220,9 +220,9 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (20ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (18ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0085</span></span>
-<span><span class="co">#&gt; 68 logpost calls: mode 7ms, VB 2ms, marginals 6ms</span></span>
+<span><span class="co">#&gt; 68 logpost calls: mode 6ms, VB 2ms, marginals 5ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -263,7 +263,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [5ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [15ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [12ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [6ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
@@ -444,8 +444,8 @@
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [1ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [1ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [2ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checks-on-a-supplied-gradient">Checks on a supplied gradient<a class="anchor" aria-label="anchor" href="#checks-on-a-supplied-gradient"></a>

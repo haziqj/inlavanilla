@@ -26,10 +26,10 @@ loo(object, ...)
 waic(object, ...)
 
 # S3 method for class 'inla_vanilla'
-loo(object, loglik, ...)
+loo(object, loglik, ..., hessian = c("full", "diagonal"))
 
 # S3 method for class 'inla_vanilla'
-waic(object, loglik, ...)
+waic(object, loglik, ..., hessian = c("full", "diagonal"))
 ```
 
 ## Arguments
@@ -56,6 +56,13 @@ waic(object, loglik, ...)
   `theta` (on the scale of `logpost`). Their sum plus the log-prior is
   `logpost`. Names, if any, label the units.
 
+- hessian:
+
+  `"full"` (the default) takes every second derivative of each unit's
+  log-likelihood, with \\m^2 + m + 1\\ calls of `loglik`. `"diagonal"`
+  takes the scores and the trace only, with \\2m + 1\\ calls: see the
+  Details. It comes after the dots, so it must be named in full.
+
 ## Value
 
 `loo()` returns an object of class `inla_vanilla_loo`, which also has
@@ -65,12 +72,17 @@ class `loo`: a list with
   columns `Estimate` and `SE`;
 
 - `pointwise`: a matrix with one row per unit and columns `elpd_loo`
-  (the log CPO), `p_loo`, `looic` and `k` (the unit's largest leverage);
+  (the log CPO), `p_loo`, `looic` and `k` (the unit's largest leverage,
+  or the sum of its leverages with `hessian = "diagonal"`);
 
-- `order`: the order of the expansion used, 2 or 1;
+- `order`: the order of the expansion used, 2 or 1 (1 with
+  `hessian = "diagonal"`, where the trace is added to the first order);
+
+- `hessian`: `"full"` or `"diagonal"`;
 
 - `first_order_units`: the units whose second-order term does not exist,
-  if any;
+  if any, and with `hessian = "diagonal"`, `trace_units`: the units
+  whose leverages add up to 1 or more;
 
 - `theta`: the point of the expansion, and `calls`: the number of calls
   of `loglik`;
@@ -111,6 +123,23 @@ The scores and Hessians come from finite differences of `loglik` along
 the principal axes of \\\Omega\\, a hundredth of a posterior SD apart:
 \\m^2 + m + 1\\ calls of `loglik` for \\m\\ parameters, each returning
 every unit.
+
+**The diagonal shortcut.** With `hessian = "diagonal"` only the \\2m +
+1\\ calls along the axes are made. They give each score and the diagonal
+of each Hessian in those axes, and so the trace \\\mathrm{tr}(\Omega
+H_u)\\. To first order in the leverages, \\\log \|I + \Omega H_u\| =
+\mathrm{tr}(\Omega H_u)\\, and then \$\$\log \mathrm{CPO}\_u = \ell_u -
+\tfrac12 s_u^\top \Omega s_u + \tfrac12 \mathrm{tr}(\Omega H_u),\$\$
+with \\p_u = s_u^\top \Omega s_u\\ for both criteria, which then agree
+unit by unit. Summed over the units, the trace is minus the effective
+number of parameters of the likelihood, \\p_D = \mathrm{tr}(-\Omega
+\sum_u H_u)\\, so the total is the first-order one less \\p_D / 2\\,
+which is what the first order alone leaves out (Alhyari et al., 2026).
+The terms dropped are of second order in the leverages, about \\m^2 /
+n\\ in all for \\n\\ units of similar weight. Use it when every unit is
+a small part of the data and \\m^2\\ calls are too many. The `k`
+reported is then the sum of a unit's leverages, \\-\mathrm{tr}(\Omega
+H_u)\\, and a unit at 1 or more gives a warning.
 
 The calls use the `cores` of the fit, or the plan set with
 [`future::plan()`](https://future.futureverse.org/reference/plan.html)
@@ -194,9 +223,9 @@ logpost <- function(theta, time, y) {
 }
 
 fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
-#> ✔ Found the posterior mode in 9 iterations [2ms]
+#> ✔ Found the posterior mode in 9 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.12σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 loo(fit, loglik, time = time, y = y)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 

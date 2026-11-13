@@ -186,13 +186,13 @@ y_{ij} = \beta_0 + \beta_1 (\text{age}_j - 11) + u_i + \epsilon_{ij},
 <span>  <span class="va">logpost_growth</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">24</span>, b1 <span class="op">=</span> <span class="fl">0.5</span>, log_tau <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 18 iterations [14ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.21σ [18ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 4 skew-normal marginals [41ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 18 iterations [11ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.21σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 4 skew-normal marginals [33ms]</span></span>
 <span><span class="va">fit_growth</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -241.09 · Converged in 18 iterations (96ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -241.09 · Converged in 18 iterations (77ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;             Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 b0     24.023   0.430   23.179   24.023   24.866   24.023 </span></span>
@@ -280,13 +280,13 @@ y_i \mid c_i = k \sim N(\mu_k, \sigma_k^2),
 <span>    logit_p <span class="op">=</span> <span class="fl">0</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [18ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.14σ [6ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [22ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [15ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.14σ [7ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [27ms]</span></span>
 <span><span class="va">fit_mix</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1050.49 · Converged in 20 iterations (68ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1050.49 · Converged in 20 iterations (69ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;              Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 mu1     54.649   0.713   53.296   54.633   56.094   54.599 </span></span>
@@ -374,13 +374,13 @@ p(y_j \mid \theta) = \int f_j(z)\, \phi(z)\, dz
 <span></span>
 <span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b1 <span class="op">=</span> <span class="op">-</span><span class="fl">1.5</span>, b2 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, b3 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, b4 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, log_tau <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_cbpp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cbpp</span>, <span class="va">init</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 15 iterations [166ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.15σ [47ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [160ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 15 iterations [146ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.15σ [59ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [152ms]</span></span>
 <span><span class="va">fit_cbpp</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -104.92 · Converged in 15 iterations (386ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -104.92 · Converged in 15 iterations (370ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b1   -1.399  0.238  -1.884  -1.393  -0.948  -1.381</span></span>
@@ -450,9 +450,9 @@ P(z_j \text{ in strip } k \mid y_j, \theta) \approx
 <span>  <span class="va">init</span>,</span>
 <span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 16 iterations [37ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.14σ [23ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [96ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 16 iterations [35ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.14σ [27ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [112ms]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit_cbpp</span><span class="op">)</span>, RTMB <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit_rtmb</span><span class="op">)</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;          b1     b2     b3     b4   tau</span></span>
 <span><span class="co">#&gt; grid -1.399 -2.397 -2.539 -3.011 0.727</span></span>

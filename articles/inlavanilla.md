@@ -78,12 +78,12 @@ Further arguments, here `X` and `y`, are passed through `...`, as in
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init, X = X, y = y)
 #> ✔ Found the posterior mode in 10 iterations [8ms]
-#> ✔ VB mean correction, max shift 0.49σ [16ms]
-#> ✔ Fitted 3 skew-normal marginals [11ms]
+#> ✔ VB mean correction, max shift 0.49σ [14ms]
+#> ✔ Fitted 3 skew-normal marginals [10ms]
 fit
 #> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.59 · Converged in 10 iterations (43ms)
+#> Log marginal likelihood: -11.59 · Converged in 10 iterations (39ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -112,9 +112,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.591 · Converged in 10 iterations (43ms)
+#> Log marginal likelihood: -11.591 · Converged in 10 iterations (39ms)
 #> Laplace -11.709 + VB term 0.12
-#> 233 logpost calls: mode 10ms, VB 17ms, marginals 11ms
+#> 233 logpost calls: mode 10ms, VB 14ms, marginals 11ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -370,7 +370,7 @@ set.seed(2026)
 draws <- sampling(fit, nsamp = 10000)
 head(draws, 3)
 #>              b0      b_wt      b_hp
-#> [1,] -0.7657929 -5.309342 0.3008175
+#> [1,] -0.7657929 -5.309342 0.3008176
 #> [2,] -1.7688214 -3.819659 1.2958502
 #> [3,] -0.9887956 -4.875465 1.0419254
 ```
@@ -483,7 +483,7 @@ fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, silent = TRUE)
 fit_p
 #> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -23.17 · Converged in 4 iterations (14ms)
+#> Log marginal likelihood: -23.17 · Converged in 4 iterations (12ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063

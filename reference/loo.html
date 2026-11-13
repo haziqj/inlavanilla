@@ -99,10 +99,10 @@ functions, and <code>logpost</code> as their sum.</p>
 <span><span class="fu">waic</span><span class="op">(</span><span class="va">object</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'inla_vanilla'</span></span>
-<span><span class="fu">loo</span><span class="op">(</span><span class="va">object</span>, <span class="va">loglik</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu">loo</span><span class="op">(</span><span class="va">object</span>, <span class="va">loglik</span>, <span class="va">...</span>, hessian <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"full"</span>, <span class="st">"diagonal"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'inla_vanilla'</span></span>
-<span><span class="fu">waic</span><span class="op">(</span><span class="va">object</span>, <span class="va">loglik</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">waic</span><span class="op">(</span><span class="va">object</span>, <span class="va">loglik</span>, <span class="va">...</span>, hessian <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"full"</span>, <span class="st">"diagonal"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -129,6 +129,14 @@ terms, one per observation or independent unit, at the named parameter
 vector <code>theta</code> (on the scale of <code>logpost</code>). Their sum plus the log-prior
 is <code>logpost</code>. Names, if any, label the units.</p></dd>
 
+
+<dt id="arg-hessian">hessian<a class="anchor" aria-label="anchor" href="#arg-hessian"></a></dt>
+<dd><p><code>"full"</code> (the default) takes every second derivative of each
+unit's log-likelihood, with \(m^2 + m + 1\) calls of <code>loglik</code>.
+<code>"diagonal"</code> takes the scores and the trace only, with \(2m + 1\)
+calls: see the Details. It comes after the dots, so it must be named in
+full.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -136,10 +144,14 @@ is <code>logpost</code>. Names, if any, label the units.</p></dd>
 has class <code>loo</code>: a list with</p><ul><li><p><code>estimates</code>: a matrix with rows <code>elpd_loo</code>, <code>p_loo</code> and <code>looic</code> and
 columns <code>Estimate</code> and <code>SE</code>;</p></li>
 <li><p><code>pointwise</code>: a matrix with one row per unit and columns <code>elpd_loo</code> (the
-log CPO), <code>p_loo</code>, <code>looic</code> and <code>k</code> (the unit's largest leverage);</p></li>
-<li><p><code>order</code>: the order of the expansion used, 2 or 1;</p></li>
+log CPO), <code>p_loo</code>, <code>looic</code> and <code>k</code> (the unit's largest leverage, or the
+sum of its leverages with <code>hessian = "diagonal"</code>);</p></li>
+<li><p><code>order</code>: the order of the expansion used, 2 or 1 (1 with
+<code>hessian = "diagonal"</code>, where the trace is added to the first order);</p></li>
+<li><p><code>hessian</code>: <code>"full"</code> or <code>"diagonal"</code>;</p></li>
 <li><p><code>first_order_units</code>: the units whose second-order term does not exist,
-if any;</p></li>
+if any, and with <code>hessian = "diagonal"</code>, <code>trace_units</code>: the units whose
+leverages add up to 1 or more;</p></li>
 <li><p><code>theta</code>: the point of the expansion, and <code>calls</code>: the number of calls
 of <code>loglik</code>;</p></li>
 <li><p><code>warnings</code>: the messages of any warnings raised.</p></li>
@@ -180,6 +192,24 @@ terms over the \(n\) units, as in the loo package.</p>
 principal axes of \(\Omega\), a hundredth of a posterior SD apart:
 \(m^2 + m + 1\) calls of <code>loglik</code> for \(m\) parameters, each returning
 every unit.</p>
+<p><strong>The diagonal shortcut.</strong> With <code>hessian = "diagonal"</code> only the
+\(2m + 1\) calls along the axes are made. They give each score and the
+diagonal of each Hessian in those axes, and so the trace
+\(\mathrm{tr}(\Omega H_u)\). To first order in the leverages,
+\(\log |I + \Omega H_u| = \mathrm{tr}(\Omega H_u)\), and then
+$$\log \mathrm{CPO}_u = \ell_u - \tfrac12 s_u^\top \Omega s_u
+  + \tfrac12 \mathrm{tr}(\Omega H_u),$$
+with \(p_u = s_u^\top \Omega s_u\) for both criteria, which then agree
+unit by unit. Summed over the units, the trace is minus the effective number
+of parameters of the likelihood,
+\(p_D = \mathrm{tr}(-\Omega \sum_u H_u)\), so the total is the
+first-order one less \(p_D / 2\), which is what the first order alone
+leaves out (Alhyari et al., 2026). The terms dropped are of second order in
+the leverages, about \(m^2 / n\) in all for \(n\) units of similar
+weight. Use it when every unit is a small part of the data and
+\(m^2\) calls are too many. The <code>k</code> reported is then the sum of a unit's
+leverages, \(-\mathrm{tr}(\Omega H_u)\), and a unit at 1 or more gives
+a warning.</p>
 <p>The calls use the <code>cores</code> of the fit, or the plan set with <code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code>
 when the fit has none, as the scans of <code><a href="inla_vanilla.html">inla_vanilla()</a></code> do (see its section
 on parallel computation), with the same results as a serial run. Calls
@@ -260,9 +290,9 @@ widely applicable information criterion in singular learning theory.
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">0</span>, b <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
 <span class="r-in"><span><span class="fu">loo</span><span class="op">(</span><span class="va">fit</span>, <span class="va">loglik</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">Leave-one-out cross-validation</span> <span style="color: #D7875F;">───────────────────────────────</span> <span style="color: #555555;">9 units</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
