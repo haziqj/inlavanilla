@@ -405,8 +405,8 @@ test_that("cores must be a positive whole number or NULL", {
   expect_identical(check_cores(4), 4L)
 })
 
-test_that("cores takes what future::availableCores() returns", {
-  n <- future::availableCores(omit = 1)
+test_that("cores takes what parallelly::availableCores() returns", {
+  n <- parallelly::availableCores(omit = 1)
   expect_identical(check_cores(n), as.integer(n))
   expect_identical(fit_reg(cores = n)$workers, 1L) # a short scan, so serial
 })
@@ -423,7 +423,7 @@ test_that("cores uses separate sessions where forks are not safe", {
   # Positron's console refuses to fork
   local_mocked_bindings(par_program = function() "ark")
   expect_false(par_can_fork())
-  # RStudio's console is unstable when forked, by future's own check
+  # RStudio's console is unstable when forked, by parallelly's check
   Sys.setenv(RSTUDIO = "1", RSTUDIO_TERM = "")
   on.exit(Sys.unsetenv(c("RSTUDIO", "RSTUDIO_TERM")), add = TRUE)
   local_mocked_bindings(par_program = function() "r")
@@ -431,7 +431,7 @@ test_that("cores uses separate sessions where forks are not safe", {
 })
 
 test_that("the POSITRON variable alone does not stop forks", {
-  skip_if(!future::supportsMulticore(), "no forks here")
+  skip_if(!parallelly::supportsMulticore(), "no forks here")
   local_mocked_bindings(par_program = function() "r")
   Sys.setenv(POSITRON = "1")
   on.exit(Sys.unsetenv("POSITRON"), add = TRUE)

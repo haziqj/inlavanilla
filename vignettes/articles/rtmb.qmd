@@ -552,7 +552,7 @@ future package. With no random effects, as here, RTMB needs nothing special:
 ```{r}
 #| label: cores
 #| eval: false
-cores <- future::availableCores(omit = 1)
+cores <- parallelly::availableCores(omit = 1)
 fit_par <- inla_vanilla(
   obj$fn, init, grad = obj$gr, width = "tk", cores = cores
 )

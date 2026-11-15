@@ -25,22 +25,27 @@ par_hint_s <- 10
 the <- new.env(parent = emptyenv())
 the$hinted <- FALSE
 
-# Functions of our own, so that the tests can replace them
+# Functions of our own, so that the tests can replace them. The core count and
+# the fork check come from parallelly, which future imports, so it is there
+# whenever future is. future's copies of these functions are deprecated.
 is_interactive <- function() interactive()
-par_has_future <- function() requireNamespace("future", quietly = TRUE)
-par_available <- function() future::availableCores()
+par_has_future <- function() {
+  requireNamespace("future", quietly = TRUE) &&
+    requireNamespace("parallelly", quietly = TRUE)
+}
+par_available <- function() parallelly::availableCores()
 
 # The program running R, in lower case: "ark" in Positron's console
 par_program <- function() tolower(basename(commandArgs(FALSE)[1L]))
 
 # Forked workers share everything, compiled code included, so they are the
-# choice where they are safe. future's own check knows that forking is not
+# choice where they are safe. parallelly's check knows that forking is not
 # available on Windows and unstable in RStudio, but says yes in Positron, whose
 # ark kernel refuses to fork, with an error. The program is checked and not the
 # POSITRON variable, which can reach Positron's integrated terminals, where a
 # plain R forks well.
 par_can_fork <- function() {
-  future::supportsMulticore() && !identical(par_program(), "ark")
+  parallelly::supportsMulticore() && !identical(par_program(), "ark")
 }
 
 # Put a plan for `cores` workers in place for one fit, with never more workers

@@ -39,6 +39,7 @@ Suggests:
     knitr,
     loo,
     Matrix,
+    parallelly,
     quarto,
     RTMB,
     testthat (>= 3.0.0)

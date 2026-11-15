@@ -633,7 +633,7 @@ grad <- function(theta, Y) {
   rebuild()
   grad_cpp(theta, Y)
 }
-cores <- future::availableCores(omit = 1)
+cores <- parallelly::availableCores(omit = 1)
 fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = cores)
 ```
 

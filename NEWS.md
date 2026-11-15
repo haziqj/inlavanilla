@@ -1,5 +1,10 @@
 # inlavanilla (development version)
 
+* A fit with `cores` no longer warns that `future::availableCores()` and
+  `future::supportsMulticore()` are deprecated. The core count and the fork
+  check now come from parallelly, which future imports. parallelly is in
+  Suggests.
+
 * `loo()` and `waic()` have a new argument `hessian`. With
   `hessian = "diagonal"` they take the scores and the trace of each unit's
   Hessian only, with 2m + 1 calls of `loglik` in place of m^2 + m + 1: the
