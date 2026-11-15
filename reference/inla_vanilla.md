@@ -536,18 +536,19 @@ converge.
 Set `cores` to run the per-parameter scans of the skew-normal marginals
 in parallel:
 
-    cores <- future::availableCores(omit = 1)
+    cores <- parallelly::availableCores(omit = 1)
     fit <- inla_vanilla(logpost, init, width = "tk", cores = cores)
 
-`availableCores()` counts the cores the machine offers, and `omit = 1`
-leaves one free. A fit never asks for more workers than the machine
-offers. The results and the progress line are those of a serial fit. A
-long scan uses all the `cores`, a shorter one fewer, and a scan expected
-to take under a second stays serial. The mode, the Hessian and the VB
-correction stay serial, so the gain is largest with `width = "tk"` or
-`"cmp"`, where the scans are nearly the whole fit: about 7.5 times
-faster on 12 cores on test models. With the default width the scans are
-about half of a slow fit, and it was about 1.5 times at most.
+[`parallelly::availableCores()`](https://parallelly.futureverse.org/reference/availableCores.html)
+counts the cores the machine offers, and `omit = 1` leaves one free. A
+fit never asks for more workers than the machine offers. The results and
+the progress line are those of a serial fit. A long scan uses all the
+`cores`, a shorter one fewer, and a scan expected to take under a second
+stays serial. The mode, the Hessian and the VB correction stay serial,
+so the gain is largest with `width = "tk"` or `"cmp"`, where the scans
+are nearly the whole fit: about 7.5 times faster on 12 cores on test
+models. With the default width the scans are about half of a slow fit,
+and it was about 1.5 times at most.
 
 `cores` needs the future package, which is optional. It uses forked
 workers where those are safe, in a terminal on macOS or Linux, and
@@ -734,12 +735,12 @@ logpost <- function(theta, y) {
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
 #> ✔ Found the posterior mode in 10 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ VB mean correction, max shift 0.25σ [2ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 fit
 #> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (13ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (14ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -790,7 +791,7 @@ fit <- inla_vanilla(
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13

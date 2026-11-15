@@ -273,7 +273,7 @@ time_per_call <- function(f, n) {
 }
 us_r <- time_per_call(function() logpost_r(init, Y), n = 1000)
 us_r
-#> [1] 74
+#> [1] 73
 ```
 
 With `vb = "off"`,
@@ -284,8 +284,8 @@ skew-normal marginals:
 ``` r
 
 fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = "off")
-#> ✔ Found the posterior mode in 82 iterations [584ms]
-#> ✔ Fitted 39 skew-normal marginals [516ms]
+#> ✔ Found the posterior mode in 82 iterations [565ms]
+#> ✔ Fitted 39 skew-normal marginals [500ms]
 fit_r$counts
 #> logpost    grad    hess 
 #>   11633       0       0
@@ -541,7 +541,7 @@ us_cpp <- time_per_call(function() logpost_cpp(init, Y), n = 10000)
 us_grad <- time_per_call(function() grad_cpp(init, Y), n = 10000)
 c(R = us_r, `C++` = us_cpp, `C++ gradient` = us_grad)
 #>            R          C++ C++ gradient 
-#>         74.0          8.1          8.1
+#>         73.0          7.9          8.0
 ```
 
 The C++ log-posterior is about 9 times faster than the R one, and the
@@ -553,12 +553,12 @@ Now the full fit, with the VB correction, first without a gradient:
 ``` r
 
 fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
-#> ✔ Found the posterior mode in 78 iterations [85ms]
-#> ✔ VB mean correction, max shift 0.57σ [43ms]
-#> ✔ Fitted 39 skew-normal marginals [184ms]
+#> ✔ Found the posterior mode in 78 iterations [81ms]
+#> ✔ VB mean correction, max shift 0.57σ [41ms]
+#> ✔ Fitted 39 skew-normal marginals [180ms]
 ```
 
-It took 13,123 calls. In R, at 74 microseconds a call, these would take
+It took 13,123 calls. In R, at 73 microseconds a call, these would take
 about 1 seconds. With the gradient:
 
 ``` r
@@ -566,7 +566,7 @@ about 1 seconds. With the gradient:
 fit <- inla_vanilla(logpost_cpp, init, grad = grad_cpp, Y = Y)
 #> ✔ Found the posterior mode in 90 iterations [8ms]
 #> ✔ VB mean correction, max shift 0.58σ [7ms]
-#> ✔ Fitted 39 skew-normal marginals [148ms]
+#> ✔ Fitted 39 skew-normal marginals [145ms]
 ```
 
 [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -579,12 +579,12 @@ Here neither does. The calls and times (in seconds) of the three fits:
 fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 #>                  logpost grad hess init laplace   vb marginals diagnostics
-#> R, no VB           11633    0    0 0.00    0.59 0.00      0.52           0
-#> C++                13123    0    0 0.00    0.09 0.04      0.18           0
+#> R, no VB           11633    0    0 0.00    0.57 0.00      0.50           0
+#> C++                13123    0    0 0.00    0.08 0.04      0.18           0
 #> C++ and gradient    1288  483    0 0.01    0.01 0.01      0.15           0
 #>                  total
-#> R, no VB          1.11
-#> C++               0.32
+#> R, no VB          1.07
+#> C++               0.31
 #> C++ and gradient  0.17
 ```
 
@@ -639,7 +639,7 @@ grad <- function(theta, Y) {
   rebuild()
   grad_cpp(theta, Y)
 }
-cores <- future::availableCores(omit = 1)
+cores <- parallelly::availableCores(omit = 1)
 fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = cores)
 ```
 
@@ -654,9 +654,9 @@ load it.
 summary(fit)
 #> ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1686.749 · Converged in 90 iterations (174ms)
+#> Log marginal likelihood: -1686.749 · Converged in 90 iterations (171ms)
 #> Laplace -1687.471 + VB term 0.72
-#> 1288 logpost and 483 grad calls: mode 9ms, VB 8ms, marginals 148ms
+#> 1288 logpost and 483 grad calls: mode 9ms, VB 8ms, marginals 146ms
 #> 
 #> ── Posterior marginals ──
 #> 

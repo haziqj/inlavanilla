@@ -83,7 +83,7 @@ fit <- inla_vanilla(logpost, init, X = X, y = y)
 fit
 #> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.59 · Converged in 10 iterations (39ms)
+#> Log marginal likelihood: -11.59 · Converged in 10 iterations (37ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -112,9 +112,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.591 · Converged in 10 iterations (39ms)
+#> Log marginal likelihood: -11.591 · Converged in 10 iterations (37ms)
 #> Laplace -11.709 + VB term 0.12
-#> 233 logpost calls: mode 10ms, VB 14ms, marginals 11ms
+#> 233 logpost calls: mode 10ms, VB 14ms, marginals 10ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -558,14 +558,15 @@ makes the fit more accurate and several times faster than R.
 
 The skew-normal scans can run in parallel, since no parameter’s scan
 depends on another’s. We ask for this with `cores`, which needs the
-optional [future](https://future.futureverse.org) package. Its
-`availableCores()` counts the cores this machine offers, and respects
-any limit set on a shared machine. Here `omit = 1` leaves one free for
-everything else:
+optional [future](https://future.futureverse.org) package. The
+`availableCores()` of [parallelly](https://parallelly.futureverse.org),
+which comes with future, counts the cores this machine offers, and
+respects any limit set on a shared machine. Here `omit = 1` leaves one
+free for everything else:
 
 ``` r
 
-cores <- future::availableCores(omit = 1)
+cores <- parallelly::availableCores(omit = 1)
 fit_par <- inla_vanilla(
   logpost, init, X = X, y = y, width = "tk", cores = cores
 )

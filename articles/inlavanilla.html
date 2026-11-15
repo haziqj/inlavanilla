@@ -145,7 +145,7 @@
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.59 · Converged in 10 iterations (39ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.59 · Converged in 10 iterations (37ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
@@ -159,9 +159,9 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.591 · Converged in 10 iterations (39ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.591 · Converged in 10 iterations (37ms)</span></span>
 <span><span class="co">#&gt; Laplace -11.709 + VB term 0.12</span></span>
-<span><span class="co">#&gt; 233 logpost calls: mode 10ms, VB 14ms, marginals 11ms</span></span>
+<span><span class="co">#&gt; 233 logpost calls: mode 10ms, VB 14ms, marginals 10ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -465,10 +465,10 @@
 <p>The articles <a href="rcpp.html">Speeding up with Rcpp</a> and <a href="rtmb.html">Gradients and Hessians with RTMB</a> work through both routes for a structural equation model with 39 parameters. C++ makes each call about ten times faster than R. A gradient from RTMB makes the fit more accurate and several times faster than R.</p>
 </section><section class="level2"><h2 id="using-several-cores">Using several cores<a class="anchor" aria-label="anchor" href="#using-several-cores"></a>
 </h2>
-<p>The skew-normal scans can run in parallel, since no parameter’s scan depends on another’s. We ask for this with <code>cores</code>, which needs the optional <a href="https://future.futureverse.org" class="external-link">future</a> package. Its <code>availableCores()</code> counts the cores this machine offers, and respects any limit set on a shared machine. Here <code>omit = 1</code> leaves one free for everything else:</p>
+<p>The skew-normal scans can run in parallel, since no parameter’s scan depends on another’s. We ask for this with <code>cores</code>, which needs the optional <a href="https://future.futureverse.org" class="external-link">future</a> package. The <code>availableCores()</code> of <a href="https://parallelly.futureverse.org" class="external-link">parallelly</a>, which comes with future, counts the cores this machine offers, and respects any limit set on a shared machine. Here <code>omit = 1</code> leaves one free for everything else:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cores</span> <span class="op">&lt;-</span> <span class="fu">future</span><span class="fu">::</span><span class="fu"><a href="https://parallelly.futureverse.org/reference/availableCores.html" class="external-link">availableCores</a></span><span class="op">(</span>omit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">cores</span> <span class="op">&lt;-</span> <span class="fu">parallelly</span><span class="fu">::</span><span class="fu"><a href="https://parallelly.futureverse.org/reference/availableCores.html" class="external-link">availableCores</a></span><span class="op">(</span>omit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">fit_par</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, width <span class="op">=</span> <span class="st">"tk"</span>, cores <span class="op">=</span> <span class="va">cores</span></span>
 <span><span class="op">)</span></span></code></pre></div>

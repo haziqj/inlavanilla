@@ -2,6 +2,13 @@
 
 ## inlavanilla (development version)
 
+- A fit with `cores` no longer warns that
+  [`future::availableCores()`](https://parallelly.futureverse.org/reference/availableCores.html)
+  and
+  [`future::supportsMulticore()`](https://parallelly.futureverse.org/reference/supportsMulticore.html)
+  are deprecated. The core count and the fork check now come from
+  parallelly, which future imports. parallelly is in Suggests.
+
 - [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
   [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) have a new
   argument `hessian`. With `hessian = "diagonal"` they take the scores
