@@ -292,6 +292,53 @@ test_that("every problem at once gives one warning, in INLAvaan's order", {
   )
 })
 
+test_that("a mode that ran off, or far from the mass, adds the funnel hint once", {
+  hint <- "^i The mode may be far from the posterior mass"
+  hints <- function(...) {
+    sum(grepl(hint, strsplit(warning_text(...), "\n")[[1]]))
+  }
+  # A Newton step over 1 SD, with the mode's own bullets before the hint
+  d <- healthy
+  d$mode_shift_sigma[2] <- 5
+  o <- healthy_optim
+  o$grad <- c(a = 0.5, b = 3)
+  lines <- strsplit(warning_text(d, o), "\n")[[1]]
+  expect_identical(grep(hint, lines), grep("^i Try other starting", lines) + 1L)
+  # Nearly all of a marginal's mass beyond its scan, the mode check passed
+  d <- healthy
+  d$unscanned_mass[1] <- 0.95
+  expect_identical(hints(d), 1L)
+  # Both at once: still one line
+  d$mode_shift_sigma[2] <- 5
+  expect_identical(hints(d, o), 1L)
+  # Near misses get no hint
+  d <- healthy
+  d$mode_shift_sigma[2] <- 0.5
+  d$unscanned_mass[1] <- 0.6
+  expect_identical(hints(d, o), 0L)
+})
+
+test_that("a random-intercept funnel gets the funnel hint", {
+  # Poisson counts in 8 groups of 4 with the random intercepts in logpost
+  # (lab/bend-screen.R). The joint log-posterior rises as log_tau falls with
+  # every u at zero, up to log_tau = -32, where the prior stops it.
+  set.seed(3)
+  u <- rnorm(8, 0, 0.7)
+  grp <- rep(1:8, each = 4)
+  y <- rpois(32, exp(0.8 + u[grp]))
+  lp <- function(theta) {
+    uu <- theta[-(1:2)]
+    sum(dpois(y, exp(theta[[1L]] + uu[grp]), log = TRUE)) +
+      sum(dnorm(uu, 0, exp(theta[[2L]]), log = TRUE)) +
+      dnorm(theta[[1L]], 0, 5, log = TRUE) +
+      dnorm(theta[[2L]], 0, 2, log = TRUE)
+  }
+  init <- setNames(numeric(10), c("b0", "log_tau", paste0("u", 1:8)))
+  fit <- inla_vanilla(lp, init, transform = FALSE, silent = TRUE)
+  expect_lt(fit$mode[["log_tau"]], -20) # observed -29.5
+  expect_match(fit$warnings, "integrate them out of `logpost`", fixed = TRUE)
+})
+
 test_that("the ridge bend and the mean gap are flagged by summary() but never warn", {
   d <- healthy
   d$ridge_bend[1] <- 0.5

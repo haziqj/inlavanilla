@@ -117,6 +117,23 @@ optimiser's return code, because without a gradient the optimiser can report
 failure at an accurate mode, and success short of one. When the mode is off,
 the warning says so first, and suggests what to change.
 
+Sometimes there is no mode to find. Random effects written into `logpost`,
+$u_j \sim N(0, \tau^2)$ with $\log\tau$ a parameter, are the common case: with
+every $u_j$ at zero, the joint log-posterior grows like $-J\log\tau$ as $\tau$
+falls, and only the prior on $\log\tau$ stops it, far from where the posterior
+mass is. This is the funnel of hierarchical models. The optimiser then either
+runs down the funnel and stops wherever it stops, with a Newton step of
+several posterior SDs, or reaches the spike at its end, where the fitted
+marginal of $\log\tau$ has nearly all its mass outside the scanned window.
+Either sign adds a line to the warning. On Poisson counts in 40 groups of
+three, the search stopped near $\log\tau = -27$ in every order of the
+parameters tried. With the random effects integrated out of `logpost`, the
+same data give a clean fit, with $\log\tau$ at $-0.56$ (SD 0.20). Writing them
+as $u_j = \tau z_j$ instead did not help: the mode moved to $\log\tau = 2.2$,
+and the VB correction did not settle. Integrate random effects out, as in the
+article [Multilevel models](multilevel.html), and draw them back afterwards
+with `sampling(fit, fun = )`.
+
 `hess_cond` is the condition number of the Hessian at the mode, with each
 parameter in posterior-SD units: the ratio of the largest to the smallest
 eigenvalue of the posterior correlation matrix. Above $10^8$ some

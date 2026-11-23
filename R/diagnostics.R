@@ -35,6 +35,13 @@ warn_levels <- list(
 # 1 - sqrt(1 - 3 b / 4), in the normal mean with an unknown SD
 # (lab/bend-threshold.md).
 summary_levels <- list(ridge_bend = 0.25, mean_gap = 0.1)
+# Past these levels the mode is not a near miss but is not where the posterior
+# is: a Newton step over 1 SD, or more than 0.9 of a marginal's mass beyond
+# its scan. On the funnels of lab/whitening-order.R (random effects whose
+# scale runs to zero) every fit passed one of them (steps of 1.2 to 67 SDs, or
+# unscanned mass 1.00), and none of 104 other fits came near (steps of at most
+# 2e-4 SDs, unscanned mass at most 0.55).
+no_mode_levels <- list(mode_shift = 1, unscanned_mass = 0.9)
 
 # TRUE where `x` is above `level` or not finite.
 off_level <- function(x, level) {
@@ -413,8 +420,27 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
       )
     }
   }
+  if (no_mode(dg)) {
+    out <- c(
+      out,
+      i = paste0(
+        "The mode may be far from the posterior mass, or the log-posterior ",
+        "may have no maximum. Random effects in {.arg logpost} whose scale ",
+        "can run to zero do this (a funnel): integrate them out of ",
+        "{.arg logpost}."
+      )
+    )
+  }
   attr(out, "envir") <- env
   out
+}
+
+# TRUE when the mode search ran off or landed far from the posterior mass,
+# past no_mode_levels (lab/DESIGN.md, "No mode to find")
+no_mode <- function(dg) {
+  glob <- dg$global
+  isTRUE(glob[["mode_shift_max"]] > no_mode_levels$mode_shift) ||
+    isTRUE(glob[["unscanned_mass_max"]] > no_mode_levels$unscanned_mass)
 }
 
 # One warning, of class inlavanilla_diagnostics_warning, when any check is

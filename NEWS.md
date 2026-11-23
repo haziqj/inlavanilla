@@ -1,5 +1,10 @@
 # inlavanilla (development version)
 
+* When the mode search runs off, or lands far from the posterior mass, the
+  diagnostics warning now says what can cause it and what to do: random
+  effects in `logpost` whose scale can run to zero (a funnel), to be
+  integrated out of `logpost`. `vignette("diagnostics")` explains the case.
+
 * Versions are now dates, as in R-INLA: `YY.MM.DD`, the day of the change,
   with `-1` or `-2` for a second or third version published on the same day.
   There are no `.9000` development versions. This version, 26.11.23, follows
