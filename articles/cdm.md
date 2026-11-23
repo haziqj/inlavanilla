@@ -110,11 +110,11 @@ init <- c(
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
 fit <- inla_vanilla(logpost, init, y = y, eta = eta)
-#> ✔ Found the posterior mode in 186 iterations [23.4s]
-#> ! VB mean correction, max shift 0.92σ, gain below its promise [5.1s]
-#> ✔ Fitted 63 skew-normal marginals [10.5s]
+#> ✔ Found the posterior mode in 191 iterations [20.1s]
+#> ! VB mean correction, max shift 0.93σ, gain below its promise [3.1s]
+#> ✔ Fitted 63 skew-normal marginals [6.7s]
 #> Warning: Fit diagnostics flagged 1 potential issue:
-#> ✖ One-step VB delivered 0.416 of the rise in the expected log-posterior it
+#> ✖ One-step VB delivered 0.414 of the rise in the expected log-posterior it
 #>   promised (warning < 0.5), so the Gaussian approximation at the mode may
 #>   be inaccurate.
 #> ℹ Compare with `vb = "full"`, and treat the log marginal likelihood with

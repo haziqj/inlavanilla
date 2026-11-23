@@ -100,8 +100,9 @@
 - A fit now records the version of inlavanilla that made it, in
   `fit$version`, and [`print()`](https://rdrr.io/r/base/print.html) and
   [`summary()`](https://rdrr.io/r/base/summary.html) show it in their
-  headers (“INLAvanilla 26.11.23”). It is the string in `DESCRIPTION`,
-  not a `package_version`, which would drop the leading zeros of a date.
+  headers with a `v` (“INLAvanilla v26.11.23”), so that it does not read
+  as the date of the fit. It is the string in `DESCRIPTION`, not a
+  `package_version`, which would drop the leading zeros of a date.
 
 - When the mode search restarts
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) with the parameters
