@@ -139,7 +139,8 @@ which five tests on 220 people cannot settle.
 ## The log-posteriors
 
 Each log-posterior sums the infection status out of the likelihood of each
-response pattern, and weighs the pattern by its count.
+response pattern, and weighs the pattern by its count. It reads the data,
+`y` and `count`, from the workspace, so it takes the parameters alone.
 
 ```{r}
 #| label: helpers
@@ -157,7 +158,7 @@ The conditionally independent model:
 
 ```{r}
 #| label: lp-lc
-lp_lc <- function(theta, y, count) {
+lp_lc <- function(theta) {
   J <- ncol(y)
   lt <- theta[1]
   se <- theta[1 + 1:J]
@@ -194,7 +195,7 @@ $\sigma$, its Jacobian.
 
 ```{r}
 #| label: lp-lcre
-lp_lcre <- function(theta, y, count, gh) {
+lp_lcre <- function(theta) {
   J <- ncol(y)
   lt <- theta[1]
   se <- theta[1 + 1:J]
@@ -228,7 +229,7 @@ pattern `00000`:
 
 ```{r}
 #| label: lp-fm
-lp_fm <- function(theta, y, count) {
+lp_fm <- function(theta) {
   J <- ncol(y)
   lt <- theta[1]
   e1 <- theta[2]
@@ -263,13 +264,10 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Se_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
-fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count, vb = "full")
+fit_lc <- inla_vanilla(lp_lc, start, vb = "full")
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
-  y = y,
-  count = count,
-  gh = gh,
   vb = "full"
 )
 start_fm <- c(
@@ -279,7 +277,7 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w1_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
-fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count, vb = "full")
+fit_fm <- inla_vanilla(lp_fm, start_fm, vb = "full")
 ```
 
 The seconds each fit took:
