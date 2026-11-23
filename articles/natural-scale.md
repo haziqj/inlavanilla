@@ -184,7 +184,7 @@ fit_bvn <- inla_vanilla(logpost_bvn, init, x = x, silent = TRUE)
 fit_bvn
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -39.67 · Converged in 33 iterations (40ms)
+#> Log marginal likelihood: -39.67 · Converged in 33 iterations (42ms)
 #> 
 #>             Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 mu1     5.0058  0.0493  4.9091  5.0058  5.1024  5.0058

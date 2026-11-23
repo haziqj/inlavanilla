@@ -87,7 +87,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.23/vignettes/articles/correlation.qmd" class="external-link"><code>vignettes/articles/correlation.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/correlation.qmd" class="external-link"><code>vignettes/articles/correlation.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -248,8 +248,8 @@ p(L) \propto \prod_{i=2}^{d} L_{ii}^{\, d - i + 2\eta - 2},
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, x <span class="op">=</span> <span class="va">x</span>, eta <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 34 iterations [1.1s]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [575ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 54 skew-normal marginals [1.5s]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.39σ [566ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 54 skew-normal marginals [1.4s]</span></span></code></pre></div>
 </div>
 <p>The fit takes about 3 seconds, and <code>summary(fit)</code> flags nothing. The parameters are named for the scale they are on, <code>log_sigma_x1</code> and <code>atanh_z21</code>, so the fit reports the standard deviations and the CPCs themselves (see the article on <a href="natural-scale.html">natural-scale summaries</a>). The first six CPCs:</p>
 <div class="cell" data-layout-align="center">

@@ -87,7 +87,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.23/vignettes/articles/diagnostic-tests.qmd" class="external-link"><code>vignettes/articles/diagnostic-tests.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/diagnostic-tests.qmd" class="external-link"><code>vignettes/articles/diagnostic-tests.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -160,7 +160,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 \sigma_1^2}\)</span> follows from it, and <span class="math inline">\(\sigma\)</span> changes only how strongly the tests depend on each other. The accuracies then share the uniform priors of the other two models. Each <span class="math inline">\(\sigma_d\)</span> gets a half-normal prior with scale 0.5, which says that the dependence beyond the infection status is probably modest. Much vaguer priors on <span class="math inline">\(\sigma\)</span> leave a posterior with several modes, which five tests on 220 people cannot settle.</p>
 </section><section class="level2"><h2 id="the-log-posteriors">The log-posteriors<a class="anchor" aria-label="anchor" href="#the-log-posteriors"></a>
 </h2>
-<p>Each log-posterior sums the infection status out of the likelihood of each response pattern, and weighs the pattern by its count.</p>
+<p>Each log-posterior sums the infection status out of the likelihood of each response pattern, and weighs the pattern by its count. It reads the data, <code>y</code> and <code>count</code>, from the workspace, so it takes the parameters alone.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># log(exp(a) + exp(b)), elementwise and without overflow</span></span>
@@ -175,7 +175,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <p>The conditionally independent model:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">lp_lc</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span>, <span class="va">count</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="va">lp_lc</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">J</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span></span>
 <span>  <span class="va">lt</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span>  <span class="va">se</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">1</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">J</span><span class="op">]</span></span>
@@ -203,7 +203,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <p>The <span class="math inline">\(\beta\)</span>s come from the sensitivities and specificities through <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">qnorm()</a></code> on the log scale, which stays accurate when a probability is close to 1. The prior on <span class="math inline">\(\log \sigma\)</span> is the half-normal density of <span class="math inline">\(\sigma\)</span> times <span class="math inline">\(\sigma\)</span>, its Jacobian.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">lp_lcre</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span>, <span class="va">count</span>, <span class="va">gh</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="va">lp_lcre</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">J</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span></span>
 <span>  <span class="va">lt</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span>  <span class="va">se</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">1</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">J</span><span class="op">]</span></span>
@@ -233,7 +233,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <p>The finite mixture adds the always-positive group to the infected class of pattern <code>11111</code>, and the always-negative group to the uninfected class of pattern <code>00000</code>:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">lp_fm</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span>, <span class="va">count</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="va">lp_fm</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">J</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">y</span><span class="op">)</span></span>
 <span>  <span class="va">lt</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span>  <span class="va">e1</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span></span>
@@ -263,30 +263,16 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_Se_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_Sp_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">fit_lc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_lc</span>, <span class="va">start</span>, y <span class="op">=</span> <span class="va">y</span>, count <span class="op">=</span> <span class="va">count</span>, vb <span class="op">=</span> <span class="st">"full"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 30 iterations [25ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.38σ [37ms]</span></span>
+<span><span class="va">fit_lc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_lc</span>, <span class="va">start</span>, vb <span class="op">=</span> <span class="st">"full"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 30 iterations [27ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.38σ [36ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 11 skew-normal marginals [48ms]</span></span>
 <span><span class="va">fit_lcre</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">lp_lcre</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">start</span>, log_sigma1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span>, log_sigma0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  y <span class="op">=</span> <span class="va">y</span>,</span>
-<span>  count <span class="op">=</span> <span class="va">count</span>,</span>
-<span>  gh <span class="op">=</span> <span class="va">gh</span>,</span>
-<span>  vb <span class="op">=</span> <span class="st">"full"</span></span>
+<span>  vb <span class="op">=</span> <span class="st">"full"</span>,</span>
+<span>  silent <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [144ms]</span></span>
-<span><span class="co">#&gt; ! VB mean correction, max shift 0.5σ (fallback optimiser), not settled [1.1s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [180ms]</span></span>
-<span><span class="co">#&gt; Warning: Fit diagnostics flagged 1 potential issue:</span></span>
-<span><span class="co">#&gt; ✖ The VB correction did not settle: one more step would move</span></span>
-<span><span class="co">#&gt;   `logit_Se_Antigens` by 0.263σ.</span></span>
-<span><span class="co">#&gt; ℹ Without a gradient the VB mean is approximate on a posterior this far</span></span>
-<span><span class="co">#&gt;   from Gaussian; supply `grad` if you can.</span></span>
-<span><span class="co">#&gt; ℹ The skew-normal marginals do not depend on it; `vb = "off"` leaves it</span></span>
-<span><span class="co">#&gt;   out.</span></span>
-<span><span class="co">#&gt; ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;</span></span>
-<span><span class="co">#&gt;   `vignette("diagnostics", package = "inlavanilla")` explains each check.</span></span>
 <span><span class="va">start_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="va">start</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
 <span>  logit_eta1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.2</span><span class="op">)</span>,</span>
@@ -294,18 +280,19 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_w1_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_w0_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">fit_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_fm</span>, <span class="va">start_fm</span>, y <span class="op">=</span> <span class="va">y</span>, count <span class="op">=</span> <span class="va">count</span>, vb <span class="op">=</span> <span class="st">"full"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 25 iterations [36ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [83ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [66ms]</span></span></code></pre></div>
+<span><span class="va">fit_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_fm</span>, <span class="va">start_fm</span>, vb <span class="op">=</span> <span class="st">"full"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 25 iterations [41ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [80ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [78ms]</span></span></code></pre></div>
 </div>
+<p>The random effects fit runs with <code>silent = TRUE</code>. Its posterior is far from Gaussian, and without a gradient the VB correction does not quite settle, as the warning kept in <code>fit_lcre$warnings</code> says. The skew-normal marginals do not depend on it, but the log marginal likelihood below does.</p>
 <p>The seconds each fit took:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>LC <span class="op">=</span> <span class="va">fit_lc</span>, LCRE <span class="op">=</span> <span class="va">fit_lcre</span>, FM <span class="op">=</span> <span class="va">fit_fm</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">timing</span><span class="op">[[</span><span class="st">"total"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   LC LCRE   FM </span></span>
-<span><span class="co">#&gt; 0.12 1.53 0.20</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.12 1.67 0.21</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
 </h2>
@@ -426,7 +413,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span><span class="co">#&gt;    LC  LCRE    FM </span></span>
 <span><span class="co">#&gt; -0.15  0.00 -2.53</span></span></code></pre></div>
 </div>
-<p>The conditionally independent and random effects models are a third of a nat apart, so the data cannot tell them apart, as Koukounari et al. (2021) found with goodness-of-fit tests and Albert and Dodd (2004) warned. The finite mixture trails by 2.7 nats, a Bayes factor of about 15. Yet the first two disagree on the sensitivities. That is the case for collecting a gold standard on some of the people: a person whose infection status is known contributes only the term of their class, <span class="math inline">\(P(D_i = d) \, p(y_i \mid D_i = d)\)</span>, instead of the sum over both, and pins the sensitivities down whatever the dependence between the tests.</p>
+<p>The conditionally independent and random effects models are 0.15 nats apart, so the data cannot tell them apart, as Koukounari et al. (2021) found with goodness-of-fit tests and Albert and Dodd (2004) warned. The finite mixture trails by 2.5 nats, a Bayes factor of about 13. Yet the first two disagree on the sensitivities. That is the case for collecting a gold standard on some of the people: a person whose infection status is known contributes only the term of their class, <span class="math inline">\(P(D_i = d) \, p(y_i \mid D_i = d)\)</span>, instead of the sum over both, and pins the sensitivities down whatever the dependence between the tests.</p>
 </section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <p>Albert, P. S., &amp; Dodd, L. E. (2004). A cautionary note on the robustness of latent class models for estimating diagnostic error without a gold standard. <em>Biometrics</em>, <em>60</em>(2), 427–435. <a href="https://doi.org/10.1111/j.0006-341X.2004.00187.x" class="external-link uri">https://doi.org/10.1111/j.0006-341X.2004.00187.x</a></p>

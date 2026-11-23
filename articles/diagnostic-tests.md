@@ -115,7 +115,9 @@ modes, which five tests on 220 people cannot settle.
 ## The log-posteriors
 
 Each log-posterior sums the infection status out of the likelihood of
-each response pattern, and weighs the pattern by its count.
+each response pattern, and weighs the pattern by its count. It reads the
+data, `y` and `count`, from the workspace, so it takes the parameters
+alone.
 
 ``` r
 
@@ -133,7 +135,7 @@ The conditionally independent model:
 
 ``` r
 
-lp_lc <- function(theta, y, count) {
+lp_lc <- function(theta) {
   J <- ncol(y)
   lt <- theta[1]
   se <- theta[1 + 1:J]
@@ -171,7 +173,7 @@ Jacobian.
 
 ``` r
 
-lp_lcre <- function(theta, y, count, gh) {
+lp_lcre <- function(theta) {
   J <- ncol(y)
   lt <- theta[1]
   se <- theta[1 + 1:J]
@@ -205,7 +207,7 @@ class of pattern `00000`:
 
 ``` r
 
-lp_fm <- function(theta, y, count) {
+lp_fm <- function(theta) {
   J <- ncol(y)
   lt <- theta[1]
   e1 <- theta[2]
@@ -240,30 +242,16 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Se_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
-fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count, vb = "full")
-#> ✔ Found the posterior mode in 30 iterations [25ms]
-#> ✔ VB mean correction, max shift 0.38σ [37ms]
+fit_lc <- inla_vanilla(lp_lc, start, vb = "full")
+#> ✔ Found the posterior mode in 30 iterations [27ms]
+#> ✔ VB mean correction, max shift 0.38σ [36ms]
 #> ✔ Fitted 11 skew-normal marginals [48ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
-  y = y,
-  count = count,
-  gh = gh,
-  vb = "full"
+  vb = "full",
+  silent = TRUE
 )
-#> ✔ Found the posterior mode in 29 iterations [144ms]
-#> ! VB mean correction, max shift 0.5σ (fallback optimiser), not settled [1.1s]
-#> ✔ Fitted 13 skew-normal marginals [180ms]
-#> Warning: Fit diagnostics flagged 1 potential issue:
-#> ✖ The VB correction did not settle: one more step would move
-#>   `logit_Se_Antigens` by 0.263σ.
-#> ℹ Without a gradient the VB mean is approximate on a posterior this far
-#>   from Gaussian; supply `grad` if you can.
-#> ℹ The skew-normal marginals do not depend on it; `vb = "off"` leaves it
-#>   out.
-#> ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;
-#>   `vignette("diagnostics", package = "inlavanilla")` explains each check.
 start_fm <- c(
   start[1],
   logit_eta1 = qlogis(0.2),
@@ -271,11 +259,17 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w1_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
-fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count, vb = "full")
-#> ✔ Found the posterior mode in 25 iterations [36ms]
-#> ✔ VB mean correction, max shift 0.42σ [83ms]
-#> ✔ Fitted 13 skew-normal marginals [66ms]
+fit_fm <- inla_vanilla(lp_fm, start_fm, vb = "full")
+#> ✔ Found the posterior mode in 25 iterations [41ms]
+#> ✔ VB mean correction, max shift 0.42σ [80ms]
+#> ✔ Fitted 13 skew-normal marginals [78ms]
 ```
+
+The random effects fit runs with `silent = TRUE`. Its posterior is far
+from Gaussian, and without a gradient the VB correction does not quite
+settle, as the warning kept in `fit_lcre$warnings` says. The skew-normal
+marginals do not depend on it, but the log marginal likelihood below
+does.
 
 The seconds each fit took:
 
@@ -284,7 +278,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.12 1.53 0.20
+#> 0.12 1.67 0.21
 ```
 
 ## Results
@@ -429,15 +423,15 @@ round(logml - max(logml), 2)
 #> -0.15  0.00 -2.53
 ```
 
-The conditionally independent and random effects models are a third of a
-nat apart, so the data cannot tell them apart, as Koukounari et
-al. (2021) found with goodness-of-fit tests and Albert and Dodd (2004)
-warned. The finite mixture trails by 2.7 nats, a Bayes factor of about
-15. Yet the first two disagree on the sensitivities. That is the case
-for collecting a gold standard on some of the people: a person whose
-infection status is known contributes only the term of their class,
-\\P(D_i = d) \\ p(y_i \mid D_i = d)\\, instead of the sum over both, and
-pins the sensitivities down whatever the dependence between the tests.
+The conditionally independent and random effects models are 0.15 nats
+apart, so the data cannot tell them apart, as Koukounari et al. (2021)
+found with goodness-of-fit tests and Albert and Dodd (2004) warned. The
+finite mixture trails by 2.5 nats, a Bayes factor of about 13. Yet the
+first two disagree on the sensitivities. That is the case for collecting
+a gold standard on some of the people: a person whose infection status
+is known contributes only the term of their class, \\P(D_i = d) \\ p(y_i
+\mid D_i = d)\\, instead of the sum over both, and pins the
+sensitivities down whatever the dependence between the tests.
 
 ## References
 

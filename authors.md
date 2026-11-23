@@ -15,7 +15,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/haziqj/inlavanilla/blob/v26.11.23/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
 
 Jamil H (2026). *inlavanilla: INLA-Style Skew-Normal Marginals for Any
 Log-Posterior*. R package version 26.11.23,
