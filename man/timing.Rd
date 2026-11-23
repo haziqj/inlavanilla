@@ -57,12 +57,12 @@ inlavanilla fit.
 \examples{
 set.seed(1)
 y <- rnorm(30, mean = 5, sd = 2)
-logpost <- function(theta, y) {
+logpost <- function(theta) {
   sum(dnorm(y, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE)) +
     dnorm(theta[["mu"]], 0, 10, log = TRUE) +
     dnorm(theta[["log_sigma"]], 0, 2, log = TRUE)
 }
-fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
+fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), silent = TRUE)
 
 # The whole fit
 timing(fit)

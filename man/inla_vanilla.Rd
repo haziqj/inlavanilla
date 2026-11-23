@@ -601,7 +601,7 @@ Whatever the level, the warnings raised during the fit are recorded in
 set.seed(1)
 y <- rnorm(30, mean = 5, sd = 2)
 
-logpost <- function(theta, y) {
+logpost <- function(theta) {
   mu <- theta[["mu"]]
   sigma <- exp(theta[["log_sigma"]])
   sum(dnorm(y, mu, sigma, log = TRUE)) +
@@ -611,7 +611,7 @@ logpost <- function(theta, y) {
 }
 
 # The parameter named log_sigma is reported as sigma
-fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
+fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 fit
 
 # The same fit as logpost sees it
@@ -624,20 +624,10 @@ cv <- sampling(fit, fun = function(theta) {
 quantile(cv, c(0.025, 0.5, 0.975))
 
 # A full diagnostic of each stage
-fit <- inla_vanilla(
-  logpost,
-  init = c(mu = 0, log_sigma = 0),
-  y = y,
-  verbose = TRUE
-)
+fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
-fit <- inla_vanilla(
-  logpost,
-  init = c(mu = 0, log_sigma = 0),
-  y = y,
-  silent = TRUE
-)
+fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)
 fit$warnings
 }
 \references{

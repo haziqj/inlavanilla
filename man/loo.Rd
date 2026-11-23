@@ -187,17 +187,15 @@ elpd is \code{sum(d)} with standard error \code{sqrt(length(d)) * sd(d)}.
 y <- c(2, 3, 6, 7, 8, 9, 10, 12, 15)
 time <- seq_along(y) - 5
 
-loglik <- function(theta, time, y) {
+loglik <- function(theta) {
   dpois(y, exp(theta[["a"]] + theta[["b"]] * time), log = TRUE)
 }
 logprior <- function(theta) sum(dnorm(theta, 0, 5, log = TRUE))
-logpost <- function(theta, time, y) {
-  sum(loglik(theta, time, y)) + logprior(theta)
-}
+logpost <- function(theta) sum(loglik(theta)) + logprior(theta)
 
-fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
-loo(fit, loglik, time = time, y = y)
-waic(fit, loglik, time = time, y = y)
+fit <- inla_vanilla(logpost, c(a = 0, b = 0))
+loo(fit, loglik)
+waic(fit, loglik)
 }
 \references{
 Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). \emph{Deterministic

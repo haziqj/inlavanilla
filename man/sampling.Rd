@@ -58,13 +58,13 @@ whatever \code{transform}.
 \examples{
 set.seed(1)
 y <- rnorm(30, mean = 5, sd = 2)
-logpost <- function(theta, y) {
+logpost <- function(theta) {
   sigma <- exp(theta[["log_sigma"]])
   sum(dnorm(y, theta[["mu"]], sigma, log = TRUE)) +
     dnorm(theta[["mu"]], 0, 10, log = TRUE) +
     dexp(sigma, log = TRUE) + theta[["log_sigma"]]
 }
-fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
+fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), silent = TRUE)
 
 # Draws of mu and sigma: the parameter named log_sigma comes back as sigma
 draws <- sampling(fit, nsamp = 2000)
