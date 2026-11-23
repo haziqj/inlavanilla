@@ -268,7 +268,8 @@ fit_lc <- inla_vanilla(lp_lc, start, vb = "full")
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
-  vb = "full"
+  vb = "full",
+  silent = TRUE
 )
 start_fm <- c(
   start[1],
@@ -279,6 +280,11 @@ start_fm <- c(
 )
 fit_fm <- inla_vanilla(lp_fm, start_fm, vb = "full")
 ```
+
+The random effects fit runs with `silent = TRUE`. Its posterior is far from
+Gaussian, and without a gradient the VB correction does not quite settle, as
+the warning kept in `fit_lcre$warnings` says. The skew-normal marginals do not
+depend on it, but the log marginal likelihood below does.
 
 The seconds each fit took:
 
@@ -398,10 +404,10 @@ logml <- c(
 round(logml - max(logml), 2)
 ```
 
-The conditionally independent and random effects models are a third of a nat
+The conditionally independent and random effects models are 0.15 nats
 apart, so the data cannot tell them apart, as Koukounari et al. (2021) found
 with goodness-of-fit tests and Albert and Dodd (2004) warned. The finite
-mixture trails by 2.7 nats, a Bayes factor of about 15. Yet the first two
+mixture trails by 2.5 nats, a Bayes factor of about 13. Yet the first two
 disagree on the sensitivities.
 That is the case for collecting a gold standard on some of the people: a
 person whose infection status is known contributes only the term of their
