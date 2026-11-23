@@ -432,13 +432,14 @@ Gaussian, is zero.
 
 \code{vb = "onestep"} takes the first Newton step towards that solution, with the
 Laplace curvature, and stops. With a gradient, the average is taken over the
-mode and \eqn{\pm\sqrt 3}{+/- sqrt(3)} posterior SDs along each principal
-axis of the covariance. Without one, it is one pass of Stein's identity on
-the rule of \code{vb = "full"}. Most of the movement is in that step, and exact VB
-is itself an approximation to the posterior mean with an error of the same
-order. If the first step is over 2.5 posterior SDs, or a node fails, the
-iteration carries on with capped steps, within the number of calls that the
-mode and Hessian took. \code{diagnostics()} then has \code{vb_step_sigma}, the step
+mode and \eqn{\pm\sqrt 3}{+/- sqrt(3)} along each axis of the symmetric
+square root of the covariance, taken on the correlation scale. Without one,
+it is one pass of Stein's identity on the rule of \code{vb = "full"}. Most of the
+movement is in that step, and exact VB is itself an approximation to the
+posterior mean with an error of the same order. If the first step is over
+2.5 posterior SDs, or a node fails, the iteration carries on with capped
+steps, within the number of calls that the mode and Hessian took.
+\code{diagnostics()} then has \code{vb_step_sigma}, the step
 still to go, which is \code{NA} after a single step. After a single step the fit
 checks that it delivered what it promised: \code{vb_gain_ratio} in \code{diagnostics()}
 is the rise in the expected log-posterior over the rise the step assumed, and

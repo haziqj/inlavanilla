@@ -91,9 +91,9 @@ test_that("the gain along the direction is a lower bound on the full gain", {
   v_scan <- sweep(lap$Sigma, 2, sqrt(diag(lap$Sigma)), "/")
   z <- res$out$z
   i <- c(which.min(abs(z + 2)), which.min(abs(z - 2)))
-  at_mode <- whitened_lp(res$lp, lap$mode, lap$lp_max, lap$L)
+  at_mode <- whitened_lp(res$lp, lap$mode, lap$lp_max, lap$A)
   for (j in 1:3) {
-    d <- gamma1_lp(j, res$lp, lap$mode, lap$lp_max, v_scan, lap$L, at_mode)
+    d <- gamma1_lp(j, res$lp, lap$mode, lap$lp_max, v_scan, lap$A, at_mode)
     f_t <- res$out$logpost[i, j]
     along <- bend_along(j, res$lp, lap, v_scan, z[i], f_t, d$bend_dir)
     full <- scan_bend(j, res$lp, NULL, lap, v_scan, z[i], f_t)
@@ -107,21 +107,21 @@ test_that("gamma1_lp() gives a unit direction across the scan", {
   mod <- reg_model(100)
   lap <- laplace_fit(mod$logpost, NULL, mod$init, vanilla_control(list()))
   v_scan <- sweep(lap$Sigma, 2, sqrt(diag(lap$Sigma)), "/")
-  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$A)
   res <- gamma1_lp(
     1L,
     mod$logpost,
     lap$mode,
     lap$lp_max,
     v_scan,
-    lap$L,
+    lap$A,
     at_mode
   )
-  a <- lap$L[1L, ] / sqrt(sum(lap$L[1L, ]^2))
+  a <- lap$A[1L, ] / sqrt(sum(lap$A[1L, ]^2))
   expect_equal(sum(res$bend_dir^2), 1)
   expect_lt(abs(sum(a * res$bend_dir)), 1e-10)
   # On the parameter scale it points along log sigma
-  d <- drop(lap$L %*% res$bend_dir)
+  d <- drop(lap$A %*% res$bend_dir)
   expect_gt(abs(d[[6L]]) / sqrt(sum(d^2)), 0.999)
 })
 
@@ -130,12 +130,12 @@ test_that("with no finite direction the ridge bend takes the full route", {
   lap <- laplace_fit(mod$logpost, NULL, mod$init, vanilla_control(list()))
   sds <- sqrt(diag(lap$Sigma))
   v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$A)
   # A wall just past the point where gamma1_lp() starts: the point itself is
   # finite, and one side of the first whitened axis is not
   edge <- lap$mode[[1L]] + 0.0105 * sds[[1L]]
   walled <- function(x) if (x[[1L]] > edge) -Inf else mod$logpost(x)
-  res <- gamma1_lp(1L, walled, lap$mode, lap$lp_max, v_scan, lap$L, at_mode)
+  res <- gamma1_lp(1L, walled, lap$mode, lap$lp_max, v_scan, lap$A, at_mode)
   expect_null(res$bend_dir)
 })
 

@@ -809,9 +809,10 @@ test_that("the marginal of a correlation is recovered on the Fisher z scale", {
   }
 
   # Log marginal likelihood, the log integral of p(y, z): observed error
-  # -0.0023 with the VB term, -0.098 for plain Laplace
+  # -0.0046 with the VB term, -0.098 for plain Laplace. The VB nodes on the
+  # principal axes, used before November 2026, gave -0.0023.
   logml <- bvn_ref_z$log_norm
-  expect_lt(abs(fit$logml - logml), 0.004)
+  expect_lt(abs(fit$logml - logml), 0.006)
   expect_lt(abs(fit$logml - logml), abs(fit$logml_laplace - logml))
 })
 

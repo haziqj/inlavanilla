@@ -6,6 +6,20 @@
   0.1.1, and a date sorts after every 0.x version, so an update installs as
   usual.
 
+* Every stage of a fit now whitens with the same factor, the symmetric square
+  root of the posterior covariance taken on the correlation scale. A fit
+  without a gradient no longer depends on the order of the parameters, beyond
+  the tolerance of the mode search: its volume correction, ridge bend and VB
+  fallback used a Cholesky factor, as did the check of the mode and `loo()`.
+  The VB correction no longer depends on rounding error where the posterior
+  has equal eigenvalues, as with exchangeable random effects, where it moved
+  the VB mean by up to 0.02 posterior SDs. It also stays accurate when the
+  posterior SDs span many orders of magnitude. The marginals change by less
+  than 1e-4 posterior SDs, except on funnels, where the skew-normal is far off
+  anyway. The one-step VB mean changes by up to 0.03 posterior SDs with a
+  gradient and 0.12 without, and the log marginal likelihood by up to 0.02 and
+  0.18. Against HMC on 52 simulated datasets, both are as accurate as before.
+
 * A fit with `cores` no longer warns that `future::availableCores()` and
   `future::supportsMulticore()` are deprecated. The core count and the fork
   check now come from parallelly, which future imports. parallelly is in

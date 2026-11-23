@@ -344,7 +344,7 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
   m <- length(lap$mode)
   sds <- sqrt(diag(lap$Sigma))
   v_scan <- sweep(lap$Sigma, 2, sds, "/")
-  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+  at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$A)
 
   # Independent reference: gamma1_j is the slope along the scan direction of
   # minus half the log-determinant of the conditional precision of the other
@@ -358,12 +358,12 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
   # The gradient route takes every parameter at once. The same with half the
   # step, and the log-posterior route with the forward difference over half
   # the distance.
-  g_grad <- gamma1_grad(mod$grad, lap$mode, v_scan, principal_axes(lap$Sigma))
+  g_grad <- gamma1_grad(mod$grad, lap$mode, v_scan, cov_root(lap$Sigma))
   g_grad_half <- gamma1_grad(
     mod$grad,
     lap$mode,
     v_scan,
-    principal_axes(lap$Sigma),
+    cov_root(lap$Sigma),
     h = 0.05
   )
   g_lp <- g_ref <- g_lp_half <- numeric(m)
@@ -374,7 +374,7 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
       lap$mode,
       lap$lp_max,
       v_scan,
-      lap$L,
+      lap$A,
       at_mode
     )$gamma1
     g_lp_half[j] <- gamma1_lp(
@@ -383,7 +383,7 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
       lap$mode,
       lap$lp_max,
       v_scan,
-      lap$L,
+      lap$A,
       at_mode,
       d_outer = 0.005
     )$gamma1
@@ -457,13 +457,13 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
     lap <- laplace_fit(mod$logpost, gr, mod$init, ctrl)
     sds <- sqrt(diag(lap$Sigma))
     v_scan <- sweep(lap$Sigma, 2, sds, "/")
-    at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$L)
+    at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$A)
     expect_lt(
       max(abs(gamma1_grad(
         mod$grad,
         lap$mode,
         v_scan,
-        principal_axes(lap$Sigma)
+        cov_root(lap$Sigma)
       ))),
       1e-11 # observed 9.3e-15, rounding in differences of the gradient
     )
@@ -476,7 +476,7 @@ test_that("the volume correction vanishes for an exactly Gaussian log-posterior"
             lap$mode,
             lap$lp_max,
             v_scan,
-            lap$L,
+            lap$A,
             at_mode
           )$gamma1
         ),
@@ -823,7 +823,7 @@ test_that("the VB shift is zero for an exactly Gaussian posterior", {
     mod$mean,
     chol2inv(R),
     R,
-    backsolve(R, diag(3)),
+    cov_root(chol2inv(R)),
     vanilla_control(list())
   )
   expect_lt(max(abs(vb$shift) / sds), 1e-14) # observed 3e-17
@@ -1109,7 +1109,7 @@ test_that("without a gradient each VB sweep costs one log-posterior call per nod
     fit$mode,
     fit$cov,
     R,
-    backsolve(R, diag(m)),
+    cov_root(fit$cov),
     vanilla_control(list())
   )
   expect_false(vb$fallback)
@@ -1742,6 +1742,30 @@ test_that("with a Hessian, nlminb() reaches a badly scaled mode without a restar
   expect_null(lap_hess$restart)
   expect_lt(max(abs(lap_hess$mode - mu) / s), 1e-10) # observed 0
   expect_lt(lap_hess$hess_error, 1e-6)
+})
+
+test_that("cov_root() is exact, smooth, and free of the order and the units", {
+  # The badly scaled covariance of the test above, with SDs from 1e-6 to 1e4.
+  # The principal axes of Sigma itself reproduce it to 1.6% only.
+  s <- 10^c(-6, -3, 0, 2, 4)
+  S <- diag(s) %*% 0.6^abs(outer(1:5, 1:5, "-")) %*% diag(s)
+  A <- cov_root(S)
+  expect_lt(max(abs(tcrossprod(A) - S) / outer(s, s)), 1e-12) # observed 1e-15
+  # Reordering the parameters reorders the rows and the columns of A, also for
+  # the reversal, which leaves this correlation unchanged
+  for (p in list(5:1, c(3, 5, 1, 4, 2))) {
+    expect_lt(max(abs(cov_root(S[p, p]) - A[p, p]) / s[p]), 1e-12)
+  }
+  # Rescaling a parameter rescales its row of A
+  d <- c(2, 1e3, 1, 0.5, 1e-2)
+  B <- cov_root(d * S * rep(d, each = 5))
+  expect_lt(max(abs(B - d * A) / (d * s)), 1e-12)
+  # Equal eigenvalues, as exchangeable random effects give: a change of 1e-10
+  # in the correlation moves A by about as much, where principal axes can turn
+  # freely within the eigenspace
+  C <- matrix(0.3, 6, 6) + diag(0.7, 6)
+  E <- outer(1:6, 1:6, function(i, j) sin(i + j))
+  expect_lt(max(abs(cov_root(C + 1e-10 * E) - cov_root(C))), 1e-8)
 })
 
 test_that("a restarted mode search reports the iterations of both runs", {

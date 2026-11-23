@@ -42,7 +42,8 @@
 #' terms over the \eqn{n} units, as in the loo package.
 #'
 #' The scores and Hessians come from finite differences of `loglik` along the
-#' principal axes of \eqn{\Omega}, a hundredth of a posterior SD apart:
+#' axes of the symmetric square root of \eqn{\Omega}, taken on the correlation
+#' scale, a hundredth of a posterior SD apart:
 #' \eqn{m^2 + m + 1} calls of `loglik` for \eqn{m} parameters, each returning
 #' every unit.
 #'
@@ -289,7 +290,9 @@ waic_x_inla_vanilla <- function(
 # The per-unit Taylor terms at the fit's Gaussian N(theta, Omega). Finite
 # differences run in whitened coordinates u, with theta + L u and
 # L L' = Omega, so they give the whitened score L' s_u and Hessian
-# L' H_u L directly; every formula below is invariant to the choice of L.
+# L' H_u L directly. Every formula below is invariant to the choice of L, and
+# L is cov_root(Omega), as in the fit, so that the differences do not depend
+# on the order of the parameters either.
 # Steps of h = 0.01 posterior SDs: in these units the terms of an expansion
 # shrink with the amount of data, so truncation error is negligible, and
 # rounding error is about 1e-12 |l_u|. With hessian = "diagonal" only the
@@ -300,7 +303,7 @@ taylor_pointwise <- function(fit, loglik, h = 0.01, hessian = "full") {
   theta <- fit$mean_vb
   parnames <- names(theta)
   m <- length(theta)
-  L <- t(chol(fit$cov))
+  L <- cov_root(fit$cov)
   full <- hessian == "full"
   n_calls <- if (full) m * m + m + 1L else 2L * m + 1L
   calls <- 0L

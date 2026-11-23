@@ -167,14 +167,14 @@
       -- Diagnostics --
       
                    VB shift   NMAD  Unscanned  Ridge bend  Mean gap
-      1 intercept    -0.24   0.010    0.00078       0.037    0.0031
-      2 slope         0.092  0.015    0.00013       0.14    -0.012 
+      1 intercept    -0.24   0.010    0.00078       0.037    0.0030
+      2 slope         0.091  0.015    0.00013       0.14    -0.011 
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction in one step: max shift 0.24 SD, gain ratio 0.977.
+      v VB correction in one step: max shift 0.24 SD, gain ratio 0.945.
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14,
-        mean gap 0.012 SD.
+        mean gap 0.011 SD.
 
 ---
 

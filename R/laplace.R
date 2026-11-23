@@ -5,8 +5,8 @@
 # (`gr` and `he` are NULL when the user gave none). With `he`, nlminb() takes
 # Newton steps with it, and the Hessian at the mode is the user's. Returns
 # the mode, the log-posterior there, the upper Cholesky factor R of the
-# precision (R'R = H), the covariance Sigma, a whitening factor L
-# (L L' = Sigma), the optimiser output, the gradient of the log-posterior at
+# precision (R'R = H), the covariance Sigma, its square root A = cov_root()
+# (A A' = Sigma), the optimiser output, the gradient of the log-posterior at
 # the mode with the checks built on it, the condition number of the Hessian
 # in posterior-SD units, and the Laplace log marginal likelihood. For verbose
 # output it also says how the Hessian was taken (`hessian`) and whether
@@ -194,11 +194,13 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
   if (is.null(R)) {
     return(out)
   }
-  out$L <- backsolve(R, diag(m)) # upper triangular, L L' = H^-1
   out$Sigma <- chol2inv(R)
   dimnames(out$Sigma) <- list(parnames, parnames)
+  # The one whitening factor of every stage, which does not depend on the
+  # order of the parameters (cov_root())
+  out$A <- cov_root(out$Sigma)
   if (!is.null(he)) {
-    out$hess_error <- hess_discrepancy(gr, mode, out$L)
+    out$hess_error <- hess_discrepancy(gr, mode, out$A)
     out$hessian$check_calls <- attr(out$hess_error, "calls")
   }
   # The gradient of the log-posterior at the mode, and two measures of how
@@ -217,7 +219,7 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
   if (!is.null(gr) && is.null(he)) {
     out$grad_gap[] <- grad_gap(as.numeric(g), H, scales)
   }
-  out$grad_mode <- max(abs(crossprod(out$L, g)))
+  out$grad_mode <- max(abs(crossprod(out$A, g)))
   out$mode_shift <- stats::setNames(
     abs(as.numeric(out$Sigma %*% g)) / sds,
     parnames
@@ -227,19 +229,19 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
 
 # How far a user Hessian is from central differences of the gradient at the
 # mode, in whitened coordinates, where the Hessian is the identity: the
-# largest error in L'(-J)L w, for J the Jacobian of the gradient along L w,
+# largest error in A'(-J)A w, for J the Jacobian of the gradient along A w,
 # over two fixed unit directions w (all ones, and alternating signs). It
 # costs 4 gradient calls whatever m, against 2m for a check of each column,
 # and a wrong Hessian passes only if its error happens to vanish along both
 # directions. Not finite when the gradient is not finite there.
-hess_discrepancy <- function(gr, mode, L, h = 1e-4) {
+hess_discrepancy <- function(gr, mode, A, h = 1e-4) {
   m <- length(mode)
   W <- unique(cbind(rep(1, m), rep_len(c(1, -1), m)), MARGIN = 2) / sqrt(m)
   err <- 0
   for (k in seq_len(ncol(W))) {
-    u <- drop(L %*% W[, k])
+    u <- drop(A %*% W[, k])
     jl <- (gr(mode + h * u) - gr(mode - h * u)) / (2 * h)
-    err <- max(err, abs(drop(crossprod(L, -jl)) - W[, k]))
+    err <- max(err, abs(drop(crossprod(A, -jl)) - W[, k]))
   }
   structure(err, calls = 2L * ncol(W))
 }

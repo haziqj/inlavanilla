@@ -409,7 +409,7 @@ test_that("the iteration after the guard stops within the budget", {
     lap$mode,
     lap$Sigma,
     lap$R,
-    lap$L,
+    lap$A,
     ctrl,
     method = "onestep",
     budget = 6

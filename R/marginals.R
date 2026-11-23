@@ -29,8 +29,9 @@
 
 # The volume correction gamma1_j: the rate of change, along v_j, of minus half
 # the log-determinant of the conditional precision of the other parameters. In
-# whitened coordinates (columns of L) the precision at the mode is the
-# identity, so its trace is m and v_j' H v_j = 1 there.
+# whitened coordinates (along the columns of A, from cov_root()) the
+# precision at the mode is the identity, so its trace is m and v_j' H v_j = 1
+# there.
 
 # The correction for every parameter at once, from the gradient. With T the
 # third derivative of the log-posterior at the mode,
@@ -40,9 +41,9 @@
 # v_j adds one more second difference: 4m + 1 gradient calls for all m
 # parameters. The step is `h` posterior SDs. Truncation grows as h^2, and noise
 # in the gradient, such as that of an inner optimisation, as 1 / h^2. Any A
-# with A A' = Sigma gives the same sum in the limit. fit_marginals() passes the
-# principal axes, so that the truncation does not depend on the order of the
-# parameters.
+# with A A' = Sigma gives the same sum in the limit. fit_marginals() passes
+# lap$A from cov_root(), so that the truncation does not depend on the order
+# of the parameters.
 gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
   m <- length(mode)
   g0 <- gr(mode)
@@ -70,7 +71,7 @@ gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
 #
 # The same calls, differenced the other way, give the whitened gradient at
 # mode + d_outer v_j, and from it the direction in which the ridge bends, for
-# scan_bend(). In whitened coordinates the scan direction is a = L[j, ] / s_j,
+# scan_bend(). In whitened coordinates the scan direction is a = A[j, ] / s_j,
 # and with T the third derivative at the mode the gradient along the scan is
 #   g(t) = g(0) - t a + t^2 / 2 T(a, a, .) + ...
 # So g(t) - g(0) + t a, without its part along a, is the second-order term
@@ -83,7 +84,7 @@ gamma1_lp <- function(
   mode,
   lp_max,
   Vscan,
-  L,
+  A,
   at_mode,
   d_outer = 0.01,
   h = 1e-2
@@ -91,10 +92,10 @@ gamma1_lp <- function(
   vj <- Vscan[, j]
   th <- mode + vj * d_outer
   f_th <- lp(th)
-  at_th <- whitened_lp(lp, th, f_th, L, h)
+  at_th <- whitened_lp(lp, th, f_th, A, h)
   vHv <- -fd_curvature(lp, th, vj, h, f0 = f_th)
   vHv0 <- -fd_curvature(lp, mode, vj, h, f0 = lp_max)
-  a <- L[j, ] / sqrt(sum(L[j, ]^2))
+  a <- A[j, ] / sqrt(sum(A[j, ]^2))
   across <- at_th$grad - at_mode$grad + d_outer * a
   across <- across - a * sum(a * across)
   size <- sqrt(sum(across^2))
@@ -108,13 +109,13 @@ gamma1_lp <- function(
 }
 
 # The whitened trace of the precision at `x`, whose log-posterior is `f_x`, and
-# the whitened gradient there, from the same 2m calls along the columns of L.
-whitened_lp <- function(lp, x, f_x, L, h = 1e-2) {
+# the whitened gradient there, from the same 2m calls along the columns of A.
+whitened_lp <- function(lp, x, f_x, A, h = 1e-2) {
   tr <- 0
-  grad <- numeric(ncol(L))
-  for (k in seq_len(ncol(L))) {
-    up <- lp(x + h * L[, k])
-    down <- lp(x - h * L[, k])
+  grad <- numeric(ncol(A))
+  for (k in seq_len(ncol(A))) {
+    up <- lp(x + h * A[, k])
+    down <- lp(x - h * A[, k])
     tr <- tr - (up - 2 * f_x + down) / h^2
     grad[k] <- (up - down) / (2 * h)
   }
@@ -308,7 +309,7 @@ fit_marginals <- function(
 ) {
   mode <- lap$mode
   Sigma <- lap$Sigma
-  L <- lap$L
+  A <- lap$A
   m <- length(mode)
   sds <- sqrt(diag(Sigma))
   Vscan <- sweep(Sigma, 2, sds, "/")
@@ -316,7 +317,7 @@ fit_marginals <- function(
 
   # The baselines at the mode for gamma1_lp(), only when some parameter uses it
   at_mode <- if (is.null(gr) && (width == "trace" || m == 1L)) {
-    whitened_lp(lp, mode, lap$lp_max, L)
+    whitened_lp(lp, mode, lap$lp_max, A)
   } else {
     NULL
   }
@@ -325,7 +326,7 @@ fit_marginals <- function(
   # estimate of the time left would otherwise charge it to the first parameter.
   g1_grad <- if (!is.null(gr) && (width == "trace" || m == 1L)) {
     start("shared")
-    gamma1_grad(gr, mode, Vscan, principal_axes(Sigma))
+    gamma1_grad(gr, mode, Vscan, A)
   } else {
     NULL
   }
@@ -504,7 +505,7 @@ scan_parameter <- function(j, lp, gr, he, ctx) {
   # Without a gradient the volume correction comes first, because its calls
   # also say which way the ridge bends
   g1_lp <- if (!is.null(ctx$at_mode)) {
-    gamma1_lp(j, lp, mode, lap$lp_max, Vscan, lap$L, ctx$at_mode)
+    gamma1_lp(j, lp, mode, lap$lp_max, Vscan, lap$A, ctx$at_mode)
   } else {
     NULL
   }
@@ -660,7 +661,7 @@ bend_screen <- 0.1
 # The gain of scan_bend() along one direction `dir`, a unit vector in whitened
 # coordinates, where the Laplace curvature is 1. One call per point.
 bend_along <- function(j, lp, lap, Vscan, t, f_t, dir, h = 1e-3) {
-  step <- h * drop(lap$L %*% dir)
+  step <- h * drop(lap$A %*% dir)
   gain <- vapply(
     seq_along(t),
     function(k) {

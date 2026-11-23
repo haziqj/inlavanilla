@@ -13,13 +13,13 @@
 # stops. The fixed-point map is nearly flat (its slope is O(1/n)), so the first
 # step holds most of the movement, and exact VB is itself only O(n^-3/2)
 # posterior SDs from the posterior mean. With a gradient the step uses 2m + 1
-# nodes on the principal axes (axis_nodes()), about one numerical Hessian.
+# nodes on the axes of cov_root() (axis_nodes()), about one numerical Hessian.
 # Without one it is one Stein pass on vb_nodes(), since Stein's identity needs
 # that rule's degree. See lab/ideas/2026-11-one-step-vb.
 
 # Node set for the Gaussian expectation: a degree-5 rule built on a regular
-# simplex, on the principal axes of Sigma. In whitened coordinates its nodes
-# are the centre and
+# simplex, in the whitened coordinates of cov_root(). There its nodes are the
+# centre and
 #   +/- r a_k    at the m + 1 vertices a_k of a regular simplex (unit
 #                vectors with a_k' a_l = -1/m),
 #   +/- s b_kl   along the m (m + 1) / 2 edge directions
@@ -47,19 +47,18 @@
 # with the vertices of an octahedron (m = 3).
 #
 # The nodes come in antipodal pairs: the centre, then one node of each pair,
-# then their negatives in the same order. The principal axes take a fixed
-# sign (each with its largest entry positive), because the simplex is not
-# symmetric under the sign of a single axis, so the rule must not depend on
-# the signs that eigen() happens to return.
-vb_nodes <- function(Sigma) {
-  A <- principal_axes(Sigma)
+# then their negatives in the same order. The simplex is placed so that a
+# reordering of the parameters only permutes its vertices (simplex_rule()), and
+# a reordering permutes the rows and the columns of cov_root() alike, so the
+# nodes of a reordered posterior are the reordered nodes.
+vb_nodes <- function(Sigma, A = cov_root(Sigma)) {
   rule <- simplex_rule(ncol(Sigma))
   half <- rule$nodes[1 + seq_len(rule$n_pairs), , drop = FALSE] %*% t(A)
   list(nodes = rbind(0, half, -half), weights = rule$weights)
 }
 
 # The node set of the one-step correction with a gradient: the centre and
-# +/- sqrt(3) SDs along each principal axis of Sigma, 2m + 1 nodes, as many
+# +/- sqrt(3) along each axis of cov_root(Sigma), 2m + 1 nodes, as many
 # gradients as a numerical Hessian. Written as differences from the centre,
 # the expected gradient is g0 + sum_k (g(+a_k) + g(-a_k) - 2 g0) / 6. In one
 # dimension this is the three-point Gauss-Hermite rule, as vb_nodes() is. The
@@ -68,9 +67,9 @@ vb_nodes <- function(Sigma) {
 # the third derivatives, is exact on a cubic. A wider rule did not help: it
 # picks up the tails, and the first step then moves further from the
 # posterior mean (lab/ideas/2026-11-one-step-vb).
-axis_nodes <- function(Sigma) {
+axis_nodes <- function(Sigma, A = cov_root(Sigma)) {
   m <- ncol(Sigma)
-  half <- sqrt(3) * t(principal_axes(Sigma))
+  half <- sqrt(3) * t(A)
   list(
     nodes = rbind(0, half, -half),
     weights = c(1 - m / 3, rep(1 / 6, 2 * m))
@@ -84,12 +83,12 @@ axis_nodes <- function(Sigma) {
 # the step went too far or the posterior is far from Gaussian
 # (lab/ideas/2026-11-one-step-vb). The expectations use axis_nodes(), with or
 # without a gradient: 4m + 2 calls of logpost. A step too small to check is NA.
-vb_gain_ratio <- function(lp, mode, Sigma, R, shift) {
+vb_gain_ratio <- function(lp, mode, Sigma, R, shift, A = cov_root(Sigma)) {
   promised <- 0.5 * sum((R %*% shift)^2)
   if (promised < 1e-6) {
     return(NA_real_)
   }
-  rule <- axis_nodes(Sigma)
+  rule <- axis_nodes(Sigma, A)
   expected <- function(mu) {
     lps <- vapply(
       seq_len(nrow(rule$nodes)),
@@ -101,25 +100,32 @@ vb_gain_ratio <- function(lp, mode, Sigma, R, shift) {
   (expected(mode + shift) - expected(mode)) / promised
 }
 
-# The principal axes of Sigma, scaled so that A A' = Sigma, each with its
-# largest entry positive
-principal_axes <- function(Sigma) {
-  m <- ncol(Sigma)
-  e <- eigen(Sigma, symmetric = TRUE)
-  top <- max.col(abs(t(e$vectors)), ties.method = "first")
-  axes <- sweep(e$vectors, 2, sign(e$vectors[cbind(top, seq_len(m))]), "*")
-  sweep(axes, 2, sqrt(pmax(e$values, 0)), "*")
+# The whitening factor of every stage, A with A A' = Sigma: the symmetric
+# square root of the correlation matrix C, scaled by the posterior SDs,
+# A = D C^1/2. A reordering of the parameters permutes its rows and columns
+# alike, and a change of units scales its rows, so no stage depends on the
+# order or the units. Stages whitened by a Cholesky factor depended on the
+# order. It is a smooth function of Sigma, unlike the principal axes, whose
+# directions are arbitrary where eigenvalues are equal, as with exchangeable
+# random effects: there rounding error alone moved the VB mean by 0.02 SDs. It
+# is also accurate when the SDs span many orders of magnitude: with SDs from
+# 1e-6 to 1e4 it reproduces Sigma to 1e-15, the principal axes of Sigma to
+# 1.6% only (lab/whitening-order.R and lab/DESIGN.md).
+cov_root <- function(Sigma) {
+  sds <- sqrt(diag(Sigma))
+  e <- eigen(Sigma / outer(sds, sds), symmetric = TRUE)
+  root <- e$vectors %*% (sqrt(pmax(e$values, 0)) * t(e$vectors))
+  unname(sds * root)
 }
 
 # The rule of vb_nodes() in whitened coordinates
 simplex_rule <- function(m) {
-  # Unit vertices: the rows of a Helmert contrast matrix, rescaled
-  H <- matrix(0, m + 1, m)
-  for (j in seq_len(m)) {
-    H[seq_len(j), j] <- 1 / sqrt(j * (j + 1))
-    H[j + 1, j] <- -j / sqrt(j * (j + 1))
-  }
-  vertices <- H * sqrt((m + 1) / m)
+  # Unit vertices, a_k' a_l = -1/m, placed so that a reordering of the
+  # coordinates only permutes them: a e_k + b 1 for k = 1, ..., m, and the
+  # last on the diagonal
+  a <- sqrt((m + 1) / m)
+  b <- (1 / sqrt(m) - a) / m
+  vertices <- rbind(a * diag(m) + b, rep(-1 / sqrt(m), m))
   p4 <- function(x) sum(as.numeric(vertices %*% x)^4)
   # One vertex and one edge direction per antipodal pair
   V <- if (m == 1) vertices[1, , drop = FALSE] else vertices
@@ -186,7 +192,7 @@ vb_correct <- function(
   mode,
   Sigma,
   R,
-  L,
+  A,
   ctrl,
   method = "full",
   budget = Inf
@@ -194,7 +200,7 @@ vb_correct <- function(
   m <- length(mode)
   stein <- is.null(gr)
   onestep <- method == "onestep"
-  rule <- if (onestep && !stein) axis_nodes(Sigma) else vb_nodes(Sigma)
+  rule <- if (onestep && !stein) axis_nodes(Sigma, A) else vb_nodes(Sigma, A)
   Z <- rule$nodes
   w <- rule$weights
   nn <- nrow(Z)
@@ -406,9 +412,10 @@ vb_correct <- function(
   }
 
   if (fallback) {
-    # Optimise in whitened coordinates, where the problem is well conditioned.
-    # The gradient there is -L' E[grad], which without a gradient is
-    # -L' Sigma^-1 step = -R step. That is the expected gradient by Stein's
+    # Optimise in whitened coordinates d, with shift = A d for A = cov_root(),
+    # where the problem is well conditioned. The gradient there is
+    # -A' E[grad], which without a gradient is -A' Sigma^-1 step = -A^-1 step,
+    # with A^-1 = A' H = A' R'R. That is the expected gradient by Stein's
     # identity, which agrees with the gradient of the objective to the error of
     # the rule, and costs no calls beyond the objective's at the same point.
     #
@@ -421,7 +428,8 @@ vb_correct <- function(
     # moves the mean away from them, back towards the region where every node
     # is finite. Finding the failed nodes takes no calls without a gradient,
     # and one more sweep with one.
-    U <- Z %*% t(R) # whitened nodes, since L = R^-1
+    A_inv <- crossprod(A, crossprod(R))
+    U <- Z %*% t(A_inv) # whitened nodes
     away <- function(shift) {
       bad <- if (stein) {
         c(FALSE, !is.finite(node_lp(shift)))
@@ -434,13 +442,13 @@ vb_correct <- function(
     fall_back <- function(start) {
       stats::nlminb(
         start = start,
-        objective = function(d) objective(as.numeric(L %*% d)),
+        objective = function(d) objective(as.numeric(A %*% d)),
         gradient = function(d) {
-          shift <- as.numeric(L %*% d)
+          shift <- as.numeric(A %*% d)
           g <- if (stein) {
-            -as.numeric(R %*% step_at(shift))
+            -as.numeric(A_inv %*% step_at(shift))
           } else {
-            as.numeric(crossprod(L, -score(shift)))
+            as.numeric(crossprod(A, -score(shift)))
           }
           if (all(is.finite(g))) g else away(shift)
         },
@@ -448,7 +456,7 @@ vb_correct <- function(
       )
     }
     nl <- fall_back(numeric(m))
-    shift <- as.numeric(L %*% nl$par)
+    shift <- as.numeric(A %*% nl$par)
     iter <- nl$iterations
     if (nl$objective >= failed) {
       stop_failed_nodes(shift, pinned = FALSE)
@@ -469,7 +477,7 @@ vb_correct <- function(
       max(abs(step) / sds) >= warn_levels$vb_step
     if (rerun) {
       nl <- fall_back(nl$par)
-      shift <- as.numeric(L %*% nl$par)
+      shift <- as.numeric(A %*% nl$par)
       iter <- iter + nl$iterations
       step <- step_at(shift)
     }
@@ -511,7 +519,7 @@ vb_correct <- function(
     fallback = fallback,
     one_pass = one_pass,
     gain_ratio = if (one_pass) {
-      vb_gain_ratio(lp, mode, Sigma, R, shift)
+      vb_gain_ratio(lp, mode, Sigma, R, shift, A)
     } else {
       NA_real_
     },

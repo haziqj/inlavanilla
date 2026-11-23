@@ -40,11 +40,11 @@
       
                    VB shift
       1 intercept    -0.24 
-      2 slope         0.092
+      2 slope         0.091
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction in one step: max shift 0.24 SD, gain ratio 0.977.
+      v VB correction in one step: max shift 0.24 SD, gain ratio 0.945.
       i Gaussian marginals: no scans, so no skew-normal checks.
 
 ---

@@ -109,7 +109,8 @@ Each standard error is \eqn{\sqrt{n \, \mathrm{Var}}} of the pointwise
 terms over the \eqn{n} units, as in the loo package.
 
 The scores and Hessians come from finite differences of \code{loglik} along the
-principal axes of \eqn{\Omega}, a hundredth of a posterior SD apart:
+axes of the symmetric square root of \eqn{\Omega}, taken on the correlation
+scale, a hundredth of a posterior SD apart:
 \eqn{m^2 + m + 1} calls of \code{loglik} for \eqn{m} parameters, each returning
 every unit.
 
