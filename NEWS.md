@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 26.11.23
 
 * When the mode search runs off, or lands far from the posterior mass, the
   diagnostics warning now says what can cause it and what to do: random
