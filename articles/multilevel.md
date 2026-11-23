@@ -43,35 +43,39 @@ and \\\sigma\\, and a uniform prior on \\\rho\\.
 The standard deviations are on the log scale and \\\rho\\ on the atanh
 scale, so each prior gets the log-Jacobian of its transform: \\\log
 \tau\\ for a standard deviation, and \\\log(1 - \rho^2)\\ for the
-correlation.
+correlation. `make_logpost()` takes the data and returns the
+log-posterior, a function of the parameters alone, so that the same
+model can also be fitted to [fewer subjects](#with-fewer-subjects).
 
 ``` r
 
-logpost <- function(theta, ys, xs) {
-  b <- c(theta[["b0"]], theta[["b1"]])
-  tau <- exp(c(theta[["log_tau0"]], theta[["log_tau1"]]))
-  rho <- tanh(theta[["atanh_rho"]])
-  sigma <- exp(theta[["log_sigma"]])
-  g <- diag(tau^2)
-  g[1, 2] <- g[2, 1] <- rho * tau[1] * tau[2]
+make_logpost <- function(ys, xs) {
+  function(theta) {
+    b <- c(theta[["b0"]], theta[["b1"]])
+    tau <- exp(c(theta[["log_tau0"]], theta[["log_tau1"]]))
+    rho <- tanh(theta[["atanh_rho"]])
+    sigma <- exp(theta[["log_sigma"]])
+    g <- diag(tau^2)
+    g[1, 2] <- g[2, 1] <- rho * tau[1] * tau[2]
 
-  # Marginal log-likelihood, one subject at a time
-  loglik <- 0
-  for (j in seq_along(ys)) {
-    x <- xs[[j]]
-    r <- chol(x %*% g %*% t(x) + diag(sigma^2, nrow(x)))
-    z <- backsolve(r, ys[[j]] - x %*% b, transpose = TRUE)
-    loglik <- loglik - sum(log(diag(r))) - sum(z^2) / 2 -
-      nrow(x) / 2 * log(2 * pi)
+    # Marginal log-likelihood, one subject at a time
+    loglik <- 0
+    for (j in seq_along(ys)) {
+      x <- xs[[j]]
+      r <- chol(x %*% g %*% t(x) + diag(sigma^2, nrow(x)))
+      z <- backsolve(r, ys[[j]] - x %*% b, transpose = TRUE)
+      loglik <- loglik - sum(log(diag(r))) - sum(z^2) / 2 -
+        nrow(x) / 2 * log(2 * pi)
+    }
+
+    # Half-normal prior on a standard deviation, with the log-Jacobian
+    lp_sd <- function(s) dnorm(s, 0, 50, log = TRUE) + log(2) + log(s)
+    loglik +
+      sum(dnorm(b, 0, 500, log = TRUE)) +
+      sum(lp_sd(tau)) +
+      lp_sd(sigma) +
+      log(1 / 2) + log(1 - rho^2)
   }
-
-  # Half-normal prior on a standard deviation, with the log-Jacobian
-  lp_sd <- function(s) dnorm(s, 0, 50, log = TRUE) + log(2) + log(s)
-  loglik +
-    sum(dnorm(b, 0, 500, log = TRUE)) +
-    sum(lp_sd(tau)) +
-    lp_sd(sigma) +
-    log(1 / 2) + log(1 - rho^2)
 }
 ```
 
@@ -92,14 +96,14 @@ init <- c(
   b0 = 250, b1 = 10, log_tau0 = log(20), log_tau1 = log(5),
   atanh_rho = 0, log_sigma = log(25)
 )
-fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [92ms]
-#> ✔ VB mean correction, max shift 0.31σ [44ms]
-#> ✔ Fitted 6 skew-normal marginals [110ms]
+fit <- inla_vanilla(make_logpost(ys, xs), init)
+#> ✔ Found the posterior mode in 20 iterations [89ms]
+#> ✔ VB mean correction, max shift 0.31σ [42ms]
+#> ✔ Fitted 6 skew-normal marginals [109ms]
 fit
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -894.66 · Converged in 20 iterations (269ms)
+#> Log marginal likelihood: -894.66 · Converged in 20 iterations (261ms)
 #> 
 #>             Mean     SD     2.5%      50%    97.5%     Mode
 #> 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 
@@ -220,12 +224,11 @@ X_j \beta) / \sigma^2. \\
 
 So a draw of \\\theta\\ from the fit, followed by a draw of each \\u_j\\
 given \\\theta\\, is a draw from the posterior of the random effects.
-[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
-passes `ys` and `xs` on to `fun`:
+`fun` reads the data, `ys` and `xs`, from the workspace:
 
 ``` r
 
-draw_ranef <- function(theta, ys, xs) {
+draw_ranef <- function(theta) {
   b <- c(theta[["b0"]], theta[["b1"]])
   tau <- exp(c(theta[["log_tau0"]], theta[["log_tau1"]]))
   rho <- tanh(theta[["atanh_rho"]])
@@ -248,7 +251,7 @@ draw_ranef <- function(theta, ys, xs) {
   c(u0 = u[1, ], u1 = u[2, ])
 }
 set.seed(1)
-u_draws <- sampling(fit, nsamp = 20000, fun = draw_ranef, ys = ys, xs = xs)
+u_draws <- sampling(fit, nsamp = 20000, fun = draw_ranef)
 ```
 
 A caterpillar plot shows each subject’s posterior mean and 95% credible
@@ -295,10 +298,10 @@ determined:
 ``` r
 
 keep <- 1:6
-fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [34ms]
-#> ✔ VB mean correction, max shift 0.42σ [10ms]
-#> ✔ Fitted 6 skew-normal marginals [52ms]
+fit_6 <- inla_vanilla(make_logpost(ys[keep], xs[keep]), init)
+#> ✔ Found the posterior mode in 20 iterations [30ms]
+#> ✔ VB mean correction, max shift 0.42σ [16ms]
+#> ✔ Fitted 6 skew-normal marginals [53ms]
 set.seed(1)
 draws_6 <- sampling(fit_6, nsamp = 20000)
 round(compare(draws_6, ref$subjects_6), 3)
@@ -324,9 +327,9 @@ ridge bend:
 summary(fit_6)
 #> ── INLAvanilla v26.11.23 summary ────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -322.686 · Converged in 20 iterations (100ms)
+#> Log marginal likelihood: -322.686 · Converged in 20 iterations (103ms)
 #> Laplace -322.994 + VB term 0.31
-#> 665 logpost calls: mode 35ms, VB 11ms, marginals 53ms
+#> 665 logpost calls: mode 31ms, VB 16ms, marginals 53ms
 #> 
 #> ── Posterior marginals ──
 #> 

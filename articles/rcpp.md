@@ -149,7 +149,8 @@ cov_at <- matrix(match(cov_pairs, ov), ncol = 2)
 The model-implied covariance matrix, the 75 pointwise log-likelihoods,
 and the log-prior with its Jacobians. The log-posterior is their total.
 Keeping the pointwise log-likelihood as a function of its own makes it
-available for leave-one-out cross-validation.
+available for leave-one-out cross-validation. Both read the data, `Y`,
+from the workspace, so they take the parameters alone.
 
 ``` r
 
@@ -167,7 +168,7 @@ implied_cov <- function(theta) {
   LA %*% (psi * t(LA)) + Theta # LA Psi LA' + Theta
 }
 
-loglik_r <- function(theta, Y) {
+loglik_r <- function(theta) {
   Sigma <- implied_cov(theta)
   R <- tryCatch(chol(Sigma), error = function(e) NULL)
   if (is.null(R)) {
@@ -187,8 +188,8 @@ logprior_r <- function(theta) {
     sum(dbeta((rho + 1) / 2, 1, 1, log = TRUE) - log(2) + log1p(-rho^2))
 }
 
-logpost_r <- function(theta, Y) {
-  sum(loglik_r(theta, Y)) + logprior_r(theta)
+logpost_r <- function(theta) {
+  sum(loglik_r(theta)) + logprior_r(theta)
 }
 ```
 
@@ -252,7 +253,7 @@ minimised as the negative:
 
 ``` r
 
-c(ours = logpost_r(theta_inlavaan, Y), INLAvaan = -int$opt$objective)
+c(ours = logpost_r(theta_inlavaan), INLAvaan = -int$opt$objective)
 #>      ours  INLAvaan 
 #> -1655.078 -1655.078
 ```
@@ -271,9 +272,9 @@ time_per_call <- function(f, n) {
   )[["elapsed"]]
   1e6 * elapsed / n
 }
-us_r <- time_per_call(function() logpost_r(init, Y), n = 1000)
+us_r <- time_per_call(function() logpost_r(init), n = 1000)
 us_r
-#> [1] 56
+#> [1] 53
 ```
 
 With `vb = "off"`,
@@ -283,9 +284,9 @@ skew-normal marginals:
 
 ``` r
 
-fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = "off")
-#> ✔ Found the posterior mode in 82 iterations [449ms]
-#> ✔ Fitted 39 skew-normal marginals [392ms]
+fit_r <- inla_vanilla(logpost_r, init, vb = "off")
+#> ✔ Found the posterior mode in 82 iterations [432ms]
+#> ✔ Fitted 39 skew-normal marginals [379ms]
 fit_r$counts
 #> logpost    grad    hess 
 #>   11633       0       0
@@ -497,10 +498,10 @@ points <- c(
   list(init, theta_inlavaan),
   replicate(4, init + rnorm(39, sd = 0.3), simplify = FALSE)
 )
-vapply(points, function(th) logpost_cpp(th, Y) - logpost_r(th, Y), 0)
+vapply(points, function(th) logpost_cpp(th, Y) - logpost_r(th), 0)
 #> [1] -6.821210e-13  0.000000e+00  0.000000e+00  0.000000e+00 -2.273737e-13
 #> [6] -4.547474e-13
-max(abs(loglik_cpp(theta_inlavaan, Y) - loglik_r(theta_inlavaan, Y)))
+max(abs(loglik_cpp(theta_inlavaan, Y) - loglik_r(theta_inlavaan)))
 #> [1] 7.105427e-15
 ```
 
@@ -522,7 +523,7 @@ fd_grad <- function(f, x, h = 1e-5) {
 vapply(
   points,
   function(th) {
-    g_fd <- fd_grad(function(x) logpost_r(x, Y), th)
+    g_fd <- fd_grad(logpost_r, th)
     max(abs(grad_cpp(th, Y) - g_fd) / (1 + abs(g_fd)))
   },
   0
@@ -541,32 +542,37 @@ us_cpp <- time_per_call(function() logpost_cpp(init, Y), n = 10000)
 us_grad <- time_per_call(function() grad_cpp(init, Y), n = 10000)
 c(R = us_r, `C++` = us_cpp, `C++ gradient` = us_grad)
 #>            R          C++ C++ gradient 
-#>         56.0          5.8          6.3
+#>         53.0          5.9          6.1
 ```
 
-The C++ log-posterior is about 10 times faster than the R one, and the
+The C++ log-posterior is about 9 times faster than the R one, and the
 analytic gradient costs about the same as one log-posterior, where
 finite differences need 40.
 
-Now the full fit, with the VB correction, first without a gradient:
+Now the full fit, with the VB correction, first without a gradient. The
+C++ functions take the data as an argument, so `lp_cpp()` reads `Y` from
+the workspace, as `logpost_r()` does, and passes it to `logpost_cpp()`:
 
 ``` r
 
-fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
-#> ✔ Found the posterior mode in 78 iterations [63ms]
+lp_cpp <- function(theta) logpost_cpp(theta, Y)
+fit_cpp <- inla_vanilla(lp_cpp, init)
+#> ✔ Found the posterior mode in 78 iterations [66ms]
 #> ✔ VB mean correction, max shift 0.61σ [27ms]
 #> ✔ Fitted 39 skew-normal marginals [138ms]
 ```
 
-It took 13,123 calls. In R, at 56 microseconds a call, these would take
-about 0.7 seconds. With the gradient:
+It took 13,123 calls. In R, at 53 microseconds a call, these would take
+about 0.7 seconds. With the gradient, through `gr_cpp()`, which does the
+same for `grad_cpp()`:
 
 ``` r
 
-fit <- inla_vanilla(logpost_cpp, init, grad = grad_cpp, Y = Y)
-#> ✔ Found the posterior mode in 90 iterations [13ms]
-#> ✔ VB mean correction, max shift 0.54σ [5ms]
-#> ✔ Fitted 39 skew-normal marginals [100ms]
+gr_cpp <- function(theta) grad_cpp(theta, Y)
+fit <- inla_vanilla(lp_cpp, init, grad = gr_cpp)
+#> ✔ Found the posterior mode in 90 iterations [8ms]
+#> ✔ VB mean correction, max shift 0.54σ [4ms]
+#> ✔ Fitted 39 skew-normal marginals [110ms]
 ```
 
 [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
@@ -579,11 +585,11 @@ Here neither does. The calls and times (in seconds) of the three fits:
 fits <- list(`R, no VB` = fit_r, `C++` = fit_cpp, `C++ and gradient` = fit)
 t(sapply(fits, function(f) c(f$counts, round(f$timing, 2))))
 #>                  logpost grad hess init laplace   vb marginals diagnostics
-#> R, no VB           11633    0    0    0    0.45 0.00      0.39        0.00
-#> C++                13123    0    0    0    0.06 0.03      0.14        0.00
-#> C++ and gradient    1288  483    0    0    0.01 0.00      0.10        0.01
+#> R, no VB           11633    0    0    0    0.43 0.00      0.38           0
+#> C++                13123    0    0    0    0.07 0.03      0.14           0
+#> C++ and gradient    1288  483    0    0    0.01 0.00      0.11           0
 #>                  total
-#> R, no VB          0.85
+#> R, no VB          0.82
 #> C++               0.23
 #> C++ and gradient  0.13
 ```
@@ -631,16 +637,16 @@ rebuild <- function() {
     pid <<- Sys.getpid()
   }
 }
-logpost <- function(theta, Y) {
+logpost <- function(theta) {
   rebuild()
   logpost_cpp(theta, Y)
 }
-grad <- function(theta, Y) {
+grad <- function(theta) {
   rebuild()
   grad_cpp(theta, Y)
 }
 cores <- parallelly::availableCores(omit = 1)
-fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = cores)
+fit_par <- inla_vanilla(logpost, init, grad = grad, cores = cores)
 ```
 
 [`Rcpp::sourceCpp()`](https://rdrr.io/pkg/Rcpp/man/sourceCpp.html) finds
@@ -654,9 +660,9 @@ load it.
 summary(fit)
 #> ── INLAvanilla v26.11.23 summary ────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1686.790 · Converged in 90 iterations (130ms)
+#> Log marginal likelihood: -1686.790 · Converged in 90 iterations (126ms)
 #> Laplace -1687.471 + VB term 0.68
-#> 1288 logpost and 483 grad calls: mode 14ms, VB 5ms, marginals 101ms
+#> 1288 logpost and 483 grad calls: mode 9ms, VB 4ms, marginals 111ms
 #> 
 #> ── Posterior marginals ──
 #> 

@@ -186,13 +186,13 @@ y_{ij} = \beta_0 + \beta_1 (\text{age}_j - 11) + u_i + \epsilon_{ij},
 <span>  <span class="va">logpost_growth</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">24</span>, b1 <span class="op">=</span> <span class="fl">0.5</span>, log_tau <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 18 iterations [10ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.21σ [11ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 18 iterations [9ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.21σ [12ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 4 skew-normal marginals [28ms]</span></span>
 <span><span class="va">fit_growth</span></span>
 <span><span class="co">#&gt; ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -241.09 · Converged in 18 iterations (66ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -241.09 · Converged in 18 iterations (64ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;             Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 b0     24.023   0.430   23.179   24.023   24.866   24.023 </span></span>
@@ -282,11 +282,11 @@ y_i \mid c_i = k \sim N(\mu_k, \sigma_k^2),
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [13ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.14σ [4ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [19ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [18ms]</span></span>
 <span><span class="va">fit_mix</span></span>
 <span><span class="co">#&gt; ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1050.49 · Converged in 20 iterations (53ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1050.49 · Converged in 20 iterations (51ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;              Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 mu1     54.649   0.713   53.296   54.633   56.094   54.599 </span></span>
@@ -304,16 +304,18 @@ P(c_i = 2 \mid y_i, \theta) =
 \frac{p(y_i, c_i = 2 \mid \theta)}
 {p(y_i, c_i = 1 \mid \theta) + p(y_i, c_i = 2 \mid \theta)}.
 \]</span></p>
-<p><code>fun</code> returns this probability, not a draw of the class. Its average over the draws of <span class="math inline">\(\theta\)</span> is the posterior probability of the class, with less Monte Carlo error than an average of drawn classes. <code><a href="../reference/sampling.html">sampling()</a></code> passes <code>y</code> on to <code>fun</code>, so the same function classifies waiting times that were never observed:</p>
+<p><code>fun</code> returns this probability, not a draw of the class. Its average over the draws of <span class="math inline">\(\theta\)</span> is the posterior probability of the class, with less Monte Carlo error than an average of drawn classes. <code>prob_long()</code> takes the waiting times and returns <code>fun</code>, so it also classifies waiting times that were never observed:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prob_long</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">lj</span> <span class="op">&lt;-</span> <span class="fu">log_joint</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span><span class="op">)</span></span>
-<span>  <span class="fl">1</span> <span class="op">/</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lj</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="va">lj</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">prob_long</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">lj</span> <span class="op">&lt;-</span> <span class="fu">log_joint</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span><span class="op">)</span></span>
+<span>    <span class="fl">1</span> <span class="op">/</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lj</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="va">lj</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">}</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">minutes</span> <span class="op">&lt;-</span> <span class="fl">45</span><span class="op">:</span><span class="fl">95</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">prob</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_mix</span>, nsamp <span class="op">=</span> <span class="fl">4000</span>, fun <span class="op">=</span> <span class="va">prob_long</span>, y <span class="op">=</span> <span class="va">minutes</span><span class="op">)</span></span>
+<span><span class="va">prob</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_mix</span>, nsamp <span class="op">=</span> <span class="fl">4000</span>, fun <span class="op">=</span> <span class="fu">prob_long</span><span class="op">(</span><span class="va">minutes</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">band</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">prob</span>, <span class="fl">2</span>, <span class="va">quantile</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span>
@@ -375,12 +377,12 @@ p(y_j \mid \theta) = \int f_j(z)\, \phi(z)\, dz
 <span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b1 <span class="op">=</span> <span class="op">-</span><span class="fl">1.5</span>, b2 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, b3 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, b4 <span class="op">=</span> <span class="op">-</span><span class="fl">2</span>, log_tau <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_cbpp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cbpp</span>, <span class="va">init</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 15 iterations [107ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.15σ [42ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [116ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.15σ [41ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [119ms]</span></span>
 <span><span class="va">fit_cbpp</span></span>
 <span><span class="co">#&gt; ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -104.92 · Converged in 15 iterations (275ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -104.92 · Converged in 15 iterations (277ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;          Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b1   -1.399  0.238  -1.884  -1.393  -0.948  -1.381</span></span>
@@ -450,9 +452,9 @@ P(z_j \text{ in strip } k \mid y_j, \theta) \approx
 <span>  <span class="va">init</span>,</span>
 <span>  grad <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/vector.html" class="external-link">as.vector</a></span><span class="op">(</span><span class="va">obj</span><span class="op">$</span><span class="fu">gr</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 16 iterations [26ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 16 iterations [27ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.14σ [17ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [76ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 5 skew-normal marginals [77ms]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit_cbpp</span><span class="op">)</span>, RTMB <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit_rtmb</span><span class="op">)</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;          b1     b2     b3     b4   tau</span></span>
 <span><span class="co">#&gt; grid -1.399 -2.397 -2.539 -3.011 0.727</span></span>
@@ -467,7 +469,7 @@ P(z_j \text{ in strip } k \mid y_j, \theta) \approx
 <p>It has nothing of the model in it. It serves any object built with <code>random =</code>, and returns all of its random effects, in the object’s order. At each draw of <span class="math inline">\(\theta\)</span> it calls <code>obj$fn()</code>, reads the mode from <code>obj$env$last.par</code> and the precision from <code>obj$env$spHess()</code>, and draws from that Gaussian with a sparse Cholesky factor. Written out, with the Matrix package attached:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">draw_latent</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">obj</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="va">draw_latent</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">obj</span><span class="op">$</span><span class="fu">fn</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="va">par</span> <span class="op">&lt;-</span> <span class="va">obj</span><span class="op">$</span><span class="va">env</span><span class="op">$</span><span class="va">last.par</span></span>
 <span>  <span class="va">random</span> <span class="op">&lt;-</span> <span class="va">obj</span><span class="op">$</span><span class="va">env</span><span class="op">$</span><span class="va">random</span></span>

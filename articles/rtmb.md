@@ -25,7 +25,9 @@ The data, the layout of the parameters, the starting values and the R
 log-posterior `logpost_r()` are those of the Rcpp article, and so are
 the C++ log-posterior `logpost_cpp()` and its gradient `grad_cpp()`,
 written by hand from the closed-form gradient of a structural equation
-model (Neudecker & Satorra, 1991). Expand the code to see them.
+model (Neudecker & Satorra, 1991). As there, the R functions read the
+data, `Y`, from the workspace, and `lp_cpp()` and `gr_cpp()` pass it to
+the C++ functions. Expand the code to see them.
 
 R code from the Rcpp article
 
@@ -64,7 +66,7 @@ implied_cov <- function(theta) {
   LA %*% (psi * t(LA)) + Theta # LA Psi LA' + Theta
 }
 
-loglik_r <- function(theta, Y) {
+loglik_r <- function(theta) {
   Sigma <- implied_cov(theta)
   R <- tryCatch(chol(Sigma), error = function(e) NULL)
   if (is.null(R)) {
@@ -84,8 +86,8 @@ logprior_r <- function(theta) {
     sum(dbeta((rho + 1) / 2, 1, 1, log = TRUE) - log(2) + log1p(-rho^2))
 }
 
-logpost_r <- function(theta, Y) {
-  sum(loglik_r(theta, Y)) + logprior_r(theta)
+logpost_r <- function(theta) {
+  sum(loglik_r(theta)) + logprior_r(theta)
 }
 
 init <- c(
@@ -242,6 +244,8 @@ VectorXd grad_cpp(const Map<VectorXd> theta, const Map<MatrixXd> Y) {
 }
 )"
 )
+lp_cpp <- function(theta) logpost_cpp(theta, Y)
+gr_cpp <- function(theta) grad_cpp(theta, Y)
 ```
 
 ## The log-posterior in RTMB
@@ -268,7 +272,7 @@ VectorXd grad_cpp(const Map<VectorXd> theta, const Map<MatrixXd> Y) {
 
 ``` r
 
-logpost_rtmb <- function(theta, Y) {
+logpost_rtmb <- function(theta) {
   "[<-" <- RTMB::ADoverload("[<-")
   Lambda <- lambda_fixed
   Lambda[lambda_at] <- theta[lambda_par]
@@ -304,7 +308,7 @@ as they are.
 ``` r
 
 obj <- RTMB::MakeADFun(
-  function(p) logpost_rtmb(p$theta, Y),
+  function(p) logpost_rtmb(p$theta),
   list(theta = unname(init)),
   silent = TRUE
 )
@@ -319,10 +323,7 @@ of its Hessian, so that each call replays the Hessian’s own computation.
 
 ``` r
 
-hess_tape <- RTMB::MakeTape(
-  function(theta) logpost_rtmb(theta, Y),
-  unname(init)
-)$jacfun()$jacfun()
+hess_tape <- RTMB::MakeTape(logpost_rtmb, unname(init))$jacfun()$jacfun()
 ```
 
 At 200 points around the starting values, the value matches the R
@@ -332,8 +333,8 @@ log-posterior, and the gradient the hand-written one, to rounding error:
 
 set.seed(1)
 points <- replicate(200, init + rnorm(39, sd = 0.05), simplify = FALSE)
-value_error <- function(th) abs(obj$fn(th) - logpost_r(th, Y))
-grad_error <- function(th) max(abs(obj$gr(th) - grad_cpp(th, Y)))
+value_error <- function(th) abs(obj$fn(th) - logpost_r(th))
+grad_error <- function(th) max(abs(obj$gr(th) - gr_cpp(th)))
 c(
   value = max(vapply(points, value_error, 0)),
   gradient = max(vapply(points, grad_error, 0))
@@ -360,35 +361,35 @@ time_per_call <- function(f, reps = 50) {
 }
 us <- rbind(
   logpost = c(
-    R = time_per_call(function(th) logpost_r(th, Y)),
+    R = time_per_call(logpost_r),
     RTMB = time_per_call(obj$fn),
-    `C++` = time_per_call(function(th) logpost_cpp(th, Y))
+    `C++` = time_per_call(lp_cpp)
   ),
   gradient = c(
     R = NA,
     RTMB = time_per_call(obj$gr),
-    `C++` = time_per_call(function(th) grad_cpp(th, Y))
+    `C++` = time_per_call(gr_cpp)
   ),
   hessian = c(R = NA, RTMB = time_per_call(hess_tape, reps = 1), `C++` = NA)
 )
 round(us, 1)
 #>             R   RTMB C++
-#> logpost  60.4   48.6 6.2
-#> gradient   NA   96.9 6.4
-#> hessian    NA 3160.0  NA
+#> logpost  59.9   49.2 6.3
+#> gradient   NA   96.9 6.3
+#> hessian    NA 3300.0  NA
 ```
 
 Replaying the tape takes 0.8 times as long as a call of `logpost_r()`,
 and RTMB’s gradient costs as much as 2 calls of its log-posterior. C++
 is 10 times faster than R, and the hand-written gradient costs as much
-as 1 calls of its log-posterior. RTMB’s Hessian tape costs as much as 33
+as 1 calls of its log-posterior. RTMB’s Hessian tape costs as much as 34
 gradients, about one for each of the 39 parameters, and `obj$he` 51. The
 five fits, with the Hessian tape in the third:
 
 ``` r
 
 fits <- list(
-  R = inla_vanilla(logpost_r, init, Y = Y, silent = TRUE),
+  R = inla_vanilla(logpost_r, init, silent = TRUE),
   RTMB = inla_vanilla(obj$fn, init, grad = obj$gr, silent = TRUE),
   `RTMB and Hessian` = inla_vanilla(
     obj$fn,
@@ -397,22 +398,21 @@ fits <- list(
     hess = hess_tape,
     silent = TRUE
   ),
-  `C++` = inla_vanilla(logpost_cpp, init, Y = Y, silent = TRUE),
+  `C++` = inla_vanilla(lp_cpp, init, silent = TRUE),
   `C++ and gradient` = inla_vanilla(
-    logpost_cpp,
+    lp_cpp,
     init,
-    grad = grad_cpp,
-    Y = Y,
+    grad = gr_cpp,
     silent = TRUE
   )
 )
 seconds <- vapply(fits, function(f) f$timing[["total"]], 0)
 cbind(t(sapply(fits, function(f) f$counts)), seconds = round(seconds, 2))
 #>                  logpost grad hess seconds
-#> R                  13431    0    0    0.94
+#> R                  13431    0    0    0.93
 #> RTMB                1291  485    0    0.23
 #> RTMB and Hessian     953  330   12    0.22
-#> C++                13123    0    0    0.23
+#> C++                13123    0    0    0.24
 #> C++ and gradient    1288  483    0    0.12
 ```
 
@@ -494,7 +494,7 @@ t(sapply(rtmb_fits, function(f) round(f$timing, 2)))
 
 The marginals and the VB correction take the same time with and without
 it. The mode stage takes a little longer, because a Hessian costs about
-as much as m gradients, and the whole fit takes 0.96 times as long. The
+as much as m gradients, and the whole fit takes 0.95 times as long. The
 gap is smaller where the Hessian is sparse, as when each of many
 parameters enters only a few terms of the log-posterior: a Hessian tape
 then costs far fewer than m gradients.

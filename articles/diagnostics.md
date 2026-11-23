@@ -70,19 +70,19 @@ Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:
 library(inlavanilla)
 
 y <- c(2, 0, 3, 1, 4, 2, 1)
-logpost_pois <- function(theta, y) {
+logpost_pois <- function(theta) {
   rate <- exp(theta[["log_rate"]])
   sum(dpois(y, rate, log = TRUE)) +
     dgamma(rate, 2, 1, log = TRUE) +
     theta[["log_rate"]] # the Jacobian
 }
-fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
+fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), silent = TRUE)
 summary(fit_pois)
 #> ── INLAvanilla v26.11.23 summary ────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (14ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (13ms)
 #> Laplace -12.362 + VB term 0.0085
-#> 68 logpost calls: mode 4ms, VB 1ms, marginals 5ms
+#> 68 logpost calls: mode 5ms, VB 1ms, marginals 4ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -243,7 +243,7 @@ logpost_mix <- function(theta) {
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [4ms]
 #> ✔ VB mean correction, max shift 0.19σ [9ms]
-#> ✔ Fitted 1 skew-normal marginal [4ms]
+#> ✔ Fitted 1 skew-normal marginal [5ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
 #>   `theta` (0.20).
@@ -358,13 +358,13 @@ observations, is the textbook case:
 
 set.seed(4)
 y12 <- rnorm(12, 10, 2)
-logpost_norm <- function(theta, y) {
-  sum(dnorm(y, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE)) +
+logpost_norm <- function(theta) {
+  sum(dnorm(y12, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE)) +
     dnorm(theta[["mu"]], 0, 100, log = TRUE) +
     dnorm(theta[["log_sigma"]], 0, 10, log = TRUE)
 }
 fit_norm <- inla_vanilla(
-  logpost_norm, c(mu = 9, log_sigma = 0.5), y = y12, silent = TRUE
+  logpost_norm, c(mu = 9, log_sigma = 0.5), silent = TRUE
 )
 signif(fit_norm$diagnostics$marginals[, c("nmad", "ridge_bend")], 2)
 #>              nmad ridge_bend
@@ -382,7 +382,7 @@ grid <- expand.grid(
   mu = seq(7, 15, length.out = 401),
   log_sigma = seq(-1, 2.5, length.out = 401)
 )
-lp <- apply(grid, 1, function(g) logpost_norm(g, y12))
+lp <- apply(grid, 1, logpost_norm)
 w <- exp(lp - max(lp))
 w <- w / sum(w)
 m <- sum(w * grid$mu)
@@ -519,7 +519,7 @@ fit <- withCallingHandlers(
     invokeRestart("muffleWarning")
   }
 )
-#> ✔ Found the posterior mode in 4 iterations [0ms]
+#> ✔ Found the posterior mode in 4 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.19σ [1ms]
 #> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Check this fit.

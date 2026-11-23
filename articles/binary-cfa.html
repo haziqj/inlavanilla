@@ -155,10 +155,10 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 </div>
 </section><section class="level2"><h2 id="the-log-posterior">The log-posterior<a class="anchor" aria-label="anchor" href="#the-log-posterior"></a>
 </h2>
-<p>With patterns in rows and nodes in columns, the log-probabilities of all the patterns at all the nodes take two matrix products. A log-sum-exp over the nodes then gives each pattern’s log-likelihood:</p>
+<p>With patterns in rows and nodes in columns, the log-probabilities of all the patterns at all the nodes take two matrix products. A log-sum-exp over the nodes then gives each pattern’s log-likelihood. <code>logpost</code> reads <code>patterns</code>, <code>count</code> and <code>nodes</code> from the workspace, so it takes the parameters alone:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">patterns</span>, <span class="va">count</span>, <span class="va">nodes</span><span class="op">)</span> <span class="op">{</span></span>
+<code class="sourceCode R"><span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">patterns</span><span class="op">)</span></span>
 <span>  <span class="va">lambda</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Hyperbolic.html" class="external-link">tanh</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">p</span><span class="op">]</span><span class="op">)</span></span>
 <span>  <span class="va">tau</span> <span class="op">&lt;-</span> <span class="va">theta</span><span class="op">[</span><span class="va">p</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">p</span><span class="op">]</span></span>
@@ -180,20 +180,14 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Hyperbolic.html" class="external-link">atanh</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span>, <span class="fl">6</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"atanh_lambda"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">6</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"tau"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
-<span>  <span class="va">logpost</span>,</span>
-<span>  <span class="va">init</span>,</span>
-<span>  patterns <span class="op">=</span> <span class="va">patterns</span>,</span>
-<span>  count <span class="op">=</span> <span class="va">count</span>,</span>
-<span>  nodes <span class="op">=</span> <span class="va">nodes</span></span>
-<span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [118ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [44ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [107ms]</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [111ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [42ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [105ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (284ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (274ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt;  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842</span></span>

@@ -20,13 +20,13 @@ Both need the log-likelihood one observation at a time, which
 [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 never sees. So write the model in three pieces:
 
-1.  `loglik(theta, ...)`, the vector of log-likelihood terms, one per
-    observation;
-2.  `logprior(theta)`, the log-prior, with any Jacobian;
-3.  `logpost(theta, ...)`, which is
-    `sum(loglik(theta, ...)) + logprior(theta)`.
+1.  `loglik(theta)`, the vector of log-likelihood terms, one per
+    observation.
+2.  `logprior(theta)`, the log-prior, with any Jacobian.
+3.  `logpost(theta)`, which is `sum(loglik(theta)) + logprior(theta)`.
 
-Fit with `logpost`, then pass `loglik` to
+`loglik` and `logpost` take the parameters alone and read the data from
+the workspace. Fit with `logpost`, then pass `loglik` to
 [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
 [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md).
 
@@ -52,30 +52,30 @@ The log-likelihood terms, the log-prior and their sum:
 
 ``` r
 
-loglik_pois <- function(theta, X, y) {
+loglik_pois <- function(theta) {
   dpois(y, lambda = exp(drop(X %*% theta)), log = TRUE)
 }
 logprior_beta <- function(beta) {
   # N(0, 5^2) on the intercept and N(0, 2.5^2) on the effects
   sum(dnorm(beta, 0, c(5, rep(2.5, length(beta) - 1)), log = TRUE))
 }
-logpost_pois <- function(theta, X, y) {
-  sum(loglik_pois(theta, X, y)) + logprior_beta(theta)
+logpost_pois <- function(theta) {
+  sum(loglik_pois(theta)) + logprior_beta(theta)
 }
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
-fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
-#> ✔ Found the posterior mode in 29 iterations [12ms]
-#> ✔ VB mean correction, max shift 0.025σ [14ms]
-#> ✔ Fitted 6 skew-normal marginals [20ms]
+fit_pois <- inla_vanilla(logpost_pois, init_pois)
+#> ✔ Found the posterior mode in 29 iterations [11ms]
+#> ✔ VB mean correction, max shift 0.025σ [15ms]
+#> ✔ Fitted 6 skew-normal marginals [21ms]
 ```
 
-[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the fit,
-`loglik`, and the same data:
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the fit
+and `loglik`:
 
 ``` r
 
-loo_pois <- loo(fit_pois, loglik_pois, X = X, y = y)
+loo_pois <- loo(fit_pois, loglik_pois)
 loo_pois
 #> ── Leave-one-out cross-validation ────────────────────────────── 54 units ──
 #> 
@@ -98,18 +98,24 @@ The negative binomial adds a dispersion parameter \\\phi\\: the variance
 is \\\mu + \mu^2 / \phi\\. On the unconstrained scale the parameter is
 \\\log \phi\\, and the prior \\\phi \sim \mathrm{Gamma}(2, 0.1)\\ needs
 the Jacobian of \\\phi = e^{\log \phi}\\, which is \\\log \phi\\ itself
-on the log scale:
+on the log scale.
+
+Later sections fit this model to other data too. So `loglik_nb_for()`
+and `logpost_nb_for()` take the data, `X` and `y`, and return a function
+of the parameters alone:
 
 ``` r
 
-loglik_nb <- function(theta, X, y) {
-  beta <- theta[seq_len(ncol(X))]
-  dnbinom(
-    y,
-    size = exp(theta[["log_phi"]]),
-    mu = exp(drop(X %*% beta)),
-    log = TRUE
-  )
+loglik_nb_for <- function(X, y) {
+  function(theta) {
+    beta <- theta[seq_len(ncol(X))]
+    dnbinom(
+      y,
+      size = exp(theta[["log_phi"]]),
+      mu = exp(drop(X %*% beta)),
+      log = TRUE
+    )
+  }
 }
 logprior_nb <- function(theta) {
   phi <- exp(theta[["log_phi"]])
@@ -117,13 +123,16 @@ logprior_nb <- function(theta) {
     dgamma(phi, shape = 2, rate = 0.1, log = TRUE) +
     theta[["log_phi"]] # the Jacobian
 }
-logpost_nb <- function(theta, X, y) {
-  sum(loglik_nb(theta, X, y)) + logprior_nb(theta)
+logpost_nb_for <- function(X, y) {
+  loglik <- loglik_nb_for(X, y)
+  function(theta) sum(loglik(theta)) + logprior_nb(theta)
 }
+loglik_nb <- loglik_nb_for(X, y)
+logpost_nb <- logpost_nb_for(X, y)
 
 init_nb <- c(init_pois, log_phi = 2)
-fit_nb <- inla_vanilla(logpost_nb, init_nb, X = X, y = y, silent = TRUE)
-loo_nb <- loo(fit_nb, loglik_nb, X = X, y = y)
+fit_nb <- inla_vanilla(logpost_nb, init_nb, silent = TRUE)
+loo_nb <- loo(fit_nb, loglik_nb)
 loo_nb
 #> ── Leave-one-out cross-validation ────────────────────────────── 54 units ──
 #> 
@@ -165,8 +174,8 @@ X_add <- model.matrix(~ wool + tension, data = warpbreaks)
 colnames(X_add)[1] <- "intercept"
 init_add <- c(setNames(numeric(ncol(X_add)), colnames(X_add)), log_phi = 2)
 
-fit_add <- inla_vanilla(logpost_nb, init_add, X = X_add, y = y, silent = TRUE)
-loo_add <- loo(fit_add, loglik_nb, X = X_add, y = y)
+fit_add <- inla_vanilla(logpost_nb_for(X_add, y), init_add, silent = TRUE)
+loo_add <- loo(fit_add, loglik_nb_for(X_add, y))
 elpd_diff(loo_nb, loo_add)
 #> elpd_diff        se 
 #>  2.066488  2.713049
@@ -198,7 +207,7 @@ the LOO:
 
 ``` r
 
-waic(fit_nb, loglik_nb, X = X, y = y)
+waic(fit_nb, loglik_nb)
 #> ── WAIC ──────────────────────────────────────────────────────── 54 units ──
 #> 
 #>            Estimate   SE
@@ -223,30 +232,22 @@ marginals, so the refits skip the VB correction.
 set.seed(1)
 refit_elpd <- function(i) {
   fit_i <- inla_vanilla(
-    logpost_nb,
+    logpost_nb_for(X[-i, ], y[-i]),
     init_nb,
-    X = X[-i, ],
-    y = y[-i],
     vb = "off",
     silent = TRUE
   )
-  ll <- sampling(
-    fit_i,
-    4000,
-    fun = loglik_nb,
-    X = X[i, , drop = FALSE],
-    y = y[i]
-  )
+  ll <- sampling(fit_i, 4000, fun = loglik_nb_for(X[i, , drop = FALSE], y[i]))
   max(ll) + log(mean(exp(ll - max(ll))))
 }
 time_refit <- system.time(
   elpd_refit <- vapply(seq_along(y), refit_elpd, numeric(1))
 )
-time_loo <- system.time(loo(fit_nb, loglik_nb, X = X, y = y))
+time_loo <- system.time(loo(fit_nb, loglik_nb))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  4.062  0.003
+#>  4.113  0.003
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1444

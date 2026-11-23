@@ -224,7 +224,7 @@
 <span><span class="va">beta_at</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">3</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">cov_at</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/match.html" class="external-link">match</a></span><span class="op">(</span><span class="va">cov_pairs</span>, <span class="va">ov</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>The model-implied covariance matrix, the 75 pointwise log-likelihoods, and the log-prior with its Jacobians. The log-posterior is their total. Keeping the pointwise log-likelihood as a function of its own makes it available for leave-one-out cross-validation.</p>
+<p>The model-implied covariance matrix, the 75 pointwise log-likelihoods, and the log-prior with its Jacobians. The log-posterior is their total. Keeping the pointwise log-likelihood as a function of its own makes it available for leave-one-out cross-validation. Both read the data, <code>Y</code>, from the workspace, so they take the parameters alone.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">implied_cov</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
@@ -241,7 +241,7 @@
 <span>  <span class="va">LA</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="op">(</span><span class="va">psi</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">LA</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="va">Theta</span> <span class="co"># LA Psi LA' + Theta</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">loglik_r</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="va">loglik_r</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">Sigma</span> <span class="op">&lt;-</span> <span class="fu">implied_cov</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span></span>
 <span>  <span class="va">R</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="va">Sigma</span><span class="op">)</span>, error <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">R</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -261,8 +261,8 @@
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">dbeta</a></span><span class="op">(</span><span class="op">(</span><span class="va">rho</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>, <span class="fl">1</span>, <span class="fl">1</span>, log <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log1p</a></span><span class="op">(</span><span class="op">-</span><span class="va">rho</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">logpost_r</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu">loglik_r</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">logprior_r</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span></span>
+<span><span class="va">logpost_r</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu">loglik_r</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">logprior_r</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
 <p>Starting values: the sample means for the intercepts, loadings of 1, no regressions, half of each sample variance for the residual variances, and no residual correlations.</p>
@@ -314,7 +314,7 @@
 <p>There, our log-posterior should equal INLAvaan’s, which its optimiser minimised as the negative:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ours <span class="op">=</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">theta_inlavaan</span>, <span class="va">Y</span><span class="op">)</span>, INLAvaan <span class="op">=</span> <span class="op">-</span><span class="va">int</span><span class="op">$</span><span class="va">opt</span><span class="op">$</span><span class="va">objective</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ours <span class="op">=</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">theta_inlavaan</span><span class="op">)</span>, INLAvaan <span class="op">=</span> <span class="op">-</span><span class="va">int</span><span class="op">$</span><span class="va">opt</span><span class="op">$</span><span class="va">objective</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      ours  INLAvaan </span></span>
 <span><span class="co">#&gt; -1655.078 -1655.078</span></span></code></pre></div>
 </div>
@@ -331,16 +331,16 @@
 <span>  <span class="op">)</span><span class="op">[[</span><span class="st">"elapsed"</span><span class="op">]</span><span class="op">]</span></span>
 <span>  <span class="fl">1e6</span> <span class="op">*</span> <span class="va">elapsed</span> <span class="op">/</span> <span class="va">n</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">us_r</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">init</span>, <span class="va">Y</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
+<span><span class="va">us_r</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="va">us_r</span></span>
-<span><span class="co">#&gt; [1] 56</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 53</span></span></code></pre></div>
 </div>
 <p>With <code>vb = "off"</code>, <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> skips the VB correction and runs only the mode search and the skew-normal marginals:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_r</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span>, vb <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 82 iterations [449ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [392ms]</span></span>
+<code class="sourceCode R"><span><span class="va">fit_r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_r</span>, <span class="va">init</span>, vb <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 82 iterations [432ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [379ms]</span></span>
 <span><span class="va">fit_r</span><span class="op">$</span><span class="va">counts</span></span>
 <span><span class="co">#&gt; logpost    grad    hess </span></span>
 <span><span class="co">#&gt;   11633       0       0</span></span></code></pre></div>
@@ -514,10 +514,10 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">init</span>, <span class="va">theta_inlavaan</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="fl">4</span>, <span class="va">init</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">39</span>, sd <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span>, simplify <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">points</span>, <span class="kw">function</span><span class="op">(</span><span class="va">th</span><span class="op">)</span> <span class="fu">logpost_cpp</span><span class="op">(</span><span class="va">th</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">-</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">th</span>, <span class="va">Y</span><span class="op">)</span>, <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">points</span>, <span class="kw">function</span><span class="op">(</span><span class="va">th</span><span class="op">)</span> <span class="fu">logpost_cpp</span><span class="op">(</span><span class="va">th</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">-</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">th</span><span class="op">)</span>, <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] -6.821210e-13  0.000000e+00  0.000000e+00  0.000000e+00 -2.273737e-13</span></span>
 <span><span class="co">#&gt; [6] -4.547474e-13</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu">loglik_cpp</span><span class="op">(</span><span class="va">theta_inlavaan</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">-</span> <span class="fu">loglik_r</span><span class="op">(</span><span class="va">theta_inlavaan</span>, <span class="va">Y</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu">loglik_cpp</span><span class="op">(</span><span class="va">theta_inlavaan</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">-</span> <span class="fu">loglik_r</span><span class="op">(</span><span class="va">theta_inlavaan</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 7.105427e-15</span></span></code></pre></div>
 </div>
 <p>The gradient should match central differences of the R log-posterior, up to their own error, about <span class="math inline">\(10^{-8}\)</span> relative:</p>
@@ -536,7 +536,7 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span></span>
 <span>  <span class="va">points</span>,</span>
 <span>  <span class="kw">function</span><span class="op">(</span><span class="va">th</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">g_fd</span> <span class="op">&lt;-</span> <span class="fu">fd_grad</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">x</span>, <span class="va">Y</span><span class="op">)</span>, <span class="va">th</span><span class="op">)</span></span>
+<span>    <span class="va">g_fd</span> <span class="op">&lt;-</span> <span class="fu">fd_grad</span><span class="op">(</span><span class="va">logpost_r</span>, <span class="va">th</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu">grad_cpp</span><span class="op">(</span><span class="va">th</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">-</span> <span class="va">g_fd</span><span class="op">)</span> <span class="op">/</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">g_fd</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="op">}</span>,</span>
 <span>  <span class="fl">0</span></span>
@@ -553,24 +553,26 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="va">us_grad</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">grad_cpp</span><span class="op">(</span><span class="va">init</span>, <span class="va">Y</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>R <span class="op">=</span> <span class="va">us_r</span>, `C++` <span class="op">=</span> <span class="va">us_cpp</span>, `C++ gradient` <span class="op">=</span> <span class="va">us_grad</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            R          C++ C++ gradient </span></span>
-<span><span class="co">#&gt;         56.0          5.8          6.3</span></span></code></pre></div>
+<span><span class="co">#&gt;         53.0          5.9          6.1</span></span></code></pre></div>
 </div>
-<p>The C++ log-posterior is about 10 times faster than the R one, and the analytic gradient costs about the same as one log-posterior, where finite differences need 40.</p>
-<p>Now the full fit, with the VB correction, first without a gradient:</p>
+<p>The C++ log-posterior is about 9 times faster than the R one, and the analytic gradient costs about the same as one log-posterior, where finite differences need 40.</p>
+<p>Now the full fit, with the VB correction, first without a gradient. The C++ functions take the data as an argument, so <code>lp_cpp()</code> reads <code>Y</code> from the workspace, as <code>logpost_r()</code> does, and passes it to <code>logpost_cpp()</code>:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_cpp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 78 iterations [63ms]</span></span>
+<code class="sourceCode R"><span><span class="va">lp_cpp</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu">logpost_cpp</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span></span>
+<span><span class="va">fit_cpp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_cpp</span>, <span class="va">init</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 78 iterations [66ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.61σ [27ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [138ms]</span></span></code></pre></div>
 </div>
-<p>It took 13,123 calls. In R, at 56 microseconds a call, these would take about 0.7 seconds. With the gradient:</p>
+<p>It took 13,123 calls. In R, at 53 microseconds a call, these would take about 0.7 seconds. With the gradient, through <code>gr_cpp()</code>, which does the same for <code>grad_cpp()</code>:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad_cpp</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 90 iterations [13ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.54σ [5ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [100ms]</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">gr_cpp</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="fu">grad_cpp</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_cpp</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">gr_cpp</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 90 iterations [8ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.54σ [4ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [110ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> compares the gradient with <code>logpost</code> at the mode, at no extra cost, and checks its Jacobian there for symmetry, and warns if either check fails. Here neither does. The calls and times (in seconds) of the three fits:</p>
 <div class="cell" data-layout-align="center">
@@ -578,11 +580,11 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>`R, no VB` <span class="op">=</span> <span class="va">fit_r</span>, `C++` <span class="op">=</span> <span class="va">fit_cpp</span>, `C++ and gradient` <span class="op">=</span> <span class="va">fit</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">counts</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">timing</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  logpost grad hess init laplace   vb marginals diagnostics</span></span>
-<span><span class="co">#&gt; R, no VB           11633    0    0    0    0.45 0.00      0.39        0.00</span></span>
-<span><span class="co">#&gt; C++                13123    0    0    0    0.06 0.03      0.14        0.00</span></span>
-<span><span class="co">#&gt; C++ and gradient    1288  483    0    0    0.01 0.00      0.10        0.01</span></span>
+<span><span class="co">#&gt; R, no VB           11633    0    0    0    0.43 0.00      0.38           0</span></span>
+<span><span class="co">#&gt; C++                13123    0    0    0    0.07 0.03      0.14           0</span></span>
+<span><span class="co">#&gt; C++ and gradient    1288  483    0    0    0.01 0.00      0.11           0</span></span>
 <span><span class="co">#&gt;                  total</span></span>
-<span><span class="co">#&gt; R, no VB          0.85</span></span>
+<span><span class="co">#&gt; R, no VB          0.82</span></span>
 <span><span class="co">#&gt; C++               0.23</span></span>
 <span><span class="co">#&gt; C++ and gradient  0.13</span></span></code></pre></div>
 </div>
@@ -612,16 +614,16 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span>    <span class="va">pid</span> <span class="op">&lt;&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.getpid.html" class="external-link">Sys.getpid</a></span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">rebuild</span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="fu">logpost_cpp</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="va">grad</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="va">grad</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">rebuild</span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="fu">grad_cpp</span><span class="op">(</span><span class="va">theta</span>, <span class="va">Y</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">cores</span> <span class="op">&lt;-</span> <span class="fu">parallelly</span><span class="fu">::</span><span class="fu"><a href="https://parallelly.futureverse.org/reference/availableCores.html" class="external-link">availableCores</a></span><span class="op">(</span>omit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">fit_par</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, Y <span class="op">=</span> <span class="va">Y</span>, cores <span class="op">=</span> <span class="va">cores</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">fit_par</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, cores <span class="op">=</span> <span class="va">cores</span><span class="op">)</span></span></code></pre></div>
 </div>
 <p><code><a href="https://rdrr.io/pkg/Rcpp/man/sourceCpp.html" class="external-link">Rcpp::sourceCpp()</a></code> finds in <code>cache</code> the code that was compiled above, so a worker only has to load it.</p>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
@@ -631,9 +633,9 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── INLAvanilla v26.11.23 summary ────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1686.790 · Converged in 90 iterations (130ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1686.790 · Converged in 90 iterations (126ms)</span></span>
 <span><span class="co">#&gt; Laplace -1687.471 + VB term 0.68</span></span>
-<span><span class="co">#&gt; 1288 logpost and 483 grad calls: mode 14ms, VB 5ms, marginals 101ms</span></span>
+<span><span class="co">#&gt; 1288 logpost and 483 grad calls: mode 9ms, VB 4ms, marginals 111ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>

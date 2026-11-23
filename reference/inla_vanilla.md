@@ -723,7 +723,7 @@ for diagnostics.
 set.seed(1)
 y <- rnorm(30, mean = 5, sd = 2)
 
-logpost <- function(theta, y) {
+logpost <- function(theta) {
   mu <- theta[["mu"]]
   sigma <- exp(theta[["log_sigma"]])
   sum(dnorm(y, mu, sigma, log = TRUE)) +
@@ -733,14 +733,14 @@ logpost <- function(theta, y) {
 }
 
 # The parameter named log_sigma is reported as sigma
-fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
+fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
 #> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (12ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (11ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -763,12 +763,7 @@ quantile(cv, c(0.025, 0.5, 0.975))
 #> 0.2688632 0.3571155 0.4917361 
 
 # A full diagnostic of each stage
-fit <- inla_vanilla(
-  logpost,
-  init = c(mu = 0, log_sigma = 0),
-  y = y,
-  verbose = TRUE
-)
+fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
@@ -801,12 +796,7 @@ fit <- inla_vanilla(
 #> ℹ Done: 147 logpost calls in 21ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
-fit <- inla_vanilla(
-  logpost,
-  init = c(mu = 0, log_sigma = 0),
-  y = y,
-  silent = TRUE
-)
+fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)
 fit$warnings
 #> character(0)
 ```

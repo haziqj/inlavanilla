@@ -186,7 +186,8 @@ the 36 CPCs on the atanh scale: 54 in all. Each row is \\x_i = \mu +
 log-likelihood is that of the \\e_i\\, less \\n \log \det
 \\\operatorname{diag}(\sigma) L\\ = n \sum_j (\log \sigma_j + \log
 L\_{jj})\\. The prior on \\\sigma_j\\ gets the log-Jacobian \\\log
-\sigma_j\\.
+\sigma_j\\. `logpost` reads the data, `x`, from the workspace, so it
+takes the parameters alone.
 
 ``` r
 
@@ -198,7 +199,7 @@ unpack <- function(theta, d) {
   )
 }
 
-logpost <- function(theta, x, eta) {
+logpost <- function(theta) {
   d <- ncol(x)
   p <- unpack(theta, d)
   e <- forwardsolve(p$L, (t(x) - p$mu) / p$sigma)
@@ -207,7 +208,7 @@ logpost <- function(theta, x, eta) {
   loglik +
     sum(dnorm(p$mu, 0, 10, log = TRUE)) +
     sum(dexp(p$sigma, rate = 1, log = TRUE) + p$log_sigma) +
-    lkj_cholesky_lpdf(p$log_diag, eta) +
+    lkj_cholesky_lpdf(p$log_diag, eta = 2) +
     p$log_jac
 }
 ```
@@ -224,9 +225,9 @@ init <- c(
   setNames(log(apply(x, 2, sd)), paste0("log_sigma_x", 1:9)),
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
-fit <- inla_vanilla(logpost, init, x = x, eta = 2)
+fit <- inla_vanilla(logpost, init)
 #> ✔ Found the posterior mode in 34 iterations [1.1s]
-#> ✔ VB mean correction, max shift 0.39σ [566ms]
+#> ✔ VB mean correction, max shift 0.39σ [561ms]
 #> ✔ Fitted 54 skew-normal marginals [1.4s]
 ```
 

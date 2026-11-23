@@ -60,23 +60,23 @@ so they need no reparameterisation.
 
 ``` r
 
-logpost <- function(theta, X, y) {
+logpost <- function(theta) {
   eta <- as.numeric(X %*% theta)
   sum(dbinom(y, 1, plogis(eta), log = TRUE)) +
     sum(dnorm(theta, 0, 2.5, log = TRUE))
 }
 ```
 
-`theta` arrives as a named vector, so `theta[["b_wt"]]` would work too.
-Further arguments, here `X` and `y`, are passed through `...`, as in
-[`optim()`](https://rdrr.io/r/stats/optim.html).
+It reads the data, `X` and `y`, from the workspace, so it takes the
+parameters alone. `theta` arrives as a named vector, so
+`theta[["b_wt"]]` would work too.
 
 ### Fitting
 
 ``` r
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
-fit <- inla_vanilla(logpost, init, X = X, y = y)
+fit <- inla_vanilla(logpost, init)
 #> ✔ Found the posterior mode in 10 iterations [6ms]
 #> ✔ VB mean correction, max shift 0.48σ [11ms]
 #> ✔ Fitted 3 skew-normal marginals [9ms]
@@ -289,11 +289,11 @@ parameters grows. For logistic regression it is short:
 
 ``` r
 
-grad <- function(theta, X, y) {
+grad <- function(theta) {
   eta <- as.numeric(X %*% theta)
   as.numeric(crossprod(X, y - plogis(eta))) - theta / 2.5^2
 }
-fit_g <- inla_vanilla(logpost, init, grad = grad, X = X, y = y, silent = TRUE)
+fit_g <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
 #> [1] 0.000998865
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
@@ -322,7 +322,7 @@ much the same answer.
 ``` r
 
 fit_fast <- function(...) {
-  inla_vanilla(logpost, init, X = X, y = y, silent = TRUE, ...)
+  inla_vanilla(logpost, init, silent = TRUE, ...)
 }
 # Named as the header of print() names them
 fits <- list(
@@ -424,15 +424,22 @@ with a shaded 95% band, and the 32 cars plotted at 0 and
 ## Comparing models
 
 The log marginal likelihood compares models through Bayes factors. Does
-horsepower help, once weight is known?
+horsepower help, once weight is known? To fit the same model to other
+data, we write a function that takes the data and returns the
+log-posterior:
 
 ``` r
 
+make_logpost <- function(X, y) {
+  function(theta) {
+    eta <- as.numeric(X %*% theta)
+    sum(dbinom(y, 1, plogis(eta), log = TRUE)) +
+      sum(dnorm(theta, 0, 2.5, log = TRUE))
+  }
+}
 fit_wt <- inla_vanilla(
-  logpost,
+  make_logpost(X[, 1:2], y),
   c(b0 = 0, b_wt = 0),
-  X = X[, 1:2],
-  y = y,
   silent = TRUE
 )
 log_bf <- fit$logml - fit_wt$logml
@@ -473,17 +480,17 @@ Jacobian is \\dp / d\vartheta = p(1 - p)\\. We name the parameter
 
 ``` r
 
-logpost_p <- function(theta, y) {
+logpost_p <- function(theta) {
   p <- plogis(theta[["logit_p"]])
   sum(dbinom(y, 1, p, log = TRUE)) +
     dbeta(p, 1, 1, log = TRUE) + # prior on p ...
     log(p) + log1p(-p) # ... and the Jacobian
 }
-fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), y = y, silent = TRUE)
+fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), silent = TRUE)
 fit_p
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -23.17 · Converged in 4 iterations (10ms)
+#> Log marginal likelihood: -23.17 · Converged in 4 iterations (11ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063
@@ -521,13 +528,13 @@ versions of its densities:
 
 ``` r
 
-logpost_rtmb <- function(theta, X, y) {
+logpost_rtmb <- function(theta) {
   eta <- as.numeric(X %*% theta)
   sum(RTMB::dbinom(y, 1, RTMB::plogis(eta), log = TRUE)) +
     sum(RTMB::dnorm(theta, 0, 2.5, log = TRUE))
 }
 obj <- RTMB::MakeADFun(
-  function(p) logpost_rtmb(p$theta, X, y),
+  function(p) logpost_rtmb(p$theta),
   list(theta = unname(init)),
   silent = TRUE
 )
@@ -567,9 +574,7 @@ free for everything else:
 ``` r
 
 cores <- parallelly::availableCores(omit = 1)
-fit_par <- inla_vanilla(
-  logpost, init, X = X, y = y, width = "tk", cores = cores
-)
+fit_par <- inla_vanilla(logpost, init, width = "tk", cores = cores)
 ```
 
 The results and the progress line are those of a serial fit, and

@@ -74,11 +74,12 @@ The probabilities go on the logit scale, and the class proportions on
 the log-ratio scale against class `000`. Under a uniform prior the
 log-density of \\\text{logit}(g)\\ is the log-Jacobian, \\\log g +
 \log(1 - g)\\. Under a Dirichlet(1) prior the log-density of the
-log-ratios is \\\sum_c \log \pi_c\\.
+log-ratios is \\\sum_c \log \pi_c\\. `logpost` reads the answers `y` and
+the matrix `eta` from the workspace, so it takes the parameters alone.
 
 ``` r
 
-logpost <- function(theta, y, eta) {
+logpost <- function(theta) {
   g <- plogis(theta[1:28])
   s <- plogis(theta[29:56])
   log_pi <- c(0, theta[57:63])
@@ -109,18 +110,10 @@ init <- c(
   setNames(rep(qlogis(0.1), 28), sprintf("s%02d", 1:28)),
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
-fit <- inla_vanilla(logpost, init, y = y, eta = eta)
-#> ✔ Found the posterior mode in 191 iterations [26.4s]
-#> ! VB mean correction, max shift 0.93σ, gain below its promise [4.0s]
-#> ✔ Fitted 63 skew-normal marginals [9.4s]
-#> Warning: Fit diagnostics flagged 1 potential issue:
-#> ✖ One-step VB delivered 0.414 of the rise in the expected log-posterior it
-#>   promised (warning < 0.5), so the Gaussian approximation at the mode may
-#>   be inaccurate.
-#> ℹ Compare with `vb = "full"`, and treat the log marginal likelihood with
-#>   care.
-#> ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;
-#>   `vignette("diagnostics", package = "inlavanilla")` explains each check.
+fit <- inla_vanilla(logpost, init, vb = "full")
+#> ✔ Found the posterior mode in 191 iterations [25.9s]
+#> ✔ VB mean correction, max shift 0.51σ [23.3s]
+#> ✔ Fitted 63 skew-normal marginals [9.1s]
 ```
 
 Draws give the parameters on the probability scale, and the share of
@@ -153,8 +146,11 @@ Over two in five examinees have mastered all three attributes, and
 nearly a third none of them. The classes with only the morphosyntactic
 or only the cohesive attribute are rare, at 1 to 2%.
 
-The fit takes about 25 seconds, most of it in the 45,000 or so calls of
-`logpost` that 63 parameters need without a gradient.
+The fit takes about 30 seconds, most of it in the 59,000 or so calls of
+`logpost` that 63 parameters need without a gradient. It uses
+`vb = "full"`, the iterative VB solver, because on this posterior the
+default one-step correction is less accurate, and its fit warns about
+it.
 
 ## Checking against Stan
 
@@ -229,23 +225,26 @@ par(op)
 ## Classifying examinees
 
 Each examinee’s chance of having mastered each attribute is a function
-of the parameters, so draws of it average over their uncertainty. For
+of the parameters, so draws of it average over their uncertainty.
+`mastery()` takes one examinee’s answers and returns this function. For
 the first three examinees:
 
 ``` r
 
-mastery <- function(theta, y_i) {
-  g <- plogis(theta[1:28])
-  s <- plogis(theta[29:56])
-  log_pi <- c(0, theta[57:63])
-  p <- t(eta) * (1 - s) + t(!eta) * g
-  l <- drop(y_i %*% log(p / (1 - p))) + colSums(log1p(-p)) + log_pi
-  w <- exp(l - max(l)) / sum(exp(l - max(l)))
-  colSums(w * alpha)
+mastery <- function(y_i) {
+  function(theta) {
+    g <- plogis(theta[1:28])
+    s <- plogis(theta[29:56])
+    log_pi <- c(0, theta[57:63])
+    p <- t(eta) * (1 - s) + t(!eta) * g
+    l <- drop(y_i %*% log(p / (1 - p))) + colSums(log1p(-p)) + log_pi
+    w <- exp(l - max(l)) / sum(exp(l - max(l)))
+    colSums(w * alpha)
+  }
 }
 set.seed(1)
 t(sapply(1:3, function(i) {
-  colMeans(sampling(fit, nsamp = 1000, fun = mastery, y_i = y[i, ]))
+  colMeans(sampling(fit, nsamp = 1000, fun = mastery(y[i, ])))
 })) |>
   round(3)
 #>      morphosyntactic cohesive lexical

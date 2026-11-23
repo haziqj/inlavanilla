@@ -90,11 +90,13 @@ c(sum(nodes$w), sum(nodes$w * nodes$z^2))
 
 With patterns in rows and nodes in columns, the log-probabilities of all
 the patterns at all the nodes take two matrix products. A log-sum-exp
-over the nodes then gives each pattern’s log-likelihood:
+over the nodes then gives each pattern’s log-likelihood. `logpost` reads
+`patterns`, `count` and `nodes` from the workspace, so it takes the
+parameters alone:
 
 ``` r
 
-logpost <- function(theta, patterns, count, nodes) {
+logpost <- function(theta) {
   p <- ncol(patterns)
   lambda <- tanh(theta[1:p])
   tau <- theta[p + 1:p]
@@ -120,20 +122,14 @@ init <- c(
   setNames(rep(atanh(0.5), 6), paste0("atanh_lambda", 1:6)),
   setNames(rep(0, 6), paste0("tau", 1:6))
 )
-fit <- inla_vanilla(
-  logpost,
-  init,
-  patterns = patterns,
-  count = count,
-  nodes = nodes
-)
-#> ✔ Found the posterior mode in 35 iterations [118ms]
-#> ✔ VB mean correction, max shift 0.17σ [44ms]
-#> ✔ Fitted 12 skew-normal marginals [107ms]
+fit <- inla_vanilla(logpost, init)
+#> ✔ Found the posterior mode in 35 iterations [111ms]
+#> ✔ VB mean correction, max shift 0.17σ [42ms]
+#> ✔ Fitted 12 skew-normal marginals [105ms]
 fit
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (284ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (274ms)
 #> 
 #>                Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842

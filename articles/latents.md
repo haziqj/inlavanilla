@@ -96,13 +96,13 @@ fit_growth <- inla_vanilla(
   logpost_growth,
   c(b0 = 24, b1 = 0.5, log_tau = 0, log_sigma = 0)
 )
-#> ✔ Found the posterior mode in 18 iterations [10ms]
-#> ✔ VB mean correction, max shift 0.21σ [11ms]
+#> ✔ Found the posterior mode in 18 iterations [9ms]
+#> ✔ VB mean correction, max shift 0.21σ [12ms]
 #> ✔ Fitted 4 skew-normal marginals [28ms]
 fit_growth
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -241.09 · Converged in 18 iterations (66ms)
+#> Log marginal likelihood: -241.09 · Converged in 18 iterations (64ms)
 #> 
 #>             Mean      SD     2.5%      50%    97.5%     Mode
 #> 1 b0     24.023   0.430   23.179   24.023   24.866   24.023 
@@ -212,11 +212,11 @@ fit_mix <- inla_vanilla(
 )
 #> ✔ Found the posterior mode in 20 iterations [13ms]
 #> ✔ VB mean correction, max shift 0.14σ [4ms]
-#> ✔ Fitted 5 skew-normal marginals [19ms]
+#> ✔ Fitted 5 skew-normal marginals [18ms]
 fit_mix
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1050.49 · Converged in 20 iterations (53ms)
+#> Log marginal likelihood: -1050.49 · Converged in 20 iterations (51ms)
 #> 
 #>              Mean      SD     2.5%      50%    97.5%     Mode
 #> 1 mu1     54.649   0.713   53.296   54.633   56.094   54.599 
@@ -238,19 +238,20 @@ Given \\\theta\\, the probability of each class is its column of
 `fun` returns this probability, not a draw of the class. Its average
 over the draws of \\\theta\\ is the posterior probability of the class,
 with less Monte Carlo error than an average of drawn classes.
-[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
-passes `y` on to `fun`, so the same function classifies waiting times
-that were never observed:
+`prob_long()` takes the waiting times and returns `fun`, so it also
+classifies waiting times that were never observed:
 
 ``` r
 
-prob_long <- function(theta, y) {
-  lj <- log_joint(theta, y)
-  1 / (1 + exp(lj[, 1] - lj[, 2]))
+prob_long <- function(y) {
+  function(theta) {
+    lj <- log_joint(theta, y)
+    1 / (1 + exp(lj[, 1] - lj[, 2]))
+  }
 }
 minutes <- 45:95
 set.seed(1)
-prob <- sampling(fit_mix, nsamp = 4000, fun = prob_long, y = minutes)
+prob <- sampling(fit_mix, nsamp = 4000, fun = prob_long(minutes))
 band <- apply(prob, 2, quantile, c(0.025, 0.975))
 
 plot(
@@ -334,12 +335,12 @@ logpost_cbpp <- function(theta) {
 init <- c(b1 = -1.5, b2 = -2, b3 = -2, b4 = -2, log_tau = log(0.5))
 fit_cbpp <- inla_vanilla(logpost_cbpp, init)
 #> ✔ Found the posterior mode in 15 iterations [107ms]
-#> ✔ VB mean correction, max shift 0.15σ [42ms]
-#> ✔ Fitted 5 skew-normal marginals [116ms]
+#> ✔ VB mean correction, max shift 0.15σ [41ms]
+#> ✔ Fitted 5 skew-normal marginals [119ms]
 fit_cbpp
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -104.92 · Converged in 15 iterations (275ms)
+#> Log marginal likelihood: -104.92 · Converged in 15 iterations (277ms)
 #> 
 #>          Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b1   -1.399  0.238  -1.884  -1.393  -0.948  -1.381
@@ -428,9 +429,9 @@ fit_rtmb <- inla_vanilla(
   init,
   grad = function(theta) -as.vector(obj$gr(unname(theta)))
 )
-#> ✔ Found the posterior mode in 16 iterations [26ms]
+#> ✔ Found the posterior mode in 16 iterations [27ms]
 #> ✔ VB mean correction, max shift 0.14σ [17ms]
-#> ✔ Fitted 5 skew-normal marginals [76ms]
+#> ✔ Fitted 5 skew-normal marginals [77ms]
 round(rbind(grid = coef(fit_cbpp), RTMB = coef(fit_rtmb)), 3)
 #>          b1     b2     b3     b4   tau
 #> grid -1.399 -2.397 -2.539 -3.011 0.727
@@ -457,7 +458,7 @@ with the Matrix package attached:
 
 ``` r
 
-draw_latent <- function(theta, obj) {
+draw_latent <- function(theta) {
   obj$fn(unname(theta))
   par <- obj$env$last.par
   random <- obj$env$random

@@ -214,19 +214,17 @@ and widely applicable information criterion in singular learning theory.
 y <- c(2, 3, 6, 7, 8, 9, 10, 12, 15)
 time <- seq_along(y) - 5
 
-loglik <- function(theta, time, y) {
+loglik <- function(theta) {
   dpois(y, exp(theta[["a"]] + theta[["b"]] * time), log = TRUE)
 }
 logprior <- function(theta) sum(dnorm(theta, 0, 5, log = TRUE))
-logpost <- function(theta, time, y) {
-  sum(loglik(theta, time, y)) + logprior(theta)
-}
+logpost <- function(theta) sum(loglik(theta)) + logprior(theta)
 
-fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
-#> ✔ Found the posterior mode in 9 iterations [1ms]
+fit <- inla_vanilla(logpost, c(a = 0, b = 0))
+#> ✔ Found the posterior mode in 9 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.12σ [1ms]
 #> ✔ Fitted 2 skew-normal marginals [5ms]
-loo(fit, loglik, time = time, y = y)
+loo(fit, loglik)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 
 #>           Estimate   SE
@@ -236,7 +234,7 @@ loo(fit, loglik, time = time, y = y)
 #> 
 #> ✔ Second-order expansion for every unit. Largest leverage k = 0.49, for
 #>   unit 9.
-waic(fit, loglik, time = time, y = y)
+waic(fit, loglik)
 #> ── WAIC ───────────────────────────────────────────────────────── 9 units ──
 #> 
 #>            Estimate   SE

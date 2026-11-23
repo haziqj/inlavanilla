@@ -41,13 +41,13 @@ written on \\\vartheta = \log\lambda\\, and the parameter is called
 library(inlavanilla)
 
 y <- c(2, 0, 3, 1, 4, 2, 1)
-logpost <- function(theta, y) {
+logpost <- function(theta) {
   rate <- exp(theta[["log_rate"]])
   sum(dpois(y, rate, log = TRUE)) +
     dgamma(rate, 2, 1, log = TRUE) + # prior on the rate ...
     theta[["log_rate"]] # ... and its Jacobian
 }
-fit <- inla_vanilla(logpost, init = c(log_rate = 0), y = y, silent = TRUE)
+fit <- inla_vanilla(logpost, init = c(log_rate = 0), silent = TRUE)
 fit
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
@@ -163,7 +163,7 @@ correlation a uniform one, each with its Jacobian:
 setosa <- iris[iris$Species == "setosa", ]
 x <- as.matrix(setosa[, c("Sepal.Length", "Sepal.Width")])
 
-logpost_bvn <- function(theta, x) {
+logpost_bvn <- function(theta) {
   mu <- theta[c("mu1", "mu2")]
   sigma <- exp(theta[c("log_sigma1", "log_sigma2")])
   rho <- tanh(theta[["atanh_rho"]])
@@ -180,11 +180,11 @@ logpost_bvn <- function(theta, x) {
 }
 
 init <- c(mu1 = 5, mu2 = 3, log_sigma1 = 0, log_sigma2 = 0, atanh_rho = 0)
-fit_bvn <- inla_vanilla(logpost_bvn, init, x = x, silent = TRUE)
+fit_bvn <- inla_vanilla(logpost_bvn, init, silent = TRUE)
 fit_bvn
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -39.67 · Converged in 33 iterations (42ms)
+#> Log marginal likelihood: -39.67 · Converged in 33 iterations (41ms)
 #> 
 #>             Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 mu1     5.0058  0.0493  4.9091  5.0058  5.1024  5.0058
@@ -327,14 +327,13 @@ parameter is then reported as `logpost` receives it:
 fit_off <- inla_vanilla(
   logpost,
   init = c(log_rate = 0),
-  y = y,
   transform = FALSE,
   silent = TRUE
 )
 fit_off
 #> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.35 · Converged in 7 iterations (6ms)
+#> Log marginal likelihood: -12.35 · Converged in 7 iterations (7ms)
 #> 
 #>              Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 log_rate  0.595  0.263  0.047  0.607  1.078  0.631
