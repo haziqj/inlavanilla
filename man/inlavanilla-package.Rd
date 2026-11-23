@@ -13,7 +13,7 @@ Performs approximate Bayesian inference for the parameters of a model from its l
 \seealso{
 Useful links:
 \itemize{
-  \item \url{http://haziqj.ml/inlavanilla/}
+  \item \url{https://haziqj.ml/inlavanilla/}
   \item \url{https://github.com/haziqj/inlavanilla}
   \item Report bugs at \url{https://github.com/haziqj/inlavanilla/issues}
 }

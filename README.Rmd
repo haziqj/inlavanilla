@@ -99,7 +99,7 @@ Due to the name given to the `init` vector, `inlavanilla` recognises that the
 fit is made on the logit scale and reports back on the natural scale $p$. Only 
 the reporting changes: `logpost` still receives `logit_p`, and 
 `transform = FALSE` turns the renaming off. See the [natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html) vignettes for details. 
+summaries](https://haziqj.ml/inlavanilla/articles/natural-scale.html) vignettes for details. 
 
 The summary matches the exact posterior:
 
@@ -123,7 +123,7 @@ curve(dbeta(x, 4, 18), add = TRUE, lwd = 2, col = "#C2410C")
 
 `summary(fit)` adds diagnostics for each stage of the approximation, and
 `plot(fit)` draws the marginals. The
-[Get started](http://haziqj.ml/inlavanilla/articles/inlavanilla.html)
+[Get started](https://haziqj.ml/inlavanilla/articles/inlavanilla.html)
 vignette works through a multi-parameter example: it checks the approximation
 against the exact posterior, and covers gradients, derived quantities and
 model comparison.

@@ -77,13 +77,13 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [3ms]
+#> ✔ Found the posterior mode in 6 iterations [4ms]
 #> ✔ VB mean correction, max shift 0.17σ [13ms]
-#> ✔ Fitted 1 skew-normal marginal [19ms]
+#> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
 #> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (40ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (42ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
@@ -96,7 +96,7 @@ that the fit is made on the logit scale and reports back on the natural
 scale $p$. Only the reporting changes: `logpost` still receives
 `logit_p`, and `transform = FALSE` turns the renaming off. See the
 [natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.html)
+summaries](https://haziqj.ml/inlavanilla/articles/natural-scale.html)
 vignettes for details.
 
 The summary matches the exact posterior:
@@ -126,7 +126,7 @@ curve(dbeta(x, 4, 18), add = TRUE, lwd = 2, col = "#C2410C")
 
 `summary(fit)` adds diagnostics for each stage of the approximation, and
 `plot(fit)` draws the marginals. The [Get
-started](http://haziqj.ml/inlavanilla/articles/inlavanilla.html)
+started](https://haziqj.ml/inlavanilla/articles/inlavanilla.html)
 vignette works through a multi-parameter example: it checks the
 approximation against the exact posterior, and covers gradients, derived
 quantities and model comparison.

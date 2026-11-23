@@ -24,7 +24,7 @@ Description: Performs approximate Bayesian inference for the parameters of a
     Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026)
     <doi:10.48550/arXiv.2609.00670>.
 License: GPL (>= 3)
-URL: http://haziqj.ml/inlavanilla/, https://github.com/haziqj/inlavanilla
+URL: https://haziqj.ml/inlavanilla/, https://github.com/haziqj/inlavanilla
 BugReports: https://github.com/haziqj/inlavanilla/issues
 Depends:
     R (>= 4.1.0)
