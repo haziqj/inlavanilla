@@ -87,7 +87,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/cdm.qmd" class="external-link"><code>vignettes/articles/cdm.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.23/vignettes/articles/cdm.qmd" class="external-link"><code>vignettes/articles/cdm.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -172,11 +172,11 @@ P(y_{ij} = 1 \mid c)^{y_{ij}} \{1 - P(y_{ij} = 1 \mid c)\}^{1 - y_{ij}}.
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">7</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"pi"</span>, <span class="va">classes</span><span class="op">[</span><span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, y <span class="op">=</span> <span class="va">y</span>, eta <span class="op">=</span> <span class="va">eta</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 191 iterations [23.6s]</span></span>
-<span><span class="co">#&gt; ! VB mean correction, max shift 0.93σ, gain below its promise [3.6s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [8.5s]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 186 iterations [23.4s]</span></span>
+<span><span class="co">#&gt; ! VB mean correction, max shift 0.92σ, gain below its promise [5.1s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [10.5s]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 1 potential issue:</span></span>
-<span><span class="co">#&gt; ✖ One-step VB delivered 0.414 of the rise in the expected log-posterior it</span></span>
+<span><span class="co">#&gt; ✖ One-step VB delivered 0.416 of the rise in the expected log-posterior it</span></span>
 <span><span class="co">#&gt;   promised (warning &lt; 0.5), so the Gaussian approximation at the mode may</span></span>
 <span><span class="co">#&gt;   be inaccurate.</span></span>
 <span><span class="co">#&gt; ℹ Compare with `vb = "full"`, and treat the log marginal likelihood with</span></span>
