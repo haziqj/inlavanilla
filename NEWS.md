@@ -1,5 +1,11 @@
 # inlavanilla (development version)
 
+* Versions are now dates, as in R-INLA: `YY.MM.DD`, the day of the change,
+  with `-1` or `-2` for a second or third version published on the same day.
+  There are no `.9000` development versions. This version, 26.11.23, follows
+  0.1.1, and a date sorts after every 0.x version, so an update installs as
+  usual.
+
 * A fit with `cores` no longer warns that `future::availableCores()` and
   `future::supportsMulticore()` are deprecated. The core count and the fork
   check now come from parallelly, which future imports. parallelly is in
@@ -45,7 +51,8 @@
 
 * A fit now records the version of inlavanilla that made it, in `fit$version`,
   and `print()` and `summary()` show it in their headers
-  ("INLAvanilla 0.1.1").
+  ("INLAvanilla 26.11.23"). It is the string in `DESCRIPTION`, not a
+  `package_version`, which would drop the leading zeros of a date.
 
 * When the mode search restarts `nlminb()` with the parameters rescaled, the
   iterations reported are now the total over both runs, not those of the run

@@ -1151,7 +1151,7 @@ is_gaussian <- function(x) {
 }
 
 # The left of the headers of print() and summary(): the package, the version
-# that made the fit, and what is shown ("INLAvanilla 0.1.1 summary"). A fit
+# that made the fit, and what is shown ("INLAvanilla 26.11.23 summary"). A fit
 # from before the version was stored has none, and the title goes without.
 header_title <- function(version, what = NULL) {
   paste(

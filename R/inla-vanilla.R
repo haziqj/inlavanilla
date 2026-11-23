@@ -495,9 +495,9 @@
 #'     `width = "tk"` (empty when there were none).
 #'   * `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
 #'     part.
-#'   * `version`: the version of inlavanilla that made the fit, as
-#'     [utils::packageVersion()] returns it. `print()` and `summary()` show it
-#'     in their headers.
+#'   * `version`: the version of inlavanilla that made the fit, the string in
+#'     `DESCRIPTION` (for example `"26.11.23"`, a date as in R-INLA).
+#'     `print()` and `summary()` show it in their headers.
 #'   * `diagnostics`: the checks of each stage, which [diagnostics()]
 #'     returns under INLAvaan's names and [summary.inla_vanilla()] explains.
 #'     `optim` holds the return code, message and iterations of
@@ -1236,7 +1236,7 @@ new_inla_vanilla <- function(
       silent = silent,
       warnings = warnings,
       call = call,
-      version = utils::packageVersion("inlavanilla")
+      version = utils::packageDescription("inlavanilla", fields = "Version")
     ),
     class = "inla_vanilla"
   )

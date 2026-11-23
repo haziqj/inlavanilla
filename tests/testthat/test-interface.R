@@ -2060,7 +2060,7 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   # headline under it gives, with the log marginal likelihood
   expect_match(
     out,
-    "^-- INLAvanilla [0-9.]+ -+ Skew-normal \\+ one-step VB --\n"
+    "^-- INLAvanilla [0-9.-]+ -+ Skew-normal \\+ one-step VB --\n"
   )
   expect_no_match(strsplit(out, "\n")[[1]][1], "[0-9](ms|s)\\b|parameters")
   expect_match(
@@ -2071,10 +2071,10 @@ test_that("print() shows the summary table and returns the fit invisibly", {
   expect_match(out, format(round(fit_reg$logml, 2), nsmall = 2), fixed = TRUE)
 
   out <- capture_output(print(fit_reg_novb))
-  expect_match(out, "^-- INLAvanilla [0-9.]+ -+ Skew-normal --\n")
+  expect_match(out, "^-- INLAvanilla [0-9.-]+ -+ Skew-normal --\n")
 
   # The fit records the version that made it, and both headers show it
-  ver <- utils::packageVersion("inlavanilla")
+  ver <- utils::packageDescription("inlavanilla", fields = "Version")
   expect_identical(fit_reg$version, ver)
   expect_identical(summary(fit_reg)$version, ver)
   expect_match(out, paste0("^-- INLAvanilla ", ver, " -"), fixed = FALSE)
@@ -2437,7 +2437,7 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     expect_false(any(grepl("[^\001-\177]", out, useBytes = TRUE)))
     expect_match(
       out,
-      "-- INLAvanilla [0-9.]+ -+ Skew-normal \\+ one-step VB --",
+      "-- INLAvanilla [0-9.-]+ -+ Skew-normal \\+ one-step VB --",
       all = FALSE
     )
     expect_match(out, "max shift [0-9.e-]+ SD", all = FALSE)
@@ -2448,7 +2448,7 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
     out <- fit_text()
     expect_match(
       out,
-      "\u2500 INLAvanilla [0-9.]+ \u2500+ Skew-normal",
+      "\u2500 INLAvanilla [0-9.-]+ \u2500+ Skew-normal",
       all = FALSE
     )
     expect_match(out, "max shift [0-9.e-]+\u03c3", all = FALSE)

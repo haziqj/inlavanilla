@@ -81,7 +81,7 @@ fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
 #> ✔ VB mean correction, max shift 0.17σ [13ms]
 #> ✔ Fitted 1 skew-normal marginal [19ms]
 fit
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
 #> Log marginal likelihood: -3.05 · Converged in 6 iterations (40ms)
 #> 
