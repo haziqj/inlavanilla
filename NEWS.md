@@ -69,9 +69,10 @@
   `vignette("natural-scale")` explains it.
 
 * A fit now records the version of inlavanilla that made it, in `fit$version`,
-  and `print()` and `summary()` show it in their headers
-  ("INLAvanilla 26.11.23"). It is the string in `DESCRIPTION`, not a
-  `package_version`, which would drop the leading zeros of a date.
+  and `print()` and `summary()` show it in their headers with a `v`
+  ("INLAvanilla v26.11.23"), so that it does not read as the date of the fit.
+  It is the string in `DESCRIPTION`, not a `package_version`, which would drop
+  the leading zeros of a date.
 
 * When the mode search restarts `nlminb()` with the parameters rescaled, the
   iterations reported are now the total over both runs, not those of the run
