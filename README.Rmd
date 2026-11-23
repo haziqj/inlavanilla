@@ -84,14 +84,17 @@ which scale it is on:
 ```{r example}
 library(inlavanilla)
 
-logpost <- function(theta, y, n) {
+y <- 3
+n <- 20
+
+logpost <- function(theta) {
   p <- plogis(theta[["logit_p"]])
   dbinom(y, n, p, log = TRUE) +
     dbeta(p, 1, 1, log = TRUE) + # prior on p ...
     log(p) + log1p(-p) # ... and the Jacobian
 }
 
-fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
+fit <- inla_vanilla(logpost, init = c(logit_p = 0))
 fit
 ```
 

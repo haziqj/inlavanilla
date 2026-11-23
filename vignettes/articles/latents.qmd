@@ -231,20 +231,22 @@ $$
 
 `fun` returns this probability, not a draw of the class. Its average over
 the draws of $\theta$ is the posterior probability of the class, with less
-Monte Carlo error than an average of drawn classes. `sampling()` passes `y`
-on to `fun`, so the same function classifies waiting times that were never
-observed:
+Monte Carlo error than an average of drawn classes. `prob_long()` takes the
+waiting times and returns `fun`, so it also classifies waiting times that
+were never observed:
 
 ```{r}
 #| label: membership
 #| fig-alt: "Posterior probability of the long class rising from 0 at 55 minutes to 1 at 80 minutes, with a shaded 95% band that is widest near 67 minutes."
-prob_long <- function(theta, y) {
-  lj <- log_joint(theta, y)
-  1 / (1 + exp(lj[, 1] - lj[, 2]))
+prob_long <- function(y) {
+  function(theta) {
+    lj <- log_joint(theta, y)
+    1 / (1 + exp(lj[, 1] - lj[, 2]))
+  }
 }
 minutes <- 45:95
 set.seed(1)
-prob <- sampling(fit_mix, nsamp = 4000, fun = prob_long, y = minutes)
+prob <- sampling(fit_mix, nsamp = 4000, fun = prob_long(minutes))
 band <- apply(prob, 2, quantile, c(0.025, 0.975))
 
 plot(
@@ -426,7 +428,7 @@ package attached:
 ```{r}
 #| label: rtmb-latent-inside
 #| eval: false
-draw_latent <- function(theta, obj) {
+draw_latent <- function(theta) {
   obj$fn(unname(theta))
   par <- obj$env$last.par
   random <- obj$env$random

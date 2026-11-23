@@ -90,10 +90,12 @@ The probabilities go on the logit scale, and the class proportions on the
 log-ratio scale against class `000`. Under a uniform prior the log-density of
 $\text{logit}(g)$ is the log-Jacobian, $\log g + \log(1 - g)$. Under a
 Dirichlet(1) prior the log-density of the log-ratios is $\sum_c \log \pi_c$.
+`logpost` reads the answers `y` and the matrix `eta` from the workspace, so
+it takes the parameters alone.
 
 ```{r}
 #| label: logpost
-logpost <- function(theta, y, eta) {
+logpost <- function(theta) {
   g <- plogis(theta[1:28])
   s <- plogis(theta[29:56])
   log_pi <- c(0, theta[57:63])
@@ -124,7 +126,7 @@ init <- c(
   setNames(rep(qlogis(0.1), 28), sprintf("s%02d", 1:28)),
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
-fit <- inla_vanilla(logpost, init, y = y, eta = eta)
+fit <- inla_vanilla(logpost, init)
 ```
 
 Draws give the parameters on the probability scale, and the share of
@@ -211,23 +213,26 @@ par(op)
 ## Classifying examinees
 
 Each examinee's chance of having mastered each attribute is a function of the
-parameters, so draws of it average over their uncertainty. For the first
-three examinees:
+parameters, so draws of it average over their uncertainty. `mastery()` takes
+one examinee's answers and returns this function. For the first three
+examinees:
 
 ```{r}
 #| label: mastery
-mastery <- function(theta, y_i) {
-  g <- plogis(theta[1:28])
-  s <- plogis(theta[29:56])
-  log_pi <- c(0, theta[57:63])
-  p <- t(eta) * (1 - s) + t(!eta) * g
-  l <- drop(y_i %*% log(p / (1 - p))) + colSums(log1p(-p)) + log_pi
-  w <- exp(l - max(l)) / sum(exp(l - max(l)))
-  colSums(w * alpha)
+mastery <- function(y_i) {
+  function(theta) {
+    g <- plogis(theta[1:28])
+    s <- plogis(theta[29:56])
+    log_pi <- c(0, theta[57:63])
+    p <- t(eta) * (1 - s) + t(!eta) * g
+    l <- drop(y_i %*% log(p / (1 - p))) + colSums(log1p(-p)) + log_pi
+    w <- exp(l - max(l)) / sum(exp(l - max(l)))
+    colSums(w * alpha)
+  }
 }
 set.seed(1)
 t(sapply(1:3, function(i) {
-  colMeans(sampling(fit, nsamp = 1000, fun = mastery, y_i = y[i, ]))
+  colMeans(sampling(fit, nsamp = 1000, fun = mastery(y[i, ])))
 })) |>
   round(3)
 ```

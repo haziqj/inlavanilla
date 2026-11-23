@@ -172,7 +172,8 @@ cov_at <- matrix(match(cov_pairs, ov), ncol = 2)
 The model-implied covariance matrix, the 75 pointwise log-likelihoods, and
 the log-prior with its Jacobians. The log-posterior is their total. Keeping
 the pointwise log-likelihood as a function of its own makes it available for
-leave-one-out cross-validation.
+leave-one-out cross-validation. Both read the data, `Y`, from the workspace,
+so they take the parameters alone.
 
 ```{r}
 #| label: logpost-r
@@ -190,7 +191,7 @@ implied_cov <- function(theta) {
   LA %*% (psi * t(LA)) + Theta # LA Psi LA' + Theta
 }
 
-loglik_r <- function(theta, Y) {
+loglik_r <- function(theta) {
   Sigma <- implied_cov(theta)
   R <- tryCatch(chol(Sigma), error = function(e) NULL)
   if (is.null(R)) {
@@ -210,8 +211,8 @@ logprior_r <- function(theta) {
     sum(dbeta((rho + 1) / 2, 1, 1, log = TRUE) - log(2) + log1p(-rho^2))
 }
 
-logpost_r <- function(theta, Y) {
-  sum(loglik_r(theta, Y)) + logprior_r(theta)
+logpost_r <- function(theta) {
+  sum(loglik_r(theta)) + logprior_r(theta)
 }
 ```
 
@@ -275,7 +276,7 @@ minimised as the negative:
 
 ```{r}
 #| label: inlavaan-check
-c(ours = logpost_r(theta_inlavaan, Y), INLAvaan = -int$opt$objective)
+c(ours = logpost_r(theta_inlavaan), INLAvaan = -int$opt$objective)
 ```
 
 ### How long R takes
@@ -292,7 +293,7 @@ time_per_call <- function(f, n) {
   )[["elapsed"]]
   1e6 * elapsed / n
 }
-us_r <- time_per_call(function() logpost_r(init, Y), n = 1000)
+us_r <- time_per_call(function() logpost_r(init), n = 1000)
 us_r
 ```
 
@@ -301,7 +302,7 @@ mode search and the skew-normal marginals:
 
 ```{r}
 #| label: fit-r
-fit_r <- inla_vanilla(logpost_r, init, Y = Y, vb = "off")
+fit_r <- inla_vanilla(logpost_r, init, vb = "off")
 fit_r$counts
 ```
 
@@ -512,8 +513,8 @@ points <- c(
   list(init, theta_inlavaan),
   replicate(4, init + rnorm(39, sd = 0.3), simplify = FALSE)
 )
-vapply(points, function(th) logpost_cpp(th, Y) - logpost_r(th, Y), 0)
-max(abs(loglik_cpp(theta_inlavaan, Y) - loglik_r(theta_inlavaan, Y)))
+vapply(points, function(th) logpost_cpp(th, Y) - logpost_r(th), 0)
+max(abs(loglik_cpp(theta_inlavaan, Y) - loglik_r(theta_inlavaan)))
 ```
 
 The gradient should match central differences of the R log-posterior, up to
@@ -534,7 +535,7 @@ fd_grad <- function(f, x, h = 1e-5) {
 vapply(
   points,
   function(th) {
-    g_fd <- fd_grad(function(x) logpost_r(x, Y), th)
+    g_fd <- fd_grad(logpost_r, th)
     max(abs(grad_cpp(th, Y) - g_fd) / (1 + abs(g_fd)))
   },
   0
@@ -556,21 +557,25 @@ The C++ log-posterior is about `r round(us_r / us_cpp)` times faster than
 the R one, and the analytic gradient costs about the same as one
 log-posterior, where finite differences need 40.
 
-Now the full fit, with the VB correction, first without a gradient:
+Now the full fit, with the VB correction, first without a gradient. The C++
+functions take the data as an argument, so `lp_cpp()` reads `Y` from the
+workspace, as `logpost_r()` does, and passes it to `logpost_cpp()`:
 
 ```{r}
 #| label: fit-cpp
-fit_cpp <- inla_vanilla(logpost_cpp, init, Y = Y)
+lp_cpp <- function(theta) logpost_cpp(theta, Y)
+fit_cpp <- inla_vanilla(lp_cpp, init)
 ```
 
 It took `r format(fit_cpp$counts[["logpost"]], big.mark = ",")` calls. In R,
 at `r round(us_r)` microseconds a call, these would take about
 `r round(fit_cpp$counts[["logpost"]] * us_r / 1e6, 1)` seconds. With the
-gradient:
+gradient, through `gr_cpp()`, which does the same for `grad_cpp()`:
 
 ```{r}
 #| label: fit-grad
-fit <- inla_vanilla(logpost_cpp, init, grad = grad_cpp, Y = Y)
+gr_cpp <- function(theta) grad_cpp(theta, Y)
+fit <- inla_vanilla(lp_cpp, init, grad = gr_cpp)
 ```
 
 `inla_vanilla()` compares the gradient with `logpost` at the mode, at no extra
@@ -625,16 +630,16 @@ rebuild <- function() {
     pid <<- Sys.getpid()
   }
 }
-logpost <- function(theta, Y) {
+logpost <- function(theta) {
   rebuild()
   logpost_cpp(theta, Y)
 }
-grad <- function(theta, Y) {
+grad <- function(theta) {
   rebuild()
   grad_cpp(theta, Y)
 }
 cores <- parallelly::availableCores(omit = 1)
-fit_par <- inla_vanilla(logpost, init, grad = grad, Y = Y, cores = cores)
+fit_par <- inla_vanilla(logpost, init, grad = grad, cores = cores)
 ```
 
 `Rcpp::sourceCpp()` finds in `cache` the code that was compiled above, so a

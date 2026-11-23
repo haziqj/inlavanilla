@@ -89,13 +89,13 @@ Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:
 library(inlavanilla)
 
 y <- c(2, 0, 3, 1, 4, 2, 1)
-logpost_pois <- function(theta, y) {
+logpost_pois <- function(theta) {
   rate <- exp(theta[["log_rate"]])
   sum(dpois(y, rate, log = TRUE)) +
     dgamma(rate, 2, 1, log = TRUE) +
     theta[["log_rate"]] # the Jacobian
 }
-fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
+fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), silent = TRUE)
 summary(fit_pois)
 ```
 
@@ -303,13 +303,13 @@ observations, is the textbook case:
 #| label: ridge-bend
 set.seed(4)
 y12 <- rnorm(12, 10, 2)
-logpost_norm <- function(theta, y) {
-  sum(dnorm(y, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE)) +
+logpost_norm <- function(theta) {
+  sum(dnorm(y12, theta[["mu"]], exp(theta[["log_sigma"]]), log = TRUE)) +
     dnorm(theta[["mu"]], 0, 100, log = TRUE) +
     dnorm(theta[["log_sigma"]], 0, 10, log = TRUE)
 }
 fit_norm <- inla_vanilla(
-  logpost_norm, c(mu = 9, log_sigma = 0.5), y = y12, silent = TRUE
+  logpost_norm, c(mu = 9, log_sigma = 0.5), silent = TRUE
 )
 signif(fit_norm$diagnostics$marginals[, c("nmad", "ridge_bend")], 2)
 ```
@@ -323,7 +323,7 @@ grid <- expand.grid(
   mu = seq(7, 15, length.out = 401),
   log_sigma = seq(-1, 2.5, length.out = 401)
 )
-lp <- apply(grid, 1, function(g) logpost_norm(g, y12))
+lp <- apply(grid, 1, logpost_norm)
 w <- exp(lp - max(lp))
 w <- w / sum(w)
 m <- sum(w * grid$mu)
@@ -376,11 +376,11 @@ $-4$ to $4$ (the grey band).
 #| label: tails-cases
 #| include: false
 # Each case: the fit, and the exact log-posterior (up to a constant)
-case <- function(logpost, init, zlim, ...) {
-  fit <- inla_vanilla(logpost, init, ..., silent = TRUE)
+case <- function(logpost, init, zlim) {
+  fit <- inla_vanilla(logpost, init, silent = TRUE)
   mode <- fit$mode[[1]]
   sd <- sqrt(fit$cov[1, 1])
-  lp_theta <- function(t) logpost(stats::setNames(t, names(init)), ...)
+  lp_theta <- function(t) logpost(stats::setNames(t, names(init)))
   lp_z <- function(z) vapply(mode + z * sd, lp_theta, 0)
   # The exact mass outside the window, integrated over the whole line
   dens <- function(t) {
@@ -412,15 +412,16 @@ case <- function(logpost, init, zlim, ...) {
 # a Gamma(1, 0.5) prior on sqrt(v), on the log scale
 z100 <- qnorm(ppoints(100))
 y_var <- z100 / sqrt(mean(z100^2)) * sqrt(1.5)
-logpost_var <- function(theta, y) {
+logpost_var <- function(theta) {
   v <- exp(theta[[1]])
-  sum(dnorm(y, 0, sqrt(1 + v), log = TRUE)) +
+  sum(dnorm(y_var, 0, sqrt(1 + v), log = TRUE)) +
     dgamma(sqrt(v), 1, 0.5, log = TRUE) + log(sqrt(v) / 2)
 }
+logpost_cauchy <- function(theta) dt(theta[[1]], 1, log = TRUE)
 cases <- list(
-  case(logpost_pois, c(log_rate = 0), zlim = c(-8, 8), y = y),
-  case(function(theta) dt(theta[[1]], 1, log = TRUE), c(theta = 0.1), zlim = c(-14, 14)),
-  case(logpost_var, c(log_v = -0.7), zlim = c(-14, 8), y = y_var)
+  case(logpost_pois, c(log_rate = 0), zlim = c(-8, 8)),
+  case(logpost_cauchy, c(theta = 0.1), zlim = c(-14, 14)),
+  case(logpost_var, c(log_v = -0.7), zlim = c(-14, 8))
 )
 titles <- c("Well behaved", "Heavy inside the window", "Heavy beyond the window")
 subs <- c("Poisson log rate", "a Cauchy posterior", "a variance near zero")
