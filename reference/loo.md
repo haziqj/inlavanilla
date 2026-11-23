@@ -8,7 +8,7 @@ unit's log-likelihood (Alhyari et al., 2026), as in INLAvaan.
 
 Both need the log-likelihood split into one term per observation, or per
 independent unit, which
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 never sees. You supply it as `loglik`: write the log-likelihood terms
 and the log-prior as separate functions, and `logpost` as their sum.
 
@@ -120,9 +120,9 @@ elpd. Each standard error is \\\sqrt{n \\ \mathrm{Var}}\\ of the
 pointwise terms over the \\n\\ units, as in the loo package.
 
 The scores and Hessians come from finite differences of `loglik` along
-the principal axes of \\\Omega\\, a hundredth of a posterior SD apart:
-\\m^2 + m + 1\\ calls of `loglik` for \\m\\ parameters, each returning
-every unit.
+the axes of the symmetric square root of \\\Omega\\, taken on the
+correlation scale, a hundredth of a posterior SD apart: \\m^2 + m + 1\\
+calls of `loglik` for \\m\\ parameters, each returning every unit.
 
 **The diagonal shortcut.** With `hessian = "diagonal"` only the \\2m +
 1\\ calls along the axes are made. They give each score and the diagonal
@@ -144,7 +144,7 @@ H_u)\\, and a unit at 1 or more gives a warning.
 The calls use the `cores` of the fit, or the plan set with
 [`future::plan()`](https://future.futureverse.org/reference/plan.html)
 when the fit has none, as the scans of
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 do (see its section on parallel computation), with the same results as a
 serial run. Calls expected to take under a second in all stay serial.
 
@@ -223,9 +223,9 @@ logpost <- function(theta, time, y) {
 }
 
 fit <- inla_vanilla(logpost, c(a = 0, b = 0), time = time, y = y)
-#> ✔ Found the posterior mode in 9 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.12σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 9 iterations [2ms]
+#> ✔ VB mean correction, max shift 0.12σ [1ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 loo(fit, loglik, time = time, y = y)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 

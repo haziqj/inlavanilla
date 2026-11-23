@@ -5,9 +5,9 @@ the whole fit, or a table with one row per parameter. They are the
 checks of INLAvaan's `diagnostics()`, under the same names and in the
 same order, followed by inlavanilla's own. The fit-time warning and the
 flags of
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 are computed from the same numbers, and
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 explains each check and the level at which it is flagged.
 
 Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
@@ -186,16 +186,16 @@ and then inlavanilla's own:
   still to go.
 
 - `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   describes.
 
 Some of INLAvaan's diagnostics are left out. `nsamp` counts posterior
 draws, which
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) makes
-on demand rather than during the fit. `grad_num` and `grad_diff` compare
-an analytic gradient with finite differences at the mode, which would
-take further calls; `grad_gap` makes that comparison from differences
-the fit has already taken. `vb_mcse_max`, `vb_mcse_mean` and
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
+makes on demand rather than during the fit. `grad_num` and `grad_diff`
+compare an analytic gradient with finite differences at the mode, which
+would take further calls; `grad_gap` makes that comparison from
+differences the fit has already taken. `vb_mcse_max`, `vb_mcse_mean` and
 `vb_mcse_sigma` estimate the quadrature error of INLAvaan's Sobol
 points, and the cubature rule of inlavanilla is deterministic (INLAvaan
 gives `NA` for its own deterministic rule).
@@ -215,9 +215,9 @@ approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
 
 ## See also
 
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 for what each check means and when it is flagged, and
-[`plot.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.md)
+[`plot.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.md)
 with `type = "sn_fit"` for the skew-normal fits themselves.
 
 ## Examples
@@ -239,23 +239,23 @@ diagnostics(fit)
 #>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond 
 #>           3.12e-05           2.05e-05           2.53e-06           1.01e+00 
 #>         vb_applied       vb_shift_max      vb_kld_global            kld_max 
-#>                  1             0.2593             0.0336             0.0336 
+#>                  1             0.2606             0.0340             0.0340 
 #>           kld_mean           nmad_max          nmad_mean unscanned_mass_max 
-#>             0.0168             0.0077             0.0039           6.58e-04 
+#>             0.0170             0.0077             0.0039           6.58e-04 
 #>       grad_gap_max        vb_fallback        vb_step_max      vb_gain_ratio 
-#>                 NA                  0                 NA             0.9502 
+#>                 NA                  0                 NA             0.9405 
 #>       mean_gap_max     ridge_bend_max      n_heavy_tails 
-#>             0.0041             0.1324                  0 
+#>             0.0028             0.1324                  0 
 
 # One row per parameter
 diagnostics(fit, type = "param")
-#>       names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift
-#> 1        mu    0        0        0                0 0.0000  -0.0006
-#> 2 log_sigma    0        0        0                0 0.0336   0.0333
+#>       names grad grad_abs grad_rel mode_shift_sigma   kld vb_shift
+#> 1        mu    0        0        0                0 0.000  -0.0001
+#> 2 log_sigma    0        0        0                0 0.034   0.0335
 #>   vb_shift_sigma   nmad   alpha unscanned_mass grad_gap vb_step_sigma
-#> 1        -0.0017 0.0000 -0.2519       6.36e-05       NA            NA
-#> 2         0.2593 0.0077  1.3709       6.58e-04       NA            NA
+#> 1        -0.0004 0.0000 -0.2519       6.36e-05       NA            NA
+#> 2         0.2606 0.0077  1.3709       6.58e-04       NA            NA
 #>   mean_gap  gamma1 tails ridge_bend
-#> 1  -0.0001 -0.0002  TRUE     0.1324
-#> 2   0.0041  0.1282  TRUE     0.0000
+#> 1  -0.0014 -0.0002  TRUE     0.1324
+#> 2   0.0028  0.1282  TRUE     0.0000
 ```

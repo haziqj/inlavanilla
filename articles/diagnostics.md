@@ -2,7 +2,7 @@
 
 ## What can go wrong
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 approximates a posterior in stages, and each stage can fail in its own
 way. The mode search can stop short. The Gaussian can be a poor centre,
 so the VB correction moves far. A skew-normal can fail to match the
@@ -16,7 +16,7 @@ Each stage is checked as it runs, at almost no cost: the checks reuse
 what the fit has already computed.
 [`summary()`](https://rdrr.io/r/base/summary.html) reports every check
 and flags the values that look off, and
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 returns them as numbers. Most problems also raise one warning at the end
 of the fit. Printing the fit opens with the log marginal likelihood and
 whether the fit converged, and ends with a line counting its warnings
@@ -44,12 +44,12 @@ converged fit can still do badly.
 | Mean gap | `mean_gap` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan’s
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 under the same names. Jamil and Rue (2026) use the VB shift and NMAD as
 fit diagnostics, and the gap between the skew-normal and VB means as an
 internal check; the mode shift, the Hessian condition number and the
 unscanned mass come from INLAvaan’s
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 not from the paper. The levels of those five checks are INLAvaan’s, and
 the fit-time warning uses its words. The VB settling, VB gain and tails
 checks are inlavanilla’s own, and so are the ridge bend and mean gap
@@ -78,11 +78,11 @@ logpost_pois <- function(theta, y) {
 }
 fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), y = y, silent = TRUE)
 summary(fit_pois)
-#> ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 summary ─────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (17ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (16ms)
 #> Laplace -12.362 + VB term 0.0085
-#> 68 logpost calls: mode 6ms, VB 2ms, marginals 5ms
+#> 68 logpost calls: mode 5ms, VB 1ms, marginals 5ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -104,7 +104,7 @@ summary(fit_pois)
 
 Every check passes. The parameter is named `log_rate`, so the table of
 posterior marginals gives the rate itself (see
-[`vignette("natural-scale", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/natural-scale.md)).
+[`vignette("natural-scale", package = "inlavanilla")`](https://haziqj.ml/inlavanilla/articles/natural-scale.md)).
 The diagnostics refer to the scale the fit is made on, the log rate, and
 keep that name. On that scale the marginal is mildly skewed (its
 skew-normal shape `alpha`, in `diagnostics(fit_pois, type = "param")`,
@@ -119,6 +119,25 @@ move each parameter. It is flagged above 0.1, INLAvaan’s level, whatever
 the optimiser’s return code, because without a gradient the optimiser
 can report failure at an accurate mode, and success short of one. When
 the mode is off, the warning says so first, and suggests what to change.
+
+Sometimes there is no mode to find. Random effects written into
+`logpost`, \\u_j \sim N(0, \tau^2)\\ with \\\log\tau\\ a parameter, are
+the common case: with every \\u_j\\ at zero, the joint log-posterior
+grows like \\-J\log\tau\\ as \\\tau\\ falls, and only the prior on
+\\\log\tau\\ stops it, far from where the posterior mass is. This is the
+funnel of hierarchical models. The optimiser then either runs down the
+funnel and stops wherever it stops, with a Newton step of several
+posterior SDs, or reaches the spike at its end, where the fitted
+marginal of \\\log\tau\\ has nearly all its mass outside the scanned
+window. Either sign adds a line to the warning. On Poisson counts in 40
+groups of three, the search stopped near \\\log\tau = -27\\ in every
+order of the parameters tried. With the random effects integrated out of
+`logpost`, the same data give a clean fit, with \\\log\tau\\ at
+\\-0.56\\ (SD 0.20). Writing them as \\u_j = \tau z_j\\ instead did not
+help: the mode moved to \\\log\tau = 2.2\\, and the VB correction did
+not settle. Integrate random effects out, as in the article [Multilevel
+models](https://haziqj.ml/inlavanilla/articles/multilevel.md), and draw
+them back afterwards with `sampling(fit, fun = )`.
 
 `hess_cond` is the condition number of the Hessian at the mode, with
 each parameter in posterior-SD units: the ratio of the largest to the
@@ -148,8 +167,8 @@ there, which is the Newton step of the condition the VB mean solves.
 Above 0.1, the level of the mode check, the correction has not settled
 and the fit has not converged. The VB mean is then off, and with it the
 VB term of the log marginal likelihood and the expansions of
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md). The
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md). The
 skew-normal marginals do not depend on it, since they are scanned around
 the mode, and `vb = "off"` leaves it out. Gaussian marginals
 (`marginals = "gaussian"`) are centred on it, and `vb = "off"` centres
@@ -183,7 +202,7 @@ A shift above 1 SD is also a reason to treat the log marginal likelihood
 with care. Its VB term, \\\tfrac12\delta^\top H\delta\\, is a
 leading-order term, and a large first step can overstate it. On the
 random effects model of the article [Diagnostic tests without a gold
-standard](http://haziqj.ml/inlavanilla/articles/diagnostic-tests.md),
+standard](https://haziqj.ml/inlavanilla/articles/diagnostic-tests.md),
 the default gives a log marginal likelihood 1.2 nats too high, and
 `vb = "full"` one 0.3 nats too low.
 
@@ -223,7 +242,7 @@ logpost_mix <- function(theta) {
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.19σ [12ms]
+#> ✔ VB mean correction, max shift 0.19σ [10ms]
 #> ✔ Fitted 1 skew-normal marginal [5ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
@@ -242,7 +261,7 @@ The fit ends with one warning that lists every problem. The second bump
 puts mass far beyond what the Laplace SD expects, so the skew-normal
 fits the scan poorly, it stretches its own tail out of the scanned
 window to cover the bump, and the tails are heavy.
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 gives the numbers behind the warning, for the whole fit and for each
 parameter:
 
@@ -406,7 +425,7 @@ different things:
   Gaussian is 8 nats down at \\\pm 4\\ SDs.
 - `unscanned_mass` is the mass the **fitted skew-normal** puts beyond
   the window, where it is extrapolated (as INLAvaan’s
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
   reports it). A Gaussian marginal gives \\2\Phi(-4) = 6.3 \times
   10^{-5}\\; the larger it is, the more of the marginal is extrapolated.
 
@@ -452,7 +471,7 @@ check that reads only the scanned window can see a tail that starts
 beyond it. Jamil and Rue (2026, Section 4.4) find the same miss in the
 lower tail of a variance near zero, the boundary pile-up that a unimodal
 skew-normal cannot capture. In the structural equation model of the
-[Rcpp article](http://haziqj.ml/inlavanilla/articles/rcpp.md), two log
+[Rcpp article](https://haziqj.ml/inlavanilla/articles/rcpp.md), two log
 residual variances behave like this, more strongly. Their skew-normal
 marginals are too narrow on the log scale, although on the variance
 scale the error is much smaller. INLAvaan gives the same marginals
@@ -500,7 +519,7 @@ fit <- withCallingHandlers(
     invokeRestart("muffleWarning")
   }
 )
-#> ✔ Found the posterior mode in 4 iterations [0ms]
+#> ✔ Found the posterior mode in 4 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.19σ [1ms]
 #> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Check this fit.

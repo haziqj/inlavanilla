@@ -7,7 +7,7 @@ classification model, sorts examinees by which of a few skills, or
 attributes. The latent variable is discrete, so it sums out of the
 likelihood exactly: the log-posterior of the item parameters and the
 class proportions has a closed form, and
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 can take it as it is.
 
 This article fits the DINA model to a language test, and compares the
@@ -110,9 +110,17 @@ init <- c(
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
 fit <- inla_vanilla(logpost, init, y = y, eta = eta)
-#> ✔ Found the posterior mode in 191 iterations [29.8s]
-#> ✔ VB mean correction, max shift 0.79σ [4.5s]
-#> ✔ Fitted 63 skew-normal marginals [10.3s]
+#> ✔ Found the posterior mode in 191 iterations [23.6s]
+#> ! VB mean correction, max shift 0.93σ, gain below its promise [3.6s]
+#> ✔ Fitted 63 skew-normal marginals [8.5s]
+#> Warning: Fit diagnostics flagged 1 potential issue:
+#> ✖ One-step VB delivered 0.414 of the rise in the expected log-posterior it
+#>   promised (warning < 0.5), so the Gaussian approximation at the mode may
+#>   be inaccurate.
+#> ℹ Compare with `vb = "full"`, and treat the log marginal likelihood with
+#>   care.
+#> ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;
+#>   `vignette("diagnostics", package = "inlavanilla")` explains each check.
 ```
 
 Draws give the parameters on the probability scale, and the share of

@@ -23,7 +23,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="multilevel_files/libs/quarto-html/popper.min.js"></script><script src="multilevel_files/libs/quarto-html/tippy.umd.min.js"></script><link href="multilevel_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="multilevel_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Multilevel models">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,7 +100,7 @@
 <p>This article fits a model with correlated random intercepts and slopes, draws the random effects from the fit afterwards, and compares both with <a href="https://paulbuerkner.com/brms/" class="external-link">brms</a> (Bürkner, 2017), which samples the full model, random effects included, with Stan.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">sleepstudy</span>, package <span class="op">=</span> <span class="st">"lme4"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <section class="level2"><h2 id="the-model">The model<a class="anchor" aria-label="anchor" href="#the-model"></a>
@@ -168,13 +168,13 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span>  atanh_rho <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">25</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [108ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.3σ [63ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [125ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [107ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.31σ [51ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [123ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -894.66 · Converged in 20 iterations (321ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -894.66 · Converged in 20 iterations (302ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;             Mean     SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 </span></span>
@@ -194,10 +194,10 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">20000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt;            b0       b1     tau0     tau1         rho    sigma</span></span>
-<span><span class="co">#&gt; [1,] 247.0624 10.98041 24.86399 6.881332 -0.33075050 26.93531</span></span>
-<span><span class="co">#&gt; [2,] 252.6071 10.80077 28.48175 7.007579  0.08917977 26.35683</span></span>
-<span><span class="co">#&gt; [3,] 245.6301  9.67959 27.23634 6.566233  0.36778021 25.16078</span></span></code></pre></div>
+<span><span class="co">#&gt;            b0        b1     tau0     tau1         rho    sigma</span></span>
+<span><span class="co">#&gt; [1,] 247.0624 10.980404 24.86398 6.881332 -0.33075059 26.93531</span></span>
+<span><span class="co">#&gt; [2,] 252.6071 10.800768 28.48175 7.007580  0.08917965 26.35683</span></span>
+<span><span class="co">#&gt; [3,] 245.6301  9.679587 27.23634 6.566234  0.36778009 25.16078</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checking-against-brms">Checking against brms<a class="anchor" aria-label="anchor" href="#checking-against-brms"></a>
 </h2>
@@ -343,9 +343,9 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">keep</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">6</span></span>
 <span><span class="va">fit_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, ys <span class="op">=</span> <span class="va">ys</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span>, xs <span class="op">=</span> <span class="va">xs</span><span class="op">[</span><span class="va">keep</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [39ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [16ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [72ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [40ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [61ms]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">draws_6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit_6</span>, nsamp <span class="op">=</span> <span class="fl">20000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu">compare</span><span class="op">(</span><span class="va">draws_6</span>, <span class="va">ref</span><span class="op">$</span><span class="va">subjects_6</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -361,11 +361,11 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_6</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 summary ─────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -322.676 · Converged in 20 iterations (132ms)</span></span>
-<span><span class="co">#&gt; Laplace -322.994 + VB term 0.32</span></span>
-<span><span class="co">#&gt; 665 logpost calls: mode 40ms, VB 17ms, marginals 72ms</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -322.686 · Converged in 20 iterations (117ms)</span></span>
+<span><span class="co">#&gt; Laplace -322.994 + VB term 0.31</span></span>
+<span><span class="co">#&gt; 665 logpost calls: mode 40ms, VB 14ms, marginals 61ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -383,16 +383,16 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <span><span class="co">#&gt; ── Diagnostics ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;              VB shift      NMAD  Unscanned  Ridge bend  Mean gap</span></span>
-<span><span class="co">#&gt; 1 b0           -0.018  0.00028    0.000066    0.63         0.010</span></span>
-<span><span class="co">#&gt; 2 b1            0.027  0.000012   0.000063    0.76        -0.029</span></span>
-<span><span class="co">#&gt; 3 log_tau0      0.24   0.037      0.00022     0.032        0.064</span></span>
+<span><span class="co">#&gt; 1 b0            0.027  0.00028    0.000066    0.63        -0.034</span></span>
+<span><span class="co">#&gt; 2 b1            0.029  0.000012   0.000063    0.76        -0.031</span></span>
+<span><span class="co">#&gt; 3 log_tau0      0.27   0.037      0.00022     0.032        0.034</span></span>
 <span><span class="co">#&gt; 4 log_tau1      0.42   0.050      0.0023      0.040        0.13 </span></span>
-<span><span class="co">#&gt; 5 atanh_rho     0.38   0.041      0.0048      1.1          0.034</span></span>
-<span><span class="co">#&gt; 6 log_sigma     0.31   0.0061     0.00043     0.000066    -0.050</span></span>
+<span><span class="co">#&gt; 5 atanh_rho     0.35   0.041      0.0048      1.1          0.063</span></span>
+<span><span class="co">#&gt; 6 log_sigma     0.28   0.0061     0.00043     0.000067    -0.026</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 20 iterations (Newton step 9e-07σ).</span></span>
 <span><span class="co">#&gt; ✔ Hessian condition number 1.8, in SD units.</span></span>
-<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.42σ, gain ratio 0.697.</span></span>
+<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.42σ, gain ratio 0.724.</span></span>
 <span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.050, unscanned mass 0.0048.</span></span>
 <span><span class="co">#&gt; ! Ridge bend &gt; 0.25 for `atanh_rho` (1.06), `b1` (0.76), `b0` (0.63): the</span></span>
 <span><span class="co">#&gt;   marginal SD may be &gt;10% too small.</span></span>

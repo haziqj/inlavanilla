@@ -1,6 +1,36 @@
 # Changelog
 
-## inlavanilla (development version)
+## inlavanilla 26.11.23
+
+- When the mode search runs off, or lands far from the posterior mass,
+  the diagnostics warning now says what can cause it and what to do:
+  random effects in `logpost` whose scale can run to zero (a funnel), to
+  be integrated out of `logpost`.
+  [`vignette("diagnostics")`](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
+  explains the case.
+
+- Versions are now dates, as in R-INLA: `YY.MM.DD`, the day of the
+  change, with `-1` or `-2` for a second or third version published on
+  the same day. There are no `.9000` development versions. This version,
+  26.11.23, follows 0.1.1, and a date sorts after every 0.x version, so
+  an update installs as usual.
+
+- Every stage of a fit now whitens with the same factor, the symmetric
+  square root of the posterior covariance taken on the correlation
+  scale. A fit without a gradient no longer depends on the order of the
+  parameters, beyond the tolerance of the mode search: its volume
+  correction, ridge bend and VB fallback used a Cholesky factor, as did
+  the check of the mode and
+  [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md). The VB
+  correction no longer depends on rounding error where the posterior has
+  equal eigenvalues, as with exchangeable random effects, where it moved
+  the VB mean by up to 0.02 posterior SDs. It also stays accurate when
+  the posterior SDs span many orders of magnitude. The marginals change
+  by less than 1e-4 posterior SDs, except on funnels, where the
+  skew-normal is far off anyway. The one-step VB mean changes by up to
+  0.03 posterior SDs with a gradient and 0.12 without, and the log
+  marginal likelihood by up to 0.02 and 0.18. Against HMC on 52
+  simulated datasets, both are as accurate as before.
 
 - A fit with `cores` no longer warns that
   [`future::availableCores()`](https://parallelly.futureverse.org/reference/availableCores.html)
@@ -9,8 +39,8 @@
   are deprecated. The core count and the fork check now come from
   parallelly, which future imports. parallelly is in Suggests.
 
-- [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) have a new
+- [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+  [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) have a new
   argument `hessian`. With `hessian = "diagonal"` they take the scores
   and the trace of each unit’s Hessian only, with 2m + 1 calls of
   `loglik` in place of m^2 + m + 1: the first-order LOO less half the
@@ -19,7 +49,7 @@
   The default, `"full"`, is unchanged.
 
 - New
-  [`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
+  [`rtmb_latent()`](https://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
   draws the random effects of an RTMB or TMB object after a fit:
   `sampling(fit, fun = rtmb_latent(obj))` gives the posterior of the
   latent variables that the object integrates out, from the Gaussian
@@ -38,15 +68,17 @@
   [`summary()`](https://rdrr.io/r/base/summary.html),
   [`coef()`](https://rdrr.io/r/stats/coef.html) and
   [`plot()`](https://rdrr.io/r/graphics/plot.default.html) show `sigma`,
-  and [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  and
+  [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
   returns draws of it. The prefixes are `log_` (reported through
   [`exp()`](https://rdrr.io/r/base/Log.html)), `logit_`
   ([`plogis()`](https://rdrr.io/r/stats/Logistic.html)) and `atanh_`
   ([`tanh()`](https://rdrr.io/r/base/Hyperbolic.html)), the scales
   R-INLA itself uses for nearly all of its hyperparameters. The fit does
   not change: `logpost`, `grad`, `hess`, the `loglik` of
-  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
-  of [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and the
+  `fun` of
+  [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
   receive the parameter as before, a prior stated on the natural scale
   still needs its Jacobian in `logpost`, and the diagnostics keep the
   names of `init`. The quantiles are mapped through the transform, and
@@ -55,20 +87,21 @@
   `fit$summary["log_sigma", ]` and `sampling(fit)[, "log_sigma"]` now
   stop with a subscript error, since the row and the column are called
   `sigma`. `transform = FALSE` in
-  [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   restores the old behaviour, and
   [`summary()`](https://rdrr.io/r/base/summary.html),
   [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
-  [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
   take the same argument to show a fit on the scale of `logpost`. The
   new `fit$transform` lists what was read from the names, and
-  [`vignette("natural-scale")`](http://haziqj.ml/inlavanilla/articles/natural-scale.md)
+  [`vignette("natural-scale")`](https://haziqj.ml/inlavanilla/articles/natural-scale.md)
   explains it.
 
 - A fit now records the version of inlavanilla that made it, in
   `fit$version`, and [`print()`](https://rdrr.io/r/base/print.html) and
   [`summary()`](https://rdrr.io/r/base/summary.html) show it in their
-  headers (“INLAvanilla 0.1.1”).
+  headers (“INLAvanilla 26.11.23”). It is the string in `DESCRIPTION`,
+  not a `package_version`, which would drop the leading zeros of a date.
 
 - When the mode search restarts
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) with the parameters
@@ -76,7 +109,7 @@
   not those of the run that was kept: in the progress line, in
   [`print()`](https://rdrr.io/r/base/print.html) and
   [`summary()`](https://rdrr.io/r/base/summary.html), in
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
   and in `fit$diagnostics$optim$iterations`. The evaluations in the
   `verbose = TRUE` report are totals too, and its restart line gives
   each run’s own iterations. On a badly scaled posterior the fit used to
@@ -88,14 +121,14 @@
   default, up from 1000 and 2000, so that slowly converging fits do not
   stop at the limit. `control$nlminb` still sets them.
 
-- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+- [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   now goes straight to the mode. A supplied `grad` used to be compared
   with finite differences of `logpost` at `init`, before anything was
   printed, at about 8m to 12m calls of `logpost`: 175 calls and 14% of
   the time on an RTMB model with 21 parameters. It is now compared at
   the mode, for each parameter and at no cost in calls, from differences
   the fit takes there anyway. The new `grad_gap` in
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
   holds the result, and the fit-time warning and
   [`summary()`](https://rdrr.io/r/base/summary.html) flag it above 0.1.
   A gradient of the wrong sign, which stops the fit at the mode, is now
@@ -113,11 +146,11 @@
   test model), and the marginals move by a few ten-thousandths of a
   posterior SD. Fits without a gradient are unchanged.
 
-- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+- [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   gains `cores`. With `cores = 8` the per-parameter scans of the
   skew-normal marginals, and the calls of `loglik` in
-  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md), run in
+  [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+  [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md), run in
   parallel through the future package, which is optional, with the
   results and the progress line of a serial fit. Forked workers are used
   where they are safe, and separate R sessions elsewhere. A long scan
@@ -157,7 +190,7 @@
 
 - After a one-step VB correction the fit checks that the step delivered
   what it promised. `vb_gain_ratio` in
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
   is the rise in the expected log-posterior over the rise the step
   assumed, at a cost of 4m + 2 calls of `logpost`. A ratio below 0.5
   raises a warning that points to `vb = "full"`, and
@@ -168,14 +201,14 @@
   [`summary()`](https://rdrr.io/r/base/summary.html), as INLAvaan’s
   [`coef()`](https://rdrr.io/r/stats/coef.html) does.
 
-- [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md) gives
+- [`timing()`](https://haziqj.ml/inlavanilla/reference/timing.md) gives
   the elapsed time of each stage of the fit, as INLAvaan’s
-  [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md) does:
+  [`timing()`](https://haziqj.ml/inlavanilla/reference/timing.md) does:
   `timing(fit)` the total, `timing(fit, what = "all")` every stage.
   `fit$timing` gains `init` and `diagnostics`, the time before the mode
   and after the marginals, so its segments now add up to `total`.
 
-- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+- [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   gains `width`, how each skew-normal scan takes the width term, the
   log-volume of the other parameters. `"trace"`, the default, is the
   linear term of INLAvaan, as before. `"cmp"` takes it exactly along the
@@ -187,9 +220,9 @@
   and `fit$fallback` and
   [`summary()`](https://rdrr.io/r/base/summary.html) list them. Both
   cost more calls, given in
-  [`?inla_vanilla`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
+  [`?inla_vanilla`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
 
-- [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+- [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   takes the Hessian of `logpost` as an optional `hess`, after `grad`, as
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) does. With it,
   [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes Newton steps
@@ -211,20 +244,20 @@
 ## inlavanilla 0.1.0
 
 - Initial version.
-  [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   approximates the posterior of any log-posterior written on an
   unconstrained scale with the INLAvaan pipeline: a Laplace
   approximation, a VB mean correction (by a deterministic degree-5
   cubature rule), skew-normal marginals with the volume correction, and
   the log marginal likelihood.
-  [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+  [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
   gives Gaussian-copula draws of the parameters or of any function of
   them. [`print()`](https://rdrr.io/r/base/print.html),
   [`summary()`](https://rdrr.io/r/base/summary.html) and
   [`plot()`](https://rdrr.io/r/graphics/plot.default.html) methods
   report the fit and its diagnostics.
-- [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) estimate
+- [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+  [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) estimate
   predictive accuracy from the fit and a pointwise log-likelihood
   `loglik(theta, ...)`, by the deterministic second-order Taylor
   approximation of Alhyari et al. (2026): no refits and no draws. The
@@ -289,9 +322,9 @@
   as in INLAvaan (“Fitting 4/6 skew-normal marginals”), not a bar as
   wide as the console. After two seconds it ends with the time so far,
   or the time left where the work is known in advance (the marginals and
-  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)), in the
+  [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md)), in the
   place where the finished line shows the time taken. The lines,
-  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)’s included,
+  [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md)’s included,
   follow the `cli.progress_show_after` option when it is set (half a
   second otherwise), so a knitr or Quarto setup chunk can keep them out
   of a rendered document.
@@ -353,7 +386,7 @@
 - `diagnostics(fit)` and `diagnostics(fit, type = "param")` return the
   checks as numbers, with the names, order and print formats of
   INLAvaan’s
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
   followed by inlavanilla’s own. `plot(fit, type = "sn_fit")` and
   `type = "sn_fit_log"` draw each skew-normal fit against the scan it
   was fitted to, as INLAvaan’s plot does, from the scans the fit now

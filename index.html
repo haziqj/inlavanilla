@@ -23,7 +23,7 @@
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="INLA-Style Skew-Normal Marginals for Any Log-Posterior">
 <meta name="description" content="Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the INLAvaan package (Jamil &amp; Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) &lt;doi:10.48550/arXiv.2609.00670&gt;.">
 <meta property="og:description" content="Performs approximate Bayesian inference for the parameters of a model from its log-likelihood plus log-prior alone, using the approximation pipeline of the INLAvaan package (Jamil &amp; Rue, 2026a) &lt;doi:10.48550/arXiv.2603.25690&gt;, an adaptation of the Integrated Nested Laplace Approximation (Rue et al., 2009) &lt;doi:10.1111/j.1467-9868.2008.00700.x&gt;, with no latent field and nothing model-specific. A Laplace approximation with a variational Bayes mean correction gives the log marginal likelihood, a skew-normal is fitted to each parameter's marginal by scanning the log-posterior, and a Gaussian copula couples the marginals for posterior draws. See also Jamil and Rue (2026b) &lt;doi:10.48550/arXiv.2604.00671&gt;. Leave-one-out cross-validation and the widely applicable information criterion come from a second-order Taylor expansion of the pointwise log-likelihood (Alhyari et al., 2026) &lt;doi:10.48550/arXiv.2609.00670&gt;.">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -91,7 +91,7 @@
 <blockquote>
 <p>INLA-style skew-normal marginals for any log-posterior.</p>
 </blockquote>
-<p>If you can write down the log-likelihood plus the log-prior, <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> with nothing model-specific:</p>
+<p>If you can write down the log-likelihood plus the log-prior, <a href="https://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> with nothing model-specific:</p>
 <ol style="list-style-type: decimal">
 <li>a <strong>Laplace approximation</strong> at the posterior mode, with the Laplace estimate of the log marginal likelihood;</li>
 <li>a <strong>VB mean correction</strong> that recentres the Gaussian at a better estimate of the posterior mean, in one Newton step by default;</li>
@@ -117,7 +117,7 @@
 <p>A trial records 3 responders out of 20 patients. With a uniform prior on the response rate <span class="math inline">\(p\)</span>, the posterior is <span class="math inline">\(\text{Beta}(4, 18)\)</span>: skewed, and bounded at zero.</p>
 <p><code><a href="reference/inla_vanilla.html">inla_vanilla()</a></code> works best on an unconstrained scale, so we write the log-posterior in terms of <span class="math inline">\(\vartheta = \text{logit}(p)\)</span>. The prior is stated for <span class="math inline">\(p\)</span>, so it carries the Jacobian <span class="math inline">\(dp / d\vartheta = p(1 - p)\)</span>. The names of <code>init</code> name the parameters, and calling this one <code>logit_p</code> says which scale it is on:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">logpost</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span>, <span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">plogis</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="st">"logit_p"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
@@ -127,19 +127,19 @@
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="fl">3</span>, n <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [3ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [4ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [13ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [19ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [20ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (40ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (42ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;        Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ℹ Natural scale: p = plogis(logit_p).</span></span></code></pre></div>
-<p>Due to the name given to the <code>init</code> vector, <code>inlavanilla</code> recognises that the fit is made on the logit scale and reports back on the natural scale <span class="math inline">\(p\)</span>. Only the reporting changes: <code>logpost</code> still receives <code>logit_p</code>, and <code>transform = FALSE</code> turns the renaming off. See the <a href="http://haziqj.ml/inlavanilla/articles/natural-scale.html">natural-scale summaries</a> vignettes for details.</p>
+<p>Due to the name given to the <code>init</code> vector, <code>inlavanilla</code> recognises that the fit is made on the logit scale and reports back on the natural scale <span class="math inline">\(p\)</span>. Only the reporting changes: <code>logpost</code> still receives <code>logit_p</code>, and <code>transform = FALSE</code> turns the renaming off. See the <a href="https://haziqj.ml/inlavanilla/articles/natural-scale.html">natural-scale summaries</a> vignettes for details.</p>
 <p>The summary matches the exact posterior:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
@@ -157,7 +157,7 @@
 <span>     main <span class="op">=</span> <span class="cn">NULL</span>, xlab <span class="op">=</span> <span class="st">"Response rate p"</span>, ylab <span class="op">=</span> <span class="cn">NULL</span>, yaxt <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/curve.html" class="external-link">curve</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Beta.html" class="external-link">dbeta</a></span><span class="op">(</span><span class="va">x</span>, <span class="fl">4</span>, <span class="fl">18</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, lwd <span class="op">=</span> <span class="fl">2</span>, col <span class="op">=</span> <span class="st">"#C2410C"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="reference/figures/README-density-1.png" alt="Histogram of draws of p, skewed to the right, with the exact Beta(4, 18) density overlaid and matching it." width="100%"></p>
-<p><code>summary(fit)</code> adds diagnostics for each stage of the approximation, and <code>plot(fit)</code> draws the marginals. The <a href="http://haziqj.ml/inlavanilla/articles/inlavanilla.html">Get started</a> vignette works through a multi-parameter example: it checks the approximation against the exact posterior, and covers gradients, derived quantities and model comparison.</p>
+<p><code>summary(fit)</code> adds diagnostics for each stage of the approximation, and <code>plot(fit)</code> draws the marginals. The <a href="https://haziqj.ml/inlavanilla/articles/inlavanilla.html">Get started</a> vignette works through a multi-parameter example: it checks the approximation against the exact posterior, and covers gradients, derived quantities and model comparison.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

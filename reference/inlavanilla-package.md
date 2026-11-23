@@ -23,7 +23,7 @@ log-likelihood (Alhyari et al., 2026)
 
 Useful links:
 
-- <http://haziqj.ml/inlavanilla/>
+- <https://haziqj.ml/inlavanilla/>
 
 - <https://github.com/haziqj/inlavanilla>
 

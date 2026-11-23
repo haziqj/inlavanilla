@@ -1,7 +1,7 @@
 # Time taken by each stage of an INLAvanilla fit
 
 The elapsed (wall-clock) time of each stage of
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
 in seconds, as INLAvaan's `timing()` gives them.
 
 ## Usage
@@ -35,7 +35,7 @@ timing(object, what = "total", ...)
 
 A named numeric vector of class `inla_vanilla_timing`, in seconds. It
 prints each time as
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 does: in milliseconds below a second, then in seconds, then in minutes
 and seconds.
 
@@ -60,8 +60,8 @@ The segments are:
 The segments are disjoint, and `total` is their sum. Each stage includes
 its progress output, so with `verbose = TRUE` they can be a little
 longer than the times printed during the fit, which time the work alone.
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) and
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) run after the
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) and
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) run after the
 fit, so their time is not included.
 
 INLAvaan also exports a `timing()` generic, an S4 one. When both
@@ -72,7 +72,7 @@ for an inlavanilla fit.
 
 ## See also
 
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md),
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md),
 which gives the time of each stage with the number of calls.
 
 ## Examples
@@ -90,15 +90,15 @@ fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), y = y, silent = TRUE)
 # The whole fit
 timing(fit)
 #> total 
-#>   9ms 
+#> 248ms 
 
 # Every stage
 timing(fit, what = "all")
 #>        init     laplace          vb   marginals diagnostics       total 
-#>         1ms         1ms         0ms         6ms         1ms         9ms 
+#>         1ms         1ms         0ms       244ms         2ms       248ms 
 
 # Some stages
 timing(fit, what = c("vb", "marginals"))
 #>        vb marginals 
-#>       0ms       6ms 
+#>       0ms     244ms 
 ```

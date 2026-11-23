@@ -67,5 +67,5 @@ advice.
 ## Code of Conduct
 
 Please note that the inlavanilla project is released with a [Contributor
-Code of Conduct](http://haziqj.ml/inlavanilla/CODE_OF_CONDUCT.md). By
+Code of Conduct](https://haziqj.ml/inlavanilla/CODE_OF_CONDUCT.md). By
 contributing to this project you agree to abide by its terms.

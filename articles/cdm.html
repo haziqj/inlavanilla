@@ -23,7 +23,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="cdm_files/libs/quarto-html/popper.min.js"></script><script src="cdm_files/libs/quarto-html/tippy.umd.min.js"></script><link href="cdm_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="cdm_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Cognitive diagnostic models">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,7 +100,7 @@
 <p>This article fits the DINA model to a language test, and compares the posterior marginals with those of Stan.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">items_ecpe</span>, <span class="va">qmatrix_ecpe</span>, package <span class="op">=</span> <span class="st">"edmdata"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <section class="level2"><h2 id="the-data">The data<a class="anchor" aria-label="anchor" href="#the-data"></a>
@@ -172,9 +172,17 @@ P(y_{ij} = 1 \mid c)^{y_{ij}} \{1 - P(y_{ij} = 1 \mid c)\}^{1 - y_{ij}}.
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">7</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"pi"</span>, <span class="va">classes</span><span class="op">[</span><span class="op">-</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, y <span class="op">=</span> <span class="va">y</span>, eta <span class="op">=</span> <span class="va">eta</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 191 iterations [29.8s]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.79σ [4.5s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [10.3s]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 191 iterations [23.6s]</span></span>
+<span><span class="co">#&gt; ! VB mean correction, max shift 0.93σ, gain below its promise [3.6s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 63 skew-normal marginals [8.5s]</span></span>
+<span><span class="co">#&gt; Warning: Fit diagnostics flagged 1 potential issue:</span></span>
+<span><span class="co">#&gt; ✖ One-step VB delivered 0.414 of the rise in the expected log-posterior it</span></span>
+<span><span class="co">#&gt;   promised (warning &lt; 0.5), so the Gaussian approximation at the mode may</span></span>
+<span><span class="co">#&gt;   be inaccurate.</span></span>
+<span><span class="co">#&gt; ℹ Compare with `vb = "full"`, and treat the log marginal likelihood with</span></span>
+<span><span class="co">#&gt;   care.</span></span>
+<span><span class="co">#&gt; ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;</span></span>
+<span><span class="co">#&gt;   `vignette("diagnostics", package = "inlavanilla")` explains each check.</span></span></code></pre></div>
 </div>
 <p>Draws give the parameters on the probability scale, and the share of examinees who have mastered each attribute, <span class="math inline">\(\sum_c \pi_c \alpha_{ck}\)</span>:</p>
 <div class="cell" data-layout-align="center">

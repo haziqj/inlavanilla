@@ -23,7 +23,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="diagnostic-tests_files/libs/quarto-html/popper.min.js"></script><script src="diagnostic-tests_files/libs/quarto-html/tippy.umd.min.js"></script><link href="diagnostic-tests_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="diagnostic-tests_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Diagnostic tests without a gold standard">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -99,7 +99,7 @@
     <p>How accurate is a diagnostic test when no test is a gold standard? If every person takes several imperfect tests, their true infection status can be treated as a latent class, and the prevalence and each test’s sensitivity and specificity estimated from the pattern of results. Koukounari et al. (2021) compared three such latent class models for tests of schistosomiasis, fitted in JAGS. This article fits all three to one of their data sets with <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code>. The infection status sums out of the likelihood, so each model has a dozen or so parameters, and each fit takes under a second.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span></code></pre></div>
 </div>
 <section class="level2"><h2 id="the-data">The data<a class="anchor" aria-label="anchor" href="#the-data"></a>
 </h2>
@@ -264,9 +264,9 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_Sp_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit_lc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_lc</span>, <span class="va">start</span>, y <span class="op">=</span> <span class="va">y</span>, count <span class="op">=</span> <span class="va">count</span>, vb <span class="op">=</span> <span class="st">"full"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 30 iterations [33ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.37σ [58ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 11 skew-normal marginals [62ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 30 iterations [29ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.38σ [42ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 11 skew-normal marginals [53ms]</span></span>
 <span><span class="va">fit_lcre</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span></span>
 <span>  <span class="va">lp_lcre</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">start</span>, log_sigma1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span>, log_sigma0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.3</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -275,9 +275,18 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  gh <span class="op">=</span> <span class="va">gh</span>,</span>
 <span>  vb <span class="op">=</span> <span class="st">"full"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [197ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.0s]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [242ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 29 iterations [183ms]</span></span>
+<span><span class="co">#&gt; ! VB mean correction, max shift 0.5σ (fallback optimiser), not settled [1.4s]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [222ms]</span></span>
+<span><span class="co">#&gt; Warning: Fit diagnostics flagged 1 potential issue:</span></span>
+<span><span class="co">#&gt; ✖ The VB correction did not settle: one more step would move</span></span>
+<span><span class="co">#&gt;   `logit_Se_Antigens` by 0.263σ.</span></span>
+<span><span class="co">#&gt; ℹ Without a gradient the VB mean is approximate on a posterior this far</span></span>
+<span><span class="co">#&gt;   from Gaussian; supply `grad` if you can.</span></span>
+<span><span class="co">#&gt; ℹ The skew-normal marginals do not depend on it; `vb = "off"` leaves it</span></span>
+<span><span class="co">#&gt;   out.</span></span>
+<span><span class="co">#&gt; ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;</span></span>
+<span><span class="co">#&gt;   `vignette("diagnostics", package = "inlavanilla")` explains each check.</span></span>
 <span><span class="va">start_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  <span class="va">start</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
 <span>  logit_eta1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.2</span><span class="op">)</span>,</span>
@@ -286,9 +295,9 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Logistic.html" class="external-link">qlogis</a></span><span class="op">(</span><span class="fl">0.7</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"logit_w0_"</span>, <span class="va">tests</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit_fm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">lp_fm</span>, <span class="va">start_fm</span>, y <span class="op">=</span> <span class="va">y</span>, count <span class="op">=</span> <span class="va">count</span>, vb <span class="op">=</span> <span class="st">"full"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 25 iterations [50ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.44σ [117ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [74ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 25 iterations [45ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.42σ [97ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 13 skew-normal marginals [73ms]</span></span></code></pre></div>
 </div>
 <p>The seconds each fit took:</p>
 <div class="cell" data-layout-align="center">
@@ -296,7 +305,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>LC <span class="op">=</span> <span class="va">fit_lc</span>, LCRE <span class="op">=</span> <span class="va">fit_lcre</span>, FM <span class="op">=</span> <span class="va">fit_fm</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="va">f</span><span class="op">$</span><span class="va">timing</span><span class="op">[[</span><span class="st">"total"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   LC LCRE   FM </span></span>
-<span><span class="co">#&gt; 0.17 1.48 0.26</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.14 1.93 0.23</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="results">Results<a class="anchor" aria-label="anchor" href="#results"></a>
 </h2>
@@ -415,7 +424,7 @@ w_{j1}^{y_{ij}} (1 - w_{j1})^{1 - y_{ij}}\Bigr\}
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">logml</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">logml</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    LC  LCRE    FM </span></span>
-<span><span class="co">#&gt; -0.33  0.00 -2.68</span></span></code></pre></div>
+<span><span class="co">#&gt; -0.15  0.00 -2.53</span></span></code></pre></div>
 </div>
 <p>The conditionally independent and random effects models are a third of a nat apart, so the data cannot tell them apart, as Koukounari et al. (2021) found with goodness-of-fit tests and Albert and Dodd (2004) warned. The finite mixture trails by 2.7 nats, a Bayes factor of about 15. Yet the first two disagree on the sensitivities. That is the case for collecting a gold standard on some of the people: a person whose infection status is known contributes only the term of their class, <span class="math inline">\(P(D_i = d) \, p(y_i \mid D_i = d)\)</span>, instead of the sum over both, and pins the sensitivities down whatever the dependence between the tests.</p>
 </section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

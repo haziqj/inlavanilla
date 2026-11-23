@@ -21,7 +21,7 @@ log-likelihood (Alhyari et al., 2026), as in INLAvaan.
 Both need the log-likelihood split into one term per observation, or per
 independent unit, which inla_vanilla() never sees. You supply it as
 loglik: write the log-likelihood terms and the log-prior as separate
-functions, and logpost as their sum."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
+functions, and logpost as their sum."><meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -29,7 +29,7 @@ functions, and logpost as their sum."><meta property="og:image" content="http://
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -189,7 +189,8 @@ p_{\mathrm{waic},u})\), and <code>looic</code> and <code>waic</code> are \(-2\) 
 Each standard error is \(\sqrt{n \, \mathrm{Var}}\) of the pointwise
 terms over the \(n\) units, as in the loo package.</p>
 <p>The scores and Hessians come from finite differences of <code>loglik</code> along the
-principal axes of \(\Omega\), a hundredth of a posterior SD apart:
+axes of the symmetric square root of \(\Omega\), taken on the correlation
+scale, a hundredth of a posterior SD apart:
 \(m^2 + m + 1\) calls of <code>loglik</code> for \(m\) parameters, each returning
 every unit.</p>
 <p><strong>The diagonal shortcut.</strong> With <code>hessian = "diagonal"</code> only the
@@ -290,9 +291,9 @@ widely applicable information criterion in singular learning theory.
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">0</span>, b <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[1ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[2ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[6ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[2ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[1ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[5ms]</span></span>
 <span class="r-in"><span><span class="fu">loo</span><span class="op">(</span><span class="va">fit</span>, <span class="va">loglik</span>, time <span class="op">=</span> <span class="va">time</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">Leave-one-out cross-validation</span> <span style="color: #D7875F;">───────────────────────────────</span> <span style="color: #555555;">9 units</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

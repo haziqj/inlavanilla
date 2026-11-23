@@ -20,7 +20,7 @@ four stages:
     skew-normal \\SN(\hat\xi_j, \hat\omega_j, \hat\alpha_j)\\.
 
 4.  **Gaussian copula draws.**
-    [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+    [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
     couples the skew-normal marginals through the correlations of
     \\\Omega\\.
 
@@ -30,7 +30,7 @@ scanned around the mode) but gives the Laplace log marginal likelihood.
 `marginals = "gaussian"` skips the scans and uses the Gaussian's own
 marginals \\N(\tilde\vartheta_j, \Omega\_{jj})\\, centred at the VB mean
 (or at the mode when `vb = "off"`);
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) then
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) then
 draws from the joint Gaussian. So `vb = "off", marginals = "gaussian"`
 is the Laplace approximation alone, and `marginals = "gaussian"` alone
 is the Laplace approximation with the VB correction.
@@ -106,7 +106,7 @@ inla_vanilla(
   abbreviations such as `"one"` work too. See the section on the VB
   correction. The correction enters the log marginal likelihood, and the
   skew-normal means are checked against it (see
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
 
 - marginals:
 
@@ -149,11 +149,11 @@ inla_vanilla(
 
   Logical. Rescan with `width = "tk"` every parameter whose `ridge_bend`
   is flagged (above 0.25, see
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md))?
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md))?
   Default `FALSE`, so that a fit costs what `width` says and gives the
   same marginals whatever its diagnostics. The parameters rescanned are
   listed in `fit$fallback` and by
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
   Ignored for Gaussian marginals and with `width = "tk"`.
 
 - transform:
@@ -166,9 +166,9 @@ inla_vanilla(
 - cores:
 
   The number of CPU cores for the skew-normal scans, and for
-  [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-  [`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) on this fit.
-  `NULL`, the default, follows
+  [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+  [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) on this
+  fit. `NULL`, the default, follows
   [`future::plan()`](https://future.futureverse.org/reference/plan.html),
   and is serial if no plan is set. `1` is serial whatever the plan.
   Needs the future package (see the section on parallel computation).
@@ -195,9 +195,9 @@ An object of class `inla_vanilla`, with methods for
 [`summary()`](https://rdrr.io/r/base/summary.html),
 [`coef()`](https://rdrr.io/r/stats/coef.html),
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html),
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md),
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
-and [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md). It
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md),
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
+and [`timing()`](https://haziqj.ml/inlavanilla/reference/timing.md). It
 is a list holding, among other things:
 
 - `summary`: the posterior summary table (mean, SD, quantiles, mode),
@@ -226,16 +226,16 @@ is a list holding, among other things:
 - `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
   part.
 
-- `version`: the version of inlavanilla that made the fit, as
-  [`utils::packageVersion()`](https://rdrr.io/r/utils/packageDescription.html)
-  returns it. [`print()`](https://rdrr.io/r/base/print.html) and
+- `version`: the version of inlavanilla that made the fit, the string in
+  `DESCRIPTION` (for example `"26.11.23"`, a date as in R-INLA).
+  [`print()`](https://rdrr.io/r/base/print.html) and
   [`summary()`](https://rdrr.io/r/base/summary.html) show it in their
   headers.
 
 - `diagnostics`: the checks of each stage, which
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
   returns under INLAvaan's names and
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   explains. `optim` holds the return code, message and iterations of
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) (the
   iterations of both runs if it was restarted, the code and message of
@@ -265,7 +265,7 @@ is a list holding, among other things:
   serial fit (see the section on parallel computation).
 
 - `timing`: the elapsed time of each stage of the fit, in seconds, which
-  [`timing()`](http://haziqj.ml/inlavanilla/reference/timing.md)
+  [`timing()`](https://haziqj.ml/inlavanilla/reference/timing.md)
   returns.
 
 - `warnings`: the messages of the warnings raised during the fit, as a
@@ -326,8 +326,8 @@ all of its hyperparameters: the log, the logit, and for a correlation
 \\\log\\(1 + \rho) / (1 - \rho)\\\\, which is twice Fisher's \\z\\.
 
 Nothing changes in the fit. `logpost`, `grad`, `hess`, the `loglik` of
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
-of [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
+of [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 all receive the parameter under the name and on the scale of `init`, and
 `logpost` must still include the log-Jacobian of a prior stated on the
 natural scale. Only the results are mapped back, each from its own
@@ -335,7 +335,7 @@ skew-normal marginal: [`print()`](https://rdrr.io/r/base/print.html),
 [`summary()`](https://rdrr.io/r/base/summary.html),
 [`coef()`](https://rdrr.io/r/stats/coef.html) and
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) show `sigma`,
-and [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+and [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 returns draws of it. The quantiles are the fitted quantiles mapped
 through the transform. The mean, SD and mode are those of the
 natural-scale distribution, so the mean of `sigma` is not the
@@ -352,7 +352,7 @@ parameters, such as a covariance, comes from `sampling(fit, fun = ...)`.
 `transform = FALSE` reports every parameter as `logpost` receives it,
 and [`summary()`](https://rdrr.io/r/base/summary.html),
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) take
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) take
 the same argument for a fit already made.
 
 ## Accuracy
@@ -360,7 +360,7 @@ the same argument for a fit already made.
 The skew-normal marginals capture skewness that the Laplace
 approximation misses, and they are accurate to the extent that a
 skew-normal fits each marginal (see the diagnostics in
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
 Like INLAvaan, each marginal is scanned along a straight line through
 the mode, and the changing volume of the other parameters enters only to
 first order. When a parameter's spread depends strongly on another,
@@ -369,7 +369,7 @@ factor that vanishes as O(1/n). Examples are a regression coefficient or
 a mean when the noise SD is uncertain. For a normal mean with unknown
 variance the SD is about 11% too small at n = 12, 3% at n = 50, and
 under 1% at n = 200. The `ridge_bend` diagnostic of
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 flags this narrowing where it predicts about 10% or more. By default
 (`width = "trace"`) this is the scan of INLAvaan; `width = "tk"`, or
 `tk_fallback = TRUE` for the flagged parameters only, removes the
@@ -388,7 +388,7 @@ marginals of this model are the same as inlavanilla's: Jamil and Rue
 (2026a, Section 4.4) find the same miss in the lower tail of a variance
 near zero, the boundary pile-up that a unimodal skew-normal cannot
 capture. No check is aimed at this. The `ridge_bend` diagnostic of
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 flagged one of the two (0.44), but the other's ridge bend (0.11) was no
 larger than that of marginals within 7% in SD, and the `tails` check,
 which looks only 4 posterior SDs either side of the mode (the Laplace
@@ -418,7 +418,7 @@ each remove one error:
   Laplace approximation of the marginal (Tierney & Kadane, 1986), INLA's
   "Laplace strategy". Its difference from `"cmp"` is the error of the
   straight path, which the `ridge_bend` diagnostic of
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   predicts.
 
 The skew-normal is fitted to the corrected heights in the same way for
@@ -447,7 +447,7 @@ up to 0.1 on a strongly skewed posterior (0.03 with `grad`), against a
 VB error of 0.01 to 0.2 SDs from the posterior mean itself. On the most
 skewed posteriors the VB correction may then not settle, and the fit
 says it has not converged (see
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md));
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md));
 `grad` is the remedy.
 
 With `grad`, every stage is more accurate. The fit is also faster when a
@@ -484,7 +484,7 @@ supplied `grad` is compared with `logpost` at the mode, from differences
 the fit takes there anyway, so at no cost in calls, and its Jacobian
 there is checked for symmetry, with a warning if either check fails (see
 `grad_gap` in
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
 A supplied `hess` is checked at the mode against central differences of
 `grad`, along two directions, with a warning if it does not match;
 `grad` is then not compared with `logpost`, since no differences of
@@ -508,18 +508,18 @@ averaged over the Gaussian, is zero.
 
 `vb = "onestep"` takes the first Newton step towards that solution, with
 the Laplace curvature, and stops. With a gradient, the average is taken
-over the mode and \\\pm\sqrt 3\\ posterior SDs along each principal axis
-of the covariance. Without one, it is one pass of Stein's identity on
-the rule of `vb = "full"`. Most of the movement is in that step, and
-exact VB is itself an approximation to the posterior mean with an error
-of the same order. If the first step is over 2.5 posterior SDs, or a
-node fails, the iteration carries on with capped steps, within the
-number of calls that the mode and Hessian took.
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+over the mode and \\\pm\sqrt 3\\ along each axis of the symmetric square
+root of the covariance, taken on the correlation scale. Without one, it
+is one pass of Stein's identity on the rule of `vb = "full"`. Most of
+the movement is in that step, and exact VB is itself an approximation to
+the posterior mean with an error of the same order. If the first step is
+over 2.5 posterior SDs, or a node fails, the iteration carries on with
+capped steps, within the number of calls that the mode and Hessian took.
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 then has `vb_step_sigma`, the step still to go, which is `NA` after a
 single step. After a single step the fit checks that it delivered what
 it promised: `vb_gain_ratio` in
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 is the rise in the expected log-posterior over the rise the step
 assumed, and a ratio below 0.5 raises a warning. A large first step can
 also overstate the VB term of the log marginal likelihood, so after a
@@ -594,8 +594,8 @@ With `cores` left at `NULL` the fit follows a plan set with
 [`future::plan()`](https://future.futureverse.org/reference/plan.html),
 and runs serially if there is none, so a plan can apply to every fit in
 a session. `cores = 1` runs serially whatever the plan.
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) use the
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) use the
 setting of the fit.
 
 ## Control
@@ -632,9 +632,9 @@ output. Warnings, such as a gradient that does not match `logpost`, are
 signalled as usual. A fit whose checks look off, such as a mode that was
 not reached, ends with one warning that lists them, as INLAvaan's does
 (see
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 and
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)).
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)).
 
 `verbose = TRUE` adds a full diagnostic of the fit, in grey lines under
 each stage. It reports what the fit computes anyway, with no further
@@ -666,7 +666,7 @@ calls of `logpost` or `grad`:
 
 - The marginals: the shape, NMAD, ridge bend, tails, unscanned mass and
   volume correction `gamma1` of each parameter, with the values that
-  [`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+  [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   flags marked.
 
 - The calls of `logpost`, `grad` and `hess` in each stage, and in all,
@@ -708,11 +708,11 @@ Statistical Association*, *81*(393), 82–86.
 
 ## See also
 
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) for
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) for
 posterior draws and derived quantities,
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 and
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 for diagnostics.
 
 ## Examples
@@ -734,13 +734,13 @@ logpost <- function(theta, y) {
 
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), y = y)
-#> ✔ Found the posterior mode in 10 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.25σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ VB mean correction, max shift 0.25σ [1ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (14ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (11ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -787,18 +787,18 @@ fit <- inla_vanilla(
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25
 #>   One step, accepted (guard > 2.5σ)
-#>   Gain ratio 0.95 (warning < 0.5)
+#>   Gain ratio 0.94 (warning < 0.5)
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 25ms
+#> ℹ Done: 147 logpost calls in 21ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(

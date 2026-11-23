@@ -76,7 +76,7 @@ same with the volume correction `gamma1` added, each as a density scaled
 to a peak of 1, and "Skew-normal fit" is the fitted skew-normal at the
 height it was fitted at. The largest gap between the last two, as a
 fraction of the peak, is the NMAD of
-[`summary.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
+[`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
 `type = "sn_fit_log"` draws the same on a base-10 log scale, which shows
 the tails. Both use the scans kept in the fit, with no further calls of
 `logpost`, and need skew-normal marginals. They show the scale the fit

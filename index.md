@@ -3,7 +3,7 @@
 > INLA-style skew-normal marginals for any log-posterior.
 
 If you can write down the log-likelihood plus the log-prior,
-[inlavanilla](http://haziqj.ml/inlavanilla/) gives you approximate
+[inlavanilla](https://haziqj.ml/inlavanilla/) gives you approximate
 Bayesian inference for the parameters of your model: posterior marginals
 and draws, the marginal likelihood, and leave-one-out cross-validation.
 There is no sampler and no tuning, and small models take milliseconds.
@@ -23,8 +23,8 @@ correction, and `marginals = "gaussian"` keeps the Gaussian marginals
 instead of scanning for skew-normal ones. With both, you get the Laplace
 approximation alone.
 
-Give [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) or
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) the
+Give [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) or
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) the
 log-likelihood as one term per observation, and they estimate the
 model’s predictive accuracy from the fit alone, with no refits and no
 draws.
@@ -49,7 +49,7 @@ A trial records 3 responders out of 20 patients. With a uniform prior on
 the response rate \\p\\, the posterior is \\\text{Beta}(4, 18)\\:
 skewed, and bounded at zero.
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 works best on an unconstrained scale, so we write the log-posterior in
 terms of \\\vartheta = \text{logit}(p)\\. The prior is stated for \\p\\,
 so it carries the Jacobian \\dp / d\vartheta = p(1 - p)\\. The names of
@@ -68,13 +68,13 @@ logpost <- function(theta, y, n) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0), y = 3, n = 20)
-#> ✔ Found the posterior mode in 6 iterations [3ms]
+#> ✔ Found the posterior mode in 6 iterations [4ms]
 #> ✔ VB mean correction, max shift 0.17σ [13ms]
-#> ✔ Fitted 1 skew-normal marginal [19ms]
+#> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (40ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (42ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
@@ -87,7 +87,7 @@ that the fit is made on the logit scale and reports back on the natural
 scale \\p\\. Only the reporting changes: `logpost` still receives
 `logit_p`, and `transform = FALSE` turns the renaming off. See the
 [natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)
+summaries](https://haziqj.ml/inlavanilla/articles/natural-scale.html)
 vignettes for details.
 
 The summary matches the exact posterior:
@@ -103,9 +103,9 @@ rbind(
 #> exact       0.05446357 0.1720895 0.363424
 ```
 
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) draws
-from the approximate posterior. Here, they are seen to have the skew of
-the exact posterior:
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
+draws from the approximate posterior. Here, they are seen to have the
+skew of the exact posterior:
 
 ``` r
 
@@ -122,10 +122,10 @@ it.](reference/figures/README-density-1.png)
 
 `summary(fit)` adds diagnostics for each stage of the approximation, and
 `plot(fit)` draws the marginals. The [Get
-started](http://haziqj.ml/inlavanilla/articles/inlavanilla.md) vignette
-works through a multi-parameter example: it checks the approximation
-against the exact posterior, and covers gradients, derived quantities
-and model comparison.
+started](https://haziqj.ml/inlavanilla/articles/inlavanilla.html)
+vignette works through a multi-parameter example: it checks the
+approximation against the exact posterior, and covers gradients, derived
+quantities and model comparison.
 
 ## References
 

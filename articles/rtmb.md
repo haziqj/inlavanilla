@@ -9,7 +9,7 @@ RTMB is the R interface to TMB (Kristensen et al., 2016), whose models
 are written as C++ templates. RTMB needs neither C++ nor a compiler.
 
 This article writes the structural equation model of [Speeding up with
-Rcpp](http://haziqj.ml/inlavanilla/articles/rcpp.md), with 39
+Rcpp](https://haziqj.ml/inlavanilla/articles/rcpp.md), with 39
 parameters, for RTMB, and compares the fit with the R and C++ fits of
 that article, for speed and for accuracy, with and without RTMB’s
 Hessian. The model, its parameterisation and its priors are described
@@ -263,7 +263,7 @@ VectorXd grad_cpp(const Map<VectorXd> theta, const Map<MatrixXd> Y) {
   such as returning `-Inf` when \\\Sigma\\ is not positive definite,
   cannot be recorded. Where \\\Sigma\\ is not positive definite the tape
   gives `NaN`, which
-  [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
   treats as `-Inf`.
 
 ``` r
@@ -298,7 +298,7 @@ objectives are usually negative log-likelihoods, to be minimised, but
 the sign matters only when random effects are integrated out. There are
 none here, so the function returns the log-posterior itself, and
 `obj$fn`, `obj$gr` and `obj$he` go to
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 as they are.
 
 ``` r
@@ -372,18 +372,18 @@ us <- rbind(
   hessian = c(R = NA, RTMB = time_per_call(hess_tape, reps = 1), `C++` = NA)
 )
 round(us, 1)
-#>             R   RTMB C++
-#> logpost  74.1   62.1 8.1
-#> gradient   NA  122.0 7.9
-#> hessian    NA 3705.0  NA
+#>             R    RTMB C++
+#> logpost  72.4   120.1 6.8
+#> gradient   NA   194.0 7.3
+#> hessian    NA 15350.0  NA
 ```
 
-Replaying the tape takes 0.8 times as long as a call of `logpost_r()`,
-and RTMB’s gradient costs as much as 2 calls of its log-posterior. C++
-is 9 times faster than R, and the hand-written gradient costs as much as
-1 calls of its log-posterior. RTMB’s Hessian tape costs as much as 30
-gradients, about one for each of the 39 parameters, and `obj$he` 50. The
-five fits, with the Hessian tape in the third:
+Replaying the tape takes 1.7 times as long as a call of `logpost_r()`,
+and RTMB’s gradient costs as much as 1.6 calls of its log-posterior. C++
+is 11 times faster than R, and the hand-written gradient costs as much
+as 1.1 calls of its log-posterior. RTMB’s Hessian tape costs as much as
+79 gradients, about one for each of the 39 parameters, and `obj$he` 41.
+The five fits, with the Hessian tape in the third:
 
 ``` r
 
@@ -409,11 +409,11 @@ fits <- list(
 seconds <- vapply(fits, function(f) f$timing[["total"]], 0)
 cbind(t(sapply(fits, function(f) f$counts)), seconds = round(seconds, 2))
 #>                  logpost grad hess seconds
-#> R                  13431    0    0    1.20
-#> RTMB                1291  485    0    0.30
-#> RTMB and Hessian     953  330   12    0.28
-#> C++                13123    0    0    0.30
-#> C++ and gradient    1288  483    0    0.16
+#> R                  13431    0    0    1.13
+#> RTMB                1291  485    0    0.38
+#> RTMB and Hessian     953  330   12    0.45
+#> C++                13123    0    0    0.26
+#> C++ and gradient    1288  483    0    0.13
 ```
 
 Without a gradient the fit calls `logpost` 13,431 times. With one it
@@ -421,8 +421,8 @@ calls `logpost` 1,291 times and the gradient 485 times. Without a
 gradient the count grows with the square of the number of parameters,
 and with one in proportion to it. Here a gradient saves time when it
 costs less than 25 calls of `logpost`. RTMB’s costs far less than that,
-and its fit is 4.1 times as fast as R’s. A hand-written gradient in C++
-is the fastest of all.
+and its fit is 3 times as fast as R’s. A hand-written gradient in C++ is
+the fastest of all.
 
 ## Accuracy
 
@@ -445,10 +445,10 @@ signif(
   2
 )
 #>                  marginals vb_mean   logml
-#> R                  0.00300 0.03300 2.2e-02
-#> RTMB               0.00011 0.00019 8.4e-05
-#> RTMB and Hessian   0.00014 0.00023 1.0e-04
-#> C++                0.00320 0.03300 2.2e-02
+#> R                  0.00240 0.07000 8.4e-02
+#> RTMB               0.00011 0.00017 6.8e-05
+#> RTMB and Hessian   0.00014 0.00021 8.3e-05
+#> C++                0.00260 0.07000 8.3e-02
 #> C++ and gradient   0.00000 0.00000 0.0e+00
 ```
 
@@ -462,17 +462,17 @@ one otherwise. The gradient changes the VB correction, which then takes
 its step from the gradient at 2m + 1 = 79 points instead of from
 `logpost` at (m + 1)(m + 2) = 1,640 points (see the section on the VB
 correction in
-[`?inla_vanilla`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
-Here the fits without a gradient move the VB mean by up to 0.03
-posterior SDs and the log marginal likelihood by 0.02. That is small,
+[`?inla_vanilla`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+Here the fits without a gradient move the VB mean by up to 0.07
+posterior SDs and the log marginal likelihood by 0.08. That is small,
 but it carries over to everything built on the VB mean: the log marginal
-likelihood, [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md), and the
+likelihood, [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md)
+and [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md), and the
 Gaussian marginals of `marginals = "gaussian"`.
 
 ## The Hessian
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 takes the Hessian as `hess`, after `grad`, as
 [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) does, and uses it in
 two places. [`nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes
@@ -488,13 +488,13 @@ would cost far more. The time each stage took, in seconds:
 rtmb_fits <- fits[c("RTMB", "RTMB and Hessian")]
 t(sapply(rtmb_fits, function(f) round(f$timing, 2)))
 #>                  init laplace   vb marginals diagnostics total
-#> RTMB                0    0.04 0.03      0.22           0  0.30
-#> RTMB and Hessian    0    0.04 0.03      0.20           0  0.28
+#> RTMB             0.00    0.07 0.04      0.26           0  0.38
+#> RTMB and Hessian 0.02    0.16 0.04      0.23           0  0.45
 ```
 
 The marginals and the VB correction take the same time with and without
 it. The mode stage takes a little longer, because a Hessian costs about
-as much as m gradients, and the whole fit takes 0.94 times as long. The
+as much as m gradients, and the whole fit takes 1.2 times as long. The
 gap is smaller where the Hessian is sparse, as when each of many
 parameters enters only a few terms of the log-posterior: a Hessian tape
 then costs far fewer than m gradients.
@@ -592,15 +592,14 @@ In order of the work they take, with the first two about equal:
 | Rcpp and a gradient | `logpost` and its gradient in C++ | ✓ | ✓ |
 
 Start with R. If RTMB has the functions your log-posterior needs, it
-gives the gradient’s accuracy for the same work, and the fit is 4.1
-times as fast as R’s. A Hessian finds the mode more precisely for a
-little more time, so it is worth passing when it comes free, as from
-RTMB, but seldom worth deriving by hand. C++ buys speed, which matters
-when each call is expensive, as with a large data set, or when there are
-many, as with many parameters or many fits in a simulation study. A
-gradient by hand is the most work, since it has to be derived, checked
-and kept in step with the log-posterior, and only in C++ does it buy
-both.
+gives the gradient’s accuracy for the same work, and the fit is 3 times
+as fast as R’s. A Hessian finds the mode more precisely for a little
+more time, so it is worth passing when it comes free, as from RTMB, but
+seldom worth deriving by hand. C++ buys speed, which matters when each
+call is expensive, as with a large data set, or when there are many, as
+with many parameters or many fits in a simulation study. A gradient by
+hand is the most work, since it has to be derived, checked and kept in
+step with the log-posterior, and only in C++ does it buy both.
 
 ## References
 

@@ -1,6 +1,6 @@
 # Latent variables
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 fits the parameters \\\theta\\ of a model. Its latent variables \\u\\
 (random effects, factor scores, class memberships) are integrated out
 inside `logpost`, so the fit holds nothing about them. They come back
@@ -25,7 +25,7 @@ depends on what the latent variables are, given the parameters:
 | [Gaussian, in closed form](#gaussian-latent-variables) | draws from that Gaussian |
 | [discrete](#discrete-latent-variables) | sums over the classes |
 | [continuous, with no closed form](#no-closed-form) | draws from a grid |
-| [too many, or too dependent, for a grid](#with-rtmb) | is [`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md), a Gaussian from RTMB |
+| [too many, or too dependent, for a grid](#with-rtmb) | is [`rtmb_latent()`](https://haziqj.ml/inlavanilla/reference/rtmb_latent.md), a Gaussian from RTMB |
 
 Each section below is one row, with a small model.
 
@@ -96,13 +96,13 @@ fit_growth <- inla_vanilla(
   logpost_growth,
   c(b0 = 24, b1 = 0.5, log_tau = 0, log_sigma = 0)
 )
-#> ✔ Found the posterior mode in 18 iterations [11ms]
-#> ✔ VB mean correction, max shift 0.21σ [14ms]
+#> ✔ Found the posterior mode in 18 iterations [10ms]
+#> ✔ VB mean correction, max shift 0.21σ [13ms]
 #> ✔ Fitted 4 skew-normal marginals [32ms]
 fit_growth
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -241.09 · Converged in 18 iterations (75ms)
+#> Log marginal likelihood: -241.09 · Converged in 18 iterations (71ms)
 #> 
 #>             Mean      SD     2.5%      50%    97.5%     Mode
 #> 1 b0     24.023   0.430   23.179   24.023   24.866   24.023 
@@ -153,7 +153,7 @@ mean(u_growth[, "M01"] > u_growth[, "M04"])
 ```
 
 The article on [multilevel
-models](http://haziqj.ml/inlavanilla/articles/multilevel.md) uses this
+models](https://haziqj.ml/inlavanilla/articles/multilevel.md) uses this
 recipe for correlated random intercepts and slopes, and checks it
 against brms.
 
@@ -210,13 +210,13 @@ fit_mix <- inla_vanilla(
     logit_p = 0
   )
 )
-#> ✔ Found the posterior mode in 20 iterations [15ms]
-#> ✔ VB mean correction, max shift 0.14σ [6ms]
-#> ✔ Fitted 5 skew-normal marginals [26ms]
+#> ✔ Found the posterior mode in 20 iterations [14ms]
+#> ✔ VB mean correction, max shift 0.14σ [4ms]
+#> ✔ Fitted 5 skew-normal marginals [21ms]
 fit_mix
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1050.49 · Converged in 20 iterations (68ms)
+#> Log marginal likelihood: -1050.49 · Converged in 20 iterations (57ms)
 #> 
 #>              Mean      SD     2.5%      50%    97.5%     Mode
 #> 1 mu1     54.649   0.713   53.296   54.633   56.094   54.599 
@@ -238,7 +238,7 @@ Given \\\theta\\, the probability of each class is its column of
 `fun` returns this probability, not a draw of the class. Its average
 over the draws of \\\theta\\ is the posterior probability of the class,
 with less Monte Carlo error than an average of drawn classes.
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 passes `y` on to `fun`, so the same function classifies waiting times
 that were never observed:
 
@@ -275,7 +275,7 @@ class itself, `fun` would return `rbinom(length(y), 1, prob)`.
 
 With several binary attributes there is a class for every pattern, and
 the sum runs over all of them. The article on [cognitive diagnostic
-models](http://haziqj.ml/inlavanilla/articles/cdm.md) classifies
+models](https://haziqj.ml/inlavanilla/articles/cdm.md) classifies
 examinees over 8 classes in this way.
 
 ## No closed form
@@ -333,13 +333,13 @@ logpost_cbpp <- function(theta) {
 
 init <- c(b1 = -1.5, b2 = -2, b3 = -2, b4 = -2, log_tau = log(0.5))
 fit_cbpp <- inla_vanilla(logpost_cbpp, init)
-#> ✔ Found the posterior mode in 15 iterations [149ms]
-#> ✔ VB mean correction, max shift 0.15σ [57ms]
-#> ✔ Fitted 5 skew-normal marginals [153ms]
+#> ✔ Found the posterior mode in 15 iterations [125ms]
+#> ✔ VB mean correction, max shift 0.15σ [52ms]
+#> ✔ Fitted 5 skew-normal marginals [136ms]
 fit_cbpp
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -104.92 · Converged in 15 iterations (371ms)
+#> Log marginal likelihood: -104.92 · Converged in 15 iterations (324ms)
 #> 
 #>          Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b1   -1.399  0.238  -1.884  -1.393  -0.948  -1.381
@@ -428,9 +428,9 @@ fit_rtmb <- inla_vanilla(
   init,
   grad = function(theta) -as.vector(obj$gr(unname(theta)))
 )
-#> ✔ Found the posterior mode in 16 iterations [34ms]
-#> ✔ VB mean correction, max shift 0.14σ [27ms]
-#> ✔ Fitted 5 skew-normal marginals [117ms]
+#> ✔ Found the posterior mode in 16 iterations [28ms]
+#> ✔ VB mean correction, max shift 0.14σ [19ms]
+#> ✔ Fitted 5 skew-normal marginals [87ms]
 round(rbind(grid = coef(fit_cbpp), RTMB = coef(fit_rtmb)), 3)
 #>          b1     b2     b3     b4   tau
 #> grid -1.399 -2.397 -2.539 -3.011 0.727
@@ -439,7 +439,7 @@ round(rbind(grid = coef(fit_cbpp), RTMB = coef(fit_rtmb)), 3)
 
 The two fits agree, so the Laplace approximation of the integral is
 accurate here. For the latent variables,
-[`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
+[`rtmb_latent()`](https://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
 builds `fun` from the object:
 
 ``` r
@@ -511,7 +511,7 @@ given \\\theta\\, as in the growth model, there is no gap at all.
 The object need not be the one that was fitted. A model with a closed
 form is faster to fit without RTMB, as the growth model was. An object
 built from its joint density, only for this step, goes to
-[`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
+[`rtmb_latent()`](https://haziqj.ml/inlavanilla/reference/rtmb_latent.md)
 in the same way, provided the object’s parameters are those of `init`,
 in the same order.
 
@@ -530,7 +530,7 @@ applies.
   them out. It is exact to the grid.
 - **Many, or dependent.** Write the joint density in RTMB and pass the
   object to
-  [`rtmb_latent()`](http://haziqj.ml/inlavanilla/reference/rtmb_latent.md).
+  [`rtmb_latent()`](https://haziqj.ml/inlavanilla/reference/rtmb_latent.md).
   It is an approximation, and it is at its best when each latent
   variable has plenty of data.
 

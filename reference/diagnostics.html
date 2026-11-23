@@ -29,7 +29,7 @@ Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (mean_gap) as an internal check (Section 5.1). The mode shift, the
 Hessian condition number and the unscanned mass come from INLAvaan's
 diagnostics(), not from the paper. grad_gap, vb_step_sigma, tails
-and ridge_bend are inlavanilla's own."><meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png"></head><body>
+and ridge_bend are inlavanilla's own."><meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -37,7 +37,7 @@ and ridge_bend are inlavanilla's own."><meta property="og:image" content="http:/
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -270,25 +270,25 @@ skew-normal fits themselves.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           3.12e-05           2.05e-05           2.53e-06           1.01e+00 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         vb_applied       vb_shift_max      vb_kld_global            kld_max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                  1             0.2593             0.0336             0.0336 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                  1             0.2606             0.0340             0.0340 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           kld_mean           nmad_max          nmad_mean unscanned_mass_max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0168             0.0077             0.0039           6.58e-04 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0170             0.0077             0.0039           6.58e-04 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       grad_gap_max        vb_fallback        vb_step_max      vb_gain_ratio </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                 NA                  0                 NA             0.9502 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 NA                  0                 NA             0.9405 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       mean_gap_max     ridge_bend_max      n_heavy_tails </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0041             0.1324                  0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0028             0.1324                  0 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># One row per parameter</span></span></span>
 <span class="r-in"><span><span class="fu">diagnostics</span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"param"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1        mu    0        0        0                0 0.0000  -0.0006</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 log_sigma    0        0        0                0 0.0336   0.0333</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       names grad grad_abs grad_rel mode_shift_sigma   kld vb_shift</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        mu    0        0        0                0 0.000  -0.0001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 log_sigma    0        0        0                0 0.034   0.0335</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   vb_shift_sigma   nmad   alpha unscanned_mass grad_gap vb_step_sigma</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1        -0.0017 0.0000 -0.2519       6.36e-05       NA            NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2         0.2593 0.0077  1.3709       6.58e-04       NA            NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1        -0.0004 0.0000 -0.2519       6.36e-05       NA            NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2         0.2606 0.0077  1.3709       6.58e-04       NA            NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   mean_gap  gamma1 tails ridge_bend</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  -0.0001 -0.0002  TRUE     0.1324</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   0.0041  0.1282  TRUE     0.0000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  -0.0014 -0.0002  TRUE     0.1324</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   0.0028  0.1282  TRUE     0.0000</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

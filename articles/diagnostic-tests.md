@@ -7,7 +7,7 @@ sensitivity and specificity estimated from the pattern of results.
 Koukounari et al. (2021) compared three such latent class models for
 tests of schistosomiasis, fitted in JAGS. This article fits all three to
 one of their data sets with
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
 The infection status sums out of the likelihood, so each model has a
 dozen or so parameters, and each fit takes under a second.
 
@@ -241,9 +241,9 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
 fit_lc <- inla_vanilla(lp_lc, start, y = y, count = count, vb = "full")
-#> ✔ Found the posterior mode in 30 iterations [33ms]
-#> ✔ VB mean correction, max shift 0.37σ [58ms]
-#> ✔ Fitted 11 skew-normal marginals [62ms]
+#> ✔ Found the posterior mode in 30 iterations [29ms]
+#> ✔ VB mean correction, max shift 0.38σ [42ms]
+#> ✔ Fitted 11 skew-normal marginals [53ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
@@ -252,9 +252,18 @@ fit_lcre <- inla_vanilla(
   gh = gh,
   vb = "full"
 )
-#> ✔ Found the posterior mode in 29 iterations [197ms]
-#> ✔ VB mean correction, max shift 0.59σ (fallback optimiser) [1.0s]
-#> ✔ Fitted 13 skew-normal marginals [242ms]
+#> ✔ Found the posterior mode in 29 iterations [183ms]
+#> ! VB mean correction, max shift 0.5σ (fallback optimiser), not settled [1.4s]
+#> ✔ Fitted 13 skew-normal marginals [222ms]
+#> Warning: Fit diagnostics flagged 1 potential issue:
+#> ✖ The VB correction did not settle: one more step would move
+#>   `logit_Se_Antigens` by 0.263σ.
+#> ℹ Without a gradient the VB mean is approximate on a posterior this far
+#>   from Gaussian; supply `grad` if you can.
+#> ℹ The skew-normal marginals do not depend on it; `vb = "off"` leaves it
+#>   out.
+#> ℹ Inspect with `diagnostics(fit)` and `diagnostics(fit, type = "param")`;
+#>   `vignette("diagnostics", package = "inlavanilla")` explains each check.
 start_fm <- c(
   start[1],
   logit_eta1 = qlogis(0.2),
@@ -263,9 +272,9 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
 fit_fm <- inla_vanilla(lp_fm, start_fm, y = y, count = count, vb = "full")
-#> ✔ Found the posterior mode in 25 iterations [50ms]
-#> ✔ VB mean correction, max shift 0.44σ [117ms]
-#> ✔ Fitted 13 skew-normal marginals [74ms]
+#> ✔ Found the posterior mode in 25 iterations [45ms]
+#> ✔ VB mean correction, max shift 0.42σ [97ms]
+#> ✔ Fitted 13 skew-normal marginals [73ms]
 ```
 
 The seconds each fit took:
@@ -275,7 +284,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.17 1.48 0.26
+#> 0.14 1.93 0.23
 ```
 
 ## Results
@@ -417,7 +426,7 @@ logml <- c(
 )
 round(logml - max(logml), 2)
 #>    LC  LCRE    FM 
-#> -0.33  0.00 -2.68
+#> -0.15  0.00 -2.53
 ```
 
 The conditionally independent and random effects models are a third of a
@@ -456,5 +465,5 @@ class analysis for evaluating accuracy of diagnostic tests.
 
 [^1]: These fits use `vb = "full"`, as the models are compared by their
     log marginal likelihoods. The [diagnostics
-    vignette](http://haziqj.ml/inlavanilla/articles/diagnostics.md)
+    vignette](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
     explains why.

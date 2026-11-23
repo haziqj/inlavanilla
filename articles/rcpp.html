@@ -23,7 +23,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="rcpp_files/libs/quarto-html/popper.min.js"></script><script src="rcpp_files/libs/quarto-html/tippy.umd.min.js"></script><link href="rcpp_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="rcpp_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Speeding up with Rcpp">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,7 +100,7 @@
 <p>This article does both for a structural equation model (SEM) with 39 parameters. We write the log-posterior in plain R first, then in C++ with <a href="https://www.rcpp.org/" class="external-link">Rcpp</a> and <a href="https://cran.r-project.org/package=RcppEigen" class="external-link">RcppEigen</a>, and then add an analytic gradient in C++. The article <a href="rtmb.html">Gradients and Hessians with RTMB</a> writes the same model in R for RTMB, which computes the gradient and the Hessian by automatic differentiation, and compares the routes for speed and accuracy.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">PoliticalDemocracy</span>, package <span class="op">=</span> <span class="st">"lavaan"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <section class="level2"><h2 id="the-model">The model<a class="anchor" aria-label="anchor" href="#the-model"></a>
@@ -333,14 +333,14 @@
 <span><span class="op">}</span></span>
 <span><span class="va">us_r</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">logpost_r</span><span class="op">(</span><span class="va">init</span>, <span class="va">Y</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="va">us_r</span></span>
-<span><span class="co">#&gt; [1] 73</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 69</span></span></code></pre></div>
 </div>
 <p>With <code>vb = "off"</code>, <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> skips the VB correction and runs only the mode search and the skew-normal marginals:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_r</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span>, vb <span class="op">=</span> <span class="st">"off"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 82 iterations [565ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [500ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 82 iterations [541ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [461ms]</span></span>
 <span><span class="va">fit_r</span><span class="op">$</span><span class="va">counts</span></span>
 <span><span class="co">#&gt; logpost    grad    hess </span></span>
 <span><span class="co">#&gt;   11633       0       0</span></span></code></pre></div>
@@ -553,24 +553,24 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="va">us_grad</span> <span class="op">&lt;-</span> <span class="fu">time_per_call</span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu">grad_cpp</span><span class="op">(</span><span class="va">init</span>, <span class="va">Y</span><span class="op">)</span>, n <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>R <span class="op">=</span> <span class="va">us_r</span>, `C++` <span class="op">=</span> <span class="va">us_cpp</span>, `C++ gradient` <span class="op">=</span> <span class="va">us_grad</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            R          C++ C++ gradient </span></span>
-<span><span class="co">#&gt;         73.0          7.9          8.0</span></span></code></pre></div>
+<span><span class="co">#&gt;         69.0          6.5          7.1</span></span></code></pre></div>
 </div>
-<p>The C++ log-posterior is about 9 times faster than the R one, and the analytic gradient costs about the same as one log-posterior, where finite differences need 40.</p>
+<p>The C++ log-posterior is about 11 times faster than the R one, and the analytic gradient costs about the same as one log-posterior, where finite differences need 40.</p>
 <p>Now the full fit, with the VB correction, first without a gradient:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_cpp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 78 iterations [81ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.57σ [41ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [180ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 78 iterations [69ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.61σ [30ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [150ms]</span></span></code></pre></div>
 </div>
-<p>It took 13,123 calls. In R, at 73 microseconds a call, these would take about 1 seconds. With the gradient:</p>
+<p>It took 13,123 calls. In R, at 69 microseconds a call, these would take about 0.9 seconds. With the gradient:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_cpp</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad_cpp</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 90 iterations [8ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.58σ [7ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [145ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 90 iterations [13ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.54σ [4ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 39 skew-normal marginals [112ms]</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> compares the gradient with <code>logpost</code> at the mode, at no extra cost, and checks its Jacobian there for symmetry, and warns if either check fails. Here neither does. The calls and times (in seconds) of the three fits:</p>
 <div class="cell" data-layout-align="center">
@@ -578,13 +578,13 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <code class="sourceCode R"><span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>`R, no VB` <span class="op">=</span> <span class="va">fit_r</span>, `C++` <span class="op">=</span> <span class="va">fit_cpp</span>, `C++ and gradient` <span class="op">=</span> <span class="va">fit</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">fits</span>, <span class="kw">function</span><span class="op">(</span><span class="va">f</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">counts</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">f</span><span class="op">$</span><span class="va">timing</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  logpost grad hess init laplace   vb marginals diagnostics</span></span>
-<span><span class="co">#&gt; R, no VB           11633    0    0 0.00    0.57 0.00      0.50           0</span></span>
-<span><span class="co">#&gt; C++                13123    0    0 0.00    0.08 0.04      0.18           0</span></span>
-<span><span class="co">#&gt; C++ and gradient    1288  483    0 0.01    0.01 0.01      0.15           0</span></span>
+<span><span class="co">#&gt; R, no VB           11633    0    0    0    0.54 0.00      0.46        0.00</span></span>
+<span><span class="co">#&gt; C++                13123    0    0    0    0.07 0.03      0.15        0.00</span></span>
+<span><span class="co">#&gt; C++ and gradient    1288  483    0    0    0.01 0.00      0.11        0.01</span></span>
 <span><span class="co">#&gt;                  total</span></span>
-<span><span class="co">#&gt; R, no VB          1.07</span></span>
-<span><span class="co">#&gt; C++               0.31</span></span>
-<span><span class="co">#&gt; C++ and gradient  0.17</span></span></code></pre></div>
+<span><span class="co">#&gt; R, no VB          1.01</span></span>
+<span><span class="co">#&gt; C++               0.25</span></span>
+<span><span class="co">#&gt; C++ and gradient  0.14</span></span></code></pre></div>
 </div>
 <p>With a gradient, the VB correction takes it at <span class="math inline">\(2m + 1 = 79\)</span> points, about as many as one numerical Hessian. Without one, it takes <code>logpost</code> at <span class="math inline">\((m + 1)(m + 2) = 1{,}640\)</span> points.</p>
 <p>The three fits agree. The skew-normal marginals do not depend on the VB correction, so even <code>fit_r</code> gives the same table. The largest difference in a posterior mean or quantile, in posterior SDs:</p>
@@ -596,7 +596,7 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span>  `C++` <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_cpp</span><span class="op">$</span><span class="va">summary</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span> <span class="op">/</span> <span class="va">sds</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;           R         C++ </span></span>
-<span><span class="co">#&gt; 0.002982603 0.003210903</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.002415743 0.002645813</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="using-several-cores">Using several cores<a class="anchor" aria-label="anchor" href="#using-several-cores"></a>
 </h2>
@@ -629,11 +629,11 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 summary ─────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1686.749 · Converged in 90 iterations (171ms)</span></span>
-<span><span class="co">#&gt; Laplace -1687.471 + VB term 0.72</span></span>
-<span><span class="co">#&gt; 1288 logpost and 483 grad calls: mode 9ms, VB 8ms, marginals 146ms</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1686.790 · Converged in 90 iterations (140ms)</span></span>
+<span><span class="co">#&gt; Laplace -1687.471 + VB term 0.68</span></span>
+<span><span class="co">#&gt; 1288 logpost and 483 grad calls: mode 14ms, VB 5ms, marginals 113ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -656,12 +656,12 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="co">#&gt; 16 c                  1.276   0.128    1.045    1.269    1.548    1.253 </span></span>
 <span><span class="co">#&gt; 17 beta_dem60_ind60   1.469   0.391    0.717    1.463    2.253    1.451 </span></span>
 <span><span class="co">#&gt; 18 beta_dem65_ind60   0.587   0.242    0.120    0.585    1.068    0.580 </span></span>
-<span><span class="co">#&gt; 19 beta_dem65_dem60   0.8679  0.0770   0.7216   0.8662   1.0239   0.8628</span></span>
+<span><span class="co">#&gt; 19 beta_dem65_dem60   0.8679  0.0770   0.7216   0.8662   1.0238   0.8628</span></span>
 <span><span class="co">#&gt; 20 logv_ind60        -0.794   0.192   -1.166   -0.796   -0.412   -0.799 </span></span>
 <span><span class="co">#&gt; 21 logv_dem60         1.359   0.227    0.909    1.361    1.797    1.366 </span></span>
-<span><span class="co">#&gt; 22 logv_dem65        -1.599   0.862   -3.601   -1.461   -0.302   -1.098 </span></span>
+<span><span class="co">#&gt; 22 logv_dem65        -1.599   0.861   -3.600   -1.460   -0.302   -1.098 </span></span>
 <span><span class="co">#&gt; 23 logv_x1           -2.438   0.238   -2.926   -2.431   -1.989   -2.416 </span></span>
-<span><span class="co">#&gt; 24 logv_x2           -2.165   0.567   -3.462   -2.086   -1.272   -1.897 </span></span>
+<span><span class="co">#&gt; 24 logv_x2           -2.165   0.567   -3.461   -2.086   -1.272   -1.897 </span></span>
 <span><span class="co">#&gt; 25 logv_x3           -0.695   0.194   -1.072   -0.697   -0.310   -0.700 </span></span>
 <span><span class="co">#&gt; 26 logv_y1            0.685   0.246    0.181    0.692    1.146    0.708 </span></span>
 <span><span class="co">#&gt; 27 logv_y2            2.065   0.178    1.719    2.063    2.418    2.061 </span></span>
@@ -675,60 +675,101 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="co">#&gt; 35 z_y2_y4            0.283   0.123    0.041    0.283    0.524    0.283 </span></span>
 <span><span class="co">#&gt; 36 z_y2_y6            0.361   0.108    0.153    0.360    0.577    0.358 </span></span>
 <span><span class="co">#&gt; 37 z_y3_y7            0.184   0.136   -0.085    0.185    0.449    0.187 </span></span>
-<span><span class="co">#&gt; 38 z_y4_y8            0.108   0.133   -0.158    0.109    0.365    0.113 </span></span>
+<span><span class="co">#&gt; 38 z_y4_y8            0.108   0.133   -0.158    0.110    0.365    0.113 </span></span>
 <span><span class="co">#&gt; 39 z_y6_y8            0.328   0.123    0.087    0.329    0.569    0.329 </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Diagnostics ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;                       VB shift       NMAD  Unscanned  Ridge bend    Mean gap</span></span>
-<span><span class="co">#&gt;  1 nu_x1             -0.000054  0.0000042   0.000063       0.054  -0.0000021</span></span>
-<span><span class="co">#&gt;  2 nu_x2             -0.00019   0.0000045   0.000063       0.054  -0.0000079</span></span>
-<span><span class="co">#&gt;  3 nu_x3             -0.00017   0.0000039   0.000063       0.054  -0.0000025</span></span>
-<span><span class="co">#&gt;  4 nu_y1             -0.00046   0.0000068   0.000063       0.050   0.000011 </span></span>
-<span><span class="co">#&gt;  5 nu_y2             -0.00053   0.0000047   0.000063       0.042   0.000012 </span></span>
-<span><span class="co">#&gt;  6 nu_y3             -0.00052   0.0000059   0.000063       0.047  -0.0000036</span></span>
-<span><span class="co">#&gt;  7 nu_y4             -0.00058   0.0000065   0.000063       0.047   0.0000058</span></span>
-<span><span class="co">#&gt;  8 nu_y5             -0.00045   0.0000063   0.000063       0.049   0.0000046</span></span>
-<span><span class="co">#&gt;  9 nu_y6             -0.00056   0.0000065   0.000063       0.051   0.000013 </span></span>
-<span><span class="co">#&gt; 10 nu_y7             -0.00054   0.0000064   0.000063       0.046  -0.0000066</span></span>
-<span><span class="co">#&gt; 11 nu_y8             -0.00058   0.0000066   0.000063       0.048   0.0000061</span></span>
-<span><span class="co">#&gt; 12 lam_x2             0.34      0.0067      0.0014         0.043   0.043    </span></span>
-<span><span class="co">#&gt; 13 lam_x3             0.17      0.0043      0.00032        0.079  -0.00051  </span></span>
-<span><span class="co">#&gt; 14 a                  0.17      0.0043      0.00048        0.079  -0.0032   </span></span>
-<span><span class="co">#&gt; 15 b                  0.11      0.0048      0.00042        0.11    0.013    </span></span>
-<span><span class="co">#&gt; 16 c                  0.22      0.0069      0.00090        0.081   0.013    </span></span>
-<span><span class="co">#&gt; 17 beta_dem60_ind60   0.00078   0.0019      0.000093       0.082  -0.0035   </span></span>
-<span><span class="co">#&gt; 18 beta_dem65_ind60  -0.10      0.00038     0.000071       0.075   0.017    </span></span>
-<span><span class="co">#&gt; 19 beta_dem65_dem60   0.18      0.0038      0.00024        0.042  -0.037    </span></span>
-<span><span class="co">#&gt; 20 logv_ind60        -0.039     0.0030      0.000069       0.038  -0.0010   </span></span>
-<span><span class="co">#&gt; 21 logv_dem60        -0.012     0.0022      0.000078       0.059   0.0070   </span></span>
-<span><span class="co">#&gt; 22 logv_dem65        -0.58      0.044       0.0020         0.44    0.35     </span></span>
-<span><span class="co">#&gt; 23 logv_x1            0.28      0.0060      0.000072       0.14    0.024    </span></span>
-<span><span class="co">#&gt; 24 logv_x2           -0.30      0.033       0.0031         0.11    0.037    </span></span>
-<span><span class="co">#&gt; 25 logv_x3            0.31      0.0030      0.00023        0.015   0.022    </span></span>
-<span><span class="co">#&gt; 26 logv_y1            0.32      0.0085      0.000081       0.033  -0.015    </span></span>
-<span><span class="co">#&gt; 27 logv_y2            0.27      0.00018     0.00018        0.017   0.0050   </span></span>
-<span><span class="co">#&gt; 28 logv_y3            0.34      0.00072     0.00025        0.018  -0.0090   </span></span>
-<span><span class="co">#&gt; 29 logv_y4            0.18      0.0074      0.00011        0.041  -0.0038   </span></span>
-<span><span class="co">#&gt; 30 logv_y5            0.32      0.0050      0.00013        0.028  -0.0043   </span></span>
-<span><span class="co">#&gt; 31 logv_y6            0.31      0.0014      0.00016        0.024  -0.011    </span></span>
-<span><span class="co">#&gt; 32 logv_y7            0.33      0.0057      0.00013        0.018  -0.022    </span></span>
-<span><span class="co">#&gt; 33 logv_y8            0.24      0.0051      0.000084       0.034  -0.027    </span></span>
-<span><span class="co">#&gt; 34 z_y1_y5           -0.029     0.0026      0.00013        0.050   0.025    </span></span>
-<span><span class="co">#&gt; 35 z_y2_y4           -0.074     0.0070      0.000052       0.094   0.0041   </span></span>
-<span><span class="co">#&gt; 36 z_y2_y6           -0.060     0.012       0.000052       0.12    0.0085   </span></span>
-<span><span class="co">#&gt; 37 z_y3_y7            0.013     0.0055      0.000057       0.061   0.034    </span></span>
-<span><span class="co">#&gt; 38 z_y4_y8           -0.11      0.0041      0.00010        0.13    0.019    </span></span>
-<span><span class="co">#&gt; 39 z_y6_y8           -0.061     0.0053      0.000058       0.080  -0.018    </span></span>
+<span><span class="co">#&gt;                       VB shift       NMAD  Unscanned  Ridge bend</span></span>
+<span><span class="co">#&gt;  1 nu_x1             -0.000063  0.0000042   0.000063       0.054</span></span>
+<span><span class="co">#&gt;  2 nu_x2             -0.00020   0.0000045   0.000063       0.054</span></span>
+<span><span class="co">#&gt;  3 nu_x3             -0.00018   0.0000039   0.000063       0.054</span></span>
+<span><span class="co">#&gt;  4 nu_y1             -0.00045   0.0000068   0.000063       0.050</span></span>
+<span><span class="co">#&gt;  5 nu_y2             -0.00052   0.0000047   0.000063       0.042</span></span>
+<span><span class="co">#&gt;  6 nu_y3             -0.00052   0.0000059   0.000063       0.047</span></span>
+<span><span class="co">#&gt;  7 nu_y4             -0.00058   0.0000065   0.000063       0.047</span></span>
+<span><span class="co">#&gt;  8 nu_y5             -0.00045   0.0000063   0.000063       0.049</span></span>
+<span><span class="co">#&gt;  9 nu_y6             -0.00055   0.0000065   0.000063       0.051</span></span>
+<span><span class="co">#&gt; 10 nu_y7             -0.00054   0.0000064   0.000063       0.046</span></span>
+<span><span class="co">#&gt; 11 nu_y8             -0.00058   0.0000066   0.000063       0.048</span></span>
+<span><span class="co">#&gt; 12 lam_x2             0.33      0.0067      0.0014         0.043</span></span>
+<span><span class="co">#&gt; 13 lam_x3             0.17      0.0043      0.00032        0.079</span></span>
+<span><span class="co">#&gt; 14 a                  0.17      0.0043      0.00048        0.079</span></span>
+<span><span class="co">#&gt; 15 b                  0.12      0.0048      0.00042        0.11 </span></span>
+<span><span class="co">#&gt; 16 c                  0.22      0.0069      0.00090        0.081</span></span>
+<span><span class="co">#&gt; 17 beta_dem60_ind60  -0.00031   0.0019      0.000093       0.082</span></span>
+<span><span class="co">#&gt; 18 beta_dem65_ind60  -0.096     0.00038     0.000071       0.075</span></span>
+<span><span class="co">#&gt; 19 beta_dem65_dem60   0.16      0.0038      0.00024        0.042</span></span>
+<span><span class="co">#&gt; 20 logv_ind60        -0.035     0.0030      0.000069       0.038</span></span>
+<span><span class="co">#&gt; 21 logv_dem60        -0.0099    0.0022      0.000078       0.059</span></span>
+<span><span class="co">#&gt; 22 logv_dem65        -0.54      0.045       0.0020         0.44 </span></span>
+<span><span class="co">#&gt; 23 logv_x1            0.27      0.0060      0.000072       0.14 </span></span>
+<span><span class="co">#&gt; 24 logv_x2           -0.30      0.033       0.0031         0.11 </span></span>
+<span><span class="co">#&gt; 25 logv_x3            0.31      0.0030      0.00023        0.015</span></span>
+<span><span class="co">#&gt; 26 logv_y1            0.31      0.0085      0.000081       0.033</span></span>
+<span><span class="co">#&gt; 27 logv_y2            0.27      0.00018     0.00018        0.017</span></span>
+<span><span class="co">#&gt; 28 logv_y3            0.33      0.00072     0.00025        0.018</span></span>
+<span><span class="co">#&gt; 29 logv_y4            0.18      0.0074      0.00011        0.041</span></span>
+<span><span class="co">#&gt; 30 logv_y5            0.32      0.0050      0.00013        0.028</span></span>
+<span><span class="co">#&gt; 31 logv_y6            0.31      0.0014      0.00016        0.024</span></span>
+<span><span class="co">#&gt; 32 logv_y7            0.32      0.0057      0.00013        0.018</span></span>
+<span><span class="co">#&gt; 33 logv_y8            0.22      0.0051      0.000084       0.034</span></span>
+<span><span class="co">#&gt; 34 z_y1_y5           -0.018     0.0026      0.00013        0.050</span></span>
+<span><span class="co">#&gt; 35 z_y2_y4           -0.073     0.0070      0.000052       0.094</span></span>
+<span><span class="co">#&gt; 36 z_y2_y6           -0.059     0.012       0.000052       0.12 </span></span>
+<span><span class="co">#&gt; 37 z_y3_y7            0.028     0.0055      0.000057       0.061</span></span>
+<span><span class="co">#&gt; 38 z_y4_y8           -0.11      0.0041      0.00010        0.13 </span></span>
+<span><span class="co">#&gt; 39 z_y6_y8           -0.067     0.0053      0.000058       0.080</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;                         Mean gap</span></span>
+<span><span class="co">#&gt;  1 nu_x1              0.0000072 </span></span>
+<span><span class="co">#&gt;  2 nu_x2              0.00000035</span></span>
+<span><span class="co">#&gt;  3 nu_x3              0.0000067 </span></span>
+<span><span class="co">#&gt;  4 nu_y1              0.0000043 </span></span>
+<span><span class="co">#&gt;  5 nu_y2              0.0000086 </span></span>
+<span><span class="co">#&gt;  6 nu_y3             -0.0000022 </span></span>
+<span><span class="co">#&gt;  7 nu_y4              0.0000041 </span></span>
+<span><span class="co">#&gt;  8 nu_y5              0.00000046</span></span>
+<span><span class="co">#&gt;  9 nu_y6              0.0000088 </span></span>
+<span><span class="co">#&gt; 10 nu_y7             -0.0000048 </span></span>
+<span><span class="co">#&gt; 11 nu_y8              0.0000033 </span></span>
+<span><span class="co">#&gt; 12 lam_x2             0.052     </span></span>
+<span><span class="co">#&gt; 13 lam_x3             0.0036    </span></span>
+<span><span class="co">#&gt; 14 a                 -0.00022   </span></span>
+<span><span class="co">#&gt; 15 b                  0.0100    </span></span>
+<span><span class="co">#&gt; 16 c                  0.012     </span></span>
+<span><span class="co">#&gt; 17 beta_dem60_ind60  -0.0024    </span></span>
+<span><span class="co">#&gt; 18 beta_dem65_ind60   0.011     </span></span>
+<span><span class="co">#&gt; 19 beta_dem65_dem60  -0.020     </span></span>
+<span><span class="co">#&gt; 20 logv_ind60        -0.0048    </span></span>
+<span><span class="co">#&gt; 21 logv_dem60         0.0049    </span></span>
+<span><span class="co">#&gt; 22 logv_dem65         0.30      </span></span>
+<span><span class="co">#&gt; 23 logv_x1            0.038     </span></span>
+<span><span class="co">#&gt; 24 logv_x2            0.037     </span></span>
+<span><span class="co">#&gt; 25 logv_x3            0.022     </span></span>
+<span><span class="co">#&gt; 26 logv_y1           -0.0053    </span></span>
+<span><span class="co">#&gt; 27 logv_y2            0.0053    </span></span>
+<span><span class="co">#&gt; 28 logv_y3           -0.0033    </span></span>
+<span><span class="co">#&gt; 29 logv_y4            0.00061   </span></span>
+<span><span class="co">#&gt; 30 logv_y5            0.0018    </span></span>
+<span><span class="co">#&gt; 31 logv_y6           -0.0048    </span></span>
+<span><span class="co">#&gt; 32 logv_y7           -0.012     </span></span>
+<span><span class="co">#&gt; 33 logv_y8           -0.014     </span></span>
+<span><span class="co">#&gt; 34 z_y1_y5            0.014     </span></span>
+<span><span class="co">#&gt; 35 z_y2_y4            0.0024    </span></span>
+<span><span class="co">#&gt; 36 z_y2_y6            0.0078    </span></span>
+<span><span class="co">#&gt; 37 z_y3_y7            0.019     </span></span>
+<span><span class="co">#&gt; 38 z_y4_y8            0.014     </span></span>
+<span><span class="co">#&gt; 39 z_y6_y8           -0.012     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 90 iterations (Newton step 1.1e-04σ).</span></span>
 <span><span class="co">#&gt; ✔ `grad` matches `logpost` at the mode (gap 0.0083).</span></span>
 <span><span class="co">#&gt; ✔ Hessian condition number 65, in SD units.</span></span>
-<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.58σ, gain ratio 0.878.</span></span>
-<span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.044, unscanned mass 0.0031.</span></span>
+<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.54σ, gain ratio 0.873.</span></span>
+<span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.045, unscanned mass 0.0031.</span></span>
 <span><span class="co">#&gt; ! Ridge bend &gt; 0.25 for `logv_dem65` (0.44): the marginal SD may be &gt;10%</span></span>
 <span><span class="co">#&gt;   too small.</span></span>
-<span><span class="co">#&gt; ! Mean gap &gt; 0.1σ for `logv_dem65` (0.35): the posterior is far from</span></span>
+<span><span class="co">#&gt; ! Mean gap &gt; 0.1σ for `logv_dem65` (0.30): the posterior is far from</span></span>
 <span><span class="co">#&gt;   Gaussian there, and either mean may be off.</span></span></code></pre></div>
 </div>
 <p>The intercepts are close to symmetric, and the loadings and regressions are mildly right-skewed. The most skewed marginal is that of the disturbance variance of <code>dem65</code>. Democracy in 1960 and industrialisation explain most of the variation in democracy in 1965 (see <span class="math inline">\(R^2\)</span> below), so this variance is small and poorly determined, and its log has a long left tail. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags it twice: the straight scan through the mode misses enough log-density that its marginal may come out too narrow, and its skew-normal and VB means differ by 0.35 posterior SDs, another sign that the marginal is hard to approximate.</p>
@@ -811,9 +852,9 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span><span class="co">#&gt; beta_dem60_ind60         1.4685     1.4685       0.3915   0.3915</span></span>
 <span><span class="co">#&gt; beta_dem65_ind60         0.5872     0.5872       0.2417   0.2417</span></span>
 <span><span class="co">#&gt; beta_dem65_dem60         0.8679     0.8679       0.0770   0.0770</span></span>
-<span><span class="co">#&gt; logv_dem65              -1.5981    -1.5993       0.8610   0.8616</span></span>
+<span><span class="co">#&gt; logv_dem65              -1.5981    -1.5991       0.8610   0.8614</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">sn_mean</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span>, <span class="st">"Mean"</span><span class="op">]</span><span class="op">)</span> <span class="op">/</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span>, <span class="st">"SD"</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.001406028</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.001139904</span></span></code></pre></div>
 </div>
 <p>Over all 39 parameters, the means differ by at most about <span class="math inline">\(10^{-4}\)</span> posterior SDs. The two packages share the skew-normal marginals, and with them the limitation for <code>logv_dem65</code> and <code>logv_x2</code> described above.</p>
 <p>The log marginal likelihoods share their Laplace part. The VB terms differ a little, because INLAvaan iterates the VB correction to convergence, on 64 Sobol points, and inlavanilla takes one step on a deterministic rule:</p>
@@ -834,11 +875,11 @@ G = \tfrac{1}{2} \left( \Omega D^\top D \, \Omega - n \Omega \right)
 <span>  <span class="op">)</span>,</span>
 <span>  <span class="fl">3</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;            Laplace    VB     total</span></span>
-<span><span class="co">#&gt; INLAvaan -1687.471 0.687 -1686.784</span></span>
-<span><span class="co">#&gt; ours     -1687.471 0.722 -1686.749</span></span></code></pre></div>
+<span><span class="co">#&gt;            Laplace    VB    total</span></span>
+<span><span class="co">#&gt; INLAvaan -1687.471 0.611 -1686.86</span></span>
+<span><span class="co">#&gt; ours     -1687.471 0.681 -1686.79</span></span></code></pre></div>
 </div>
-<p>The Laplace parts agree to the last digit. The VB terms differ by -0.04. The first is the iterated solution, with the Monte Carlo error of 64 Sobol points, and the second a single step.</p>
+<p>The Laplace parts agree to the last digit. The VB terms differ by -0.07. The first is the iterated solution, with the Monte Carlo error of 64 Sobol points, and the second a single step.</p>
 </section></section><section class="level2"><h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <p>Bollen, K. A. (1989). <em>Structural equations with latent variables</em>. Wiley. <a href="https://doi.org/10.1002/9781118619179" class="external-link uri">https://doi.org/10.1002/9781118619179</a></p>

@@ -1,6 +1,6 @@
 # Natural-scale summaries
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 works on an unconstrained scale: a standard deviation goes in as its
 log, a probability as its logit, a correlation as its inverse hyperbolic
 tangent. Those are the right scales to compute on, and the wrong ones to
@@ -18,14 +18,14 @@ its natural scale:
 
 The rule is short. You write on the unconstrained scale: `logpost`,
 `grad`, `hess`, the `loglik` of
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
-of [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and the `fun`
+of [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 all receive the parameter under the name you gave it. You read on the
 natural scale: [`print()`](https://rdrr.io/r/base/print.html),
 [`summary()`](https://rdrr.io/r/base/summary.html),
 [`coef()`](https://rdrr.io/r/stats/coef.html),
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and the draws
-of [`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+of [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 all show the parameter without its prefix.
 
 ## A rate
@@ -49,9 +49,9 @@ logpost <- function(theta, y) {
 }
 fit <- inla_vanilla(logpost, init = c(log_rate = 0), y = y, silent = TRUE)
 fit
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.35 · Converged in 7 iterations (17ms)
+#> Log marginal likelihood: -12.35 · Converged in 7 iterations (15ms)
 #> 
 #>          Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 rate  1.875  0.485  1.048  1.834  2.940  1.758
@@ -182,9 +182,9 @@ logpost_bvn <- function(theta, x) {
 init <- c(mu1 = 5, mu2 = 3, log_sigma1 = 0, log_sigma2 = 0, atanh_rho = 0)
 fit_bvn <- inla_vanilla(logpost_bvn, init, x = x, silent = TRUE)
 fit_bvn
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -39.67 · Converged in 33 iterations (54ms)
+#> Log marginal likelihood: -39.67 · Converged in 33 iterations (46ms)
 #> 
 #>             Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 mu1     5.0058  0.0493  4.9091  5.0058  5.1024  5.0058
@@ -227,7 +227,7 @@ fit_bvn$transform
 
 ### Draws and derived quantities
 
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 returns draws on the natural scale, under the natural names:
 
 ``` r
@@ -260,7 +260,7 @@ derived <- sampling(fit_bvn, nsamp = 10000, fun = function(theta) {
 t(apply(derived, 2, quantile, c(0.025, 0.5, 0.975)))
 #>                  2.5%        50%     97.5%
 #> covariance 0.06124972 0.09913891 0.1600525
-#> slope      0.58066257 0.77928684 0.9984041
+#> slope      0.58066256 0.77928683 0.9984040
 ```
 
 The sample covariance is 0.099 and the least-squares slope 0.799, both
@@ -269,7 +269,7 @@ well inside their intervals.
 This is also the answer for anything that is not a one-to-one map of a
 single parameter. A covariance matrix, for one, ties its entries
 together, and no entry can be mapped back on its own. The [correlation
-matrices article](http://haziqj.ml/inlavanilla/articles/correlation.md)
+matrices article](https://haziqj.ml/inlavanilla/articles/correlation.md)
 builds one from unconstrained parameters and reads it back through the
 draws.
 
@@ -332,7 +332,7 @@ fit_off <- inla_vanilla(
   silent = TRUE
 )
 fit_off
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
 #> Log marginal likelihood: -12.35 · Converged in 7 iterations (7ms)
 #> 
@@ -343,7 +343,7 @@ fit_off
 The two fits are the same fit.
 [`summary()`](https://rdrr.io/r/base/summary.html),
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) take
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) take
 `transform = FALSE` as well, so there is no need to refit to see the
 other scale:
 
@@ -352,7 +352,7 @@ other scale:
 set.seed(1)
 head(sampling(fit_bvn, nsamp = 3, transform = FALSE))
 #>           mu1      mu2 log_sigma1 log_sigma2 atanh_rho
-#> [1,] 4.974906 3.460932 -0.9823351 -0.9596205 0.8800905
+#> [1,] 4.974906 3.460932 -0.9823351 -0.9596206 0.8800905
 #> [2,] 5.014849 3.446804 -0.9559824 -0.7805312 0.7876613
 #> [3,] 4.964592 3.365724 -0.9730748 -0.8940833 1.1111349
 ```

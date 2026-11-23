@@ -23,7 +23,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="inlavanilla_files/libs/quarto-html/popper.min.js"></script><script src="inlavanilla_files/libs/quarto-html/tippy.umd.min.js"></script><link href="inlavanilla_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="inlavanilla_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Get started with inlavanilla">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,7 +98,7 @@
 
     <section class="level2"><h2 id="the-idea">The idea<a class="anchor" aria-label="anchor" href="#the-idea"></a>
 </h2>
-<p>If you can write down the log-likelihood plus the log-prior, <a href="http://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> on any log-posterior:</p>
+<p>If you can write down the log-likelihood plus the log-prior, <a href="https://haziqj.ml/inlavanilla/">inlavanilla</a> gives you approximate Bayesian inference for the parameters of your model: posterior marginals and draws, the marginal likelihood, and leave-one-out cross-validation. There is no sampler and no tuning, and small models take milliseconds. It runs the approximation pipeline of <a href="https://inlavaan.haziqj.ml/" class="external-link">INLAvaan</a> on any log-posterior:</p>
 <ol type="1">
 <li>
 <strong>Joint Gaussian (Laplace).</strong> Find the posterior mode and the curvature there. This gives a Gaussian approximation and the Laplace estimate of the log marginal likelihood.</li>
@@ -115,7 +115,7 @@
 <p>The <code>mtcars</code> data describe 32 cars from 1973–74. Which have a manual gearbox (<code>am = 1</code>)? Heavy cars tend to be automatic, and for a given weight, more powerful ones tend to be manual. We fit a logistic regression on weight and horsepower, both standardised.</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">wt</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">mtcars</span><span class="op">$</span><span class="va">hp</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="va">mtcars</span><span class="op">$</span><span class="va">am</span></span></code></pre></div>
@@ -139,13 +139,13 @@
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [8ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.49σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [6ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.48σ [11ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [10ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.59 · Converged in 10 iterations (37ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.60 · Converged in 10 iterations (33ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
@@ -157,11 +157,11 @@
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 summary ─────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.591 · Converged in 10 iterations (37ms)</span></span>
-<span><span class="co">#&gt; Laplace -11.709 + VB term 0.12</span></span>
-<span><span class="co">#&gt; 233 logpost calls: mode 10ms, VB 14ms, marginals 10ms</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.595 · Converged in 10 iterations (33ms)</span></span>
+<span><span class="co">#&gt; Laplace -11.709 + VB term 0.11</span></span>
+<span><span class="co">#&gt; 233 logpost calls: mode 8ms, VB 11ms, marginals 10ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -173,13 +173,13 @@
 <span><span class="co">#&gt; ── Diagnostics ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;         VB shift    NMAD  Unscanned  Ridge bend  Mean gap</span></span>
-<span><span class="co">#&gt; 1 b0       -0.15  0.0091    0.00041       0.14     0.026 </span></span>
-<span><span class="co">#&gt; 2 b_wt     -0.49  0.017     0.0022        0.049   -0.0043</span></span>
-<span><span class="co">#&gt; 3 b_hp      0.28  0.0049    0.0018        0.022    0.054 </span></span>
+<span><span class="co">#&gt; 1 b0       -0.15  0.0091    0.00041       0.14      0.022</span></span>
+<span><span class="co">#&gt; 2 b_wt     -0.48  0.017     0.0022        0.049    -0.013</span></span>
+<span><span class="co">#&gt; 3 b_hp      0.28  0.0049    0.0018        0.022     0.054</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 10 iterations (Newton step 1.4e-07σ).</span></span>
 <span><span class="co">#&gt; ✔ Hessian condition number 4.4, in SD units.</span></span>
-<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.49σ, gain ratio 0.806.</span></span>
+<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.48σ, gain ratio 0.878.</span></span>
 <span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.017, unscanned mass 0.0022, ridge bend 0.14,</span></span>
 <span><span class="co">#&gt;   mean gap 0.054σ.</span></span></code></pre></div>
 </div>
@@ -285,7 +285,7 @@
 <span>  Laplace <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">logml_laplace</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt;        exact VB-corrected      Laplace </span></span>
-<span><span class="co">#&gt;    -11.61846    -11.59107    -11.70894</span></span></code></pre></div>
+<span><span class="co">#&gt;    -11.61846    -11.59505    -11.70894</span></span></code></pre></div>
 </div>
 <p>The VB correction removes most of the error of the Laplace estimate.</p>
 </section><section class="level2"><h2 id="supplying-a-gradient">Supplying a gradient<a class="anchor" aria-label="anchor" href="#supplying-a-gradient"></a>
@@ -299,7 +299,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, X <span class="op">=</span> <span class="va">X</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_g</span><span class="op">$</span><span class="va">summary</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.001068982</span></span>
+<span><span class="co">#&gt; [1] 0.000998865</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>finite_differences <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">counts</span>, gradient <span class="op">=</span> <span class="va">fit_g</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                    logpost grad hess</span></span>
 <span><span class="co">#&gt; finite_differences     233    0    0</span></span>
@@ -330,10 +330,10 @@
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                           calls  logml  Mean  2.5% 97.5%</span></span>
-<span><span class="co">#&gt; Skew-normal + one-step VB   233 -11.59 -5.12 -8.00 -2.72</span></span>
-<span><span class="co">#&gt; Skew-normal + full VB       261 -11.61 -5.12 -8.00 -2.72</span></span>
+<span><span class="co">#&gt; Skew-normal + one-step VB   233 -11.60 -5.12 -8.00 -2.72</span></span>
+<span><span class="co">#&gt; Skew-normal + full VB       261 -11.62 -5.12 -8.00 -2.72</span></span>
 <span><span class="co">#&gt; Skew-normal                 205 -11.71 -5.12 -8.00 -2.72</span></span>
-<span><span class="co">#&gt; Laplace + one-step VB       124 -11.59 -5.12 -7.58 -2.66</span></span>
+<span><span class="co">#&gt; Laplace + one-step VB       124 -11.60 -5.10 -7.56 -2.64</span></span>
 <span><span class="co">#&gt; Laplace                      96 -11.71 -4.51 -6.97 -2.05</span></span></code></pre></div>
 </div>
 <p>Without the VB correction the skew-normal marginals are the same, because they are scanned around the mode, but the log marginal likelihood is the Laplace one. The VB correction moves the Gaussian’s centre most of the way to the posterior mean, but a Gaussian cannot follow the long tail. With a gradient the default correction costs about one numerical Hessian. Without one it takes the expected gradient from values of <code>logpost</code> alone, and still costs less than finding the mode. As the number of parameters grows, the marginals become the slowest stage.</p>
@@ -346,9 +346,9 @@
 <span><span class="va">draws</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sampling.html">sampling</a></span><span class="op">(</span><span class="va">fit</span>, nsamp <span class="op">=</span> <span class="fl">10000</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">draws</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;              b0      b_wt      b_hp</span></span>
-<span><span class="co">#&gt; [1,] -0.7657929 -5.309342 0.3008176</span></span>
-<span><span class="co">#&gt; [2,] -1.7688214 -3.819659 1.2958502</span></span>
-<span><span class="co">#&gt; [3,] -0.9887956 -4.875465 1.0419254</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] -0.7657930 -5.309342 0.3008171</span></span>
+<span><span class="co">#&gt; [2,] -1.7688215 -3.819659 1.2958496</span></span>
+<span><span class="co">#&gt; [3,] -0.9887957 -4.875465 1.0419249</span></span></code></pre></div>
 </div>
 <p>Its <code>fun</code> argument maps each draw to any quantity of interest. Here is the weight, in pounds, at which a car of average horsepower is equally likely to be manual or automatic. That is where the linear predictor crosses zero, a ratio of coefficients and so skewed:</p>
 <div class="cell" data-layout-align="center">
@@ -403,7 +403,7 @@
 <span><span class="op">)</span></span>
 <span><span class="va">log_bf</span> <span class="op">&lt;-</span> <span class="va">fit</span><span class="op">$</span><span class="va">logml</span> <span class="op">-</span> <span class="va">fit_wt</span><span class="op">$</span><span class="va">logml</span></span>
 <span><span class="va">log_bf</span></span>
-<span><span class="co">#&gt; [1] 1.415006</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 1.410803</span></span></code></pre></div>
 </div>
 <p>A log Bayes factor of 1.4 favours the model with horsepower, by a factor of about 4.</p>
 <p>The log marginal likelihood estimates <span class="math inline">\(\log p(y)\)</span> only when <code>logpost</code> returns the full <span class="math inline">\(\log p(y, \vartheta)\)</span>, with every normalising constant of the likelihood and the prior. Here <code><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">dbinom()</a></code> and <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm()</a></code> include theirs.</p>
@@ -422,9 +422,9 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">fit_p</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -23.17 · Converged in 4 iterations (12ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -23.17 · Converged in 4 iterations (10ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;        Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063</span></span>

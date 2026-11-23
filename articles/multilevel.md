@@ -1,6 +1,6 @@
 # Multilevel models
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 knows nothing about levels or clusters: it sees one log-posterior and a
 vector of parameters. A multilevel model fits in that mould when the
 random effects are integrated out inside `logpost`, so that the
@@ -93,13 +93,13 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(logpost, init, ys = ys, xs = xs)
-#> ✔ Found the posterior mode in 20 iterations [108ms]
-#> ✔ VB mean correction, max shift 0.3σ [63ms]
-#> ✔ Fitted 6 skew-normal marginals [125ms]
+#> ✔ Found the posterior mode in 20 iterations [107ms]
+#> ✔ VB mean correction, max shift 0.31σ [51ms]
+#> ✔ Fitted 6 skew-normal marginals [123ms]
 fit
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -894.66 · Converged in 20 iterations (321ms)
+#> Log marginal likelihood: -894.66 · Converged in 20 iterations (302ms)
 #> 
 #>             Mean     SD     2.5%      50%    97.5%     Mode
 #> 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 
@@ -118,18 +118,18 @@ The fit is made on the unconstrained scale, and the standard deviations
 and the correlation are named for the scale they are on, so they are
 reported on their natural scale, as `tau0`, `tau1`, `rho` and `sigma`
 (see the article on [natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)). The
-draws are on that scale too:
+summaries](https://haziqj.ml/inlavanilla/articles/natural-scale.md)).
+The draws are on that scale too:
 
 ``` r
 
 set.seed(1)
 draws <- sampling(fit, nsamp = 20000)
 head(draws, 3)
-#>            b0       b1     tau0     tau1         rho    sigma
-#> [1,] 247.0624 10.98041 24.86399 6.881332 -0.33075050 26.93531
-#> [2,] 252.6071 10.80077 28.48175 7.007579  0.08917977 26.35683
-#> [3,] 245.6301  9.67959 27.23634 6.566233  0.36778021 25.16078
+#>            b0        b1     tau0     tau1         rho    sigma
+#> [1,] 247.0624 10.980404 24.86398 6.881332 -0.33075059 26.93531
+#> [2,] 252.6071 10.800768 28.48175 7.007580  0.08917965 26.35683
+#> [3,] 245.6301  9.679587 27.23634 6.566234  0.36778009 25.16078
 ```
 
 ## Checking against brms
@@ -204,7 +204,7 @@ plot_compare(draws, ref$subjects_18)
 
 ![](multilevel_files/figure-html/densities-1.png)
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 took a fraction of a second. brms takes seconds to sample, after about a
 minute compiling the model.
 
@@ -220,7 +220,7 @@ X_j \beta) / \sigma^2. \\
 
 So a draw of \\\theta\\ from the fit, followed by a draw of each \\u_j\\
 given \\\theta\\, is a draw from the posterior of the random effects.
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md)
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md)
 passes `ys` and `xs` on to `fun`:
 
 ``` r
@@ -284,7 +284,7 @@ plot_caterpillar(u_draws, ref$subjects_18)
 
 The means agree with brms to within 1% of the interval’s width, and the
 intervals are at most 5% narrower. The article on [latent
-variables](http://haziqj.ml/inlavanilla/articles/latents.md) has the
+variables](https://haziqj.ml/inlavanilla/articles/latents.md) has the
 recipes for latent variables that are not Gaussian given the parameters.
 
 ## With fewer subjects
@@ -296,9 +296,9 @@ determined:
 
 keep <- 1:6
 fit_6 <- inla_vanilla(logpost, init, ys = ys[keep], xs = xs[keep])
-#> ✔ Found the posterior mode in 20 iterations [39ms]
-#> ✔ VB mean correction, max shift 0.42σ [16ms]
-#> ✔ Fitted 6 skew-normal marginals [72ms]
+#> ✔ Found the posterior mode in 20 iterations [40ms]
+#> ✔ VB mean correction, max shift 0.42σ [14ms]
+#> ✔ Fitted 6 skew-normal marginals [61ms]
 set.seed(1)
 draws_6 <- sampling(fit_6, nsamp = 20000)
 round(compare(draws_6, ref$subjects_6), 3)
@@ -322,11 +322,11 @@ ridge bend:
 ``` r
 
 summary(fit_6)
-#> ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 summary ─────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -322.676 · Converged in 20 iterations (132ms)
-#> Laplace -322.994 + VB term 0.32
-#> 665 logpost calls: mode 40ms, VB 17ms, marginals 72ms
+#> Log marginal likelihood: -322.686 · Converged in 20 iterations (117ms)
+#> Laplace -322.994 + VB term 0.31
+#> 665 logpost calls: mode 40ms, VB 14ms, marginals 61ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -344,16 +344,16 @@ summary(fit_6)
 #> ── Diagnostics ──
 #> 
 #>              VB shift      NMAD  Unscanned  Ridge bend  Mean gap
-#> 1 b0           -0.018  0.00028    0.000066    0.63         0.010
-#> 2 b1            0.027  0.000012   0.000063    0.76        -0.029
-#> 3 log_tau0      0.24   0.037      0.00022     0.032        0.064
+#> 1 b0            0.027  0.00028    0.000066    0.63        -0.034
+#> 2 b1            0.029  0.000012   0.000063    0.76        -0.031
+#> 3 log_tau0      0.27   0.037      0.00022     0.032        0.034
 #> 4 log_tau1      0.42   0.050      0.0023      0.040        0.13 
-#> 5 atanh_rho     0.38   0.041      0.0048      1.1          0.034
-#> 6 log_sigma     0.31   0.0061     0.00043     0.000066    -0.050
+#> 5 atanh_rho     0.35   0.041      0.0048      1.1          0.063
+#> 6 log_sigma     0.28   0.0061     0.00043     0.000067    -0.026
 #> 
 #> ✔ Mode found in 20 iterations (Newton step 9e-07σ).
 #> ✔ Hessian condition number 1.8, in SD units.
-#> ✔ VB correction in one step: max shift 0.42σ, gain ratio 0.697.
+#> ✔ VB correction in one step: max shift 0.42σ, gain ratio 0.724.
 #> ✔ Skew-normal fits: max NMAD 0.050, unscanned mass 0.0048.
 #> ! Ridge bend > 0.25 for `atanh_rho` (1.06), `b1` (0.76), `b0` (0.63): the
 #>   marginal SD may be >10% too small.

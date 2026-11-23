@@ -9,15 +9,15 @@ the observations, this is the expected log predictive density,
 of the data, whatever their parameters.
 
 Refitting once per observation is slow.
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) gets the answer
-from the one fit, with no refits and no posterior draws: it expands each
-observation’s log-likelihood to second order around the posterior
-(Alhyari et al., 2026).
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) gives the
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) gets the
+answer from the one fit, with no refits and no posterior draws: it
+expands each observation’s log-likelihood to second order around the
+posterior (Alhyari et al., 2026).
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) gives the
 widely applicable information criterion from the same expansion.
 
 Both need the log-likelihood one observation at a time, which
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 never sees. So write the model in three pieces:
 
 1.  `loglik(theta, ...)`, the vector of log-likelihood terms, one per
@@ -27,8 +27,8 @@ never sees. So write the model in three pieces:
     `sum(loglik(theta, ...)) + logprior(theta)`.
 
 Fit with `logpost`, then pass `loglik` to
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) and
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md).
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md).
 
 ## Warp breaks
 
@@ -65,12 +65,12 @@ logpost_pois <- function(theta, X, y) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois, X = X, y = y)
-#> ✔ Found the posterior mode in 29 iterations [15ms]
-#> ✔ VB mean correction, max shift 0.025σ [22ms]
-#> ✔ Fitted 6 skew-normal marginals [28ms]
+#> ✔ Found the posterior mode in 29 iterations [13ms]
+#> ✔ VB mean correction, max shift 0.025σ [16ms]
+#> ✔ Fitted 6 skew-normal marginals [23ms]
 ```
 
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) takes the fit,
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the fit,
 `loglik`, and the same data:
 
 ``` r
@@ -129,7 +129,7 @@ loo_nb
 #> 
 #>           Estimate   SE
 #> elpd_loo    -202.1  4.8
-#> p_loo          6.0  0.8
+#> p_loo          5.9  0.8
 #> looic        404.3  9.6
 #> 
 #> ✔ Second-order expansion for every unit. Largest leverage k = 0.23, for
@@ -152,7 +152,7 @@ elpd_diff <- function(a, b) {
 }
 elpd_diff(loo_nb, loo_pois)
 #> elpd_diff        se 
-#>  40.77979  10.63887
+#>  40.78319  10.64064
 ```
 
 The negative binomial predicts better, by about four standard errors.
@@ -169,7 +169,7 @@ fit_add <- inla_vanilla(logpost_nb, init_add, X = X_add, y = y, silent = TRUE)
 loo_add <- loo(fit_add, loglik_nb, X = X_add, y = y)
 elpd_diff(loo_nb, loo_add)
 #> elpd_diff        se 
-#>  2.064323  2.713827
+#>  2.066488  2.713049
 ```
 
 The interaction model is ahead, but by less than one standard error: the
@@ -192,9 +192,9 @@ loo::loo_compare(list(poisson = loo_pois, nb = loo_nb, nb_additive = loo_add))
 #> or https://mc-stan.org/loo/reference/loo-glossary.html.
 ```
 
-[`waic()`](http://haziqj.ml/inlavanilla/reference/loo.md) takes the same
-arguments. With no observation dominating the fit, it is close to the
-LOO:
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the
+same arguments. With no observation dominating the fit, it is close to
+the LOO:
 
 ``` r
 
@@ -246,10 +246,10 @@ time_loo <- system.time(loo(fit_nb, loglik_nb, X = X, y = y))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  5.816  0.004
+#>  4.738  0.004
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
-#> -202.6061 -202.1478
+#> -202.6061 -202.1444
 ```
 
 ``` r
@@ -276,17 +276,17 @@ line.](model-comparison_files/figure-html/refit-plot-1.png)
 
 The two agree loom by loom, to within 0.05 nats, and their totals differ
 by 0.5, a tenth of the standard error.
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) took a fraction
-of the time of the 54 refits.
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) took a
+fraction of the time of the 54 refits.
 
 ## Leaving out what?
 
 `loglik` decides the unit that is left out. One term per observation
 leaves out one observation at a time. For grouped data, sum each group’s
 terms, so that `loglik` returns one term per group:
-[`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md) then leaves out
-a whole group at a time, and estimates how well the model predicts a new
-group (leave-one-cluster-out; Alhyari et al., 2026). Either way the
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) then leaves
+out a whole group at a time, and estimates how well the model predicts a
+new group (leave-one-cluster-out; Alhyari et al., 2026). Either way the
 units must be conditionally independent given the parameters, so that
 the log-likelihood is the sum of the terms.
 
@@ -297,7 +297,7 @@ posterior precision it carries in any direction of the parameter space.
 A value close to 1 means that the unit alone pins down some combination
 of the parameters. At \\k \ge 1\\ the rest of the data and the prior
 cannot identify that combination without it, the second-order term does
-not exist, and [`loo()`](http://haziqj.ml/inlavanilla/reference/loo.md)
+not exist, and [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md)
 falls back to the first-order expansion for every unit, with a warning.
 Here no loom comes close:
 
@@ -305,7 +305,7 @@ Here no loom comes close:
 
 summary(loo_nb$pointwise[, "k"])
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#> 0.09707 0.10268 0.11503 0.12762 0.13973 0.22890
+#> 0.09703 0.10264 0.11499 0.12758 0.13968 0.22886
 ```
 
 ## References

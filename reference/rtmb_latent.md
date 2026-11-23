@@ -1,8 +1,8 @@
 # Draw latent variables from an RTMB object
 
 Builds the `fun` of
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md) for a
-model whose latent variables are the random effects of an RTMB or TMB
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) for
+a model whose latent variables are the random effects of an RTMB or TMB
 object. For each draw of the parameters from the fit, the function it
 returns draws the random effects from their Gaussian approximation given
 those parameters, so that together the draws follow the posterior of the
@@ -25,7 +25,7 @@ rtmb_latent(obj)
 ## Value
 
 A function of the parameters, to pass as `fun` to
-[`sampling()`](http://haziqj.ml/inlavanilla/reference/sampling.md). It
+[`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md). It
 returns one draw of every random effect of `obj`, in the object's order,
 named after the parameter it belongs to: `u[1]`, `u[2]` and so on for a
 vector `u`.

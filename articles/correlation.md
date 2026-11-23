@@ -1,11 +1,11 @@
 # Correlation matrices
 
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 works on a vector of unconstrained parameters, and a correlation matrix
 is far from unconstrained: its diagonal is fixed at one, and it must be
 positive definite. A single correlation can go on the atanh scale, as in
 the [multilevel
-article](http://haziqj.ml/inlavanilla/articles/multilevel.md), but a
+article](https://haziqj.ml/inlavanilla/articles/multilevel.md), but a
 matrix of them cannot be handled one entry at a time. Not every set of
 values in \\(-1, 1)\\ makes a valid correlation matrix.
 
@@ -225,17 +225,17 @@ init <- c(
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
 fit <- inla_vanilla(logpost, init, x = x, eta = 2)
-#> ✔ Found the posterior mode in 34 iterations [1.6s]
-#> ✔ VB mean correction, max shift 0.39σ [842ms]
-#> ✔ Fitted 54 skew-normal marginals [2.2s]
+#> ✔ Found the posterior mode in 34 iterations [1.4s]
+#> ✔ VB mean correction, max shift 0.39σ [652ms]
+#> ✔ Fitted 54 skew-normal marginals [1.6s]
 ```
 
-The fit takes about 5 seconds, and `summary(fit)` flags nothing. The
+The fit takes about 4 seconds, and `summary(fit)` flags nothing. The
 parameters are named for the scale they are on, `log_sigma_x1` and
 `atanh_z21`, so the fit reports the standard deviations and the CPCs
 themselves (see the article on [natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)). The
-first six CPCs:
+summaries](https://haziqj.ml/inlavanilla/articles/natural-scale.md)).
+The first six CPCs:
 
 ``` r
 
@@ -448,7 +448,7 @@ two agree to the third decimal.
 Over 300 students for 54 parameters is plenty. With far fewer
 observations per parameter the marginals come out too narrow, as for the
 fixed effects with six subjects in the [multilevel
-article](http://haziqj.ml/inlavanilla/articles/multilevel.md).
+article](https://haziqj.ml/inlavanilla/articles/multilevel.md).
 
 ## References
 

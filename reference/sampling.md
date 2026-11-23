@@ -63,7 +63,7 @@ Draws never call the log-posterior, so they are cheap: large `nsamp`
 costs little. A parameter named for its scale (`log_sigma`, `logit_p`,
 `atanh_rho`) is returned on its natural scale, in a column named
 `sigma`, `p` or `rho` (see the section on natural-scale summaries in
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
 Use `fun` for quantities of several parameters, such as a ratio or a
 covariance matrix. `fun` is written as `logpost` is: it receives each
 draw on the scale of `logpost`, under the names in `init`, whatever

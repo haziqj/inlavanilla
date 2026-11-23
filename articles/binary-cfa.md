@@ -3,7 +3,7 @@
 A factor model for binary items has a latent factor score for each
 person, and the likelihood integrates it out. Here a Gauss-Hermite
 quadrature inside the log-posterior does the integral, so
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
 sees only the item parameters.
 
 ``` r
@@ -127,13 +127,13 @@ fit <- inla_vanilla(
   count = count,
   nodes = nodes
 )
-#> ✔ Found the posterior mode in 35 iterations [159ms]
-#> ✔ VB mean correction, max shift 0.18σ [108ms]
-#> ✔ Fitted 12 skew-normal marginals [109ms]
+#> ✔ Found the posterior mode in 35 iterations [181ms]
+#> ✔ VB mean correction, max shift 0.17σ [53ms]
+#> ✔ Fitted 12 skew-normal marginals [122ms]
 fit
-#> ── INLAvanilla 0.1.1.9003 ───────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla 26.11.23 ─────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (397ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (373ms)
 #> 
 #>                Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842
@@ -156,7 +156,7 @@ fit
 The loadings are named for the scale they are on, `atanh_lambda1` and so
 on, so the fit reports them as the loadings themselves (see the article
 on [natural-scale
-summaries](http://haziqj.ml/inlavanilla/articles/natural-scale.md)).
+summaries](https://haziqj.ml/inlavanilla/articles/natural-scale.md)).
 Next to the true values:
 
 ``` r

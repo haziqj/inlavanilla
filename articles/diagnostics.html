@@ -23,7 +23,7 @@
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="diagnostics_files/libs/quarto-html/popper.min.js"></script><script src="diagnostics_files/libs/quarto-html/tippy.umd.min.js"></script><link href="diagnostics_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="diagnostics_files/libs/quarto-html/light-border.css" rel="stylesheet">
 <!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Diagnostics">
-<meta property="og:image" content="http://haziqj.ml/inlavanilla/logo.png">
+<meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1.9003</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -207,7 +207,7 @@
 <p>Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://haziqj.ml/inlavanilla/">inlavanilla</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">0</span>, <span class="fl">3</span>, <span class="fl">1</span>, <span class="fl">4</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">logpost_pois</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">theta</span>, <span class="va">y</span><span class="op">)</span> <span class="op">{</span></span>
@@ -218,11 +218,11 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>log_rate <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, y <span class="op">=</span> <span class="va">y</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla 0.1.1.9003 summary ───────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla 26.11.23 summary ─────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (17ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (16ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0085</span></span>
-<span><span class="co">#&gt; 68 logpost calls: mode 6ms, VB 2ms, marginals 5ms</span></span>
+<span><span class="co">#&gt; 68 logpost calls: mode 5ms, VB 1ms, marginals 5ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -245,6 +245,7 @@
 </section><section class="level2"><h2 id="the-mode-the-hessian-and-the-vb-correction">The mode, the Hessian and the VB correction<a class="anchor" aria-label="anchor" href="#the-mode-the-hessian-and-the-vb-correction"></a>
 </h2>
 <p>The mode is checked by the Newton step there, in posterior SDs (<code>mode_shift_sigma</code>): how far one step of Newton’s method would still move each parameter. It is flagged above 0.1, INLAvaan’s level, whatever the optimiser’s return code, because without a gradient the optimiser can report failure at an accurate mode, and success short of one. When the mode is off, the warning says so first, and suggests what to change.</p>
+<p>Sometimes there is no mode to find. Random effects written into <code>logpost</code>, <span class="math inline">\(u_j \sim N(0, \tau^2)\)</span> with <span class="math inline">\(\log\tau\)</span> a parameter, are the common case: with every <span class="math inline">\(u_j\)</span> at zero, the joint log-posterior grows like <span class="math inline">\(-J\log\tau\)</span> as <span class="math inline">\(\tau\)</span> falls, and only the prior on <span class="math inline">\(\log\tau\)</span> stops it, far from where the posterior mass is. This is the funnel of hierarchical models. The optimiser then either runs down the funnel and stops wherever it stops, with a Newton step of several posterior SDs, or reaches the spike at its end, where the fitted marginal of <span class="math inline">\(\log\tau\)</span> has nearly all its mass outside the scanned window. Either sign adds a line to the warning. On Poisson counts in 40 groups of three, the search stopped near <span class="math inline">\(\log\tau = -27\)</span> in every order of the parameters tried. With the random effects integrated out of <code>logpost</code>, the same data give a clean fit, with <span class="math inline">\(\log\tau\)</span> at <span class="math inline">\(-0.56\)</span> (SD 0.20). Writing them as <span class="math inline">\(u_j = \tau z_j\)</span> instead did not help: the mode moved to <span class="math inline">\(\log\tau = 2.2\)</span>, and the VB correction did not settle. Integrate random effects out, as in the article <a href="multilevel.html">Multilevel models</a>, and draw them back afterwards with <code>sampling(fit, fun = )</code>.</p>
 <p><code>hess_cond</code> is the condition number of the Hessian at the mode, with each parameter in posterior-SD units: the ratio of the largest to the smallest eigenvalue of the posterior correlation matrix. Above <span class="math inline">\(10^8\)</span> some combination of the parameters is weakly identified. INLAvaan takes the condition number on the raw scale of the parameters, where a mere change of units can make it large; inlavanilla allows posterior SDs from <span class="math inline">\(10^{-6}\)</span> to <span class="math inline">\(10^4\)</span>, so it measures it in posterior SDs instead.</p>
 <p>The VB correction recentres the Gaussian at the shift that minimises its Kullback-Leibler divergence from the posterior (Jamil &amp; Rue, 2026, Section 3.1). <code>vb_shift_sigma</code> is how far it moved each mean from the mode, in posterior SDs. <code>vb_shift</code> is the same shift on the scale of <code>logpost</code>, and <code>kld</code>, half the square of <code>vb_shift_sigma</code>, is the Kullback-Leibler divergence of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift above 1 SD means that the posterior is far from the Laplace Gaussian. With <code>vb = "full"</code>, when the fixed-point iteration hands over to the optimiser, <code>fit$diagnostics$vb</code> records it, and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and the verbose output report it, but, as in INLAvaan, it is not flagged: it is a route of the solver, not a sign of a poor approximation.</p>
 <p>Where the solver lands is checked as the mode is. <code>vb_step_sigma</code> is the step still to go at the VB mean, in posterior SDs: the fixed-point step there, which is the Newton step of the condition the VB mean solves. Above 0.1, the level of the mode check, the correction has not settled and the fit has not converged. The VB mean is then off, and with it the VB term of the log marginal likelihood and the expansions of <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code>. The skew-normal marginals do not depend on it, since they are scanned around the mode, and <code>vb = "off"</code> leaves it out. Gaussian marginals (<code>marginals = "gaussian"</code>) are centred on it, and <code>vb = "off"</code> centres them at the mode instead. Without a gradient, the usual cause is not the solver but the VB mean itself: from <code>logpost</code> values alone it is exact only for a log-posterior of degree four, and on a strongly skewed posterior it can be about 0.1 SDs out. Supplying <code>grad</code> is the fix.</p>
@@ -263,7 +264,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [4ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [12ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [10ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [5ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
@@ -443,7 +444,7 @@
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">invokeRestart</a></span><span class="op">(</span><span class="st">"muffleWarning"</span><span class="op">)</span></span>
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [0ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [1ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [1ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>

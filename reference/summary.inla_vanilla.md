@@ -5,7 +5,7 @@ diagnostics of each stage of the approximation. A parameter named for
 its scale (`log_sigma`, `logit_p`, `atanh_rho`) is summarised on its
 natural scale, as `sigma`, `p` or `rho`, and the others on the scale of
 `logpost` (see the section on natural-scale summaries in
-[`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
 A line under the table says which rows were mapped. The diagnostics
 always refer to the scale of `logpost`, where the approximation is made,
 and name the parameters as `init` does.
@@ -56,21 +56,21 @@ posterior marginals give each one to three significant figures of its
 posterior SD, with the decimal points lined up.
 
 Most of the checks are those of INLAvaan's
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 and
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 returns them under the same names. Jamil and Rue (2026) use the VB shift
 and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the gap between
 the skew-normal and VB means as an internal check (Section 5.1). The
 mode shift, the Hessian condition number and the unscanned mass come
 from INLAvaan's
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 not from the paper. `grad_gap`, `vb_step_sigma`, `tails` and
 `ridge_bend` are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \\\sqrt{\Sigma\_{jj}}\\, as in INLAvaan's
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md);
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md);
 it is not the SD column of the table, which is the skew-normal's. The
 diagnostics, with the level at which each is flagged where it is, are:
 
@@ -112,7 +112,7 @@ diagnostics, with the level at which each is flagged where it is, are:
   `vb_step_sigma` is the step still to go at the VB mean, in posterior
   SDs (the fixed-point step there, which is the Newton step of the VB
   stationarity condition; see
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)).
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)).
   It is flagged above 0.1, the level of the mode check, as a correction
   that did not settle. That check is inlavanilla's own.
 
@@ -123,7 +123,7 @@ diagnostics, with the level at which each is flagged where it is, are:
   marginal, and the sign gives the direction of the skew. It describes
   the marginal rather than checking it, so it is not in the printed
   table: it is in `summary(fit)$diagnostics` and
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md),
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
   and `fit$sn` holds it with the other skew-normal parameters.
 
 - **Volume correction.** `gamma1`, the slope added to the scanned
@@ -135,7 +135,7 @@ diagnostics, with the level at which each is flagged where it is, are:
 - **Unscanned mass.** `unscanned_mass`, the mass each fitted skew-normal
   puts outside the scanned window (4 posterior SDs either side of the
   mode), where the marginal is extrapolated, as INLAvaan's
-  [`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
   reports it. A Gaussian marginal gives \\2\Phi(-4) = 6.3 \times
   10^{-5}\\; the larger it is, the more of the marginal is extrapolated.
   It is flagged above 0.05.
@@ -160,7 +160,7 @@ diagnostics, with the level at which each is flagged where it is, are:
   Poisson regressions and below it in a nonlinear regression.
   `ridge_bend` is flagged above 0.25, a shortfall of 10% by that formula
   (see the Accuracy section of
-  [`inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
   Without `grad`, a value below 0.1 is the gain along the direction in
   which the ridge bends, not the full one, so it can be a little low.
 
@@ -206,12 +206,12 @@ mean from `logpost` values alone is then approximate, and supplying
 `grad` is the fix. Printing the fit ends with a line for its warnings
 and one counting the checks flagged here, each shown only when there are
 any.
-[`vignette("diagnostics", package = "inlavanilla")`](http://haziqj.ml/inlavanilla/articles/diagnostics.md)
+[`vignette("diagnostics", package = "inlavanilla")`](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
 explains every check with examples.
 
 With `vb = "off"` there is no VB mean: the VB columns of
 `summary(fit)$diagnostics` are `NA`, as INLAvaan's
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 leaves them, and are left out of the table. With
 `marginals = "gaussian"` there are no scans, so the scan columns are
 `NA` and only the VB shift is shown.
@@ -225,7 +225,7 @@ approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
 
 ## See also
 
-[`diagnostics()`](http://haziqj.ml/inlavanilla/reference/diagnostics.md)
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 for the diagnostics as numbers, under INLAvaan's names, and
-[`plot.inla_vanilla()`](http://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.md)
+[`plot.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/plot.inla_vanilla.md)
 with `type = "sn_fit"` for the skew-normal fits.
