@@ -74,6 +74,9 @@ par_workers <- function() {
 # use from the global environment, and the packages they use. `functions`
 # holds the user's functions, NULL for those not given. future finds these by
 # reading the functions, once, because reading them again for each job is slow.
+# The workers also load the package that holds this code, for the jobs, by the
+# name packageName() gives, so a package that copies the engine files loads
+# itself.
 par_globals <- function(functions) {
   functions <- functions[!vapply(functions, is.null, NA)]
   names(functions) <- paste0(".par_fn", seq_along(functions))
@@ -88,7 +91,7 @@ par_globals <- function(functions) {
   )
   list(
     found = stats::setNames(lapply(found, function(k) gp$globals[[k]]), found),
-    packages = unique(c(gp$packages, "inlavanilla"))
+    packages = unique(c(gp$packages, utils::packageName()))
   )
 }
 
