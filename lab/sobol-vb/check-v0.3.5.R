@@ -7,8 +7,10 @@
 # shift of sobol_vb() on those inputs with the one the fit found. Then it
 # reports how far the shift moves with inlavanilla's factor cov_root() in
 # place of INLAvaan's Cholesky factor. Run from the root of inlavanilla, with
-# the source of INLAvaan 0.3.5 in the directory INLAVAAN_035, for example
-#   git -C ~/GitHub/INLAvaan archive v0.3.5 | tar -x -C /tmp/inlavaan-0.3.5
+# the source of INLAvaan 0.3.5 in the directory INLAVAAN_035 (by default
+# /tmp/inlavaan-0.3.5), for example
+#   git clone --depth 1 --branch v0.3.5 https://github.com/haziqj/INLAvaan \
+#     /tmp/inlavaan-0.3.5
 #
 ################################################################################
 
