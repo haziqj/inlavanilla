@@ -501,6 +501,43 @@ test_that("qsnorm_fast scales, shifts and recycles its arguments", {
   )
 })
 
+test_that("qsnorm_fast recycles to the longest argument, as qsnorm does", {
+  # An alpha longer than p used to give NA or an error, since only the other
+  # arguments were recycled to the length of p. Each case must give what the
+  # recycled p gives, and each element what a scalar call gives.
+  alpha <- c(-30, -2.5, -1, -0.3, 0, 0.3, 1, 2.18, 2.5, 30)
+  out <- qsnorm_fast(0.3, 0, 1, alpha)
+  expect_identical(out, qsnorm_fast(rep(0.3, 10), 0, 1, alpha))
+  expect_identical(
+    out,
+    vapply(alpha, function(a) qsnorm_fast(0.3, 0, 1, a), numeric(1))
+  )
+  expect_false(anyNA(out))
+
+  p <- c(1e-10, 0.4, 1 - 1e-10)
+  xi <- c(-1, 0, 1, 2, 3, 4)
+  omega <- c(0.5, 2)
+  expect_identical(
+    qsnorm_fast(p, xi, omega, 3),
+    qsnorm_fast(rep(p, 2), xi, rep(omega, 3), rep(3, 6))
+  )
+  expect_identical(
+    qsnorm_fast(p, 0, 1, alpha[1:6]),
+    qsnorm_fast(rep(p, 2), 0, 1, alpha[1:6])
+  )
+  expect_identical(
+    qsnorm_fast(p, 0, omega, alpha[1:6]),
+    qsnorm_fast(rep(p, 2), 0, rep(omega, 3), alpha[1:6])
+  )
+
+  # A zero-length argument gives a zero-length result, as in qsnorm()
+  expect_identical(qsnorm_fast(numeric(0)), numeric(0))
+  expect_identical(qsnorm_fast(numeric(0), 0, 1, alpha), numeric(0))
+  expect_identical(qsnorm_fast(0.3, numeric(0), 1, 2), numeric(0))
+  expect_identical(qsnorm_fast(0.3, 0, numeric(0), 2), numeric(0))
+  expect_identical(qsnorm_fast(p, 0, 1, numeric(0)), numeric(0))
+})
+
 test_that("qsnorm_fast is within its documented envelope of the true quantile", {
   # R/vanilla-qsnorm-fast.R documents qsnorm_fast() as a starting value whose
   # error, in units of omega, is at most 7e-3 for p in [0.01, 0.99] and 0.085

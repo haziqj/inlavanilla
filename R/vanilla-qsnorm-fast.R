@@ -55,8 +55,16 @@
 # for random number generation (Doctoral thesis). University College London.
 # https://discovery.ucl.ac.uk/1482128/
 qsnorm_fast <- function(p, xi = 0, omega = 1, alpha = 0) {
-  # Recycling inputs to match length of p
-  n <- length(p)
+  # Recycle every argument to the length of the longest, as qsnorm() does. A
+  # zero-length argument gives a zero-length result.
+  lens <- c(length(p), length(xi), length(omega), length(alpha))
+  if (min(lens) == 0L) {
+    return(numeric(0))
+  }
+  n <- max(lens)
+  if (length(p) < n) {
+    p <- rep(p, length.out = n)
+  }
   if (length(xi) < n) {
     xi <- rep(xi, length.out = n)
   }
