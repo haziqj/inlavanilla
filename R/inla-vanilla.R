@@ -222,14 +222,17 @@
 #'
 #' The fit goes straight to the mode: at `init` it only checks that `logpost`,
 #' `grad` and `hess` return finite values of the right shape. A supplied `grad`
-#' is compared with `logpost` at the mode, from differences the fit takes there
-#' anyway to set its steps, so at no cost in calls, and the Hessian there,
-#' whether taken from `grad` or supplied, is checked for symmetry, with a
-#' warning if either check fails (see `grad_gap` in [summary.inla_vanilla()]).
-#' A supplied `hess` is also checked at the mode against central differences
-#' of `grad`, along two directions, with a warning if it does not match, and
-#' its diagonal is part of what `grad_gap` compares with `logpost`. Taking the
-#' steps costs about 4m `logpost` calls. Any R function works for `logpost`,
+#' is compared with `logpost` at the mode, and the Hessian there, whether taken
+#' from `grad` or supplied, is checked for symmetry, with a warning if either
+#' check fails (see `grad_gap` in [summary.inla_vanilla()]). Without `hess`,
+#' the comparison reads differences the fit takes there anyway to set its
+#' steps, at no cost in calls. With `hess` it takes them for the check alone:
+#' 2 `logpost` calls per try of the step search, usually 3 or 4 tries per
+#' parameter, so about 6m to 8m calls, and up to 60m when the search fails. A
+#' supplied `hess` is also checked at the mode against central differences of
+#' `grad`, along two directions, with a warning if it does not match, and its
+#' diagonal is part of what `grad_gap` compares with `logpost`. Any R function
+#' works for `logpost`,
 #' `grad` and `hess`, including compiled code (Rcpp, TMB) and RTMB, which
 #' differentiates R code. An RTMB function can return the log-posterior itself,
 #' and its `obj$fn`, `obj$gr` and `obj$he` are then passed as they are. For a

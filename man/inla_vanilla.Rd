@@ -429,14 +429,17 @@ model with 39 parameters and an automatic-differentiation Hessian (RTMB) took
 
 The fit goes straight to the mode: at \code{init} it only checks that \code{logpost},
 \code{grad} and \code{hess} return finite values of the right shape. A supplied \code{grad}
-is compared with \code{logpost} at the mode, from differences the fit takes there
-anyway to set its steps, so at no cost in calls, and the Hessian there,
-whether taken from \code{grad} or supplied, is checked for symmetry, with a
-warning if either check fails (see \code{grad_gap} in \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).
-A supplied \code{hess} is also checked at the mode against central differences
-of \code{grad}, along two directions, with a warning if it does not match, and
-its diagonal is part of what \code{grad_gap} compares with \code{logpost}. Taking the
-steps costs about 4m \code{logpost} calls. Any R function works for \code{logpost},
+is compared with \code{logpost} at the mode, and the Hessian there, whether taken
+from \code{grad} or supplied, is checked for symmetry, with a warning if either
+check fails (see \code{grad_gap} in \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}). Without \code{hess},
+the comparison reads differences the fit takes there anyway to set its
+steps, at no cost in calls. With \code{hess} it takes them for the check alone:
+2 \code{logpost} calls per try of the step search, usually 3 or 4 tries per
+parameter, so about 6m to 8m calls, and up to 60m when the search fails. A
+supplied \code{hess} is also checked at the mode against central differences of
+\code{grad}, along two directions, with a warning if it does not match, and its
+diagonal is part of what \code{grad_gap} compares with \code{logpost}. Any R function
+works for \code{logpost},
 \code{grad} and \code{hess}, including compiled code (Rcpp, TMB) and RTMB, which
 differentiates R code. An RTMB function can return the log-posterior itself,
 and its \code{obj$fn}, \code{obj$gr} and \code{obj$he} are then passed as they are. For a

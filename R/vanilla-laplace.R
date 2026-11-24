@@ -336,8 +336,9 @@ fd_scales <- function(fn, x, f0) {
 }
 
 # How far a user gradient is from `logpost` at the mode, for each parameter.
-# It costs no calls: fd_scales() has already taken symmetric differences of
-# `logpost` there, for the steps of the Hessian. They give the slope along each
+# It costs no calls of its own: fd_scales() has taken symmetric differences of
+# `logpost` there, for the steps of the Hessian, or with a supplied Hessian for
+# this check alone. They give the slope along each
 # coordinate and the curvature 1 / s_j^2, against the gradient `g` and the
 # Hessian `H` taken from the user's gradient. The gap is the larger of the
 # difference in slope per conditional posterior SD, about how far it would move
