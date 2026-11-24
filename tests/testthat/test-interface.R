@@ -1316,6 +1316,27 @@ test_that("NaN outside the support, away from the mode, does not break the fit",
   # -Inf and NaN are treated alike
   fit_inf <- inla_vanilla(lp_inf, c(x = 4), silent = TRUE)
   expect_equal(fit_inf$summary, fit$summary)
+
+  # And so is -1e40, the value of a failed likelihood in lavaan and INLAvaan
+  lp_big <- function(theta) {
+    x <- theta[[1]]
+    if (x <= 0) -1e40 else (shape - 1) * log(x) - rate * x
+  }
+  fit_big <- inla_vanilla(lp_big, c(x = 4), silent = TRUE)
+  expect_identical(fit_big$summary, fit_inf$summary)
+  expect_identical(fit_big$scan, fit_inf$scan)
+})
+
+test_that("a logpost of -1e39 or below counts as -Inf, also at init", {
+  expect_identical(failed_lp(-1e40), -Inf)
+  expect_identical(failed_lp(-1e39), -Inf)
+  expect_identical(failed_lp(NaN), -Inf)
+  expect_identical(failed_lp(-1e38), -1e38)
+  expect_error(
+    inla_vanilla(function(theta) -1e40, c(a = 0), silent = TRUE),
+    "`logpost` is not finite at `init`",
+    class = "inlavanilla_error"
+  )
 })
 
 test_that("-Inf inside the scan range of one parameter does not break the fit", {

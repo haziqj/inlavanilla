@@ -1,5 +1,11 @@
 # inlavanilla (development version)
 
+* A `logpost` value at or below -1e39 now counts as `-Inf`, as `NA` and `NaN`
+  already did. Some code returns -1e40 where it fails, as lavaan's and
+  INLAvaan's likelihoods do. As a finite number it passed for a very low
+  density: the VB fallback could take a failed node for one it can average
+  over, and a failed start did not stop the fit.
+
 * New `vanilla_control()` builds the `control` list of `inla_vanilla()`, with
   one entry per setting, so that an editor can complete the names. It has three
   new entries for the mode search: `mode_maxit`, `mode_maxeval` and `mode_tol`,

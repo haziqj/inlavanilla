@@ -494,7 +494,7 @@ wrap_fns <- function(
     on_call()
     # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
     v <- logpost_x(x)[[1L]]
-    if (is.na(v)) -Inf else v
+    failed_lp(v)
   }
   gr <- if (is.null(grad_x)) {
     NULL
@@ -523,6 +523,16 @@ wrap_fns <- function(
   list(lp = lp, gr = gr, he = he, state = state)
 }
 
+# The log-posterior as the stages read it: -Inf where it failed. NA and NaN
+# count as a failure, and so does any value at or below -1e39, such as the
+# -1e40 that lavaan's likelihoods, and INLAvaan's, return where a model cannot
+# be evaluated. As a finite number it would pass for a very low density: the
+# VB fallback would take a failed node for one it can average over, and a
+# failed start would not stop the fit.
+failed_lp <- function(v) {
+  if (is.na(v) || v <= -1e39) -Inf else v
+}
+
 check_logpost_at_init <- function(logpost, init) {
   v <- logpost(init)
   if (!is.numeric(v) || length(v) != 1L) {
@@ -533,7 +543,7 @@ check_logpost_at_init <- function(logpost, init) {
       )
     )
   }
-  if (!is.finite(v)) {
+  if (!is.finite(failed_lp(v))) {
     abort(
       c(
         "{.arg logpost} is not finite at {.arg init}.",

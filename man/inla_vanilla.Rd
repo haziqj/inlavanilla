@@ -236,9 +236,11 @@ probability as its logit, or a correlation as its Fisher \eqn{z}. Means and
 regression coefficients need no change.
 
 Return \code{-Inf} wherever the density is zero or cannot be evaluated, such as
-outside the support or where a matrix is not positive definite (\code{NA} and
-\code{NaN} count the same). The scans and the VB nodes reach several posterior
-SDs from the mode, and an error raised there stops the fit.
+outside the support or where a matrix is not positive definite. \code{NA} and
+\code{NaN} count the same, and so does any value at or below \eqn{-10^{39}}{-1e39},
+such as the \code{-1e40} that some code, lavaan's likelihoods among it, returns
+where it fails. The scans and the VB nodes reach several posterior SDs from
+the mode, and an error raised there stops the fit.
 
 \code{logpost} is then the log density \strong{of the parameters you pass}. When a
 prior is stated on the natural scale, include the log-Jacobian of the

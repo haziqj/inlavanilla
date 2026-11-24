@@ -1519,6 +1519,16 @@ test_that("the fallback stops with its own error where logpost is -Inf at the no
   # Without the VB correction the fit goes ahead
   fit <- inla_vanilla(mod$logpost, init, vb_correction = "none", silent = TRUE)
   expect_s3_class(fit, "inla_vanilla")
+  # A logpost that fails with -1e40, as lavaan's likelihoods do, stops in the
+  # same way: the failed nodes are not taken for very low densities
+  big <- truncated(-0.5)
+  lp_inf <- big$logpost
+  big$logpost <- function(t) {
+    v <- lp_inf(t)
+    if (is.finite(v)) v else -1e40
+  }
+  msg <- vb_error(big, NULL)
+  expect_match(msg, "some of its nodes around every mean tried", fixed = TRUE)
 })
 
 test_that("the fallback moves to where logpost is finite at every node", {
