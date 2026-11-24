@@ -29,7 +29,7 @@ Generated files that must not be edited by hand: `NAMESPACE` and `man/*.Rd` (rox
 
 ## CI
 
-- `R-CMD-check.yaml` runs on macOS, Windows and Ubuntu with R release, and on Ubuntu with R 4.1, the minimum in `DESCRIPTION` (the floor is tested in CI, not only declared), so keep to base-R features available in R 4.1. The package is not on CRAN, so the matrix is otherwise kept minimal.
+- `R-CMD-check.yaml` runs on macOS, Windows and Ubuntu with R release, and on Ubuntu with R 4.1, the minimum in `DESCRIPTION`, with the hard dependencies and testthat only and no vignettes (the floor is tested in CI, not only declared), so keep to base-R features available in R 4.1. The package is not on CRAN, so the matrix is otherwise kept minimal.
 - `source-checks.yaml` runs `air format . --check` (settings in `air.toml`, with INLAvaan's skip list) and checks that the engine files `R/vanilla-*.R` hold no roxygen, no S3 generic or method registration and not the string `"inlavanilla"`; `tests/testthat/test-engine-files.R` runs the same checks from the source tree, and checks that the engine files use nothing defined in the other files.
 - `test-coverage.yaml` runs covr and uploads to Codecov. The Codecov checks are informational only.
 - `pkgdown.yaml` builds the site and deploys it to `gh-pages` on pushes to main.

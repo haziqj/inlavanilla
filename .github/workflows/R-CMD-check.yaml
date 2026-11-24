@@ -13,7 +13,7 @@ jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
 
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+    name: ${{ matrix.config.os }} (${{ matrix.config.r }}) ${{ matrix.config.label }}
 
     strategy:
       fail-fast: false
@@ -22,12 +22,26 @@ jobs:
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
-          # The floor in DESCRIPTION, R (>= 4.1.0), tested and not only declared
-          - {os: ubuntu-latest,  r: '4.1'}
+          # The floor in DESCRIPTION, R (>= 4.1.0), tested and not only
+          # declared. Some Suggests (RTMB, and Matrix as RTMB needs it) and the
+          # vignettes' tooling need a newer R, so this job installs the hard
+          # dependencies and testthat, and skips the vignettes; the tests skip
+          # what needs a missing Suggests.
+          - {
+              os: ubuntu-latest,
+              r: '4.1',
+              label: '(R floor)',
+              dependencies: '"hard"',
+              extra_packages: 'any::rcmdcheck, any::testthat, local::.',
+              force_suggests: 'false',
+              build_args: 'c("--no-manual", "--no-build-vignettes")',
+              check_args: 'c("--no-manual", "--ignore-vignettes")'
+            }
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      _R_CHECK_FORCE_SUGGESTS_: ${{ matrix.config.force_suggests || 'true' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -46,10 +60,12 @@ jobs:
       # (quarto-dev/quarto-r#217).
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, local::.
+          dependencies: ${{ matrix.config.dependencies || '"all"' }}
+          extra-packages: ${{ matrix.config.extra_packages || 'any::rcmdcheck, local::.' }}
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
-          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+          build_args: ${{ matrix.config.build_args || 'c("--no-manual","--compact-vignettes=gs+qpdf")' }}
+          args: ${{ matrix.config.check_args || 'c("--no-manual", "--as-cran")' }}
