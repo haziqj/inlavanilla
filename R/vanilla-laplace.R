@@ -125,16 +125,17 @@ grad_sign_hint <- function(H, scales) {
 # coordinate from fd_scales(), so they suit each parameter's own scale:
 # central differences of the gradient at 1e-4 of that scale, or, without a
 # gradient, second differences of the log-posterior at a hundredth of it. R
-# is NULL when the Hessian is not positive definite. `grad_gap` compares a
-# user gradient with `logpost` there, NA when there is no gradient or the
-# Hessian is the user's, since neither takes the differences it reads.
-# `hessian` records the method and its calls, those of fd_scales() counted
-# apart.
+# is NULL when the Hessian is not positive definite. fd_scales() runs with
+# `he` too, since its differences of `logpost` give `grad_gap`, which compares
+# a user gradient, and the diagonal of the Hessian, with `logpost` there: NA
+# without a gradient. `hessian` records the method and its calls, those of
+# fd_scales() counted apart.
 laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
   m <- length(mode)
   mode <- stats::setNames(mode, parnames)
+  fds <- fd_scales(lp, mode, lp_max)
   if (is.null(he)) {
-    scales <- fd_scales(lp, mode, lp_max)
+    scales <- fds
     H <- if (is.null(gr)) {
       -fd_hessian(lp, mode, h = 0.01 * scales, f0 = lp_max)
     } else {
@@ -146,9 +147,9 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
     # the Hessian's own diagonal where it allows
     d <- diag(H)
     scales <- if (all(is.finite(d) & d > 0)) {
-      structure(1 / sqrt(d), ok = rep(TRUE, m), calls = 0L)
+      structure(1 / sqrt(d), ok = rep(TRUE, m))
     } else {
-      fd_scales(lp, mode, lp_max)
+      fds
     }
   }
   # A Hessian is symmetric. A Jacobian of the user's gradient that is not
@@ -190,7 +191,7 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
       } else {
         2 * m
       },
-      step_calls = attr(scales, "calls"),
+      step_calls = attr(fds, "calls"),
       check_calls = 0L
     )
   )
@@ -219,8 +220,8 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
     gr(mode)
   }
   out$grad <- stats::setNames(as.numeric(g), parnames)
-  if (!is.null(gr) && is.null(he)) {
-    out$grad_gap[] <- grad_gap(as.numeric(g), H, scales)
+  if (!is.null(gr)) {
+    out$grad_gap[] <- grad_gap(as.numeric(g), H, fds)
   }
   out$grad_mode <- max(abs(crossprod(out$A, g)))
   out$mode_shift <- stats::setNames(

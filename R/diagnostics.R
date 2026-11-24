@@ -51,7 +51,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' is not the SD column of the summary table, which is the skew-normal's.
 #' Values that a fit did not compute are `NA`: the VB quantities with
 #' `vb_correction = "none"`, the scan quantities with `marginals = "gaussian"`,
-#' and `grad_gap` without `grad` or with `hess`.
+#' and `grad_gap` without `grad`.
 #'
 #' **Global diagnostics** (`type = "global"`), a named numeric vector:
 #' * `npar`: the number of parameters.
@@ -131,10 +131,11 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' * `grad_gap`: how far a supplied `grad` is from `logpost` at the mode: the
 #'   larger of the difference in slope per conditional posterior SD (about how
 #'   far it moves the mode, in SDs) and half the relative difference in
-#'   curvature (about the relative error it makes in an SD). It comes from
-#'   central differences of `logpost` that the fit takes at the mode anyway, up
-#'   to a posterior SD or so apart, so it costs no calls. It should be close to
-#'   0, and is flagged above 0.1.
+#'   curvature (about the relative error it makes in an SD), the curvature
+#'   being that of the Hessian at the mode, the supplied `hess` when there is
+#'   one. It comes from central differences of `logpost` that the fit takes at
+#'   the mode anyway, up to a posterior SD or so apart, so it costs no calls. It
+#'   should be close to 0, and is flagged above 0.1.
 #' * `vb_step_sigma`: the step still to go at the VB mean, in posterior SDs:
 #'   the fixed-point step there, the Newton step of the VB stationarity
 #'   condition, as `mode_shift_sigma` is for the mode. After the fallback

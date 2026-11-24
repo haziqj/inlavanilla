@@ -430,12 +430,13 @@ model with 39 parameters and an automatic-differentiation Hessian (RTMB) took
 The fit goes straight to the mode: at \code{init} it only checks that \code{logpost},
 \code{grad} and \code{hess} return finite values of the right shape. A supplied \code{grad}
 is compared with \code{logpost} at the mode, from differences the fit takes there
-anyway, so at no cost in calls, and its Jacobian there is checked for
-symmetry, with a warning if either check fails (see \code{grad_gap} in
-\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}). A supplied \code{hess} is checked at the mode against
-central differences of \code{grad}, along two directions, with a warning if it
-does not match; \code{grad} is then not compared with \code{logpost}, since no
-differences of \code{logpost} are taken. Any R function works for \code{logpost},
+anyway to set its steps, so at no cost in calls, and the Hessian there,
+whether taken from \code{grad} or supplied, is checked for symmetry, with a
+warning if either check fails (see \code{grad_gap} in \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).
+A supplied \code{hess} is also checked at the mode against central differences
+of \code{grad}, along two directions, with a warning if it does not match, and
+its diagonal is part of what \code{grad_gap} compares with \code{logpost}. Taking the
+steps costs about 4m \code{logpost} calls. Any R function works for \code{logpost},
 \code{grad} and \code{hess}, including compiled code (Rcpp, TMB) and RTMB, which
 differentiates R code. An RTMB function can return the log-posterior itself,
 and its \code{obj$fn}, \code{obj$gr} and \code{obj$he} are then passed as they are. For a
@@ -565,8 +566,8 @@ restart line gives each run's own iterations); the
 log-posterior at the mode, the whitened gradient there (which decides
 the restart) and the largest Newton step in posterior SDs (which the
 fit-time warning checks); how the Hessian was taken (and, for a
-supplied \code{grad}, the asymmetry of its Jacobian and its gap from
-\code{logpost}, or, for a supplied \code{hess}, how far it is from central
+supplied \code{grad}, the asymmetry of the Hessian and its gap from
+\code{logpost}, and, for a supplied \code{hess}, how far it is from central
 differences of \code{grad}); the largest posterior
 correlation and the smallest eigenvalue of the correlation matrix, which
 is near zero when some combination of the parameters is poorly

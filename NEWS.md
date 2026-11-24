@@ -1,5 +1,11 @@
 # inlavanilla (development version)
 
+* A fit with `hess` now compares `grad` with `logpost` at the mode, as a fit
+  without one does: `grad_gap` is no longer `NA` there, and its curvature part
+  now checks the diagonal of `hess`. It reads the differences of `logpost` that
+  set the steps of the Hessian in a fit without `hess`, about 4m more
+  `logpost` calls. The marginals do not change.
+
 * A `logpost` value at or below -1e39 now counts as `-Inf`, as `NA` and `NaN`
   already did. Some code returns -1e40 where it fails, as lavaan's and
   INLAvaan's likelihoods do. As a finite number it passed for a very low

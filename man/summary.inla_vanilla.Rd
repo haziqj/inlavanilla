@@ -67,9 +67,10 @@ one. With the VB check below, it is what makes the fit converged.
 the mode: the larger of the difference in slope per conditional posterior
 SD and half the relative difference in curvature, so about how far it
 moves the mode in SDs and the relative error it makes in an SD. It is
-flagged above 0.1, costs no calls, and is \code{NA} without \code{grad} or with
-\code{hess}. A wrong gradient mostly harms the log marginal likelihood and the
-covariance, since the scans use \code{logpost} itself.
+flagged above 0.1, costs no calls, and is \code{NA} without \code{grad}. With \code{hess},
+the curvature is that of \code{hess}. A wrong gradient mostly harms the log
+marginal likelihood and the covariance, since the scans use \code{logpost}
+itself.
 \item \strong{Hessian.} \code{hess_cond_cor}, the condition number of the Hessian at the
 mode with each parameter in posterior-SD units (the eigenvalue ratio of
 the posterior correlation matrix). It is flagged above \eqn{10^8}: some

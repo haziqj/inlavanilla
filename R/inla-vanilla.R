@@ -223,12 +223,13 @@
 #' The fit goes straight to the mode: at `init` it only checks that `logpost`,
 #' `grad` and `hess` return finite values of the right shape. A supplied `grad`
 #' is compared with `logpost` at the mode, from differences the fit takes there
-#' anyway, so at no cost in calls, and its Jacobian there is checked for
-#' symmetry, with a warning if either check fails (see `grad_gap` in
-#' [summary.inla_vanilla()]). A supplied `hess` is checked at the mode against
-#' central differences of `grad`, along two directions, with a warning if it
-#' does not match; `grad` is then not compared with `logpost`, since no
-#' differences of `logpost` are taken. Any R function works for `logpost`,
+#' anyway to set its steps, so at no cost in calls, and the Hessian there,
+#' whether taken from `grad` or supplied, is checked for symmetry, with a
+#' warning if either check fails (see `grad_gap` in [summary.inla_vanilla()]).
+#' A supplied `hess` is also checked at the mode against central differences
+#' of `grad`, along two directions, with a warning if it does not match, and
+#' its diagonal is part of what `grad_gap` compares with `logpost`. Taking the
+#' steps costs about 4m `logpost` calls. Any R function works for `logpost`,
 #' `grad` and `hess`, including compiled code (Rcpp, TMB) and RTMB, which
 #' differentiates R code. An RTMB function can return the log-posterior itself,
 #' and its `obj$fn`, `obj$gr` and `obj$he` are then passed as they are. For a
@@ -353,8 +354,8 @@
 #'   log-posterior at the mode, the whitened gradient there (which decides
 #'   the restart) and the largest Newton step in posterior SDs (which the
 #'   fit-time warning checks); how the Hessian was taken (and, for a
-#'   supplied `grad`, the asymmetry of its Jacobian and its gap from
-#'   `logpost`, or, for a supplied `hess`, how far it is from central
+#'   supplied `grad`, the asymmetry of the Hessian and its gap from
+#'   `logpost`, and, for a supplied `hess`, how far it is from central
 #'   differences of `grad`); the largest posterior
 #'   correlation and the smallest eigenvalue of the correlation matrix, which
 #'   is near zero when some combination of the parameters is poorly

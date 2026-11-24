@@ -940,20 +940,38 @@ test_that("the gradient is compared with logpost at no cost in calls", {
   text <- paste(cli::ansi_strip(capture.output(summary(fit))), collapse = " ")
   expect_match(text, "`grad` does not match `logpost`", fixed = TRUE)
 
-  # A check that did not run is NA and not flagged: without a gradient, and
-  # with a Hessian, which takes no differences of logpost to read
+  # A check that did not run is NA and not flagged: without a gradient
   fit <- inla_vanilla(lp_gauss, c(a = 0.3, b = 0.2), silent = TRUE)
   expect_true(all(is.na(diagnostics(fit, type = "param")$grad_gap)))
   expect_identical(fit$warnings, character())
+
+  # With a Hessian the check runs too, on the gradient and on the Hessian's
+  # diagonal, from the same differences of logpost
+  he_gauss <- function(theta) -diag(2)
   fit <- inla_vanilla(
     lp_gauss,
     c(a = 0.3, b = 0.2),
     grad = gr_gauss,
-    hess = function(theta) -diag(2),
+    hess = he_gauss,
     silent = TRUE
   )
-  expect_true(all(is.na(diagnostics(fit, type = "param")$grad_gap)))
+  gap <- diagnostics(fit, type = "param")$grad_gap
+  expect_true(all(is.finite(gap)))
+  expect_lt(max(gap), 1e-3)
   expect_identical(fit$warnings, character())
+  # A gradient twice too large in b is flagged as without a Hessian, and so
+  # is a Hessian whose diagonal is wrong
+  fit <- inla_vanilla(
+    lp_gauss,
+    c(a = 0.3, b = 0.2),
+    grad = function(theta) c(1, 2) * gr_gauss(theta),
+    hess = function(theta) diag(c(1, 2)) %*% he_gauss(theta),
+    silent = TRUE
+  )
+  gap <- diagnostics(fit, type = "param")$grad_gap
+  expect_lt(gap[[1]], 1e-3)
+  expect_equal(gap[[2]], 0.5, tolerance = 1e-3)
+  expect_match(fit$warnings, "for `b` \\(0.50\\)", all = FALSE)
 })
 
 test_that("a slow function gets its progress line on time", {
