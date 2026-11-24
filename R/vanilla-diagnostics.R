@@ -304,7 +304,12 @@ problem_text <- function(check, dg, env, n = 3L) {
     ),
     tails = paste0(
       "Heavy tails for ",
-      list_template(env, "tails", p$names[!p$tails %in% TRUE], n = n),
+      list_template(
+        env,
+        "tails",
+        p$names[check_ran(p$tails) & !p$tails %in% TRUE],
+        n = n
+      ),
       ": the density is still over 5% of its peak at the ends of the ",
       "scanned window (4",
       sd_unit(),

@@ -204,3 +204,129 @@ test_that("verbose output says where the Hessian at the mode came from", {
   expect_match(text, "Hessian at the mode from hess_mode, checked there")
   expect_match(text, "Hessian from hess_mode: 1 call")
 })
+
+## ----- gaussian_marginals ----------------------------------------------------
+
+# A normal mean and log SD, and a third parameter c that is Gaussian and
+# independent of them, like a saturated intercept
+set.seed(12)
+gm_y <- rnorm(25, 3, 1.5)
+lp_gm <- function(theta) {
+  sigma <- exp(theta[["ls"]])
+  sum(dnorm(gm_y, theta[["mu"]], sigma, log = TRUE)) +
+    dnorm(theta[["mu"]], 0, 10, log = TRUE) +
+    dnorm(theta[["ls"]], 0, 2, log = TRUE) +
+    dnorm(theta[["c"]], 1, 0.3, log = TRUE)
+}
+gr_gm <- function(theta) {
+  mu <- theta[["mu"]]
+  ls <- theta[["ls"]]
+  r <- gm_y - mu
+  s2 <- exp(2 * ls)
+  c(
+    sum(r) / s2 - mu / 100,
+    -length(gm_y) + sum(r^2) / s2 - ls / 4,
+    -(theta[["c"]] - 1) / 0.09
+  )
+}
+init_gm <- c(mu = 0, ls = 0, c = 0)
+
+test_that("gaussian_marginals gives those parameters their Gaussian marginal", {
+  for (gr in list(gr_gm, NULL)) {
+    ref <- vanilla_core(lp_gm, gr, init_gm, silent = TRUE)
+    core <- vanilla_core(
+      lp_gm,
+      gr,
+      init_gm,
+      gaussian_marginals = "c",
+      silent = TRUE
+    )
+    sd_c <- sqrt(core$cov["c", "c"])
+    # The VB shift of c is held at zero, and the others are unchanged
+    expect_identical(core$mean_vb[["c"]], core$mode[["c"]])
+    expect_equal(core$mean_vb[1:2], ref$mean_vb[1:2], tolerance = 1e-6)
+    # The marginal of c is the Gaussian at the mode, which is exact here
+    expect_identical(
+      unname(core$sn["c", c("xi", "omega", "alpha")]),
+      c(
+        core$mode[["c"]],
+        sd_c,
+        0
+      )
+    )
+    expect_equal(core$mode[["c"]], 1, tolerance = 1e-6)
+    expect_equal(sd_c, 0.3, tolerance = 1e-5)
+    expect_true(all(is.na(
+      core$sn["c", c("gamma1", "nmad", "tails", "ridge_bend", "logC")]
+    )))
+    expect_true(is.na(core$sn["c", "unscanned_mass"]))
+    expect_true(all(is.na(core$scan$logpost[, "c"])))
+    expect_identical(core$diagnostics$marginals["c", "vb_shift"], 0)
+    expect_identical(
+      core$diagnostics$marginals["c", "marginal_scan"],
+      NA_character_
+    )
+    # The other marginals are those of the fit without the hook
+    expect_lt(
+      max(abs(core$sn[1:2, 1:3] - ref$sn[1:2, 1:3])),
+      1e-4
+    )
+    # It saves the scan of c
+    expect_gt(ref$counts[["logpost"]], core$counts[["logpost"]])
+    # A check that did not run flags nothing
+    dg <- diagnostics_internal(
+      core$diagnostics$optim,
+      core$diagnostics$vb,
+      core$diagnostics$marginals
+    )
+    expect_false(any(check_flags(dg, gaussian = FALSE)))
+    expect_length(diagnostic_problems(dg, gaussian = FALSE), 0L)
+  }
+})
+
+test_that("gaussian_marginals holds the VB shift through the fallback", {
+  core <- vanilla_core(
+    lp_gm,
+    gr_gm,
+    init_gm,
+    gaussian_marginals = 3,
+    vb_correction = "full",
+    control = list(vb_maxit = 1),
+    silent = TRUE
+  )
+  expect_true(core$diagnostics$vb$fallback)
+  expect_identical(core$mean_vb[["c"]], core$mode[["c"]])
+  # With Gaussian marginals too
+  core <- vanilla_core(
+    lp_gm,
+    gr_gm,
+    init_gm,
+    gaussian_marginals = 3,
+    marginals = "gaussian",
+    silent = TRUE
+  )
+  expect_identical(core$mean_vb[["c"]], core$mode[["c"]])
+  expect_identical(core$sn["c", "xi"], core$mode[["c"]])
+})
+
+test_that("gaussian_marginals must index or name parameters", {
+  for (bad in list("d", 4, 0, 1.5, TRUE)) {
+    expect_error(
+      vanilla_core(lp_gm, gr_gm, init_gm, gaussian_marginals = bad),
+      "`gaussian_marginals` must index or name parameters",
+      class = "inlavanilla_error"
+    )
+  }
+  expect_identical(
+    check_gaussian_marginals(c("c", "mu", "c"), names(init_gm)),
+    c(1L, 3L)
+  )
+  expect_identical(check_gaussian_marginals(NULL, names(init_gm)), integer())
+})
+
+test_that("inla_vanilla() does not expose the hooks", {
+  expect_false(any(
+    c("hess_mode", "gaussian_marginals") %in% names(formals(inla_vanilla))
+  ))
+  expect_false("vanilla_core" %in% getNamespaceExports("inlavanilla"))
+})

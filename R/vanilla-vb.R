@@ -187,6 +187,12 @@ vb_onestep_guard <- 2.5
 # Hessian stage: when one-step VB has to iterate, it stops within that many
 # calls (at least two passes), and never calls nlminb() on account of its
 # length, so the VB stage stays within what the fit has already spent.
+# `fixed` holds the parameters whose shift is known to be zero, those with
+# Gaussian marginals (the `gaussian_marginals` of vanilla_core()): their step
+# is set to zero at every iteration, and their shift after the fallback, with
+# the nodes still on all m axes. That is exact when the log-posterior is
+# quadratic along those axes and they are nearly separate from the others, as
+# INLAvaan's saturated means are.
 vb_correct <- function(
   lp,
   gr,
@@ -196,7 +202,8 @@ vb_correct <- function(
   A,
   ctrl,
   method = "full",
-  budget = Inf
+  budget = Inf,
+  fixed = integer()
 ) {
   m <- length(mode)
   stein <- is.null(gr)
@@ -244,7 +251,7 @@ vb_correct <- function(
     plus <- seq_len(n_pairs)
     Zp <- Z[1 + plus, , drop = FALSE]
     wp <- w[1 + plus]
-    step_at <- function(shift) {
+    raw_step <- function(shift) {
       v <- node_lp(shift)
       as.numeric(crossprod(Zp, wp * (v[plus] - v[n_pairs + plus])))
     }
@@ -258,7 +265,13 @@ vb_correct <- function(
       }
       s
     }
-    step_at <- function(shift) as.numeric(Sigma %*% score(shift))
+    raw_step <- function(shift) as.numeric(Sigma %*% score(shift))
+  }
+  # The step with the shift of the fixed parameters held at zero
+  step_at <- function(shift) {
+    step <- raw_step(shift)
+    step[fixed] <- 0
+    step
   }
 
   # Negative expected log-posterior, for the fallback optimiser. A failed node
@@ -391,6 +404,7 @@ vb_correct <- function(
       if (denom > 0) {
         gam <- sum(step * df) / denom
         cand <- step - gam * (dx + df)
+        cand[fixed] <- 0
         if (
           all(is.finite(cand)) &&
             max(abs(cand) / sds) <= min(maxstep, 2 * move)
@@ -448,7 +462,7 @@ vb_correct <- function(
         gradient = function(d) {
           shift <- as.numeric(A %*% d)
           g <- if (stein) {
-            -as.numeric(A_inv %*% step_at(shift))
+            -as.numeric(A_inv %*% raw_step(shift))
           } else {
             as.numeric(crossprod(A, -score(shift)))
           }
@@ -459,6 +473,7 @@ vb_correct <- function(
     }
     nl <- fall_back(numeric(m))
     shift <- as.numeric(A %*% nl$par)
+    shift[fixed] <- 0
     iter <- nl$iterations
     if (nl$objective >= failed) {
       stop_failed_nodes(shift, pinned = FALSE)
@@ -480,6 +495,7 @@ vb_correct <- function(
     if (rerun) {
       nl <- fall_back(nl$par)
       shift <- as.numeric(A %*% nl$par)
+      shift[fixed] <- 0
       iter <- iter + nl$iterations
       step <- step_at(shift)
     }

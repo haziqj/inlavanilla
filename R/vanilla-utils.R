@@ -219,14 +219,19 @@ param_flags <- function(dg, gaussian) {
       off_level(p$vb_step_sigma, warn_levels$vb_step),
     vb_shift_sigma = vb &
       off_level(abs(p$vb_shift_sigma), warn_levels$vb_shift),
-    nmad = sn & off_level(p$nmad, warn_levels$nmad),
+    nmad = sn & check_ran(p$nmad) & off_level(p$nmad, warn_levels$nmad),
     unscanned_mass = sn &
+      check_ran(p$unscanned_mass) &
       off_level(p$unscanned_mass, warn_levels$unscanned_mass),
-    tails = sn & !p$tails %in% TRUE,
+    tails = sn & check_ran(p$tails) & !p$tails %in% TRUE,
     ridge_bend = sn &
+      check_ran(p$ridge_bend) &
       off_level(p$ridge_bend, summary_levels$ridge_bend) &
       !scanned_laplace(dg),
-    mean_gap = sn & vb & off_level(abs(p$mean_gap), summary_levels$mean_gap)
+    mean_gap = sn &
+      vb &
+      check_ran(p$mean_gap) &
+      off_level(abs(p$mean_gap), summary_levels$mean_gap)
   )
 }
 
@@ -243,6 +248,27 @@ fmt_num <- function(x) {
 }
 
 # Checks of arguments, with the package's own errors
+
+# The parameters whose marginals are Gaussian, as indices: given as indices or
+# names, or NULL for none.
+check_gaussian_marginals <- function(x, parnames) {
+  if (is.null(x) || length(x) == 0L) {
+    return(integer())
+  }
+  idx <- if (is.character(x)) {
+    match(x, parnames)
+  } else if (is.numeric(x) && all(x == round(x))) {
+    as.integer(x)
+  } else {
+    NA_integer_
+  }
+  if (anyNA(idx) || any(idx < 1L | idx > length(parnames))) {
+    abort(
+      "{.arg gaussian_marginals} must index or name parameters in {.arg init}."
+    )
+  }
+  sort(unique(idx))
+}
 
 check_function <- function(f, arg) {
   if (!is.function(f)) {

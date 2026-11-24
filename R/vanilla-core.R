@@ -7,7 +7,21 @@
 # diagnostics of each stage. `lp`, `gr` and `hess` are the log-posterior, its
 # gradient and its Hessian as functions of the parameter vector alone (any
 # data already bound), with `gr` and `hess` NULL when there are none, and
-# `init` the named start. The other arguments are those of inla_vanilla().
+# `init` the named start. The other arguments are those of inla_vanilla(),
+# and two that only INLAvaan passes, as it knows its models:
+# * `hess_mode`, a function that gives the Hessian of `lp` at the mode, as
+#   `hess` does, but is called there alone, once or, after a restart of the
+#   mode search, twice: never by nlminb(), the VB correction or the scans. It
+#   replaces the differences of `gr` at the mode, and is checked against them
+#   and for symmetry, as `hess` is. It needs `gr`.
+# * `gaussian_marginals`, the indices (or names) of parameters whose marginal
+#   may be taken as Gaussian: the log-posterior is exactly quadratic along
+#   each of their axes with the other parameters fixed, and those axes are
+#   nearly separate from the non-Gaussian parameters (saturated intercepts
+#   qualify, random effects kept in the parameters do not, because of the
+#   funnel with their variance). Their VB shift is held at zero, and they get
+#   no scan: their marginal is N(mode_j, Sigma_jj), with NA for the scan
+#   diagnostics.
 #
 # It prints the stage lines (none with `silent = TRUE`) and raises the
 # warnings of the stages, but installs no condition handler and raises no
@@ -24,6 +38,7 @@ vanilla_core <- function(
   init,
   hess = NULL,
   hess_mode = NULL,
+  gaussian_marginals = NULL,
   vb_correction = c("onestep", "full", "none"),
   marginals = c("skewnorm", "gaussian"),
   marginal_scan = c("linear", "exact", "laplace", "plain"),
@@ -56,6 +71,7 @@ vanilla_core <- function(
   if (anyDuplicated(names(init))) {
     abort("{.arg init} must have unique names.")
   }
+  gm <- check_gaussian_marginals(gaussian_marginals, names(init))
   vb_correction <- check_vb(vb_correction)
   marginals <- check_marginals(marginals)
   marginal_scan <- check_choice(
@@ -275,7 +291,8 @@ vanilla_core <- function(
         lap$A,
         ctrl,
         method = vb_correction,
-        budget = st$n_lp + st$n_gr + st$n_he
+        budget = st$n_lp + st$n_gr + st$n_he,
+        fixed = gm
       )
     )
     # The fallback is a route of the solver, reported but not marked, as in
@@ -369,13 +386,18 @@ vanilla_core <- function(
             progress_close(prog)
             progress_note(prog, text)
           }
-        )
+        ),
+        gaussian = gm
       )
     )
     workers <- mar$workers
     sn <- cbind(
       mar$sn,
-      unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
+      unscanned_mass = replace(
+        unscanned_mass(mar$sn, lap$mode, sds),
+        gm,
+        NA_real_
+      )
     )
     # The scans, kept for plot(type = "sn_fit"): no further calls
     scan <- list(
@@ -459,11 +481,15 @@ vanilla_core <- function(
       vb_shift = if (use_vb) shift else na,
       vb_shift_sigma = if (use_vb) shift / sds else na,
       nmad = sn[, "nmad"],
-      alpha = if (skew) sn[, "alpha"] else na,
+      alpha = if (skew) replace(sn[, "alpha"], gm, NA_real_) else na,
       unscanned_mass = sn[, "unscanned_mass"],
       vb_step_sigma = if (use_vb) vbc$step_sigma else na,
       grad_gap = lap$grad_gap,
-      mean_gap = if (use_vb && skew) (mom$mean - mean_vb) / sds else na,
+      mean_gap = if (use_vb && skew) {
+        replace((mom$mean - mean_vb) / sds, gm, NA_real_)
+      } else {
+        na
+      },
       gamma1 = sn[, "gamma1"],
       tails = as.logical(sn[, "tails"]),
       ridge_bend = sn[, "ridge_bend"],
@@ -495,7 +521,11 @@ vanilla_core <- function(
     marginals = marginals,
     marginal_scan = if (skew) marginal_scan else NA_character_,
     tk_fallback = tk_fallback,
-    fallback = if (skew) parnames[method != marginal_scan] else character(),
+    fallback = if (skew) {
+      parnames[!is.na(method) & method != marginal_scan]
+    } else {
+      character()
+    },
     cores = cores,
     workers = workers,
     has_grad = has_grad

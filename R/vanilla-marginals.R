@@ -44,8 +44,9 @@
 # in the gradient, such as that of an inner optimisation, as 1 / h^2. Any A
 # with A A' = Sigma gives the same sum in the limit. fit_marginals() passes
 # lap$A from cov_root(), so that the truncation does not depend on the order
-# of the parameters.
-gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
+# of the parameters. Only the parameters in `which` get their own second
+# difference; the others are NA.
+gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1, which = seq_along(mode)) {
   m <- length(mode)
   g0 <- gr(mode)
   second_diff <- function(a) {
@@ -57,7 +58,13 @@ gamma1_grad <- function(gr, mode, Vscan, A, h = 0.1) {
   }
   vapply(
     seq_len(m),
-    function(j) 0.5 * sum(Vscan[, j] * (u - second_diff(Vscan[, j]))),
+    function(j) {
+      if (j %in% which) {
+        0.5 * sum(Vscan[, j] * (u - second_diff(Vscan[, j])))
+      } else {
+        NA_real_
+      }
+    },
     numeric(1)
   )
 }
@@ -298,6 +305,11 @@ width_slope <- function(z, w) {
 # `width`, the width term added to them (zero at the mode), and `method`, the
 # scan each parameter used. plot(type = "sn_fit") draws them as INLAvaan's
 # visual_debug() does.
+#
+# The parameters in `gaussian` (the `gaussian_marginals` of vanilla_core())
+# are not scanned: their marginal is the Gaussian N(mode_j, Sigma_jj), a
+# skew-normal with shape 0, with NA for the scan's diagnostics, its heights
+# and its width term, and NA for its scan in `method`.
 fit_marginals <- function(
   lp,
   gr,
@@ -308,13 +320,16 @@ fit_marginals <- function(
   he = NULL,
   marginal_scan = "linear",
   tk_fallback = FALSE,
-  par = NULL
+  par = NULL,
+  gaussian = integer()
 ) {
   mode <- lap$mode
   Sigma <- lap$Sigma
   A <- lap$A
   m <- length(mode)
   sds <- sqrt(diag(Sigma))
+  # The parameters to scan
+  todo <- setdiff(seq_len(m), gaussian)
   Vscan <- sweep(Sigma, 2, sds, "/")
   z <- seq(-4, 4, length.out = ctrl$n_grid)
 
@@ -323,7 +338,7 @@ fit_marginals <- function(
   linear <- marginal_scan == "linear" ||
     (m == 1L && marginal_scan != "plain")
   # The baselines at the mode for gamma1_lp(), only when some parameter uses it
-  at_mode <- if (is.null(gr) && linear) {
+  at_mode <- if (is.null(gr) && linear && length(todo) > 0L) {
     whitened_lp(lp, mode, lap$lp_max, A)
   } else {
     NULL
@@ -331,9 +346,9 @@ fit_marginals <- function(
   # The linear width term from the gradient, for all the parameters at once.
   # It has a progress line of its own, ahead of the per-parameter one, whose
   # estimate of the time left would otherwise charge it to the first parameter.
-  g1_grad <- if (!is.null(gr) && linear) {
+  g1_grad <- if (!is.null(gr) && linear && length(todo) > 0L) {
     start("shared")
-    gamma1_grad(gr, mode, Vscan, A)
+    gamma1_grad(gr, mode, Vscan, A, which = todo)
   } else {
     NULL
   }
@@ -355,16 +370,16 @@ fit_marginals <- function(
   # are long enough. Before the per-parameter line starts, because it can print
   # a message
   setup <- list(jobs = 1L)
-  if (!is.null(par) && m > 1L) {
+  if (!is.null(par) && length(todo) > 1L) {
     data <- c(par[c("logpost", "grad", "hess", "init")], list(ctx = ctx))
     setup <- par_setup(
       par[c("logpost", "grad", "hess")],
       scan_probe,
       data,
       est_s = par$call_s *
-        m *
+        length(todo) *
         scan_calls(m, ctrl$n_grid, marginal_scan, !is.null(gr), !is.null(he)),
-      n = m,
+      n = length(todo),
       note = par$note,
       label = "The skew-normal scans",
       what = "logpost",
@@ -383,8 +398,20 @@ fit_marginals <- function(
     }
   }
   scans <- vector("list", m)
+  for (j in gaussian) {
+    na <- rep(NA_real_, length(z))
+    scans[[j]] <- list(
+      row = c(mode[[j]], sds[[j]], 0, NA, NA, NA, NA, NA),
+      raw = na,
+      w = na,
+      method = NA_character_
+    )
+  }
   if (setup$jobs > 1L) {
-    groups <- par_groups(m, setup$jobs)
+    groups <- lapply(
+      par_groups(length(todo), setup$jobs),
+      function(i) todo[i]
+    )
     done <- par_run(groups, scan_job, data, setup, tick_once)
     for (k in seq_along(groups)) {
       if (!is.null(done[[k]])) {
