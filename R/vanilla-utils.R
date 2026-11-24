@@ -257,7 +257,7 @@ check_gaussian_marginals <- function(x, parnames) {
   }
   idx <- if (is.character(x)) {
     match(x, parnames)
-  } else if (is.numeric(x) && all(x == round(x))) {
+  } else if (is.numeric(x) && all(is.finite(x)) && all(x == round(x))) {
     as.integer(x)
   } else {
     NA_integer_

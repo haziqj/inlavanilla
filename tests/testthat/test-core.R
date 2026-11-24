@@ -365,7 +365,7 @@ test_that("verbose output shows Gaussian marginals with a dash and no flag", {
 })
 
 test_that("gaussian_marginals must index or name parameters", {
-  for (bad in list("d", 4, 0, 1.5, TRUE)) {
+  for (bad in list("d", 4, 0, 1.5, TRUE, NA, NA_real_, Inf)) {
     expect_error(
       vanilla_core(lp_gm, gr_gm, init_gm, gaussian_marginals = bad),
       "`gaussian_marginals` must index or name parameters",
