@@ -379,6 +379,49 @@ test_that("psnorm returns NA for a non-positive or missing scale or shape", {
   expect_true(is.na(out[2]))
 })
 
+test_that("psnorm gives a zero-length result for any zero-length argument", {
+  # As pnorm() does, in place of the NA that recycling to length one gave
+  expect_identical(psnorm(numeric(0)), numeric(0))
+  expect_identical(psnorm(numeric(0), 0, 1, 2), numeric(0))
+  expect_identical(psnorm(0.3, numeric(0), 1, 2), numeric(0))
+  expect_identical(psnorm(0.3, 0, numeric(0), 2), numeric(0))
+  expect_identical(psnorm(0.3, 0, 1, numeric(0)), numeric(0))
+  expect_identical(psnorm(numeric(0), 0, 1, 2, lower_tail = FALSE), numeric(0))
+  expect_identical(psnorm(c(0.1, 0.2), 0, 1, numeric(0)), numeric(0))
+  q0 <- matrix(numeric(0), 0, 2)
+  expect_identical(psnorm(q0, 0, 1, 2), stats::pnorm(q0))
+})
+
+test_that("psnorm keeps the names and dim of q, as dsnorm does", {
+  q <- c(a = -0.5, b = 0.3, c = 2)
+  for (lower_tail in c(TRUE, FALSE)) {
+    out <- psnorm(q, 0.1, 1.5, c(-2, 0, 3), lower_tail = lower_tail)
+    expect_named(out, names(q))
+    # The numbers are those of an unnamed call
+    expect_identical(
+      unname(out),
+      psnorm(unname(q), 0.1, 1.5, c(-2, 0, 3), lower_tail = lower_tail)
+    )
+  }
+  expect_named(dsnorm(q, 0.1, 1.5, 3), names(q))
+
+  m <- matrix(
+    c(-1, 0, 0.5, 2),
+    2,
+    dimnames = list(c("r1", "r2"), c("c1", "c2"))
+  )
+  out <- psnorm(m, 0, 1, -3)
+  expect_identical(dim(out), dim(m))
+  expect_identical(dimnames(out), dimnames(m))
+  expect_identical(as.vector(out), psnorm(as.vector(m), 0, 1, -3))
+  expect_identical(dim(dsnorm(m, 0, 1, -3)), dim(m))
+
+  # A q shorter than the result has no shape to give
+  out <- psnorm(c(a = 0.3), 0, 1, c(1, 2))
+  expect_null(names(out))
+  expect_identical(out, psnorm(c(0.3, 0.3), 0, 1, c(1, 2)))
+})
+
 # qsnorm_fast and qsnorm --------------------------------------------------------
 
 p_wide <- c(
@@ -547,6 +590,40 @@ test_that("qsnorm recycles its arguments and returns NA or +-Inf at the edges", 
   )
   expect_identical(qsnorm(0.5, 0, c(0, -1, NA), 2), rep(NA_real_, 3))
   expect_identical(qsnorm(0.5, 0, 1, c(NA, Inf)), rep(NA_real_, 2))
+})
+
+test_that("qsnorm gives a zero-length result for any zero-length argument", {
+  # As qnorm() does, in place of the NA that recycling to length one gave
+  expect_identical(qsnorm(numeric(0)), numeric(0))
+  expect_identical(qsnorm(numeric(0), 0, 1, 2), numeric(0))
+  expect_identical(qsnorm(0.3, numeric(0), 1, 2), numeric(0))
+  expect_identical(qsnorm(0.3, 0, numeric(0), 2), numeric(0))
+  expect_identical(qsnorm(0.3, 0, 1, numeric(0)), numeric(0))
+  expect_identical(qsnorm(c(0.1, 0.2), 0, 1, numeric(0)), numeric(0))
+  p0 <- matrix(numeric(0), 0, 2)
+  expect_identical(qsnorm(p0, 0, 1, 2), stats::qnorm(p0))
+})
+
+test_that("qsnorm keeps the names and dim of p", {
+  p <- c(lo = 0.025, mid = 0.5, hi = 0.975, edge = 1)
+  out <- qsnorm(p, 1, 2, 3)
+  expect_named(out, names(p))
+  expect_identical(unname(out), qsnorm(unname(p), 1, 2, 3))
+
+  m <- matrix(
+    c(1e-10, 0.1, 0.5, 0.9),
+    2,
+    dimnames = list(c("r1", "r2"), c("c1", "c2"))
+  )
+  out <- qsnorm(m, 0, 1, -5)
+  expect_identical(dim(out), dim(m))
+  expect_identical(dimnames(out), dimnames(m))
+  expect_identical(as.vector(out), qsnorm(as.vector(m), 0, 1, -5))
+
+  # A p shorter than the result has no shape to give
+  out <- qsnorm(c(a = 0.3), 0, 1, c(1, 2))
+  expect_null(names(out))
+  expect_identical(out, qsnorm(c(0.3, 0.3), 0, 1, c(1, 2)))
 })
 
 test_that("qsnorm stays accurate far into the heavier tail", {

@@ -90,9 +90,16 @@ log_sn_light_tail <- function(h, a) {
 # z = (q - xi) / omega. The upper tail is computed by reflection,
 # 1 - F(z; alpha) = F(-z; -alpha), so a small tail probability never comes
 # out as the difference of two numbers close to one. It is 0 and 1 at -Inf
-# and Inf, and NA for a non-positive or missing scale.
+# and Inf, and NA for a non-positive or missing scale. As in pnorm(), the
+# arguments are recycled to the longest, a zero-length argument gives a
+# zero-length result, and the result keeps the names and dim of q.
 psnorm <- function(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE) {
-  n <- max(length(q), length(xi), length(omega), length(alpha))
+  lens <- c(length(q), length(xi), length(omega), length(alpha))
+  if (min(lens) == 0L) {
+    return(keep_shape(numeric(0), q))
+  }
+  n <- max(lens)
+  shape <- q
   q <- rep_len(q, n)
   xi <- rep_len(xi, n)
   omega <- rep_len(omega, n)
@@ -109,14 +116,21 @@ psnorm <- function(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE) {
   out[ok] <- pmin(pmax(out[ok], 0), 1)
   out[valid & z == -Inf] <- 0
   out[valid & z == Inf] <- 1
-  out
+  keep_shape(out, shape)
 }
 
 # Skew-normal quantiles, solved to near machine precision. Each probability
 # is turned into the log of its smaller tail, and qsn_std_logtail() solves for
-# the standardised quantile.
+# the standardised quantile. As in qnorm(), the arguments are recycled to the
+# longest, a zero-length argument gives a zero-length result, and the result
+# keeps the names and dim of p.
 qsnorm <- function(p, xi = 0, omega = 1, alpha = 0) {
-  n <- max(length(p), length(xi), length(omega), length(alpha))
+  lens <- c(length(p), length(xi), length(omega), length(alpha))
+  if (min(lens) == 0L) {
+    return(keep_shape(numeric(0), p))
+  }
+  n <- max(lens)
+  shape <- p
   p <- rep_len(p, n)
   xi <- rep_len(xi, n)
   omega <- rep_len(omega, n)
@@ -131,6 +145,16 @@ qsnorm <- function(p, xi = 0, omega = 1, alpha = 0) {
     logp <- ifelse(upper, log1p(-p[mid]), log(p[mid]))
     z <- qsn_std_logtail(logp, alpha[mid], upper)
     out[mid] <- xi[mid] + omega[mid] * z
+  }
+  keep_shape(out, shape)
+}
+
+# The names, dim and dimnames of x, given to out when the two have the same
+# length.
+keep_shape <- function(out, x) {
+  if (length(out) == length(x)) {
+    att <- attributes(x)
+    attributes(out) <- att[intersect(names(att), c("names", "dim", "dimnames"))]
   }
   out
 }
