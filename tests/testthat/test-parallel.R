@@ -198,9 +198,22 @@ test_that("a function that fails on a worker sends the fit back to serial", {
     }
     lp_reg(theta)
   }
-  fit <- on_forks(fit_reg(lp_err))
+  msgs <- character()
+  fit <- on_forks(withCallingHandlers(
+    fit_reg(lp_err, silent = FALSE),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }
+  ))
   expect_identical(fit$workers, 1L)
   expect_same_fit(fit, fit_reg())
+  # The note gives the error on the worker
+  expect_true(any(grepl(
+    "failed on a parallel worker (no such function here)",
+    gsub("\\s+", " ", msgs),
+    fixed = TRUE
+  )))
 })
 
 test_that("a job that errors is done again in the parent", {

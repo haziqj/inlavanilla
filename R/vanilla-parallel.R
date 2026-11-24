@@ -172,30 +172,40 @@ par_setup <- function(
     return(serial)
   }
   # Only the values matter here. Anything the function says while being
-  # checked it has said already, or will say again in the real run
-  checked <- suppressMessages(suppressWarnings(tryCatch(
+  # checked it has said already, or will say again in the real run. The
+  # check gives NULL when the worker agrees, and otherwise what went wrong.
+  problem <- suppressMessages(suppressWarnings(tryCatch(
     {
       setup <- par_globals(functions)
       t0 <- elapsed()
       fut <- par_future(probe, 0L, data, setup)
       cost <- elapsed() - t0
       got <- future::value(fut)
-      isTRUE(all.equal(
+      same <- isTRUE(all.equal(
         got,
         probe(0L, data),
         tolerance = 1e-6,
         check.attributes = FALSE
       ))
+      if (same) NULL else "did not give the same value on a parallel worker"
     },
-    error = function(e) FALSE
+    error = function(e) {
+      paste0(
+        "failed on a parallel worker (",
+        gsub("\\s+", " ", trimws(conditionMessage(e))),
+        ")"
+      )
+    }
   )))
-  if (!checked) {
+  if (!is.null(problem)) {
     restore()
     note(paste0(
       label,
       " will run serially, because `",
       what,
-      "` did not give the same value on a parallel worker. Compiled code ",
+      "` ",
+      problem,
+      ". Compiled code ",
       "(Rcpp, TMB, RTMB) cannot be sent to a separate R session: rebuild it on ",
       "each worker, or use forked workers from a terminal on macOS or Linux ",
       "(see Parallel computation in ?inla_vanilla)."
