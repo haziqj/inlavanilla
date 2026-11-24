@@ -13,3 +13,4 @@
 ^vignettes/articles$
 ^\.quarto$
 ^\.claude$
+^air\.toml$
