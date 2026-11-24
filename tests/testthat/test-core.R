@@ -190,6 +190,20 @@ test_that("a wrong hess_mode is caught at the mode", {
   expect_match(w, "not symmetric at the mode", all = FALSE)
 })
 
+test_that("a hess_mode of the wrong shape is an error that names it", {
+  for (bad in list(
+    function(theta) he_core(theta)[1:2, 1:2],
+    function(theta) diag(he_core(theta)),
+    function(theta) "a"
+  )) {
+    expect_error(
+      core_fit(hess_mode = bad),
+      "`hess_mode` must return a numeric 3 x 3 matrix",
+      class = "inlavanilla_error"
+    )
+  }
+})
+
 test_that("the VB budget leaves out the calls that check grad against hess", {
   ctrl <- check_control(list())
   fns <- wrap_fns(lp_core, gr_core, he_core, init_core)

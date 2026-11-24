@@ -573,9 +573,10 @@ wrap_fns <- function(
     }
   }
   # A plain m x m matrix, whatever the user's function returns (a sparse
-  # matrix from the Matrix package, or a number when m = 1). A Hessian for the
-  # mode alone counts as a call of `hess`.
-  wrap_hess <- function(hess_x) {
+  # matrix from the Matrix package, or a number when m = 1), and an error
+  # naming `arg` for any other shape. A Hessian for the mode alone counts as a
+  # call of `hess`.
+  wrap_hess <- function(hess_x, arg) {
     if (is.null(hess_x)) {
       return(NULL)
     }
@@ -584,16 +585,35 @@ wrap_fns <- function(
       state$last_x <- x
       state$n_he <- state$n_he + 1L
       on_call()
-      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
+      h <- hess_x(x)
+      H <- tryCatch(as.matrix(h), error = function(e) NULL)
+      if (!is.numeric(H) || !identical(dim(H), c(m, m))) {
+        abort_hess_shape(h, m, arg, paste0(arg, "()"))
+      }
+      matrix(as.numeric(H), m, m)
     }
   }
   list(
     lp = lp,
     gr = gr,
-    he = wrap_hess(hess_x),
-    he_mode = wrap_hess(hess_mode_x),
+    he = wrap_hess(hess_x, "hess"),
+    he_mode = wrap_hess(hess_mode_x, "hess_mode"),
     state = state
   )
+}
+
+# The error for a Hessian that is not a numeric m x m matrix: `arg` names the
+# argument, and `call` the call that returned `h`.
+abort_hess_shape <- function(h, m, arg, call) {
+  shape <- if (is.null(dim(h))) {
+    paste("of length", length(h))
+  } else {
+    paste("with dimensions", paste(dim(h), collapse = " x "))
+  }
+  abort(c(
+    "{.arg {arg}} must return a numeric {m} x {m} matrix.",
+    "x" = "{.code {call}} returned {.obj_type_friendly {h}} {shape}."
+  ))
 }
 
 # The log-posterior as the stages read it: -Inf where it failed. NA and NaN
@@ -636,15 +656,7 @@ check_hess_at_init <- function(hess, init) {
   h <- hess(init)
   H <- tryCatch(as.matrix(h), error = function(e) NULL)
   if (!is.numeric(H) || !identical(dim(H), c(m, m))) {
-    shape <- if (is.null(dim(h))) {
-      paste("of length", length(h))
-    } else {
-      paste("with dimensions", paste(dim(h), collapse = " x "))
-    }
-    abort(c(
-      "{.arg hess} must return a numeric {m} x {m} matrix.",
-      "x" = "{.code hess(init)} returned {.obj_type_friendly {h}} {shape}."
-    ))
+    abort_hess_shape(h, m, "hess", "hess(init)")
   }
   if (!all(is.finite(H))) {
     abort("{.arg hess} is not finite at {.arg init}.")
