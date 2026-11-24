@@ -1,3 +1,29 @@
+# inlavanilla (development version)
+
+* This version changes only the skew-normal functions of the engine. They are
+  internal in inlavanilla, but INLAvaan, which copies the engine, exports some
+  of them. No fit changes: on the tests, vignettes and articles, every
+  summary, marginal, VB mean, covariance, log marginal likelihood and LOO
+  estimate is the same to the last digit as in 26.11.24.
+
+* Internal changes, for INLAvaan and other packages that copy the engine:
+
+  * `psnorm()` and `qsnorm()` return a zero-length result when any argument
+    has length zero, as `pnorm()` and `qnorm()` do. Before, they returned
+    `NA`. The result now keeps the names and dimensions of `q` or `p`, as
+    the result of `dsnorm()` keeps those of `x`.
+  * `qsnorm_fast()` recycles its arguments to the length of the longest, as
+    `qsnorm()` does. Before, an `alpha` longer than `p` gave `NA` or an
+    error.
+  * `fit_skew_normal()` stops with an error when `temp` is not a single
+    finite positive number, or `threshold_log_drop` is not a single finite
+    negative number.
+  * The comments of the skew-normal functions are true in any package that
+    copies them, and give the measured error of `qsnorm_fast()`. For
+    `|alpha|` up to 30 it is at most 0.085 in units of `omega`, except in a
+    narrow window of `alpha` deep in the lighter tail and far in the heavier
+    tail.
+
 # inlavanilla 26.11.24
 
 * This version renames arguments and diagnostics so that inlavanilla and
