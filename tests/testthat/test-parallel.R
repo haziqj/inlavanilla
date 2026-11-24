@@ -216,6 +216,24 @@ test_that("a function that fails on a worker sends the fit back to serial", {
   )))
 })
 
+test_that("a global helper named logpost is not taken for the user's on forks", {
+  skip_if(
+    "logpost" %in% ls(globalenv(), all.names = TRUE),
+    "the global environment has logpost"
+  )
+  force_workers()
+  # future assigns the globals of the user's function in the fork's global
+  # environment too, where a helper called `logpost` would have replaced it
+  assign("logpost", function(theta) lp_reg(theta), envir = globalenv())
+  on.exit(rm(logpost, envir = globalenv()), add = TRUE)
+  lp <- function(theta) logpost(theta)
+  environment(lp) <- globalenv()
+  ref <- fit_reg(lp)
+  fit <- on_forks(fit_reg(lp))
+  expect_identical(fit$workers, 2L)
+  expect_same_fit(fit, ref)
+})
+
 test_that("a job that errors is done again in the parent", {
   force_workers()
   edge <- fit_reg()$mode[[1]]
