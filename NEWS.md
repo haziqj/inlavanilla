@@ -73,12 +73,13 @@
   `verbose = TRUE` reports the asymmetry for both, as "Asymmetry of the
   Hessian".
 
-* On separate R sessions (`cores` where forks are not safe, or a
-  `multisession` plan), a `logpost`, `grad` or `hess` that calls a global
-  helper of the same name, such as a `logpost()` of the user's own, now finds
-  that helper. Before, the worker took it for the user's function, which then
-  called itself until R stopped it, and the scans ran serially. The same holds
-  for a `loglik` in `loo()` and `waic()`.
+* On parallel workers (forked, or separate R sessions), a `logpost`, `grad`
+  or `hess` that calls a global helper of the same name, such as a
+  `logpost()` of the user's own, now finds that helper. Before, the worker
+  took it for the user's function, which then called itself until R stopped
+  it, and the scans ran serially, with a note whose advice to use forked
+  workers did not help. The same holds for a `loglik` in `loo()` and
+  `waic()`.
 
 * When the check of a parallel worker fails with an error, the note that the
   scans will run serially now gives that error.
