@@ -453,6 +453,22 @@ test_that("print() and summary() say which rows are on the natural scale", {
   expect_true(all(nchar(capture.output(print(nm_fit))) <= 80))
 })
 
+test_that("summary() with no probabilities works on the natural scale", {
+  # In 26.11.24 qsnorm() gave a length-one NA for an empty probs, so
+  # natural_summary() returned one value too many for the row, and summary()
+  # stopped with base R's "number of items to replace is not a multiple of
+  # replacement length".
+  for (key in names(maps)) {
+    expect_length(natural_summary(0.3, 1.2, 2, key, probs = numeric(0)), 3L)
+  }
+  s <- summary(nm_fit, probs = numeric(0))
+  expect_s3_class(s, "summary.inla_vanilla")
+  expect_identical(rownames(s$table), c("mu", "sigma"))
+  expect_identical(colnames(s$table), c("Mean", "SD", "Mode"))
+  expect_equal(s$table, nm_fit$summary[, c("Mean", "SD", "Mode")])
+  expect_output(print(s), "Natural scale: sigma = exp\\(log_sigma\\)\\.")
+})
+
 test_that("many transformed parameters are grouped by transform", {
   nms <- c(paste0("log_s", 1:4), "atanh_r", "b")
   lp <- function(theta) sum(dnorm(theta, 0, 0.3, log = TRUE))
