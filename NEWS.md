@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 26.11.24
 
 * This version renames arguments and diagnostics so that inlavanilla and
   INLAvaan, which takes its engine from inlavanilla from its version 0.4.0, use
