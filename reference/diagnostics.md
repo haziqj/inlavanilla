@@ -2,9 +2,11 @@
 
 The checks of each stage of the approximation, as numbers: a summary of
 the whole fit, or a table with one row per parameter. They are the
-checks of INLAvaan's `diagnostics()`, under the same names and in the
-same order, followed by inlavanilla's own. The fit-time warning and the
-flags of
+checks of INLAvaan's `diagnostics()`, in the same order and under the
+same names, two of them under the names INLAvaan will use from its
+version 0.4.0 (`hess_cond_cor`, and `unscanned_mass` for its
+`scan_end_mass`), followed by inlavanilla's own. The fit-time warning
+and the flags of
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 are computed from the same numbers, and
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
@@ -57,9 +59,9 @@ formats.
 A posterior SD here is the Laplace SD at the mode, \\s_j =
 \sqrt{\Sigma\_{jj}}\\, as in INLAvaan; it is not the SD column of the
 summary table, which is the skew-normal's. Values that a fit did not
-compute are `NA`: the VB quantities with `vb = "off"`, the scan
-quantities with `marginals = "gaussian"`, and `grad_gap` without `grad`
-or with `hess`.
+compute are `NA`: the VB quantities with `vb_correction = "none"`, the
+scan quantities with `marginals = "gaussian"`, and `grad_gap` without
+`grad`.
 
 **Global diagnostics** (`type = "global"`), a named numeric vector:
 
@@ -84,13 +86,16 @@ or with `hess`.
 - `mode_shift_max`: the largest `mode_shift_sigma`. Unlike the gradient
   norms it is scale-free. It should be close to 0.
 
-- `hess_cond`: the condition number of the Hessian at the mode, with
-  each parameter in its own posterior-SD units: the ratio of the largest
-  to the smallest eigenvalue of the posterior correlation matrix. Large
-  values mean that some combination of the parameters is weakly
-  identified. INLAvaan takes it on the raw scale of the parameters,
-  where a mere change of units makes it large, so the two agree only
-  when the posterior SDs are similar.
+- `hess_cond`: the condition number of the Hessian at the mode, the
+  ratio of the largest to the smallest eigenvalue of the Laplace
+  covariance, as INLAvaan defines it. It depends on the units of the
+  parameters: posterior SDs of 1e-3 and 1e3 alone make it 1e12.
+
+- `hess_cond_cor`: the same with each parameter in its own posterior-SD
+  units, the ratio of the largest to the smallest eigenvalue of the
+  posterior correlation matrix. It is free of units. Large values mean
+  that some combination of the parameters is weakly identified, and the
+  fit warns above \\10^8\\.
 
 - `vb_applied`: 1 if the VB correction ran, 0 otherwise.
 
@@ -142,7 +147,7 @@ and then inlavanilla's own:
 - `grad_abs`: its absolute value.
 
 - `grad_rel`: `grad_abs / (abs(par) + 1e-6)`, with `par` the VB mean
-  (the mode when `vb = "off"`), as in INLAvaan.
+  (the mode when `vb_correction = "none"`), as in INLAvaan.
 
 - `mode_shift_sigma`: the Newton step at the mode, in posterior SDs,
   \\\|(\Sigma g)\_j\| / s_j\\ with \\g\\ the gradient. It should be
@@ -170,10 +175,15 @@ and then inlavanilla's own:
 - `grad_gap`: how far a supplied `grad` is from `logpost` at the mode:
   the larger of the difference in slope per conditional posterior SD
   (about how far it moves the mode, in SDs) and half the relative
-  difference in curvature (about the relative error it makes in an SD).
-  It comes from central differences of `logpost` that the fit takes at
-  the mode anyway, up to a posterior SD or so apart, so it costs no
-  calls. It should be close to 0, and is flagged above 0.1.
+  difference in curvature (about the relative error it makes in an SD),
+  the curvature being that of the Hessian at the mode, the supplied
+  `hess` when there is one. It comes from central differences of
+  `logpost` at the mode, up to a posterior SD or so apart: without
+  `hess` the fit takes them anyway, so it costs no calls, and with
+  `hess` it takes them for this check alone, about 6m to 8m `logpost`
+  calls (see "Gradients and Hessians" in
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+  It should be close to 0, and is flagged above 0.1.
 
 - `vb_step_sigma`: the step still to go at the VB mean, in posterior
   SDs: the fixed-point step there, the Newton step of the VB
@@ -237,15 +247,15 @@ diagnostics(fit)
 #>               npar          converged         iterations           grad_inf 
 #>                  2                  1                 10           1.96e-05 
 #>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond 
-#>           3.12e-05           2.05e-05           2.53e-06           1.01e+00 
-#>         vb_applied       vb_shift_max      vb_kld_global            kld_max 
-#>                  1             0.2606             0.0340             0.0340 
-#>           kld_mean           nmad_max          nmad_mean unscanned_mass_max 
-#>             0.0170             0.0077             0.0039           6.58e-04 
-#>       grad_gap_max        vb_fallback        vb_step_max      vb_gain_ratio 
-#>                 NA                  0                 NA             0.9405 
-#>       mean_gap_max     ridge_bend_max      n_heavy_tails 
-#>             0.0028             0.1324                  0 
+#>           3.12e-05           2.05e-05           2.53e-06           6.62e+00 
+#>      hess_cond_cor         vb_applied       vb_shift_max      vb_kld_global 
+#>           1.01e+00                  1             0.2606             0.0340 
+#>            kld_max           kld_mean           nmad_max          nmad_mean 
+#>             0.0340             0.0170             0.0077             0.0039 
+#> unscanned_mass_max       grad_gap_max        vb_fallback        vb_step_max 
+#>           6.58e-04                 NA                  0                 NA 
+#>      vb_gain_ratio       mean_gap_max     ridge_bend_max      n_heavy_tails 
+#>             0.9405             0.0028             0.1324                  0 
 
 # One row per parameter
 diagnostics(fit, type = "param")

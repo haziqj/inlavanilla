@@ -65,9 +65,9 @@ logpost_pois <- function(theta) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois)
-#> ✔ Found the posterior mode in 29 iterations [11ms]
-#> ✔ VB mean correction, max shift 0.025σ [15ms]
-#> ✔ Fitted 6 skew-normal marginals [21ms]
+#> ✔ Found the posterior mode in 29 iterations [16ms]
+#> ✔ VB mean correction, max shift 0.025σ [16ms]
+#> ✔ Fitted 6 skew-normal marginals [23ms]
 ```
 
 [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the fit
@@ -85,7 +85,7 @@ loo_pois
 #> looic        485.9  30.0
 #> 
 #> ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for
-#>   unit 39.
+#>   unit 45.
 ```
 
 `p_loo` is the effective number of parameters. Here it is about 21, for
@@ -234,7 +234,7 @@ refit_elpd <- function(i) {
   fit_i <- inla_vanilla(
     logpost_nb_for(X[-i, ], y[-i]),
     init_nb,
-    vb = "off",
+    vb_correction = "none",
     silent = TRUE
   )
   ll <- sampling(fit_i, 4000, fun = loglik_nb_for(X[i, , drop = FALSE], y[i]))
@@ -247,7 +247,7 @@ time_loo <- system.time(loo(fit_nb, loglik_nb))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  4.113  0.003
+#>  4.564  0.005
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1444
@@ -312,8 +312,8 @@ summary(loo_nb$pointwise[, "k"])
 ## References
 
 Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). *Deterministic
-leave-one-cluster-out cross-validation for multilevel Bayesian models*
-(arXiv:2609.00670 \[stat.ME\]). arXiv.
+leave-one-cluster-out cross-validation for multilevel Bayesian
+structural equation models* (arXiv:2609.00670 \[stat.ME\]). arXiv.
 <https://doi.org/10.48550/arXiv.2609.00670>
 
 Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model

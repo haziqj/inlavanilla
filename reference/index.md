@@ -21,3 +21,5 @@
   : Summarise an INLAvanilla fit
 - [`timing()`](https://haziqj.ml/inlavanilla/reference/timing.md) : Time
   taken by each stage of an INLAvanilla fit
+- [`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
+  : Tuning of an INLAvanilla fit

@@ -8,8 +8,8 @@ named for its scale (`log_sigma`) is drawn on its natural scale, as
 the Laplace curve is the density that a Gaussian `log_sigma` gives
 `sigma`. For a fit with `marginals = "gaussian"` the marginals are
 Gaussian on the scale of `logpost`: centred at the VB mean, or, with
-`vb = "off"`, the Laplace marginals themselves, drawn without a second
-copy.
+`vb_correction = "none"`, the Laplace marginals themselves, drawn
+without a second copy.
 
 ## Usage
 

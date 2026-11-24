@@ -101,8 +101,8 @@ unit \\u\\, its conditional predictive ordinate, is \$\$\mathrm{CPO}\_u
 = p(y_u \mid y\_{-u}) = 1 / E\[1 / p(y_u \mid \vartheta) \mid y\],\$\$
 an expectation over the full posterior. The posterior is taken as the
 Gaussian \\N(\tilde\vartheta, \Omega)\\ of the fit, with the
-VB-corrected mean (the mode when `vb = "off"`) and the Laplace
-covariance, and \\\ell_u\\ is expanded to second order about
+VB-corrected mean (the mode when `vb_correction = "none"`) and the
+Laplace covariance, and \\\ell_u\\ is expanded to second order about
 \\\tilde\vartheta\\, with score \\s_u\\ and Hessian \\H_u\\. The
 expectation is then a Gaussian integral: \$\$\log \mathrm{CPO}\_u =
 \ell_u - \tfrac12 s_u^\top (\Omega^{-1} + H_u)^{-1} s_u + \tfrac12 \log
@@ -193,8 +193,8 @@ standard error `sqrt(length(d)) * sd(d)`.
 ## References
 
 Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). *Deterministic
-leave-one-cluster-out cross-validation for multilevel Bayesian models*
-(arXiv:2609.00670 \[stat.ME\]). arXiv.
+leave-one-cluster-out cross-validation for multilevel Bayesian
+structural equation models* (arXiv:2609.00670 \[stat.ME\]). arXiv.
 <https://doi.org/10.48550/arXiv.2609.00670>
 
 Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
@@ -223,7 +223,7 @@ logpost <- function(theta) sum(loglik(theta)) + logprior(theta)
 fit <- inla_vanilla(logpost, c(a = 0, b = 0))
 #> ✔ Found the posterior mode in 9 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.12σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 loo(fit, loglik)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 

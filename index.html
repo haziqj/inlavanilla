@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,7 +100,7 @@
 <li>
 <strong>Gaussian copula draws</strong> for any function of the parameters.</li>
 </ol>
-<p>Stages 2 and 3 are optional and independent: <code>vb = "off"</code> skips the VB correction, and <code>marginals = "gaussian"</code> keeps the Gaussian marginals instead of scanning for skew-normal ones. With both, you get the Laplace approximation alone.</p>
+<p>Stages 2 and 3 are optional and independent: <code>vb_correction = "none"</code> skips the VB correction, and <code>marginals = "gaussian"</code> keeps the Gaussian marginals instead of scanning for skew-normal ones. With both, you get the Laplace approximation alone.</p>
 <p>Give <code><a href="reference/loo.html">loo()</a></code> or <code><a href="reference/loo.html">waic()</a></code> the log-likelihood as one term per observation, and they estimate the model’s predictive accuracy from the fit alone, with no refits and no draws.</p>
 <p>The package is pure R and small. Its only dependency outside base R is <a href="https://cli.r-lib.org/" class="external-link">cli</a>.</p>
 <div class="section level2">
@@ -132,11 +132,11 @@
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 6 iterations [4ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [13ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [18ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [21ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (40ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -3.05 · Converged in 6 iterations (66ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;        Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510</span></span>

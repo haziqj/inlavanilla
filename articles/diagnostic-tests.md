@@ -242,14 +242,14 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Se_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
-fit_lc <- inla_vanilla(lp_lc, start, vb = "full")
-#> ✔ Found the posterior mode in 30 iterations [26ms]
-#> ✔ VB mean correction, max shift 0.38σ [36ms]
-#> ✔ Fitted 11 skew-normal marginals [47ms]
+fit_lc <- inla_vanilla(lp_lc, start, vb_correction = "full")
+#> ✔ Found the posterior mode in 30 iterations [48ms]
+#> ✔ VB mean correction, max shift 0.38σ [52ms]
+#> ✔ Fitted 11 skew-normal marginals [59ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
-  vb = "full",
+  vb_correction = "full",
   silent = TRUE
 )
 start_fm <- c(
@@ -259,10 +259,10 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w1_", tests)),
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
-fit_fm <- inla_vanilla(lp_fm, start_fm, vb = "full")
-#> ✔ Found the posterior mode in 25 iterations [40ms]
-#> ✔ VB mean correction, max shift 0.42σ [78ms]
-#> ✔ Fitted 13 skew-normal marginals [75ms]
+fit_fm <- inla_vanilla(lp_fm, start_fm, vb_correction = "full")
+#> ✔ Found the posterior mode in 25 iterations [69ms]
+#> ✔ VB mean correction, max shift 0.42σ [110ms]
+#> ✔ Fitted 13 skew-normal marginals [104ms]
 ```
 
 The random effects fit runs with `silent = TRUE`. Its posterior is far
@@ -278,7 +278,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.12 1.62 0.21
+#> 0.18 2.49 0.31
 ```
 
 ## Results
@@ -457,7 +457,7 @@ Qu, Y., Tan, M., & Kutner, M. H. (1996). Random effects models in latent
 class analysis for evaluating accuracy of diagnostic tests.
 *Biometrics*, *52*(3), 797–810. <https://doi.org/10.2307/2533043>
 
-[^1]: These fits use `vb = "full"`, as the models are compared by their
-    log marginal likelihoods. The [diagnostics
+[^1]: These fits use `vb_correction = "full"`, as the models are
+    compared by their log marginal likelihoods. The [diagnostics
     vignette](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
     explains why.

@@ -35,20 +35,23 @@ converged fit can still do badly.
 | Gradient | `grad_gap` | above 0.1 | the same | inlavanilla |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
 | VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
-| Hessian | `hess_cond` (in `diagnostics(fit)`) | above \\10^8\\ | the same | INLAvaan |
+| Hessian | `hess_cond_cor` (in `diagnostics(fit)`) | above \\10^8\\ | the same | INLAvaan, renamed |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
-| Unscanned mass | `unscanned_mass` | above 0.05 | the same | INLAvaan |
+| Unscanned mass | `unscanned_mass` | above 0.05 | the same | INLAvaan, renamed |
 | Tails | `tails` | heavy | the same | inlavanilla |
 | Ridge bend | `ridge_bend` | above 0.25 nats | no | inlavanilla |
 | Mean gap | `mean_gap` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan’s
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
-under the same names. Jamil and Rue (2026) use the VB shift and NMAD as
-fit diagnostics, and the gap between the skew-normal and VB means as an
-internal check; the mode shift, the Hessian condition number and the
-unscanned mass come from INLAvaan’s
+under the same names. Two have new names, which INLAvaan will use from
+its version 0.4.0: `hess_cond_cor` is INLAvaan’s `hess_cond` taken on
+the correlation scale, free of units (`hess_cond` is now the raw one, as
+in INLAvaan), and `unscanned_mass` is its `scan_end_mass`. Jamil and Rue
+(2026) use the VB shift and NMAD as fit diagnostics, and the gap between
+the skew-normal and VB means as an internal check; the mode shift, the
+Hessian condition number and the unscanned mass come from INLAvaan’s
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 not from the paper. The levels of those five checks are INLAvaan’s, and
 the fit-time warning uses its words. The VB settling, VB gain and tails
@@ -59,9 +62,8 @@ stays silent, and not a calibrated cut-off: a tripped check is a prompt
 to look again, and silence is not a certificate of accuracy. In the
 simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD
 track the loss of accuracy, and the paper reports a calibration of the
-expected error against them in its Supplementary Material.
-
-## A healthy fit
+expected error against them in its Supplementary Material. \## A healthy
+fit
 
 Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:
 
@@ -78,11 +80,11 @@ logpost_pois <- function(theta) {
 }
 fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), silent = TRUE)
 summary(fit_pois)
-#> ── INLAvanilla v26.11.23 summary ────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.24 summary ────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (13ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (20ms)
 #> Laplace -12.362 + VB term 0.0085
-#> 68 logpost calls: mode 5ms, VB 1ms, marginals 4ms
+#> 68 logpost calls: mode 6ms, VB 2ms, marginals 6ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -139,13 +141,14 @@ not settle. Integrate random effects out, as in the article [Multilevel
 models](https://haziqj.ml/inlavanilla/articles/multilevel.md), and draw
 them back afterwards with `sampling(fit, fun = )`.
 
-`hess_cond` is the condition number of the Hessian at the mode, with
+`hess_cond_cor` is the condition number of the Hessian at the mode, with
 each parameter in posterior-SD units: the ratio of the largest to the
 smallest eigenvalue of the posterior correlation matrix. Above \\10^8\\
-some combination of the parameters is weakly identified. INLAvaan takes
-the condition number on the raw scale of the parameters, where a mere
-change of units can make it large; inlavanilla allows posterior SDs from
-\\10^{-6}\\ to \\10^4\\, so it measures it in posterior SDs instead.
+some combination of the parameters is weakly identified. `hess_cond` is
+the condition number on the raw scale of the parameters, as INLAvaan
+defines it, where a mere change of units can make it large; inlavanilla
+allows posterior SDs from \\10^{-6}\\ to \\10^4\\, so the check uses
+`hess_cond_cor`.
 
 The VB correction recentres the Gaussian at the shift that minimises its
 Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026,
@@ -155,8 +158,8 @@ mode, in posterior SDs. `vb_shift` is the same shift on the scale of
 Kullback-Leibler divergence of each shifted marginal from the unshifted
 one. A shift of a few tenths is normal for a skewed posterior; a shift
 above 1 SD means that the posterior is far from the Laplace Gaussian.
-With `vb = "full"`, when the fixed-point iteration hands over to the
-optimiser, `fit$diagnostics$vb` records it, and
+With `vb_correction = "full"`, when the fixed-point iteration hands over
+to the optimiser, `fit$diagnostics$vb` records it, and
 [`summary()`](https://rdrr.io/r/base/summary.html) and the verbose
 output report it, but, as in INLAvaan, it is not flagged: it is a route
 of the solver, not a sign of a poor approximation.
@@ -170,20 +173,21 @@ VB term of the log marginal likelihood and the expansions of
 [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
 [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md). The
 skew-normal marginals do not depend on it, since they are scanned around
-the mode, and `vb = "off"` leaves it out. Gaussian marginals
-(`marginals = "gaussian"`) are centred on it, and `vb = "off"` centres
-them at the mode instead. Without a gradient, the usual cause is not the
-solver but the VB mean itself: from `logpost` values alone it is exact
-only for a log-posterior of degree four, and on a strongly skewed
-posterior it can be about 0.1 SDs out. Supplying `grad` is the fix.
+the mode, and `vb_correction = "none"` leaves it out. Gaussian marginals
+(`marginals = "gaussian"`) are centred on it, and
+`vb_correction = "none"` centres them at the mode instead. Without a
+gradient, the usual cause is not the solver but the VB mean itself: from
+`logpost` values alone it is exact only for a log-posterior of degree
+four, and on a strongly skewed posterior it can be about 0.1 SDs out.
+Supplying `grad` is the fix.
 
-The default correction, `vb = "onestep"`, takes a single step from the
-mode, so there is no step still to go and `vb_step_sigma` is `NA`. The
-check applies when that step has to iterate: if it is over 2.5 posterior
-SDs or a node fails, the iteration carries on with capped steps, within
-the calls that the mode and Hessian took. Running out of them shows up
-here as a correction that did not settle, and `vb = "full"` is then the
-thing to try.
+The default correction, `vb_correction = "onestep"`, takes a single step
+from the mode, so there is no step still to go and `vb_step_sigma` is
+`NA`. The check applies when that step has to iterate: if it is over 2.5
+posterior SDs or a node fails, the iteration carries on with capped
+steps, within the calls that the mode and Hessian took. Running out of
+them shows up here as a correction that did not settle, and
+`vb_correction = "full"` is then the thing to try.
 
 One step rests on a single premise: that the expected log-posterior is a
 parabola with the Laplace curvature. That premise can be tested.
@@ -195,8 +199,8 @@ ratio means that the step went too far, or that the posterior is far
 from Gaussian around the mode. It cannot see a long tail far from the
 mode, where the parabola still holds near the peak: there only the mean
 gap, below, shows the trouble. The check says how far to trust the step,
-not what to do about it, as `vb = "full"` is better on some of these
-posteriors and worse on others.
+not what to do about it, as `vb_correction = "full"` is better on some
+of these posteriors and worse on others.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood
 with care. Its VB term, \\\tfrac12\delta^\top H\delta\\, is a
@@ -204,7 +208,7 @@ leading-order term, and a large first step can overstate it. On the
 random effects model of the article [Diagnostic tests without a gold
 standard](https://haziqj.ml/inlavanilla/articles/diagnostic-tests.md),
 the default gives a log marginal likelihood 1.2 nats too high, and
-`vb = "full"` one 0.3 nats too low.
+`vb_correction = "full"` one 0.3 nats too low.
 
 With a gradient the fallback takes one more step of its own. If it lands
 short of settled, it is run once more from where it landed, much as the
@@ -242,8 +246,8 @@ logpost_mix <- function(theta) {
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.19σ [9ms]
-#> ✔ Fitted 1 skew-normal marginal [5ms]
+#> ✔ VB mean correction, max shift 0.19σ [14ms]
+#> ✔ Fitted 1 skew-normal marginal [6ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
 #>   `theta` (0.20).
@@ -272,14 +276,14 @@ diagnostics(fit_mix)
 #>                  1                  1                  4           1.99e-08 
 #>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond 
 #>           9.66e-08           1.99e-08           2.04e-08           1.00e+00 
-#>         vb_applied       vb_shift_max      vb_kld_global            kld_max 
-#>                  1             0.1867             0.0174             0.0174 
-#>           kld_mean           nmad_max          nmad_mean unscanned_mass_max 
-#>             0.0174             0.1963             0.1963           9.13e-02 
-#>       grad_gap_max        vb_fallback        vb_step_max      vb_gain_ratio 
-#>                 NA                  0                 NA             2.0805 
-#>       mean_gap_max     ridge_bend_max      n_heavy_tails 
-#>             0.9681             0.0000                  1
+#>      hess_cond_cor         vb_applied       vb_shift_max      vb_kld_global 
+#>           1.00e+00                  1             0.1867             0.0174 
+#>            kld_max           kld_mean           nmad_max          nmad_mean 
+#>             0.0174             0.0174             0.1963             0.1963 
+#> unscanned_mass_max       grad_gap_max        vb_fallback        vb_step_max 
+#>           9.13e-02                 NA                  0                 NA 
+#>      vb_gain_ratio       mean_gap_max     ridge_bend_max      n_heavy_tails 
+#>             2.0805             0.9681             0.0000                  1
 diagnostics(fit_mix, type = "param")
 #>   names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift
 #> 1 theta    0        0        0                0 0.0174    0.191
@@ -521,22 +525,26 @@ fit <- withCallingHandlers(
 )
 #> ✔ Found the posterior mode in 4 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.19σ [1ms]
-#> ✔ Fitted 1 skew-normal marginal [3ms]
+#> ✔ Fitted 1 skew-normal marginal [4ms]
 #> Check this fit.
 ```
 
 ## Checks on a supplied gradient
 
 When you pass `grad`, the fit does not stop to test it first. At the
-mode it compares `grad` with differences of `logpost` that it has taken
-there anyway, for each parameter and at no cost in calls. `grad_gap` in
+mode it compares `grad` with differences of `logpost` there, for each
+parameter. Without `hess` the fit has taken them anyway, to set its
+steps, so the check costs no calls. With `hess` it takes them for the
+check alone, about 6 to 8 `logpost` calls per parameter. `grad_gap` in
 `diagnostics(fit, type = "param")` holds the result: the larger of the
 difference in slope per posterior SD and half the relative difference in
 curvature. It is flagged above 0.1, a mode moved by a tenth of an SD or
-an SD about 10% off. The Jacobian at the mode is also checked for
-symmetry, as the Hessian of a function must be, and either failure gives
-a warning. A gradient of the wrong sign stops the fit at the mode, and
-the error says so.
+an SD about 10% off. The Hessian at the mode, taken from `grad` or
+supplied as `hess`, is also checked for symmetry, as the Hessian of a
+function must be, and either failure gives a warning. With `hess`, the
+curvature that `grad_gap` compares is that of `hess`, which is also
+checked against differences of `grad`. A gradient of the wrong sign
+stops the fit at the mode, and the error says so.
 
 ## References
 

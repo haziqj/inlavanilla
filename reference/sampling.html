@@ -21,7 +21,7 @@ each parameter's skew-normal quantile, \(\vartheta_j = Q_j(u_j)\)."><meta proper
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -125,7 +125,7 @@ transformed ones on their natural scale, or the values of <code>fun</code>.</p>
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>For a fit with <code>marginals = "gaussian"</code> this is a draw from the joint
 Gaussian \(N(\tilde\vartheta, \Omega)\), centred at the VB mean (or at
-the mode when <code>vb = "off"</code>).</p>
+the mode when <code>vb_correction = "none"</code>).</p>
 <p>Draws never call the log-posterior, so they are cheap: large <code>nsamp</code> costs
 little. A parameter named for its scale (<code>log_sigma</code>, <code>logit_p</code>,
 <code>atanh_rho</code>) is returned on its natural scale, in a column named <code>sigma</code>,

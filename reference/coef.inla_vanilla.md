@@ -7,9 +7,9 @@ scale (`log_sigma`) is on its natural scale, under its natural name
 are on the scale of `logpost`. These are the estimates INLAvaan's
 [`coef()`](https://rdrr.io/r/stats/coef.html) gives. For a fit with
 `marginals = "gaussian"` and no transformed parameters they are the
-VB-corrected means, or, with `vb = "off"`, the mode. The joint posterior
-mode is `fit$mode`, and the VB-corrected mean `fit$mean_vb`, both on the
-scale of `logpost`.
+VB-corrected means, or, with `vb_correction = "none"`, the mode. The
+joint posterior mode is `fit$mode`, and the VB-corrected mean
+`fit$mean_vb`, both on the scale of `logpost`.
 
 ## Usage
 

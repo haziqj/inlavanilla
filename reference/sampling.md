@@ -57,7 +57,7 @@ transformed ones on their natural scale, or the values of `fun`.
 
 For a fit with `marginals = "gaussian"` this is a draw from the joint
 Gaussian \\N(\tilde\vartheta, \Omega)\\, centred at the VB mean (or at
-the mode when `vb = "off"`).
+the mode when `vb_correction = "none"`).
 
 Draws never call the log-posterior, so they are cheap: large `nsamp`
 costs little. A parameter named for its scale (`log_sigma`, `logit_p`,

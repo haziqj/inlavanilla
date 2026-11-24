@@ -5,10 +5,12 @@
       fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
     }
   };
-</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Diagnostics of an INLAvanilla fit — diagnostics"><meta name="description" content="The checks of each stage of the approximation, as numbers: a summary of
-the whole fit, or a table with one row per parameter. They are the checks
-of INLAvaan's diagnostics(), under the same names and in the same order,
-followed by inlavanilla's own. The fit-time warning and the flags of
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Diagnostics of an INLAvanilla fit — diagnostics"><meta name="description" content="The checks of each stage of the approximation, as numbers: a summary of the
+whole fit, or a table with one row per parameter. They are the checks of
+INLAvaan's diagnostics(), in the same order and under the same names, two
+of them under the names INLAvaan will use from its version 0.4.0
+(hess_cond_cor, and unscanned_mass for its scan_end_mass), followed by
+inlavanilla's own. The fit-time warning and the flags of
 summary.inla_vanilla() are computed from the same numbers, and
 summary.inla_vanilla() explains each check and the level at which it is
 flagged.
@@ -17,10 +19,12 @@ Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics
 (mean_gap) as an internal check (Section 5.1). The mode shift, the
 Hessian condition number and the unscanned mass come from INLAvaan's
 diagnostics(), not from the paper. grad_gap, vb_step_sigma, tails
-and ridge_bend are inlavanilla's own."><meta property="og:description" content="The checks of each stage of the approximation, as numbers: a summary of
-the whole fit, or a table with one row per parameter. They are the checks
-of INLAvaan's diagnostics(), under the same names and in the same order,
-followed by inlavanilla's own. The fit-time warning and the flags of
+and ridge_bend are inlavanilla's own."><meta property="og:description" content="The checks of each stage of the approximation, as numbers: a summary of the
+whole fit, or a table with one row per parameter. They are the checks of
+INLAvaan's diagnostics(), in the same order and under the same names, two
+of them under the names INLAvaan will use from its version 0.4.0
+(hess_cond_cor, and unscanned_mass for its scan_end_mass), followed by
+inlavanilla's own. The fit-time warning and the flags of
 summary.inla_vanilla() are computed from the same numbers, and
 summary.inla_vanilla() explains each check and the level at which it is
 flagged.
@@ -37,7 +41,7 @@ and ridge_bend are inlavanilla's own."><meta property="og:image" content="https:
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,10 +87,12 @@ and ridge_bend are inlavanilla's own."><meta property="og:image" content="https:
     </div>
 
     <div class="ref-description section level2">
-    <p>The checks of each stage of the approximation, as numbers: a summary of
-the whole fit, or a table with one row per parameter. They are the checks
-of INLAvaan's <code>diagnostics()</code>, under the same names and in the same order,
-followed by inlavanilla's own. The fit-time warning and the flags of
+    <p>The checks of each stage of the approximation, as numbers: a summary of the
+whole fit, or a table with one row per parameter. They are the checks of
+INLAvaan's <code>diagnostics()</code>, in the same order and under the same names, two
+of them under the names INLAvaan will use from its version 0.4.0
+(<code>hess_cond_cor</code>, and <code>unscanned_mass</code> for its <code>scan_end_mass</code>), followed by
+inlavanilla's own. The fit-time warning and the flags of
 <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> are computed from the same numbers, and
 <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code> explains each check and the level at which it is
 flagged.</p>
@@ -139,8 +145,8 @@ INLAvaan's formats.</p>
 \(s_j = \sqrt{\Sigma_{jj}}\), as in INLAvaan; it
 is not the SD column of the summary table, which is the skew-normal's.
 Values that a fit did not compute are <code>NA</code>: the VB quantities with
-<code>vb = "off"</code>, the scan quantities with <code>marginals = "gaussian"</code>, and
-<code>grad_gap</code> without <code>grad</code> or with <code>hess</code>.</p>
+<code>vb_correction = "none"</code>, the scan quantities with <code>marginals = "gaussian"</code>,
+and <code>grad_gap</code> without <code>grad</code>.</p>
 <p><strong>Global diagnostics</strong> (<code>type = "global"</code>), a named numeric vector:</p><ul><li><p><code>npar</code>: the number of parameters.</p></li>
 <li><p><code>converged</code>: 1 if <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> reported convergence (return code
 0), 0 otherwise, as INLAvaan defines it. No check uses it: without a
@@ -153,13 +159,15 @@ largest relative value and the Euclidean norm of <code>grad</code> (see below).
 They depend on the scale of each parameter.</p></li>
 <li><p><code>mode_shift_max</code>: the largest <code>mode_shift_sigma</code>. Unlike the gradient
 norms it is scale-free. It should be close to 0.</p></li>
-<li><p><code>hess_cond</code>: the condition number of the Hessian at the mode, with each
-parameter in its own posterior-SD units: the ratio of the largest to
-the smallest eigenvalue of the posterior correlation matrix. Large
-values mean that some combination of the parameters is weakly
-identified. INLAvaan takes it on the raw scale of the parameters, where
-a mere change of units makes it large, so the two agree only when the
-posterior SDs are similar.</p></li>
+<li><p><code>hess_cond</code>: the condition number of the Hessian at the mode, the ratio
+of the largest to the smallest eigenvalue of the Laplace covariance, as
+INLAvaan defines it. It depends on the units of the parameters: posterior
+SDs of 1e-3 and 1e3 alone make it 1e12.</p></li>
+<li><p><code>hess_cond_cor</code>: the same with each parameter in its own posterior-SD
+units, the ratio of the largest to the smallest eigenvalue of the
+posterior correlation matrix. It is free of units. Large values mean that
+some combination of the parameters is weakly identified, and the fit
+warns above \(10^8\).</p></li>
 <li><p><code>vb_applied</code>: 1 if the VB correction ran, 0 otherwise.</p></li>
 <li><p><code>vb_shift_max</code>: the largest absolute <code>vb_shift_sigma</code>.</p></li>
 <li><p><code>vb_kld_global</code>: the Kullback-Leibler divergence between the Laplace
@@ -191,7 +199,7 @@ differences of <code>logpost</code> a thousandth of a posterior SD apart. It
 should be close to 0.</p></li>
 <li><p><code>grad_abs</code>: its absolute value.</p></li>
 <li><p><code>grad_rel</code>: <code>grad_abs / (abs(par) + 1e-6)</code>, with <code>par</code> the VB mean (the
-mode when <code>vb = "off"</code>), as in INLAvaan.</p></li>
+mode when <code>vb_correction = "none"</code>), as in INLAvaan.</p></li>
 <li><p><code>mode_shift_sigma</code>: the Newton step at the mode, in posterior SDs,
 \(|(\Sigma g)_j| / s_j\) with \(g\) the gradient. It should be
 close to 0.</p></li>
@@ -210,10 +218,13 @@ scanned window.</p></li>
 </ul><p>and then inlavanilla's own:</p><ul><li><p><code>grad_gap</code>: how far a supplied <code>grad</code> is from <code>logpost</code> at the mode: the
 larger of the difference in slope per conditional posterior SD (about how
 far it moves the mode, in SDs) and half the relative difference in
-curvature (about the relative error it makes in an SD). It comes from
-central differences of <code>logpost</code> that the fit takes at the mode anyway, up
-to a posterior SD or so apart, so it costs no calls. It should be close to
-0, and is flagged above 0.1.</p></li>
+curvature (about the relative error it makes in an SD), the curvature being
+that of the Hessian at the mode, the supplied <code>hess</code> when there is one. It
+comes from central differences of <code>logpost</code> at the mode, up to a posterior
+SD or so apart: without <code>hess</code> the fit takes them anyway, so it costs no
+calls, and with <code>hess</code> it takes them for this check alone, about 6m to 8m
+<code>logpost</code> calls (see "Gradients and Hessians" in <code><a href="inla_vanilla.html">inla_vanilla()</a></code>). It
+should be close to 0, and is flagged above 0.1.</p></li>
 <li><p><code>vb_step_sigma</code>: the step still to go at the VB mean, in posterior SDs:
 the fixed-point step there, the Newton step of the VB stationarity
 condition, as <code>mode_shift_sigma</code> is for the mode. After the fallback
@@ -268,15 +279,15 @@ skew-normal fits themselves.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>               npar          converged         iterations           grad_inf </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                  2                  1                 10           1.96e-05 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       grad_inf_rel            grad_l2     mode_shift_max          hess_cond </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           3.12e-05           2.05e-05           2.53e-06           1.01e+00 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         vb_applied       vb_shift_max      vb_kld_global            kld_max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                  1             0.2606             0.0340             0.0340 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           kld_mean           nmad_max          nmad_mean unscanned_mass_max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0170             0.0077             0.0039           6.58e-04 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       grad_gap_max        vb_fallback        vb_step_max      vb_gain_ratio </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                 NA                  0                 NA             0.9405 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       mean_gap_max     ridge_bend_max      n_heavy_tails </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0028             0.1324                  0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           3.12e-05           2.05e-05           2.53e-06           6.62e+00 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      hess_cond_cor         vb_applied       vb_shift_max      vb_kld_global </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           1.01e+00                  1             0.2606             0.0340 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>            kld_max           kld_mean           nmad_max          nmad_mean </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             0.0340             0.0170             0.0077             0.0039 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> unscanned_mass_max       grad_gap_max        vb_fallback        vb_step_max </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           6.58e-04                 NA                  0                 NA </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      vb_gain_ratio       mean_gap_max     ridge_bend_max      n_heavy_tails </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             0.9405             0.0028             0.1324                  0 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># One row per parameter</span></span></span>
 <span class="r-in"><span><span class="fu">diagnostics</span><span class="op">(</span><span class="va">fit</span>, type <span class="op">=</span> <span class="st">"param"</span><span class="op">)</span></span></span>

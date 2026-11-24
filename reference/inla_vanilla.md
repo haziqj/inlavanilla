@@ -24,16 +24,18 @@ four stages:
     couples the skew-normal marginals through the correlations of
     \\\Omega\\.
 
-Stages 2 and 3 are optional and independent of each other. `vb = "off"`
-skips the VB correction, which leaves the marginals unchanged (they are
-scanned around the mode) but gives the Laplace log marginal likelihood.
-`marginals = "gaussian"` skips the scans and uses the Gaussian's own
-marginals \\N(\tilde\vartheta_j, \Omega\_{jj})\\, centred at the VB mean
-(or at the mode when `vb = "off"`);
+Stages 2 and 3 are optional and independent of each other.
+`vb_correction = "none"` skips the VB correction, which leaves the
+marginals unchanged (they are scanned around the mode) but gives the
+Laplace log marginal likelihood. `marginals = "gaussian"` skips the
+scans and uses the Gaussian's own marginals \\N(\tilde\vartheta_j,
+\Omega\_{jj})\\, centred at the VB mean (or at the mode when
+`vb_correction = "none"`);
 [`sampling()`](https://haziqj.ml/inlavanilla/reference/sampling.md) then
-draws from the joint Gaussian. So `vb = "off", marginals = "gaussian"`
-is the Laplace approximation alone, and `marginals = "gaussian"` alone
-is the Laplace approximation with the VB correction.
+draws from the joint Gaussian. So
+`vb_correction = "none", marginals = "gaussian"` is the Laplace
+approximation alone, and `marginals = "gaussian"` alone is the Laplace
+approximation with the VB correction.
 
 ## Usage
 
@@ -44,15 +46,17 @@ inla_vanilla(
   grad = NULL,
   hess = NULL,
   ...,
-  vb = c("onestep", "full", "off"),
-  marginals = c("skewnormal", "gaussian"),
-  width = c("trace", "cmp", "tk"),
+  vb_correction = c("onestep", "full", "none"),
+  marginals = c("skewnorm", "gaussian"),
+  marginal_scan = c("linear", "exact", "laplace", "plain"),
   tk_fallback = FALSE,
   transform = TRUE,
   cores = NULL,
   verbose = FALSE,
   silent = FALSE,
-  control = list()
+  control = list(),
+  vb = NULL,
+  width = NULL
 )
 ```
 
@@ -90,71 +94,76 @@ inla_vanilla(
   Further arguments passed to `logpost`, `grad` and `hess`, such as the
   data. As in [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
   they come after the gradient and the Hessian, and the arguments after
-  them (`vb`, `marginals`, `width`, `tk_fallback`, `transform`, `cores`,
-  `verbose`, `silent`, `control`) must be given by their full names, so
+  them (`vb_correction`, `marginals`, `marginal_scan`, `tk_fallback`,
+  `transform`, `cores`, `verbose`, `silent`, `control`, and the
+  deprecated `vb` and `width`) must be given by their full names, so
   data arguments cannot partially match them. A data argument cannot
   take one of those names. The arguments before them can be matched, as
   in [`nlminb()`](https://rdrr.io/r/stats/nlminb.html): a data argument
   named `g` or `gr` would be taken as `grad`, and one named `h` or `he`
   as `hess`, so give it a longer name.
 
-- vb:
+- vb_correction:
 
   The VB mean correction: `"onestep"` (the default) takes one Newton
-  step from the mode, `"full"` iterates to the VB solution, and `"off"`
-  (or `FALSE`) leaves it out. `TRUE` means the default, and
-  abbreviations such as `"one"` work too. See the section on the VB
-  correction. The correction enters the log marginal likelihood, and the
-  skew-normal means are checked against it (see
+  step from the mode, `"full"` iterates to the VB solution, and `"none"`
+  leaves it out. Abbreviations such as `"one"` work too. See the section
+  on the VB correction. The correction enters the log marginal
+  likelihood, and the skew-normal means are checked against it (see
   [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
 
 - marginals:
 
-  The marginal of each parameter: `"skewnormal"` (the default) fits a
+  The marginal of each parameter: `"skewnorm"` (the default) fits a
   skew-normal to a scan of the log-posterior; `"gaussian"` uses the
   Gaussian marginal of the Laplace approximation, centred at the VB mean
-  unless `vb = "off"`, with no scans. Abbreviations such as `"skew"` and
-  `"gauss"` work too.
+  unless `vb_correction = "none"`, with no scans. `"skewnormal"` is the
+  same as `"skewnorm"`, and abbreviations such as `"skew"` and `"gauss"`
+  work too.
 
-- width:
+- marginal_scan:
 
-  How each skew-normal scan accounts for the changing volume of the
-  other parameters, the width term \\\gamma_j(t) = -\frac12
-  \log\|H\_{-j}\|\\ (see the section on the width term). With m
+  How each skew-normal scan is taken, and how it accounts for the
+  changing volume of the other parameters, the width term \\\gamma_j(t)
+  = -\frac12 \log\|H\_{-j}\|\\ (see the section on the scans). With m
   parameters and `n_grid` scan points, per parameter:
 
-  - `"trace"` (the default): its linear term \\\gamma_j' t\\, as in
+  - `"linear"` (the default): its linear term \\\gamma_j' t\\, as in
     INLAvaan, from 4 `grad` calls, and one more for all the parameters
     together (2m + 5 `logpost` calls without `grad`), on top of the
     `n_grid - 1` `logpost` calls of the scan.
 
-  - `"cmp"`: the exact width term along the same straight scan, from the
-    Hessian of the other parameters at each scan point: about
+  - `"exact"`: the exact width term along the same straight scan, from
+    the Hessian of the other parameters at each scan point: about
     `n_grid - 1` times 2(m - 1) `grad` calls (`n_grid - 1` `hess` calls
     with `hess`, or `n_grid - 1` times (m - 1)m `logpost` calls without
     `grad`).
 
-  - `"tk"`: the Laplace marginal of Tierney and Kadane (1986). At each
-    scan point the other parameters are moved to their conditional mode
-    by [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html), started
-    from the straight scan, and the height and the width term are taken
-    there: the calls of `"cmp"` plus those of `n_grid - 1` conditional
-    optimisations, typically 5 to 20 `logpost` and `grad` calls each
-    with `grad`, and many more without.
+  - `"laplace"`: the Laplace marginal of Tierney and Kadane (1986). At
+    each scan point the other parameters are moved to their conditional
+    mode by [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html),
+    started from the straight scan, and the height and the width term
+    are taken there: the calls of `"exact"` plus those of `n_grid - 1`
+    conditional optimisations, typically 5 to 20 `logpost` and `grad`
+    calls each with `grad`, and many more without.
 
-  With one parameter the three are the same. Abbreviations work. Ignored
-  for Gaussian marginals.
+  - `"plain"`: no width term, only the `n_grid - 1` `logpost` calls of
+    the scan. It shows what the volume correction adds.
+
+  With one parameter there is no width term, and the four are the same
+  scan (`"plain"` leaves out the volume correction's rounding error).
+  Abbreviations work. Ignored for Gaussian marginals.
 
 - tk_fallback:
 
-  Logical. Rescan with `width = "tk"` every parameter whose `ridge_bend`
-  is flagged (above 0.25, see
+  Logical. Rescan with `marginal_scan = "laplace"` every parameter whose
+  `ridge_bend` is flagged (above 0.25, see
   [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md))?
-  Default `FALSE`, so that a fit costs what `width` says and gives the
-  same marginals whatever its diagnostics. The parameters rescanned are
-  listed in `fit$fallback` and by
+  Default `FALSE`, so that a fit costs what `marginal_scan` says and
+  gives the same marginals whatever its diagnostics. The parameters
+  rescanned are listed in `fit$fallback` and by
   [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md).
-  Ignored for Gaussian marginals and with `width = "tk"`.
+  Ignored for Gaussian marginals and with `marginal_scan = "laplace"`.
 
 - transform:
 
@@ -186,7 +195,21 @@ inla_vanilla(
 
 - control:
 
-  A list of tuning parameters; see the section on control.
+  The tuning of the fit: the limits of the mode search, the VB
+  correction and the scans, from
+  [`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md),
+  or a list with some of its entries.
+
+- vb:
+
+  Deprecated: the name of `vb_correction` before inlavanilla 26.11.24,
+  where `"off"` is now `"none"`. It still works, with a warning.
+
+- width:
+
+  Deprecated: the name of `marginal_scan` before inlavanilla 26.11.24,
+  with the values `"trace"` (now `"linear"`), `"cmp"` (now `"exact"`)
+  and `"tk"` (now `"laplace"`). It still works, with a warning.
 
 ## Value
 
@@ -211,17 +234,18 @@ is a list holding, among other things:
 - `mode`, `cov`: the Laplace mode and covariance, on the scale of
   `logpost`, as is everything below.
 
-- `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
+- `mean_vb`: the VB-corrected mean (the mode when
+  `vb_correction = "none"`).
 
 - `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
   parameter (with `alpha = 0` for Gaussian marginals).
 
-- `vb`, `marginals`, `width`, `tk_fallback`, `cores`, `verbose`,
-  `silent`: the settings the fit used (`width` is `NA` for Gaussian
-  marginals).
+- `vb_correction`, `marginals`, `marginal_scan`, `tk_fallback`, `cores`,
+  `verbose`, `silent`: the settings the fit used (`marginal_scan` is
+  `NA` for Gaussian marginals).
 
 - `fallback`: the parameters that `tk_fallback` rescanned with
-  `width = "tk"` (empty when there were none).
+  `marginal_scan = "laplace"` (empty when there were none).
 
 - `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
   part.
@@ -241,25 +265,26 @@ is a list holding, among other things:
   iterations of both runs if it was restarted, the code and message of
   the run that was kept), the gradient of minus the log-posterior at the
   mode (`grad`), the whitened gradient there (`grad_mode`), and the
-  condition number of the Hessian in posterior-SD units (`hess_cond`).
-  `vb` holds the iterations of the VB correction, whether it stopped at
-  the first step (`one_pass`), whether it fell back to
+  condition number of the Hessian, on the raw scale (`hess_cond`) and in
+  posterior-SD units (`hess_cond_cor`). `vb` holds the iterations of the
+  VB correction, whether it stopped at the first step (`one_pass`),
+  whether it fell back to
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) (`fallback`),
   and the Kullback-Leibler divergence of the shift (`kld_global`); it is
-  `NULL` when `vb = "off"`. `marginals` is a data frame with a row per
-  parameter: `mode_shift_sigma`, `kld`, `vb_shift`, `vb_shift_sigma`,
-  `nmad`, `alpha`, `unscanned_mass`, `vb_step_sigma`, `grad_gap`,
-  `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with `NA` for the
-  checks the fit did not run, and `width`, the width method of each scan
-  (see the section on the width term).
+  `NULL` when `vb_correction = "none"`. `marginals` is a data frame with
+  a row per parameter: `mode_shift_sigma`, `kld`, `vb_shift`,
+  `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`, `vb_step_sigma`,
+  `grad_gap`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with `NA`
+  for the checks the fit did not run, and `marginal_scan`, the scan of
+  each parameter (see the section on the scans).
 
 - `scan`: the scans the skew-normals were fitted to, for
   `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
   mode, the log-posterior at each point (`logpost`, a column per
   parameter: along the CMP, or at the conditional modes for
-  `width = "tk"`), the width term added to it (`width`, zero at the
-  mode), and the log scale factor `logC` of each fit on that grid. It is
-  `NULL` for Gaussian marginals.
+  `marginal_scan = "laplace"`), the width term added to it (`width`,
+  zero at the mode), and the log scale factor `logC` of each fit on that
+  grid. It is `NULL` for Gaussian marginals.
 
 - `workers`: the number of parallel jobs the scans ran on, 1 for a
   serial fit (see the section on parallel computation).
@@ -281,9 +306,12 @@ probability as its logit, or a correlation as its Fisher \\z\\. Means
 and regression coefficients need no change.
 
 Return `-Inf` wherever the density is zero or cannot be evaluated, such
-as outside the support or where a matrix is not positive definite (`NA`
-and `NaN` count the same). The scans and the VB nodes reach several
-posterior SDs from the mode, and an error raised there stops the fit.
+as outside the support or where a matrix is not positive definite. `NA`
+and `NaN` count the same, and so does any value at or below
+\\-10^{39}\\, such as the `-1e40` that some code, lavaan's likelihoods
+among it, returns where it fails. The scans and the VB nodes reach
+several posterior SDs from the mode, and an error raised there stops the
+fit.
 
 `logpost` is then the log density **of the parameters you pass**. When a
 prior is stated on the natural scale, include the log-Jacobian of the
@@ -371,9 +399,10 @@ variance the SD is about 11% too small at n = 12, 3% at n = 50, and
 under 1% at n = 200. The `ridge_bend` diagnostic of
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
 flags this narrowing where it predicts about 10% or more. By default
-(`width = "trace"`) this is the scan of INLAvaan; `width = "tk"`, or
-`tk_fallback = TRUE` for the flagged parameters only, removes the
-narrowing at a higher cost (see the section on the width term).
+(`marginal_scan = "linear"`) this is the scan of INLAvaan;
+`marginal_scan = "laplace"`, or `tk_fallback = TRUE` for the flagged
+parameters only, removes the narrowing at a higher cost (see the section
+on the scans).
 
 A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could
@@ -394,7 +423,7 @@ larger than that of marginals within 7% in SD, and the `tails` check,
 which looks only 4 posterior SDs either side of the mode (the Laplace
 SDs), missed both.
 
-## The width term
+## The scans
 
 Each skew-normal scan follows the conditional mode path (CMP) of the
 Laplace Gaussian, \\\vartheta(t) = \vartheta^\* + t v_j\\ with \\v_j =
@@ -403,32 +432,35 @@ posterior SDs. The log marginal is then about the height of the
 log-posterior along the path plus the width term \\\gamma_j(t) =
 -\frac12 \log\|H\_{-j}(t)\|\\, where \\H\_{-j}\\ is the negative Hessian
 of the log-posterior with row and column j deleted: the log-volume of
-the other parameters. `width` sets how it is taken, in three levels that
-each remove one error:
+the other parameters. `marginal_scan` sets how the scan is taken, in
+four levels that each remove one error:
 
-- `"trace"`, the default and INLAvaan's, linearises it, \\\gamma_j(t)
-  \approx \gamma_j' t\\, with the slope from whitened differences of the
-  gradient (Jamil & Rue, 2026a, Corollary 3.3).
+- `"plain"` leaves the width term out, and fits the heights alone.
 
-- `"cmp"` takes \\\gamma_j(t)\\ exactly along the same path. Its
-  difference from `"trace"` is the error of the linearisation.
+- `"linear"`, the default and INLAvaan's, linearises the width term,
+  \\\gamma_j(t) \approx \gamma_j' t\\, with the slope from whitened
+  differences of the gradient (Jamil & Rue, 2026a, Corollary 3.3). Its
+  difference from `"plain"` is the volume correction.
 
-- `"tk"` moves the other parameters to their conditional mode at each
-  point of the scan and takes the height and the width term there: the
-  Laplace approximation of the marginal (Tierney & Kadane, 1986), INLA's
-  "Laplace strategy". Its difference from `"cmp"` is the error of the
-  straight path, which the `ridge_bend` diagnostic of
+- `"exact"` takes \\\gamma_j(t)\\ exactly along the same path. Its
+  difference from `"linear"` is the error of the linearisation.
+
+- `"laplace"` moves the other parameters to their conditional mode at
+  each point of the scan and takes the height and the width term there:
+  the Laplace approximation of the marginal (Tierney & Kadane, 1986),
+  INLA's "Laplace strategy". Its difference from `"exact"` is the error
+  of the straight path, which the `ridge_bend` diagnostic of
   [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
   predicts.
 
 The skew-normal is fitted to the corrected heights in the same way for
-all three, on the same grid. `tk_fallback = TRUE` keeps the cheap scan
+all four, on the same grid. `tk_fallback = TRUE` keeps the cheap scan
 for every parameter but those whose ridge bend is flagged, and rescans
-those with `"tk"`. In `fit$diagnostics$marginals`, `width` gives the
-method each parameter used and `gamma1` the slope of its width term at
-the mode (for `"cmp"` and `"tk"`, a central difference across the mode).
-The ridge bend of a parameter scanned with `"tk"` is still reported, but
-not flagged.
+those with `"laplace"`. In `fit$diagnostics$marginals`, `marginal_scan`
+gives the scan each parameter used and `gamma1` the slope of its width
+term at the mode (for `"exact"` and `"laplace"`, a central difference
+across the mode, and `NA` for `"plain"`). The ridge bend of a parameter
+scanned with `"laplace"` is still reported, but not flagged.
 
 ## Gradients and Hessians
 
@@ -437,16 +469,17 @@ of `logpost`, and the number of calls grows with the square of the
 number of parameters m. The mode and Hessian take about m^2 + 6m calls,
 and the marginals about m(`n_grid` + 2m + 6), with 2(m - 1) more for
 each parameter whose ridge bend is above 0.1. The VB correction takes
-(m + 1)(m + 2) calls, or that many per sweep with `vb = "full"`: it
-needs no derivatives, because Stein's identity gives the expected
-gradient from values of `logpost` alone. With `vb = "full"`, the VB mean
-is then exact when the log-posterior is a polynomial of degree four in
-whitened coordinates, and up to degree six with `grad`. On test models
-it was about 0.01 posterior SDs from exact VB (0.003 with `grad`), and
-up to 0.1 on a strongly skewed posterior (0.03 with `grad`), against a
-VB error of 0.01 to 0.2 SDs from the posterior mean itself. On the most
-skewed posteriors the VB correction may then not settle, and the fit
-says it has not converged (see
+(m + 1)(m + 2) calls, or that many per sweep with
+`vb_correction = "full"`: it needs no derivatives, because Stein's
+identity gives the expected gradient from values of `logpost` alone.
+With `vb_correction = "full"`, the VB mean is then exact when the
+log-posterior is a polynomial of degree four in whitened coordinates,
+and up to degree six with `grad`. On test models it was about 0.01
+posterior SDs from exact VB (0.003 with `grad`), and up to 0.1 on a
+strongly skewed posterior (0.03 with `grad`), against a VB error of 0.01
+to 0.2 SDs from the posterior mean itself. On the most skewed posteriors
+the VB correction may then not settle, and the fit says it has not
+converged (see
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md));
 `grad` is the remedy.
 
@@ -456,11 +489,12 @@ gradient usually does, since it then makes far fewer calls in all. A
 gradient by automatic differentiation (RTMB, TMB) costs about two, and
 beyond a handful of parameters the fit is still several times faster
 than without one (four times at m = 39). The default VB correction,
-`vb = "onestep"`, takes 2m + 1 gradient calls, about as many as one
-numerical Hessian, and `vb = "full"` takes at most (m + 1)(m + 2) + 1
-per sweep, usually about four sweeps. Beyond a handful of parameters the
-marginals are the slowest stage, along with the VB correction under
-`vb = "full"`. `vb = "off"` skips the VB correction (and its term in the
+`vb_correction = "onestep"`, takes 2m + 1 gradient calls, about as many
+as one numerical Hessian, and `vb_correction = "full"` takes at most
+(m + 1)(m + 2) + 1 per sweep, usually about four sweeps. Beyond a
+handful of parameters the marginals are the slowest stage, along with
+the VB correction under `vb_correction = "full"`.
+`vb_correction = "none"` skips the VB correction (and its term in the
 log marginal likelihood), and the skew-normal marginals do not depend on
 it; `marginals = "gaussian"` saves the calls of the scans.
 
@@ -470,26 +504,29 @@ it; `marginals = "gaussian"` saves the calls of the scans.
 steps to the mode, and the Hessian at the mode is the supplied one. The
 VB correction does not use it, nor do the default marginals, whose
 volume correction takes 4m + 1 `grad` calls for all the parameters
-together, where a Hessian each would cost far more. `width = "cmp"` and
-`width = "tk"` do use it. The fit is the one `grad` alone gives, to the
-error of its finite differences (about 1e-8, relative), except that the
-mode is found more precisely. A dense Hessian costs about m gradients,
-so this takes a little longer: a structural equation model with 39
-parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
-with it and 0.17 s without.
+together, where a Hessian each would cost far more.
+`marginal_scan = "exact"` and `"laplace"` do use it. The fit is the one
+`grad` alone gives, to the error of its finite differences (about 1e-8,
+relative), except that the mode is found more precisely. A dense Hessian
+costs about m gradients, so this takes a little longer: a structural
+equation model with 39 parameters and an automatic-differentiation
+Hessian (RTMB) took 0.18 s with it and 0.17 s without.
 
 The fit goes straight to the mode: at `init` it only checks that
 `logpost`, `grad` and `hess` return finite values of the right shape. A
-supplied `grad` is compared with `logpost` at the mode, from differences
-the fit takes there anyway, so at no cost in calls, and its Jacobian
-there is checked for symmetry, with a warning if either check fails (see
-`grad_gap` in
+supplied `grad` is compared with `logpost` at the mode, and the Hessian
+there, whether taken from `grad` or supplied, is checked for symmetry,
+with a warning if either check fails (see `grad_gap` in
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
-A supplied `hess` is checked at the mode against central differences of
-`grad`, along two directions, with a warning if it does not match;
-`grad` is then not compared with `logpost`, since no differences of
-`logpost` are taken. Any R function works for `logpost`, `grad` and
-`hess`, including compiled code (Rcpp, TMB) and RTMB, which
+Without `hess`, the comparison reads differences the fit takes there
+anyway to set its steps, at no cost in calls. With `hess` it takes them
+for the check alone: 2 `logpost` calls per try of the step search,
+usually 3 or 4 tries per parameter, so about 6m to 8m calls, and up to
+60m when the search fails. A supplied `hess` is also checked at the mode
+against central differences of `grad`, along two directions, with a
+warning if it does not match, and its diagonal is part of what
+`grad_gap` compares with `logpost`. Any R function works for `logpost`,
+`grad` and `hess`, including compiled code (Rcpp, TMB) and RTMB, which
 differentiates R code. An RTMB function can return the log-posterior
 itself, and its `obj$fn`, `obj$gr` and `obj$he` are then passed as they
 are. For a TMB template that returns the negative log-posterior, pass
@@ -506,15 +543,16 @@ the posterior, keeping its covariance. It maximises the expected
 log-posterior under that Gaussian, so that at the solution the gradient,
 averaged over the Gaussian, is zero.
 
-`vb = "onestep"` takes the first Newton step towards that solution, with
-the Laplace curvature, and stops. With a gradient, the average is taken
-over the mode and \\\pm\sqrt 3\\ along each axis of the symmetric square
-root of the covariance, taken on the correlation scale. Without one, it
-is one pass of Stein's identity on the rule of `vb = "full"`. Most of
-the movement is in that step, and exact VB is itself an approximation to
-the posterior mean with an error of the same order. If the first step is
-over 2.5 posterior SDs, or a node fails, the iteration carries on with
-capped steps, within the number of calls that the mode and Hessian took.
+`vb_correction = "onestep"` takes the first Newton step towards that
+solution, with the Laplace curvature, and stops. With a gradient, the
+average is taken over the mode and \\\pm\sqrt 3\\ along each axis of the
+symmetric square root of the covariance, taken on the correlation scale.
+Without one, it is one pass of Stein's identity on the rule of
+`vb_correction = "full"`. Most of the movement is in that step, and
+exact VB is itself an approximation to the posterior mean with an error
+of the same order. If the first step is over 2.5 posterior SDs, or a
+node fails, the iteration carries on with capped steps, within the
+number of calls that the mode and Hessian took.
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 then has `vb_step_sigma`, the step still to go, which is `NA` after a
 single step. After a single step the fit checks that it delivered what
@@ -524,10 +562,10 @@ is the rise in the expected log-posterior over the rise the step
 assumed, and a ratio below 0.5 raises a warning. A large first step can
 also overstate the VB term of the log marginal likelihood, so after a
 shift above 1 posterior SD, which is flagged, compare models with care:
-`vb = "full"` may be closer.
+`vb_correction = "full"` may be closer.
 
-`vb = "full"` iterates to the solution, on a degree-5 rule with at most
-(m + 1)(m + 2) + 1 nodes, and hands over to
+`vb_correction = "full"` iterates to the solution, on a degree-5 rule
+with at most (m + 1)(m + 2) + 1 nodes, and hands over to
 [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) if it does not
 converge.
 
@@ -537,7 +575,7 @@ Set `cores` to run the per-parameter scans of the skew-normal marginals
 in parallel:
 
     cores <- parallelly::availableCores(omit = 1)
-    fit <- inla_vanilla(logpost, init, width = "tk", cores = cores)
+    fit <- inla_vanilla(logpost, init, marginal_scan = "laplace", cores = cores)
 
 [`parallelly::availableCores()`](https://parallelly.futureverse.org/reference/availableCores.html)
 counts the cores the machine offers, and `omit = 1` leaves one free. A
@@ -545,10 +583,10 @@ fit never asks for more workers than the machine offers. The results and
 the progress line are those of a serial fit. A long scan uses all the
 `cores`, a shorter one fewer, and a scan expected to take under a second
 stays serial. The mode, the Hessian and the VB correction stay serial,
-so the gain is largest with `width = "tk"` or `"cmp"`, where the scans
-are nearly the whole fit: about 7.5 times faster on 12 cores on test
-models. With the default width the scans are about half of a slow fit,
-and it was about 1.5 times at most.
+so the gain is largest with `marginal_scan = "laplace"` or `"exact"`,
+where the scans are nearly the whole fit: about 7.5 times faster on 12
+cores on test models. With the default scan the scans are about half of
+a slow fit, and it was about 1.5 times at most.
 
 `cores` needs the future package, which is optional. It uses forked
 workers where those are safe, in a terminal on macOS or Linux, and
@@ -598,29 +636,6 @@ a session. `cores = 1` runs serially whatever the plan.
 [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) use the
 setting of the fit.
 
-## Control
-
-`control` is a list with any of:
-
-- `n_grid`: number of grid points per skew-normal scan, spread over
-  \\\pm 4\\ posterior SDs (default `21`).
-
-- `log_threshold`: grid points whose log-posterior falls more than this
-  below the maximum are ignored in the skew-normal fit (default `-6`).
-
-- `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
-  tolerance in posterior SDs (default `1e-3`) for the VB correction's
-  fixed-point iteration, with `vb = "full"` and when a one-step
-  correction has to iterate. A step over 1.5 posterior SDs is cut to
-  1.5. With `vb = "full"`, if two steps in a row are cut, or it has not
-  converged after `vb_maxit` steps,
-  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes over.
-
-- `nlminb`: a list of
-  [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) controls for
-  the mode search. `iter.max` and `eval.max` both default to `5000`, and
-  `trace = 1` prints its iterations.
-
 ## Output
 
 By default each stage prints one line as it finishes, with the time it
@@ -651,7 +666,7 @@ calls of `logpost` or `grad`:
   whitened gradient there (which decides the restart) and the largest
   Newton step in posterior SDs (which the fit-time warning checks); how
   the Hessian was taken (and, for a supplied `grad`, the asymmetry of
-  its Jacobian and its gap from `logpost`, or, for a supplied `hess`,
+  the Hessian and its gap from `logpost`, and, for a supplied `hess`,
   how far it is from central differences of `grad`); the largest
   posterior correlation and the smallest eigenvalue of the correlation
   matrix, which is near zero when some combination of the parameters is
@@ -674,7 +689,7 @@ calls of `logpost` or `grad`:
 
 For the iteration trace of
 [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) itself, pass
-`control = list(nlminb = list(trace = 1))`.
+`control = vanilla_control(nlminb = list(trace = 1))`.
 
 `silent = TRUE` prints nothing, for simulations and other repeated fits:
 no progress bars and no stage lines, and every warning and message
@@ -736,11 +751,11 @@ logpost <- function(theta) {
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
-#> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (11ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (15ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -767,11 +782,11 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
-#>     (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
+#>     8.8e-08σ (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -786,14 +801,14 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [8ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 21ms
+#> ℹ Done: 147 logpost calls in 35ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)

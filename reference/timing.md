@@ -48,7 +48,8 @@ The segments are:
 
 - `laplace`: the posterior mode and the Hessian there.
 
-- `vb`: the VB mean correction, close to zero with `vb = "off"`.
+- `vb`: the VB mean correction, close to zero with
+  `vb_correction = "none"`.
 
 - `marginals`: the scans and the skew-normal fits, close to zero with
   `marginals = "gaussian"`.
@@ -90,15 +91,15 @@ fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), silent = TRUE)
 # The whole fit
 timing(fit)
 #> total 
-#> 240ms 
+#>  11ms 
 
 # Every stage
 timing(fit, what = "all")
 #>        init     laplace          vb   marginals diagnostics       total 
-#>         1ms         1ms         0ms       236ms         2ms       240ms 
+#>         1ms         1ms         1ms         6ms         2ms        11ms 
 
 # Some stages
 timing(fit, what = c("vb", "marginals"))
 #>        vb marginals 
-#>       0ms     236ms 
+#>       1ms       6ms 
 ```

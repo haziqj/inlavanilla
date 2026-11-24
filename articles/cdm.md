@@ -110,10 +110,10 @@ init <- c(
   setNames(rep(qlogis(0.1), 28), sprintf("s%02d", 1:28)),
   setNames(rep(0, 7), paste0("pi", classes[-1]))
 )
-fit <- inla_vanilla(logpost, init, vb = "full")
-#> ✔ Found the posterior mode in 191 iterations [25.9s]
-#> ✔ VB mean correction, max shift 0.51σ [23.3s]
-#> ✔ Fitted 63 skew-normal marginals [9.1s]
+fit <- inla_vanilla(logpost, init, vb_correction = "full")
+#> ✔ Found the posterior mode in 186 iterations [23.2s]
+#> ✔ VB mean correction, max shift 0.51σ [26.9s]
+#> ✔ Fitted 63 skew-normal marginals [10.5s]
 ```
 
 Draws give the parameters on the probability scale, and the share of
@@ -148,9 +148,9 @@ or only the cohesive attribute are rare, at 1 to 2%.
 
 The fit takes about 30 seconds, most of it in the 59,000 or so calls of
 `logpost` that 63 parameters need without a gradient. It uses
-`vb = "full"`, the iterative VB solver, because on this posterior the
-default one-step correction is less accurate, and its fit warns about
-it.
+`vb_correction = "full"`, the iterative VB solver, because on this
+posterior the default one-step correction is less accurate, and its fit
+warns about it.
 
 ## Checking against Stan
 

@@ -29,7 +29,7 @@ functions, and logpost as their sum."><meta property="og:image" content="https:/
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -168,7 +168,7 @@ $$\mathrm{CPO}_u = p(y_u \mid y_{-u}) =
   1 / E[1 / p(y_u \mid \vartheta) \mid y],$$
 an expectation over the full posterior. The posterior is taken as the
 Gaussian \(N(\tilde\vartheta, \Omega)\) of the fit, with the VB-corrected
-mean (the mode when <code>vb = "off"</code>) and the Laplace covariance, and
+mean (the mode when <code>vb_correction = "none"</code>) and the Laplace covariance, and
 \(\ell_u\) is expanded to second order about \(\tilde\vartheta\), with
 score \(s_u\) and Hessian \(H_u\). The expectation is then a Gaussian
 integral:
@@ -264,8 +264,8 @@ elpd is <code>sum(d)</code> with standard error <code>sqrt(length(d)) * sd(d)</c
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Alhyari, M., Jamil, H., Montcho, H., &amp; Rue, H. (2026). <em>Deterministic
-leave-one-cluster-out cross-validation for multilevel Bayesian models</em>
-(arXiv:2609.00670 [stat.ME]). arXiv.
+leave-one-cluster-out cross-validation for multilevel Bayesian structural
+equation models</em> (arXiv:2609.00670 [stat.ME]). arXiv.
 <a href="https://doi.org/10.48550/arXiv.2609.00670" class="external-link">https://doi.org/10.48550/arXiv.2609.00670</a></p>
 <p>Vehtari, A., Gelman, A., &amp; Gabry, J. (2017). Practical Bayesian model
 evaluation using leave-one-out cross-validation and WAIC. <em>Statistics and
@@ -291,7 +291,7 @@ widely applicable information criterion in singular learning theory.
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">0</span>, b <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">9</span> iterations <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.12σ</span> <span style="color: #555555;">[1ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[5ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
 <span class="r-in"><span><span class="fu">loo</span><span class="op">(</span><span class="va">fit</span>, <span class="va">loglik</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">Leave-one-out cross-validation</span> <span style="color: #D7875F;">───────────────────────────────</span> <span style="color: #555555;">9 units</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

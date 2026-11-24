@@ -59,11 +59,13 @@ Most of the checks are those of INLAvaan's
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 and
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
-returns them under the same names. Jamil and Rue (2026) use the VB shift
-and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the gap between
-the skew-normal and VB means as an internal check (Section 5.1). The
-mode shift, the Hessian condition number and the unscanned mass come
-from INLAvaan's
+returns them under the same names, two of them under the names INLAvaan
+will use from its version 0.4.0 (`hess_cond_cor`, and `unscanned_mass`
+for its `scan_end_mass`). Jamil and Rue (2026) use the VB shift and NMAD
+as fit diagnostics (Sections 3.1 and 4.4), and the gap between the
+skew-normal and VB means as an internal check (Section 5.1). The mode
+shift, the Hessian condition number and the unscanned mass come from
+INLAvaan's
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 not from the paper. `grad_gap`, `vb_step_sigma`, `tails` and
 `ridge_bend` are inlavanilla's own.
@@ -87,15 +89,19 @@ diagnostics, with the level at which each is flagged where it is, are:
   at the mode: the larger of the difference in slope per conditional
   posterior SD and half the relative difference in curvature, so about
   how far it moves the mode in SDs and the relative error it makes in an
-  SD. It is flagged above 0.1, costs no calls, and is `NA` without
-  `grad` or with `hess`. A wrong gradient mostly harms the log marginal
-  likelihood and the covariance, since the scans use `logpost` itself.
+  SD. It is flagged above 0.1, and is `NA` without `grad`. It costs no
+  calls without `hess`, and about 6m to 8m `logpost` calls with it (see
+  "Gradients and Hessians" in
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
+  With `hess`, the curvature is that of `hess`. A wrong gradient mostly
+  harms the log marginal likelihood and the covariance, since the scans
+  use `logpost` itself.
 
-- **Hessian.** `hess_cond`, the condition number of the Hessian at the
-  mode with each parameter in posterior-SD units (the eigenvalue ratio
-  of the posterior correlation matrix). It is flagged above \\10^8\\:
-  some combination of the parameters is then weakly identified. Its line
-  is shown when there is more than one parameter.
+- **Hessian.** `hess_cond_cor`, the condition number of the Hessian at
+  the mode with each parameter in posterior-SD units (the eigenvalue
+  ratio of the posterior correlation matrix). It is flagged above
+  \\10^8\\: some combination of the parameters is then weakly
+  identified. Its line is shown when there is more than one parameter.
 
 - **VB correction.** `vb_shift_sigma`, the shift of each mean from the
   mode in posterior SDs (`vb_shift` is the same shift on the scale of
@@ -209,7 +215,7 @@ any.
 [`vignette("diagnostics", package = "inlavanilla")`](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
 explains every check with examples.
 
-With `vb = "off"` there is no VB mean: the VB columns of
+With `vb_correction = "none"` there is no VB mean: the VB columns of
 `summary(fit)$diagnostics` are `NA`, as INLAvaan's
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
 leaves them, and are left out of the table. With

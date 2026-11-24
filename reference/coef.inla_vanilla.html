@@ -11,16 +11,16 @@ Mean column of the fit's summary table. A parameter named for its scale
 unless the fit was made with transform = FALSE; the others are on the
 scale of logpost. These are the estimates INLAvaan's coef() gives. For
 a fit with marginals = &quot;gaussian&quot; and no transformed parameters they are
-the VB-corrected means, or, with vb = &quot;off&quot;, the mode. The joint
-posterior mode is fit$mode, and the VB-corrected mean fit$mean_vb,
+the VB-corrected means, or, with vb_correction = &quot;none&quot;, the mode. The
+joint posterior mode is fit$mode, and the VB-corrected mean fit$mean_vb,
 both on the scale of logpost."><meta property="og:description" content="The posterior mean of each parameter, from its skew-normal marginal: the
 Mean column of the fit's summary table. A parameter named for its scale
 (log_sigma) is on its natural scale, under its natural name (sigma),
 unless the fit was made with transform = FALSE; the others are on the
 scale of logpost. These are the estimates INLAvaan's coef() gives. For
 a fit with marginals = &quot;gaussian&quot; and no transformed parameters they are
-the VB-corrected means, or, with vb = &quot;off&quot;, the mode. The joint
-posterior mode is fit$mode, and the VB-corrected mean fit$mean_vb,
+the VB-corrected means, or, with vb_correction = &quot;none&quot;, the mode. The
+joint posterior mode is fit$mode, and the VB-corrected mean fit$mean_vb,
 both on the scale of logpost."><meta property="og:image" content="https://haziqj.ml/inlavanilla/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -29,7 +29,7 @@ both on the scale of logpost."><meta property="og:image" content="https://haziqj
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.23</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,8 +81,8 @@ both on the scale of logpost."><meta property="og:image" content="https://haziqj
 unless the fit was made with <code>transform = FALSE</code>; the others are on the
 scale of <code>logpost</code>. These are the estimates INLAvaan's <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> gives. For
 a fit with <code>marginals = "gaussian"</code> and no transformed parameters they are
-the VB-corrected means, or, with <code>vb = "off"</code>, the mode. The joint
-posterior mode is <code>fit$mode</code>, and the VB-corrected mean <code>fit$mean_vb</code>,
+the VB-corrected means, or, with <code>vb_correction = "none"</code>, the mode. The
+joint posterior mode is <code>fit$mode</code>, and the VB-corrected mean <code>fit$mean_vb</code>,
 both on the scale of <code>logpost</code>.</p>
     </div>
 
