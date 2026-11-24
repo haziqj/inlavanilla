@@ -236,13 +236,14 @@ fmt_g3 <- function(x) {
 # (`n = Inf`), and inlavanilla's own for the others. The mode and VB
 # bullets name the worst parameter only, as INLAvaan's do; summary() has its
 # own lines for those two.
-problem_text <- function(check, dg, env, n = 3L) {
+problem_text <- function(check, dg, env, advice, n = 3L) {
   p <- dg$param
   glob <- dg$global
   switch(
     check,
     grad_gap = paste0(
-      "{.arg grad} does not match {.arg logpost} at the mode (gap > ",
+      advice$grad_gap,
+      " at the mode (gap > ",
       warn_levels$grad_gap,
       ") for ",
       flagged_list(env, "grad", dg, "grad_gap", warn_levels$grad_gap, n),
@@ -356,10 +357,46 @@ problem_text <- function(check, dg, env, n = 3L) {
   )
 }
 
+# The wording a caller gives diagnostic_problems() and problem_text(): cli
+# templates that name its own arguments, so that each package words the
+# bullets and the advice for its users. Every entry is needed:
+# * `grad_gap`: the subject of the bullet on a gradient that does not match
+#   the log-posterior, such as "{.arg grad} does not match {.arg logpost}".
+# * `no_grad`: the advice for a VB correction that did not settle without a
+#   gradient, such as "supply {.arg grad} if you can" (a caller that always
+#   has a gradient can give "").
+# * `vb_full`, `vb_none`: the code that asks for the full VB correction and
+#   for none, such as {.code vb_correction = "full"}.
+# * `mode_limit`: how to raise the limits of the mode search, a sentence.
+# * `mode_retry`: what else to try when it stops short, a sentence.
+# * `funnel`: what to do about random effects whose scale can run to zero, a
+#   sentence.
+advice_entries <- c(
+  "grad_gap",
+  "no_grad",
+  "vb_full",
+  "vb_none",
+  "mode_limit",
+  "mode_retry",
+  "funnel"
+)
+
+check_advice <- function(advice) {
+  if (!is.list(advice) || !all(advice_entries %in% names(advice))) {
+    abort(
+      "{.arg advice} must be a list with the entries {.val {advice_entries}}."
+    )
+  }
+  invisible(advice)
+}
+
 # The bullets of the fit-time warning, in INLAvaan's order with tails after
 # the unscanned mass, as cli templates with the environment that fills them
 # in attribute "envir". A flagged mode adds nlminb()'s message and a hint.
-diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
+# `advice` words them for the caller (see advice_entries). The caller raises
+# the warning, with any checks of its own and a footer.
+diagnostic_problems <- function(dg, gaussian, has_grad = TRUE, advice) {
+  check_advice(advice)
   flags <- check_flags(dg, gaussian)
   env <- new.env(parent = baseenv())
   out <- character()
@@ -375,7 +412,7 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
     "hess_cond"
   )
   for (check in warned[flags[warned]]) {
-    out <- c(out, x = problem_text(check, dg, env))
+    out <- c(out, x = problem_text(check, dg, env, advice))
     if (check == "grad_gap") {
       out <- c(
         out,
@@ -389,8 +426,9 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
       out <- c(
         out,
         i = paste0(
-          "Compare with {.code vb_correction = \"full\"}, and treat the log ",
-          "marginal likelihood with care."
+          "Compare with ",
+          advice$vb_full,
+          ", and treat the log marginal likelihood with care."
         )
       )
     }
@@ -400,12 +438,14 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
       # solver. Then what the unsettled VB mean moves: not skew-normal
       # marginals, which are scanned around the mode, but Gaussian ones,
       # which are centred on it.
-      if (!has_grad) {
+      if (!has_grad && nzchar(advice$no_grad)) {
         out <- c(
           out,
           i = paste0(
             "Without a gradient the VB mean is approximate on a posterior ",
-            "this far from Gaussian; supply {.arg grad} if you can."
+            "this far from Gaussian; ",
+            advice$no_grad,
+            "."
           )
         )
       }
@@ -414,12 +454,14 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
         i = if (gaussian) {
           paste0(
             "The Gaussian marginals are centred on the VB mean; ",
-            "{.code vb_correction = \"none\"} centres them at the mode."
+            advice$vb_none,
+            " centres them at the mode."
           )
         } else {
           paste0(
             "The skew-normal marginals do not depend on it; ",
-            "{.code vb_correction = \"none\"} leaves it out."
+            advice$vb_none,
+            " leaves it out."
           )
         }
       )
@@ -430,9 +472,9 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
         out,
         i = "{.fn nlminb} says: {.val {mode_message}}.",
         i = if (isTRUE(grepl("limit", dg$message))) {
-          "Raise {.code mode_maxit} or {.code mode_maxeval} in {.fn vanilla_control}."
+          advice$mode_limit
         } else {
-          "Try other starting values, or supply {.arg grad}."
+          advice$mode_retry
         }
       )
     }
@@ -442,9 +484,8 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
       out,
       i = paste0(
         "The mode may be far from the posterior mass, or the log-posterior ",
-        "may have no maximum. Random effects in {.arg logpost} whose scale ",
-        "can run to zero do this (a funnel): integrate them out of ",
-        "{.arg logpost}."
+        "may have no maximum. ",
+        advice$funnel
       )
     )
   }

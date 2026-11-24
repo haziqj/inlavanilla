@@ -280,7 +280,10 @@ test_that("gaussian_marginals gives those parameters their Gaussian marginal", {
       core$diagnostics$marginals
     )
     expect_false(any(check_flags(dg, gaussian = FALSE)))
-    expect_length(diagnostic_problems(dg, gaussian = FALSE), 0L)
+    expect_length(
+      diagnostic_problems(dg, gaussian = FALSE, advice = inlavanilla_advice),
+      0L
+    )
   }
 })
 

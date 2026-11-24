@@ -343,7 +343,11 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   # worst first, through variables in `env` (see list_template()).
   env <- new.env(parent = environment())
   flagged_line <- function(check) {
-    cat_status("warn", problem_text(check, dg, env, n = Inf), .envir = env)
+    cat_status(
+      "warn",
+      problem_text(check, dg, env, inlavanilla_advice, n = Inf),
+      .envir = env
+    )
   }
 
   if (!flags[["mode"]]) {

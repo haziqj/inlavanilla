@@ -1,10 +1,30 @@
 # The diagnostics() generic and its methods, and the fit-time warning. The
 # checks themselves are in R/vanilla-diagnostics.R.
 
+# The wording of the diagnostics for inla_vanilla(), in its own arguments (see
+# advice_entries in R/vanilla-diagnostics.R), and the vignette that explains
+# them
+inlavanilla_advice <- list(
+  grad_gap = "{.arg grad} does not match {.arg logpost}",
+  no_grad = "supply {.arg grad} if you can",
+  vb_full = "{.code vb_correction = \"full\"}",
+  vb_none = "{.code vb_correction = \"none\"}",
+  mode_limit = paste0(
+    "Raise {.code mode_maxit} or {.code mode_maxeval} in ",
+    "{.fn vanilla_control}."
+  ),
+  mode_retry = "Try other starting values, or supply {.arg grad}.",
+  funnel = paste0(
+    "Random effects in {.arg logpost} whose scale can run to zero do this ",
+    "(a funnel): integrate them out of {.arg logpost}."
+  ),
+  vignette = "{.code vignette(\"diagnostics\", package = \"inlavanilla\")}"
+)
+
 # One warning, of class inlavanilla_diagnostics_warning, when any check is
 # off; FALSE (invisibly) when none is.
 warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
-  problems <- diagnostic_problems(dg, gaussian, has_grad)
+  problems <- diagnostic_problems(dg, gaussian, has_grad, inlavanilla_advice)
   if (length(problems) == 0L) {
     return(invisible(FALSE))
   }
@@ -17,8 +37,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
       "i" = paste0(
         "Inspect with {.code diagnostics(fit)} and ",
         "{.code diagnostics(fit, type = \"param\")}; ",
-        "{.code vignette(\"diagnostics\", package = \"inlavanilla\")} ",
-        "explains each check."
+        inlavanilla_advice$vignette,
+        " explains each check."
       )
     ),
     class = "inlavanilla_diagnostics_warning",

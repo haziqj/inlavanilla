@@ -54,7 +54,7 @@ dg_of <- function(d = healthy, optim = healthy_optim, vb = healthy_vb) {
   diagnostics_internal(optim, vb, d)
 }
 problems <- function(..., gaussian = FALSE) {
-  diagnostic_problems(dg_of(...), gaussian)
+  diagnostic_problems(dg_of(...), gaussian, advice = inlavanilla_advice)
 }
 # The warning's message as plain text (no colours, no wrapping), or "" when
 # there is none
@@ -74,6 +74,63 @@ test_that("a healthy fit raises no diagnostics warning", {
   expect_identical(fit$warnings, character())
   expect_length(problems(), 0)
   expect_false(warn_diagnostics(dg_of(), gaussian = FALSE))
+})
+
+test_that("a caller words the bullets and the advice with its own arguments", {
+  # As INLAvaan words them for its users
+  advice <- list(
+    grad_gap = "The gradient of the model does not match its log-posterior",
+    no_grad = "",
+    vb_full = "{.code vb_correction = \"full\"}",
+    vb_none = "{.code vb_correction = FALSE}",
+    mode_limit = "Raise {.code mode_maxit} in {.fn inlavaan_control}.",
+    mode_retry = "Try other starting values with {.arg start}.",
+    funnel = "Check the model for a variance that can run to zero."
+  )
+  o <- healthy_optim
+  o$grad <- c(a = 50, b = 0.01)
+  o$message <- "iteration limit reached without convergence (10)"
+  d <- healthy
+  d$mode_shift_sigma[1] <- 2
+  d$grad_gap[1] <- 0.5
+  d$vb_step_sigma[1] <- 0.3
+  bullets <- diagnostic_problems(
+    dg_of(d, o),
+    gaussian = FALSE,
+    has_grad = FALSE,
+    advice = advice
+  )
+  text <- paste(cli::ansi_strip(cli::format_inline(
+    paste(bullets, collapse = "\n"),
+    .envir = attr(bullets, "envir")
+  )))
+  expect_match(
+    text,
+    "The gradient of the model does not match its log-posterior at the mode",
+    fixed = TRUE
+  )
+  expect_match(text, "`vb_correction = FALSE` leaves it out", fixed = TRUE)
+  expect_match(
+    text,
+    "Raise `mode_maxit` in `inlavaan_control()`.",
+    fixed = TRUE
+  )
+  expect_match(
+    text,
+    "Check the model for a variance that can run to zero.",
+    fixed = TRUE
+  )
+  # An empty no_grad leaves its line out
+  expect_no_match(text, "Without a gradient")
+  for (word in c("logpost", "vanilla_control", "`grad`")) {
+    expect_no_match(text, word, fixed = TRUE)
+  }
+  # Every entry is needed
+  expect_error(
+    diagnostic_problems(dg_of(d, o), FALSE, advice = advice[-1]),
+    "`advice` must be a list with the entries",
+    class = "inlavanilla_error"
+  )
 })
 
 test_that("each check adds its own line to the warning, in INLAvaan's words", {

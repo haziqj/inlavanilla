@@ -2143,7 +2143,15 @@ test_that("silent = TRUE records each warning once, as plain text", {
     expect_false(any(grepl("{.", fit$warnings, fixed = TRUE)))
     lines <- strsplit(fit$warnings[1], "\n")[[1]]
     expect_match(lines[-1], "^[xi] ")
-    expect_length(lines, length(diagnostic_problems(fit_dg(fit), FALSE)) + 2)
+    expect_length(
+      lines,
+      length(diagnostic_problems(
+        fit_dg(fit),
+        FALSE,
+        advice = inlavanilla_advice
+      )) +
+        2
+    )
     # whereas the warning as signalled is styled and wrapped
     w <- tryCatch(
       suppressMessages(inla_vanilla(
