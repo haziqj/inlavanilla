@@ -1,5 +1,6 @@
 # Fast checks of the source tree, without installing R: the code is formatted
-# with air (settings in air.toml).
+# with air (settings in air.toml), and the engine files R/vanilla-*.R hold only
+# internal code.
 on:
   push:
     branches: [main, master]
@@ -24,3 +25,24 @@ jobs:
 
       - name: Check formatting
         run: air format . --check
+
+      # The engine files are copied byte for byte into other packages
+      # (INLAvaan), so they hold only internal code: no roxygen and no
+      # exports, no S3 generics or method registrations, and not the name of
+      # this package. Help, exports and methods go in the other files of R/.
+      - name: Check the engine files R/vanilla-*.R
+        run: |
+          status=0
+          if grep -n "^[[:space:]]*#'" R/vanilla-*.R; then
+            echo "::error::R/vanilla-*.R hold roxygen; document and export from another file"
+            status=1
+          fi
+          if grep -nE '(UseMethod|NextMethod|registerS3method|setGeneric|setMethod)[[:space:]]*\(|S3method' R/vanilla-*.R; then
+            echo "::error::R/vanilla-*.R define a generic or register a method"
+            status=1
+          fi
+          if grep -nE '\\?"inlavanilla\\?"' R/vanilla-*.R; then
+            echo "::error::R/vanilla-*.R name the package inlavanilla"
+            status=1
+          fi
+          exit $status
