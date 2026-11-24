@@ -575,9 +575,12 @@ for each parameter and at no cost in calls. `grad_gap` in
 `diagnostics(fit, type = "param")` holds the result: the larger of the
 difference in slope per posterior SD and half the relative difference in
 curvature. It is flagged above 0.1, a mode moved by a tenth of an SD or an SD
-about 10% off. The Jacobian at the mode is also checked for symmetry, as the
-Hessian of a function must be, and either failure gives a warning. A gradient
-of the wrong sign stops the fit at the mode, and the error says so.
+about 10% off. The Hessian at the mode, taken from `grad` or supplied as
+`hess`, is also checked for symmetry, as the Hessian of a function must be,
+and either failure gives a warning. With `hess`, the curvature that `grad_gap`
+compares is that of `hess`, which is also checked against differences of
+`grad`. A gradient of the wrong sign stops the fit at the mode, and the error
+says so.
 
 ## References
 
