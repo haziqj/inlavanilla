@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 26.11.24-1
 
 * This version changes only the skew-normal functions of the engine. They are
   internal in inlavanilla, but INLAvaan, which copies the engine, exports some
