@@ -1,5 +1,11 @@
 # inlavanilla (development version)
 
+* `vb` is renamed `vb_correction`, the name INLAvaan uses, and its `"off"` is
+  now `"none"`: `vb_correction = c("onestep", "full", "none")`. `TRUE` and
+  `FALSE` still mean `"onestep"` and `"none"`. `vb` still works, with a warning
+  once per session, and will be removed in a later version. The fit stores the
+  setting as `fit$vb_correction`.
+
 * `marginals = "skewnorm"` is the new name of the skew-normal marginals, as
   INLAvaan will name them. `"skewnormal"` still works, as an alias.
 

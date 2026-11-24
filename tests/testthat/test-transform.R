@@ -460,7 +460,7 @@ test_that("many transformed parameters are grouped by transform", {
     lp,
     stats::setNames(numeric(6), nms),
     marginals = "gaussian",
-    vb = "off",
+    vb_correction = "none",
     silent = TRUE
   )
   out <- capture.output(print(fit))
@@ -474,7 +474,7 @@ test_that("many transformed parameters are grouped by transform", {
     lp,
     stats::setNames(numeric(5), nms[-1]),
     marginals = "gaussian",
-    vb = "off",
+    vb_correction = "none",
     silent = TRUE
   )
   note <- gsub(" +", " ", paste(capture.output(print(fit)), collapse = " "))
@@ -485,7 +485,7 @@ test_that("many transformed parameters are grouped by transform", {
     lp,
     stats::setNames(numeric(9), nms),
     marginals = "gaussian",
-    vb = "off",
+    vb_correction = "none",
     silent = TRUE
   )
   out <- capture.output(print(fit))
@@ -561,7 +561,12 @@ test_that("a clash of names warns once, and the fit records it", {
   lp <- function(theta) sum(dnorm(theta, 0, 1, log = TRUE))
   init <- c(log_sigma = 0, sigma = 0)
   expect_warning(
-    fit <- inla_vanilla(lp, init, marginals = "gaussian", vb = "off"),
+    fit <- inla_vanilla(
+      lp,
+      init,
+      marginals = "gaussian",
+      vb_correction = "none"
+    ),
     "unconstrained scale"
   ) |>
     suppressMessages()
@@ -573,7 +578,7 @@ test_that("a clash of names warns once, and the fit records it", {
     lp,
     init,
     marginals = "gaussian",
-    vb = "off",
+    vb_correction = "none",
     silent = TRUE
   ))
   expect_length(fit$warnings, 1L)
@@ -582,7 +587,7 @@ test_that("a clash of names warns once, and the fit records it", {
     lp,
     init,
     marginals = "gaussian",
-    vb = "off",
+    vb_correction = "none",
     transform = FALSE,
     silent = TRUE
   ))

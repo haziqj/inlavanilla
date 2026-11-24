@@ -1,10 +1,10 @@
-# The `marginals` argument and its independence from `vb`.
+# The `marginals` argument and its independence from `vb_correction`.
 #
 # marginals = "gaussian" skips the skew-normal scans and uses the Gaussian
-# marginals N(mean_vb_j, Sigma_jj), centred at the VB mean when vb = TRUE and
-# at the mode when vb = FALSE. Every other stage must be unchanged: the mode,
-# the covariance, the VB correction and the log marginal likelihood are the
-# same numbers whichever marginals are asked for.
+# marginals N(mean_vb_j, Sigma_jj), centred at the VB mean with the VB
+# correction and at the mode when vb_correction = "none". Every other stage must
+# be unchanged: the mode, the covariance, the VB correction and the log marginal
+# likelihood are the same numbers whichever marginals are asked for.
 
 # A Poisson regression with fixed data: two correlated, skewed parameters, so
 # the Gaussian and skew-normal marginals differ visibly.
@@ -19,7 +19,7 @@ lp_reg <- function(theta) {
 init_reg <- c(intercept = 0.2, slope = 0.1)
 
 fit_sn_vb <- inla_vanilla(lp_reg, init_reg, silent = TRUE)
-fit_sn <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
+fit_sn <- inla_vanilla(lp_reg, init_reg, vb_correction = "none", silent = TRUE)
 fit_g_vb <- inla_vanilla(
   lp_reg,
   init_reg,
@@ -29,7 +29,7 @@ fit_g_vb <- inla_vanilla(
 fit_g <- inla_vanilla(
   lp_reg,
   init_reg,
-  vb = FALSE,
+  vb_correction = "none",
   marginals = "gaussian",
   silent = TRUE
 )
@@ -116,7 +116,7 @@ test_that("the choice of marginals leaves the other stages unchanged", {
       b$diagnostics$marginals$vb_shift
     )
   }
-  # vb = FALSE: the mean is the mode and the evidence is Laplace's
+  # vb_correction = "none": the mean is the mode and the evidence is Laplace's
   expect_identical(fit_g$mean_vb, fit_g$mode)
   expect_identical(fit_g$logml, fit_g$logml_laplace)
   expect_false(isTRUE(all.equal(fit_g_vb$logml, fit_g_vb$logml_laplace)))
@@ -158,11 +158,11 @@ test_that("an exactly Gaussian posterior is recovered exactly", {
     d <- theta - mu
     -log(2 * pi) - 0.5 * log(det(S)) - 0.5 * sum(d * (Q %*% d))
   }
-  for (vb in c(TRUE, FALSE)) {
+  for (vb in c("onestep", "none")) {
     fit <- inla_vanilla(
       lp,
       c(a = 0, b = 0),
-      vb = vb,
+      vb_correction = vb,
       marginals = "gaussian",
       silent = TRUE
     )
@@ -184,11 +184,15 @@ test_that("Gaussian marginals skip the scans", {
     inla_vanilla(lp, init_reg, silent = TRUE, ...)
     n
   }
-  for (vb in c(TRUE, FALSE)) {
-    n_g21 <- count(vb = vb, marginals = "gaussian")
-    n_g41 <- count(vb = vb, marginals = "gaussian", control = list(n_grid = 41))
-    n_sn21 <- count(vb = vb)
-    n_sn41 <- count(vb = vb, control = list(n_grid = 41))
+  for (vb in c("onestep", "none")) {
+    n_g21 <- count(vb_correction = vb, marginals = "gaussian")
+    n_g41 <- count(
+      vb_correction = vb,
+      marginals = "gaussian",
+      control = list(n_grid = 41)
+    )
+    n_sn21 <- count(vb_correction = vb)
+    n_sn41 <- count(vb_correction = vb, control = list(n_grid = 41))
     expect_identical(n_g21, n_g41)
     expect_identical(n_sn41 - n_sn21, 40L)
     expect_lt(n_g21, n_sn21)
@@ -228,7 +232,12 @@ test_that("the stage lines have no skew-normal line", {
   expect_match(msgs[1], "Found the posterior mode")
   expect_match(msgs[2], "VB mean correction")
   msgs <- capture_messages(
-    inla_vanilla(lp_reg, init_reg, vb = FALSE, marginals = "gaussian")
+    inla_vanilla(
+      lp_reg,
+      init_reg,
+      vb_correction = "none",
+      marginals = "gaussian"
+    )
   )
   expect_length(msgs, 1)
   expect_match(msgs, "Found the posterior mode")

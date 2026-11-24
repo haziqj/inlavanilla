@@ -213,7 +213,7 @@ refit_elpd <- function(i) {
   fit_i <- inla_vanilla(
     logpost_nb_for(X[-i, ], y[-i]),
     init_nb,
-    vb = "off",
+    vb_correction = "none",
     silent = TRUE
   )
   ll <- sampling(fit_i, 4000, fun = loglik_nb_for(X[i, , drop = FALSE], y[i]))

@@ -47,7 +47,7 @@ nothing model-specific:
    log-posterior;
 4. **Gaussian copula draws** for any function of the parameters.
 
-Stages 2 and 3 are optional and independent: `vb = "off"` skips the VB
+Stages 2 and 3 are optional and independent: `vb_correction = "none"` skips the VB
 correction, and `marginals = "gaussian"` keeps the Gaussian marginals instead
 of scanning for skew-normal ones. With both, you get the Laplace approximation
 alone.

@@ -200,7 +200,7 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      i No VB correction (vb = "off").
+      i No VB correction (vb_correction = "none").
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14.
 
 # summary() rejects probabilities outside (0, 1)

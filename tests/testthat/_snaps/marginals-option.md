@@ -67,6 +67,6 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      i No VB correction (vb = "off").
+      i No VB correction (vb_correction = "none").
       i Gaussian marginals: no scans, so no skew-normal checks.
 

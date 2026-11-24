@@ -67,29 +67,73 @@ mod2 <- log_gamma_model(2)
 
 # The argument --------------------------------------------------------------
 
-test_that("vb takes a method, an abbreviation, TRUE or FALSE", {
-  expect_identical(fit_model(mod2)$vb, "onestep")
-  expect_identical(fit_model(mod2, vb = "onestep")$vb, "onestep")
-  expect_identical(fit_model(mod2, vb = "full")$vb, "full")
-  expect_identical(fit_model(mod2, vb = "off")$vb, "off")
-  expect_identical(fit_model(mod2, vb = TRUE)$vb, "onestep")
-  expect_identical(fit_model(mod2, vb = FALSE)$vb, "off")
-  expect_identical(fit_model(mod2, vb = "one")$vb, "onestep")
-  expect_identical(fit_model(mod2, vb = "FULL")$vb, "full")
-  expect_identical(fit_model(mod2, vb = "of")$vb, "off")
-  # "o" could be onestep or off
-  for (bad in list("o", "fast", NA, c(TRUE, FALSE), 1)) {
+test_that("vb_correction takes a method, an abbreviation, TRUE or FALSE", {
+  vb_of <- function(...) fit_model(mod2, ...)$vb_correction
+  expect_identical(vb_of(), "onestep")
+  expect_identical(vb_of(vb_correction = "onestep"), "onestep")
+  expect_identical(vb_of(vb_correction = "full"), "full")
+  expect_identical(vb_of(vb_correction = "none"), "none")
+  expect_identical(vb_of(vb_correction = TRUE), "onestep")
+  expect_identical(vb_of(vb_correction = FALSE), "none")
+  expect_identical(vb_of(vb_correction = "o"), "onestep")
+  expect_identical(vb_of(vb_correction = "FULL"), "full")
+  expect_identical(vb_of(vb_correction = "n"), "none")
+  for (bad in list("off", "fast", NA, c(TRUE, FALSE), 1)) {
     expect_error(
-      fit_model(mod2, vb = bad),
-      "`vb` must be one of",
+      fit_model(mod2, vb_correction = bad),
+      "`vb_correction` must be one of",
       class = "inlavanilla_error"
     )
   }
 })
 
-test_that("vb = \"off\" is the Laplace centre, and FALSE is the same fit", {
-  off <- fit_model(mod2, vb = "off")
-  no <- fit_model(mod2, vb = FALSE)
+test_that("vb, the old name of vb_correction, still works, with a warning", {
+  rm(list = ls(renamed), envir = renamed)
+  # Not silent, which would muffle the warning; the stage lines are messages
+  fit_loud <- function(...) {
+    suppressMessages(
+      inla_vanilla(mod2$logpost, mod2$init, grad = mod2$grad, ...)
+    )
+  }
+  new <- fit_model(mod2, vb_correction = "none")
+  expect_warning(
+    old <- fit_loud(vb = "off"),
+    "`vb` is deprecated",
+    class = "inlavanilla_deprecated"
+  )
+  expect_identical(old$vb_correction, "none")
+  expect_identical(old$summary, new$summary)
+  # Once per session
+  expect_no_warning(fit_loud(vb = FALSE))
+  for (pair in list(
+    list(TRUE, "onestep"),
+    list(FALSE, "none"),
+    list("full", "full"),
+    list("one", "onestep")
+  )) {
+    expect_identical(fit_model(mod2, vb = pair[[1]])$vb_correction, pair[[2]])
+  }
+  expect_error(
+    fit_model(mod2, vb = "none"),
+    "`vb` must be one of",
+    class = "inlavanilla_error"
+  )
+  expect_error(
+    fit_model(mod2, vb = "off", vb_correction = "none"),
+    "Give `vb_correction` alone",
+    class = "inlavanilla_error"
+  )
+  # A silent fit records the warning, and leaves the next fit to show it
+  rm(list = ls(renamed), envir = renamed)
+  fit <- fit_model(mod2, vb = "off")
+  expect_match(fit$warnings, "`vb` is deprecated", all = FALSE)
+  expect_warning(fit_loud(vb = "off"), class = "inlavanilla_deprecated")
+  rm(list = ls(renamed), envir = renamed)
+})
+
+test_that("vb_correction = \"none\" is the Laplace centre, and FALSE is the same fit", {
+  off <- fit_model(mod2, vb_correction = "none")
+  no <- fit_model(mod2, vb_correction = FALSE)
   expect_identical(off$mean_vb, off$mode)
   expect_identical(off$logml, off$logml_laplace)
   expect_null(off$diagnostics$vb)
@@ -146,7 +190,7 @@ test_that("one step is the first step of the rule, with no iteration", {
 test_that("with a gradient one step costs 2m + 1 gradient calls", {
   mod <- logistic_model(80, 6, 1)
   on <- fit_model(mod, marginals = "gaussian")
-  off <- fit_model(mod, vb = "off", marginals = "gaussian")
+  off <- fit_model(mod, vb_correction = "none", marginals = "gaussian")
   expect_identical(on$counts[["grad"]] - off$counts[["grad"]], 13L)
   # And 4m + 2 calls of logpost for the gain ratio
   expect_identical(on$counts[["logpost"]] - off$counts[["logpost"]], 26L)
@@ -163,7 +207,7 @@ test_that("without a gradient one step is one pass of logpost calls", {
   off <- inla_vanilla(
     mod$logpost,
     mod$init,
-    vb = "off",
+    vb_correction = "none",
     marginals = "gaussian",
     silent = TRUE
   )
@@ -206,7 +250,7 @@ test_that("the labels name the VB method", {
     fixed = TRUE
   )
   expect_match(
-    capture_output(print(fit_model(mod2, vb = "full"))),
+    capture_output(print(fit_model(mod2, vb_correction = "full"))),
     "Skew-normal + full VB --",
     fixed = TRUE
   )
@@ -216,7 +260,7 @@ test_that("the labels name the VB method", {
     fixed = TRUE
   )
   expect_match(
-    capture_output(print(summary(fit_model(mod2, vb = "full")))),
+    capture_output(print(summary(fit_model(mod2, vb_correction = "full")))),
     "VB correction settled in",
     fixed = TRUE
   )
@@ -228,7 +272,7 @@ test_that("one step is about as close to the true mean as the full solve", {
   for (a in c(1, 2, 5, 20)) {
     mod <- log_gamma_model(a)
     on <- fit_model(mod)
-    full <- fit_model(mod, vb = "full")
+    full <- fit_model(mod, vb_correction = "full")
     s <- sqrt(on$cov[1, 1])
     truth <- digamma(a)
     # Observed 0.0005 to 0.061 SDs for one step, against 0.0009 to 0.084
@@ -245,7 +289,7 @@ test_that("one step and the full solve agree to the order the theory gives", {
   gap <- function(a) {
     mod <- log_gamma_model(a)
     on <- fit_model(mod)
-    full <- fit_model(mod, vb = "full")
+    full <- fit_model(mod, vb_correction = "full")
     abs(on$mean_vb[[1]] - full$mean_vb[[1]]) / sqrt(on$cov[1, 1])
   }
   expect_lt(gap(50) / gap(5), 3 * (5 / 50)^1.5)
@@ -254,7 +298,7 @@ test_that("one step and the full solve agree to the order the theory gives", {
 test_that("in several dimensions one step moves most of the way", {
   mod <- logistic_model(150, 8, 3)
   on <- fit_model(mod)
-  full <- fit_model(mod, vb = "full")
+  full <- fit_model(mod, vb_correction = "full")
   sds <- sqrt(diag(on$cov))
   shift_on <- (on$mean_vb - on$mode) / sds
   shift_full <- (full$mean_vb - full$mode) / sds
@@ -309,7 +353,7 @@ test_that("a low gain ratio warns, and points to the full solve", {
     suppressMessages()
   text <- gsub("\\s+", " ", cli::ansi_strip(conditionMessage(w)))
   expect_match(text, "One-step VB delivered", fixed = TRUE)
-  expect_match(text, "Compare with `vb = \"full\"`", fixed = TRUE)
+  expect_match(text, "Compare with `vb_correction = \"full\"`", fixed = TRUE)
   expect_match(
     gsub("\\s+", " ", capture_output(print(summary(fit)))),
     "VB correction in one step delivered",
@@ -333,7 +377,7 @@ test_that("the gain ratio did not run when the correction iterated", {
   on <- fit_model(mod)
   expect_false(on$diagnostics$vb$one_pass)
   expect_true(is.na(on$diagnostics$vb$gain_ratio))
-  full <- fit_model(log_gamma_model(2), vb = "full")
+  full <- fit_model(log_gamma_model(2), vb_correction = "full")
   expect_true(is.na(full$diagnostics$vb$gain_ratio))
 })
 
@@ -359,7 +403,7 @@ test_that("a first step over the guard goes on to iterate", {
   # The first step of this strongly skewed posterior is 2.9 SDs
   mod <- skew_normal_model(10)
   on <- fit_model(mod)
-  full <- fit_model(mod, vb = "full")
+  full <- fit_model(mod, vb_correction = "full")
   expect_false(on$diagnostics$vb$one_pass)
   expect_gt(on$diagnostics$vb$iterations, 1L)
   sds <- sqrt(diag(on$cov))
@@ -387,7 +431,13 @@ test_that("a node on a boundary is handled by the guard", {
     if (x <= 0) NaN else 3 / x - 1
   }
   on <- inla_vanilla(lp, c(a = 1.5), grad = gr, silent = TRUE)
-  full <- inla_vanilla(lp, c(a = 1.5), grad = gr, vb = "full", silent = TRUE)
+  full <- inla_vanilla(
+    lp,
+    c(a = 1.5),
+    grad = gr,
+    vb_correction = "full",
+    silent = TRUE
+  )
   expect_false(on$diagnostics$vb$one_pass)
   sds <- sqrt(diag(on$cov))
   expect_lt(abs(on$mean_vb[[1]] - full$mean_vb[[1]]) / sds[[1]], 0.02)

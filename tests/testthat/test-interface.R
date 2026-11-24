@@ -74,7 +74,12 @@ hess_reg <- function(theta) {
 }
 
 fit_reg <- inla_vanilla(lp_reg, init_reg, silent = TRUE)
-fit_reg_novb <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
+fit_reg_novb <- inla_vanilla(
+  lp_reg,
+  init_reg,
+  vb_correction = "none",
+  silent = TRUE
+)
 
 # Helpers ---------------------------------------------------------------------
 
@@ -432,11 +437,11 @@ test_that("hess must return a finite m x m matrix at init", {
   )
 })
 
-test_that("verbose and silent must be a single TRUE or FALSE, and vb a method", {
+test_that("verbose and silent must be a single TRUE or FALSE, and vb_correction a method", {
   for (bad in list(NA, c(TRUE, FALSE))) {
     expect_error(
-      inla_vanilla(lp_gauss, c(a = 0.5), vb = bad, silent = TRUE),
-      "`vb` must be one of",
+      inla_vanilla(lp_gauss, c(a = 0.5), vb_correction = bad, silent = TRUE),
+      "`vb_correction` must be one of",
       class = "inlavanilla_error"
     )
     expect_error(
@@ -601,7 +606,7 @@ test_that("control entries reach the stages they tune", {
       y = pois_y,
       a0 = pois_a0,
       b0 = pois_b0,
-      vb = "full",
+      vb_correction = "full",
       control = list(...),
       silent = TRUE
     )$diagnostics$vb
@@ -675,7 +680,7 @@ test_that("errors do not name the package's internal helpers", {
   # inla_vanilla() itself.
   errs <- list(
     function() inla_vanilla(lp_gauss, "a"),
-    function() inla_vanilla(lp_gauss, c(a = 0), vb = NA),
+    function() inla_vanilla(lp_gauss, c(a = 0), vb_correction = NA),
     function() inla_vanilla(lp_gauss, c(a = 0.5), grad = function(theta) NA),
     function() inla_vanilla(function(theta) 0, c(a = 0.3), silent = TRUE),
     function() summary(fit_reg, probs = 2),
@@ -770,7 +775,7 @@ test_that("a wrong analytic gradient triggers the mismatch warning", {
       y = pois_y,
       a0 = pois_a0,
       b0 = pois_b0,
-      vb = "off"
+      vb_correction = "none"
     )),
     "does not match `logpost`",
     class = "inlavanilla_diagnostics_warning"
@@ -879,7 +884,7 @@ test_that("a slow function gets its progress line on time", {
   fit <- suppressMessages(inla_vanilla(
     lp,
     c(a = 0.3, b = 0.2),
-    vb = "off",
+    vb_correction = "none",
     marginals = "gaussian"
   ))
   expect_gte(ticks, fit$counts[["logpost"]])
@@ -887,7 +892,7 @@ test_that("a slow function gets its progress line on time", {
   fit <- suppressMessages(inla_vanilla(
     lp_gauss,
     c(a = 0.3, b = 0.2),
-    vb = "off",
+    vb_correction = "none",
     marginals = "gaussian"
   ))
   expect_lte(ticks, fit$counts[["logpost"]] %/% 16L + 1L)
@@ -1162,7 +1167,7 @@ test_that("data arguments named like vb, verbose or control reach logpost", {
     inla_vanilla(lp, c(a = 0.5), v = 1, verb = 2, sil = 5, con = 3, contr = 4)
   )
   expect_equal(fit$mode[["a"]], 15, tolerance = 1e-6)
-  expect_identical(fit$vb, "onestep")
+  expect_identical(fit$vb_correction, "onestep")
   expect_false(fit$verbose)
   expect_false(fit$silent)
 })
@@ -1396,7 +1401,7 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
         y = pois_y,
         a0 = pois_a0,
         b0 = pois_b0,
-        vb = "full",
+        vb_correction = "full",
         control = list(nlminb = list(iter.max = 1))
       )
     ),
@@ -1436,7 +1441,7 @@ test_that("a VB fallback with a small shift leaves the stage line unmarked", {
       y = pois_y,
       a0 = pois_a0,
       b0 = pois_b0,
-      vb = "full",
+      vb_correction = "full",
       control = list(vb_maxit = 1)
     )
   )
@@ -1489,7 +1494,11 @@ test_that("by default each stage prints one line, and nothing else", {
   expect_false(fit$silent)
 
   # No VB line without the VB correction
-  msgs <- capture_messages(inla_vanilla(lp_reg, init_reg, vb = FALSE))
+  msgs <- capture_messages(inla_vanilla(
+    lp_reg,
+    init_reg,
+    vb_correction = "none"
+  ))
   expect_false(any(grepl("VB", msgs)))
   expect_length(msgs, 2)
   expect_length(grep("Found the posterior mode|Fitted 2 skew-normal", msgs), 2)
@@ -1710,11 +1719,15 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   msgs <- capture_messages(inla_vanilla(
     lp_reg,
     init_reg,
-    vb = FALSE,
+    vb_correction = "none",
     marginals = "gaussian",
     verbose = TRUE
   ))
-  expect_match(msgs, "^i No VB correction \\(vb = \"off\"\\)", all = FALSE)
+  expect_match(
+    msgs,
+    "^i No VB correction \\(vb_correction = \"none\"\\)",
+    all = FALSE
+  )
   expect_match(msgs, "^i Gaussian marginals .*: no scans", all = FALSE)
   expect_no_match(msgs, "Fixed-point|Shape")
 
@@ -1784,7 +1797,12 @@ test_that("a VB correction that does not settle is flagged from end to end", {
   ctrl_x6 <- list(vb_maxit = 1)
   w <- expect_warning(
     msgs <- capture_messages(
-      fit <- inla_vanilla(lp_x6, c(t = 0.3), vb = "full", control = ctrl_x6)
+      fit <- inla_vanilla(
+        lp_x6,
+        c(t = 0.3),
+        vb_correction = "full",
+        control = ctrl_x6
+      )
     ),
     class = "inlavanilla_diagnostics_warning"
   )
@@ -1812,7 +1830,7 @@ test_that("a VB correction that does not settle is flagged from end to end", {
     inla_vanilla(
       lp_x6,
       c(t = 0.3),
-      vb = "full",
+      vb_correction = "full",
       verbose = TRUE,
       control = ctrl_x6
     )
@@ -1833,7 +1851,7 @@ test_that("verbose = TRUE reports a restart, a VB fallback and heavy tails", {
     y = pois_y,
     a0 = pois_a0,
     b0 = pois_b0,
-    vb = "full",
+    vb_correction = "full",
     control = list(nlminb = list(iter.max = 1)),
     verbose = TRUE
   )))
@@ -2033,7 +2051,7 @@ test_that("the output level does not change the fit", {
   settings <- list(
     list(),
     list(grad = gr_reg),
-    list(vb = FALSE, marginals = "gaussian")
+    list(vb_correction = "none", marginals = "gaussian")
   )
   for (s in settings) {
     fit_at <- function(...) {
@@ -2125,7 +2143,7 @@ test_that("print() points to the fit's warnings and to flagged checks", {
     out,
     "\\| Not converged: VB did not settle \\([0-9.]+m?s\\)\n"
   )
-  # With vb = FALSE only the mode check counts
+  # With vb_correction = "none" only the mode check counts
   fit$diagnostics$marginals$vb_step_sigma[2] <- NA
   fit$diagnostics$vb <- NULL
   expect_match(capture_output(print(fit)), "\\| Converged in")
@@ -2425,7 +2443,7 @@ test_that("printed output is plain ASCII unless the console shows UTF-8", {
         lp_reg,
         init_reg,
         grad = gr_reg,
-        vb = FALSE,
+        vb_correction = "none",
         marginals = "gaussian",
         verbose = TRUE
       ))
@@ -2516,7 +2534,7 @@ test_that("coef() gives the posterior means of summary()", {
     lp_reg,
     init_reg,
     marginals = "gaussian",
-    vb = FALSE,
+    vb_correction = "none",
     silent = TRUE
   )
   expect_equal(coef(fit_g_novb), fit_g_novb$mode)

@@ -48,8 +48,9 @@ for its scale (\code{log_sigma}) is drawn on its natural scale, as \code{sigma}:
 both densities are carried there by the change of variables, so the
 Laplace curve is the density that a Gaussian \code{log_sigma} gives \code{sigma}.
 For a fit with \code{marginals = "gaussian"} the marginals are Gaussian on the
-scale of \code{logpost}: centred at the VB mean, or, with \code{vb = "off"}, the
-Laplace marginals themselves, drawn without a second copy.
+scale of \code{logpost}: centred at the VB mean, or, with
+\code{vb_correction = "none"}, the Laplace marginals themselves, drawn without a
+second copy.
 }
 \details{
 \code{type = "sn_fit"} shows each skew-normal fit against the scan it was

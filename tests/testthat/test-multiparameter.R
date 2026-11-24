@@ -22,8 +22,8 @@
 # errors first; each comment states the observed value.
 # The tests in this file check the VB solver against its exact target, so they
 # ask for it. test-vb-onestep.R tests the default.
-inla_vanilla <- function(..., vb = "full") {
-  inlavanilla::inla_vanilla(..., vb = vb)
+inla_vanilla <- function(..., vb_correction = "full") {
+  inlavanilla::inla_vanilla(..., vb_correction = vb_correction)
 }
 
 probs <- c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975)

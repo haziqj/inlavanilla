@@ -23,8 +23,8 @@
 # 1e-7 SDs, so the same approximation tolerances serve both.
 # The tests in this file check the VB solver against its exact target, so they
 # ask for it. test-vb-onestep.R tests the default.
-inla_vanilla <- function(..., vb = "full") {
-  inlavanilla::inla_vanilla(..., vb = vb)
+inla_vanilla <- function(..., vb_correction = "full") {
+  inlavanilla::inla_vanilla(..., vb_correction = vb_correction)
 }
 
 probs <- c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975)
@@ -565,7 +565,7 @@ test_that("without the VB correction the log marginal likelihood is the Laplace 
   fit <- inla_vanilla(
     bb_skewed$logpost,
     init = c(theta = 0),
-    vb = FALSE,
+    vb_correction = "none",
     silent = TRUE
   )
   expect_identical(fit$logml, fit$logml_laplace)

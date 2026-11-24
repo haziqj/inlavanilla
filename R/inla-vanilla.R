@@ -20,15 +20,16 @@
 #' 4. **Gaussian copula draws.** [sampling()] couples the skew-normal marginals
 #'    through the correlations of \eqn{\Omega}.
 #'
-#' Stages 2 and 3 are optional and independent of each other. `vb = "off"`
-#' skips the VB correction, which leaves the marginals unchanged (they are
-#' scanned around the mode) but gives the Laplace log marginal likelihood.
-#' `marginals = "gaussian"` skips the scans and uses the Gaussian's own
-#' marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at the VB mean
-#' (or at the mode when `vb = "off"`); [sampling()] then draws from the joint
-#' Gaussian. So `vb = "off", marginals = "gaussian"` is the Laplace
-#' approximation alone, and `marginals = "gaussian"` alone is the Laplace
-#' approximation with the VB correction.
+#' Stages 2 and 3 are optional and independent of each other.
+#' `vb_correction = "none"` skips the VB correction, which leaves the marginals
+#' unchanged (they are scanned around the mode) but gives the Laplace log
+#' marginal likelihood. `marginals = "gaussian"` skips the scans and uses the
+#' Gaussian's own marginals \eqn{N(\tilde\vartheta_j, \Omega_{jj})}, centred at
+#' the VB mean (or at the mode when `vb_correction = "none"`); [sampling()] then
+#' draws from the joint Gaussian. So
+#' `vb_correction = "none", marginals = "gaussian"` is the Laplace approximation
+#' alone, and `marginals = "gaussian"` alone is the Laplace approximation with
+#' the VB correction.
 #'
 #' @section Writing `logpost`:
 #' The approximation works on an unconstrained scale: every parameter must be
@@ -178,15 +179,15 @@
 #' of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
 #' marginals about m(`n_grid` + 2m + 6), with 2(m - 1) more for each parameter
 #' whose ridge bend is above 0.1. The VB correction takes (m + 1)(m + 2)
-#' calls, or that many per sweep with `vb = "full"`: it needs no derivatives,
-#' because Stein's identity gives the expected gradient from values of
-#' `logpost` alone. With `vb = "full"`, the VB mean is then exact when the
-#' log-posterior is a polynomial of degree four in whitened coordinates, and up
-#' to degree six with `grad`. On test models it was about 0.01 posterior SDs from exact VB
-#' (0.003 with `grad`), and up to 0.1 on a strongly skewed posterior (0.03
-#' with `grad`), against a VB error of 0.01 to 0.2 SDs from the posterior mean
-#' itself. On the most skewed posteriors the VB correction may then not
-#' settle, and the fit says it has not converged (see
+#' calls, or that many per sweep with `vb_correction = "full"`: it needs no
+#' derivatives, because Stein's identity gives the expected gradient from values
+#' of `logpost` alone. With `vb_correction = "full"`, the VB mean is then exact
+#' when the log-posterior is a polynomial of degree four in whitened
+#' coordinates, and up to degree six with `grad`. On test models it was about
+#' 0.01 posterior SDs from exact VB (0.003 with `grad`), and up to 0.1 on a
+#' strongly skewed posterior (0.03 with `grad`), against a VB error of 0.01 to
+#' 0.2 SDs from the posterior mean itself. On the most skewed posteriors the VB
+#' correction may then not settle, and the fit says it has not converged (see
 #' [summary.inla_vanilla()]); `grad` is the remedy.
 #'
 #' With `grad`, every stage is more accurate. The fit is also faster when a
@@ -195,13 +196,13 @@
 #' gradient by automatic differentiation (RTMB, TMB) costs about two, and
 #' beyond a handful of parameters the fit is still several times faster than
 #' without one (four times at m = 39). The default VB correction,
-#' `vb = "onestep"`, takes 2m + 1 gradient calls, about as many as one numerical
-#' Hessian, and `vb = "full"` takes at most (m + 1)(m + 2) + 1 per sweep, usually
-#' about four sweeps. Beyond a handful of parameters the marginals are the
-#' slowest stage, along with the VB correction under `vb = "full"`. `vb = "off"`
-#' skips the VB correction (and its term in the log marginal likelihood), and
-#' the skew-normal marginals do not depend on it;
-#' `marginals = "gaussian"` saves the calls of the scans.
+#' `vb_correction = "onestep"`, takes 2m + 1 gradient calls, about as many as
+#' one numerical Hessian, and `vb_correction = "full"` takes at most (m + 1)(m +
+#' 2) + 1 per sweep, usually about four sweeps. Beyond a handful of parameters
+#' the marginals are the slowest stage, along with the VB correction under
+#' `vb_correction = "full"`. `vb_correction = "none"` skips the VB correction
+#' (and its term in the log marginal likelihood), and the skew-normal marginals
+#' do not depend on it; `marginals = "gaussian"` saves the calls of the scans.
 #'
 #' `hess` is optional too, and needs `grad`, as in [stats::nlminb()]. With
 #' it, [stats::nlminb()] takes Newton steps to the mode, and the Hessian at
@@ -239,27 +240,27 @@
 #' under that Gaussian, so that at the solution the gradient, averaged over the
 #' Gaussian, is zero.
 #'
-#' `vb = "onestep"` takes the first Newton step towards that solution, with the
-#' Laplace curvature, and stops. With a gradient, the average is taken over the
-#' mode and \eqn{\pm\sqrt 3}{+/- sqrt(3)} along each axis of the symmetric
-#' square root of the covariance, taken on the correlation scale. Without one,
-#' it is one pass of Stein's identity on the rule of `vb = "full"`. Most of the
-#' movement is in that step, and exact VB is itself an approximation to the
-#' posterior mean with an error of the same order. If the first step is over
-#' 2.5 posterior SDs, or a node fails, the iteration carries on with capped
-#' steps, within the number of calls that the mode and Hessian took.
-#' `diagnostics()` then has `vb_step_sigma`, the step
+#' `vb_correction = "onestep"` takes the first Newton step towards that
+#' solution, with the Laplace curvature, and stops. With a gradient, the average
+#' is taken over the mode and \eqn{\pm\sqrt 3}{+/- sqrt(3)} along each axis of
+#' the symmetric square root of the covariance, taken on the correlation scale.
+#' Without one, it is one pass of Stein's identity on the rule of
+#' `vb_correction = "full"`. Most of the movement is in that step, and exact VB
+#' is itself an approximation to the posterior mean with an error of the same
+#' order. If the first step is over 2.5 posterior SDs, or a node fails, the
+#' iteration carries on with capped steps, within the number of calls that the
+#' mode and Hessian took. `diagnostics()` then has `vb_step_sigma`, the step
 #' still to go, which is `NA` after a single step. After a single step the fit
 #' checks that it delivered what it promised: `vb_gain_ratio` in `diagnostics()`
 #' is the rise in the expected log-posterior over the rise the step assumed, and
-#' a ratio below 0.5 raises a warning. A large first step can also
-#' overstate the VB term of the log marginal likelihood, so after a shift above
-#' 1 posterior SD, which is flagged, compare models with care: `vb = "full"` may
+#' a ratio below 0.5 raises a warning. A large first step can also overstate the
+#' VB term of the log marginal likelihood, so after a shift above 1 posterior
+#' SD, which is flagged, compare models with care: `vb_correction = "full"` may
 #' be closer.
 #'
-#' `vb = "full"` iterates to the solution, on a degree-5 rule with at most
-#' (m + 1)(m + 2) + 1 nodes, and hands over to [stats::nlminb()] if it does not
-#' converge.
+#' `vb_correction = "full"` iterates to the solution, on a degree-5 rule with at
+#' most (m + 1)(m + 2) + 1 nodes, and hands over to [stats::nlminb()] if it does
+#' not converge.
 #'
 #' @section Parallel computation:
 #' Set `cores` to run the per-parameter scans of the skew-normal marginals in
@@ -333,10 +334,10 @@
 #'   below the maximum are ignored in the skew-normal fit (default `-6`).
 #' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
 #'   tolerance in posterior SDs (default `1e-3`) for the VB correction's
-#'   fixed-point iteration, with `vb = "full"` and when a one-step correction
-#'   has to iterate. A step over 1.5 posterior SDs is cut to 1.5. With
-#'   `vb = "full"`, if two steps in a row are cut, or it has not converged
-#'   after `vb_maxit` steps, [stats::nlminb()] takes over.
+#'   fixed-point iteration, with `vb_correction = "full"` and when a one-step
+#'   correction has to iterate. A step over 1.5 posterior SDs is cut to 1.5.
+#'   With `vb_correction = "full"`, if two steps in a row are cut, or it has not
+#'   converged after `vb_maxit` steps, [stats::nlminb()] takes over.
 #' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
 #'   `iter.max` and `eval.max` both default to `5000`, and `trace = 1` prints
 #'   its iterations.
@@ -411,25 +412,25 @@
 #'   `grad`. When `NULL` (the default), finite differences of `grad` are used.
 #' @param ... Further arguments passed to `logpost`, `grad` and `hess`, such
 #'   as the data. As in [stats::nlminb()], they come after the gradient and
-#'   the Hessian, and the arguments after them (`vb`, `marginals`, `width`,
-#'   `tk_fallback`, `transform`, `cores`, `verbose`, `silent`, `control`) must
-#'   be given by their full names, so data arguments cannot partially match
-#'   them. A data
-#'   argument cannot take one of those names. The arguments before them can be
-#'   matched, as in `nlminb()`: a data argument named `g` or `gr` would be
-#'   taken as `grad`, and one named `h` or `he` as `hess`, so give it a
-#'   longer name.
-#' @param vb The VB mean correction: `"onestep"` (the default) takes one Newton
-#'   step from the mode, `"full"` iterates to the VB solution, and `"off"` (or
-#'   `FALSE`) leaves it out. `TRUE` means the default, and abbreviations such as
-#'   `"one"` work too. See the section on the VB correction. The correction
-#'   enters the log marginal likelihood, and the skew-normal means are checked
-#'   against it (see [summary.inla_vanilla()]).
+#'   the Hessian, and the arguments after them (`vb_correction`, `marginals`,
+#'   `width`, `tk_fallback`, `transform`, `cores`, `verbose`, `silent`,
+#'   `control`) must be given by their full names, so data arguments cannot
+#'   partially match them. A data argument cannot take one of those names. The
+#'   arguments before them can be matched, as in `nlminb()`: a data argument
+#'   named `g` or `gr` would be taken as `grad`, and one named `h` or `he` as
+#'   `hess`, so give it a longer name.
+#' @param vb_correction The VB mean correction: `"onestep"` (the default)
+#'   takes one Newton step from the mode, `"full"` iterates to the VB solution,
+#'   and `"none"` leaves it out. Abbreviations such as `"one"` work too. See the
+#'   section on the VB correction. The correction enters the log marginal
+#'   likelihood, and the skew-normal means are checked against it (see
+#'   [summary.inla_vanilla()]).
 #' @param marginals The marginal of each parameter: `"skewnorm"` (the
 #'   default) fits a skew-normal to a scan of the log-posterior; `"gaussian"`
 #'   uses the Gaussian marginal of the Laplace approximation, centred at the
-#'   VB mean unless `vb = "off"`, with no scans. `"skewnormal"` is the same as
-#'   `"skewnorm"`, and abbreviations such as `"skew"` and `"gauss"` work too.
+#'   VB mean unless `vb_correction = "none"`, with no scans. `"skewnormal"` is
+#'   the same as `"skewnorm"`, and abbreviations such as `"skew"` and `"gauss"`
+#'   work too.
 #' @param width How each skew-normal scan accounts for the changing volume of
 #'   the other parameters, the width term
 #'   \eqn{\gamma_j(t) = -\frac12 \log|H_{-j}|}{gamma_j(t) = -1/2 log|H_-j|}
@@ -474,6 +475,8 @@
 #'   messages raised during the fit? Default `FALSE`. The warnings are still
 #'   recorded in `fit$warnings`. Cannot be combined with `verbose = TRUE`.
 #' @param control A list of tuning parameters; see the section on control.
+#' @param vb Deprecated: the name of `vb_correction` before inlavanilla
+#'   26.11.24, where `"off"` is now `"none"`. It still works, with a warning.
 #'
 #' @returns An object of class `inla_vanilla`, with methods for [print()],
 #'   [summary()], [coef()], [plot()], [sampling()], [diagnostics()] and
@@ -487,11 +490,13 @@
 #'     for none).
 #'   * `mode`, `cov`: the Laplace mode and covariance, on the scale of
 #'     `logpost`, as is everything below.
-#'   * `mean_vb`: the VB-corrected mean (the mode when `vb = "off"`).
+#'   * `mean_vb`: the VB-corrected mean (the mode when
+#'     `vb_correction = "none"`).
 #'   * `sn`: the skew-normal parameters `xi`, `omega` and `alpha` per
 #'     parameter (with `alpha = 0` for Gaussian marginals).
-#'   * `vb`, `marginals`, `width`, `tk_fallback`, `cores`, `verbose`, `silent`:
-#'     the settings the fit used (`width` is `NA` for Gaussian marginals).
+#'   * `vb_correction`, `marginals`, `width`, `tk_fallback`, `cores`, `verbose`,
+#'     `silent`: the settings the fit used (`width` is `NA` for Gaussian
+#'     marginals).
 #'   * `fallback`: the parameters that `tk_fallback` rescanned with
 #'     `width = "tk"` (empty when there were none).
 #'   * `logml`: the log marginal likelihood, and `logml_laplace` its Laplace
@@ -510,13 +515,12 @@
 #'     the iterations of the VB correction, whether it stopped at the first
 #'     step (`one_pass`), whether it fell back to
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
-#'     the shift (`kld_global`); it is `NULL` when `vb = "off"`. `marginals`
-#'     is a data frame with a row per parameter: `mode_shift_sigma`, `kld`,
-#'     `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
+#'     the shift (`kld_global`); it is `NULL` when `vb_correction = "none"`.
+#'     `marginals` is a data frame with a row per parameter: `mode_shift_sigma`,
+#'     `kld`, `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,
 #'     `vb_step_sigma`, `grad_gap`, `mean_gap`, `gamma1`, `tails` and
-#'     `ridge_bend`, with
-#'     `NA` for the checks the fit did not run, and `width`, the width method
-#'     of each scan (see the section on the width term).
+#'     `ridge_bend`, with `NA` for the checks the fit did not run, and `width`,
+#'     the width method of each scan (see the section on the width term).
 #'   * `scan`: the scans the skew-normals were fitted to, for
 #'     `plot(fit, type = "sn_fit")`: the grid `z` in posterior SDs from the
 #'     mode, the log-posterior at each point (`logpost`, a column per
@@ -591,7 +595,7 @@ inla_vanilla <- function(
   grad = NULL,
   hess = NULL,
   ...,
-  vb = c("onestep", "full", "off"),
+  vb_correction = c("onestep", "full", "none"),
   marginals = c("skewnorm", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
@@ -599,7 +603,8 @@ inla_vanilla <- function(
   cores = NULL,
   verbose = FALSE,
   silent = FALSE,
-  control = list()
+  control = list(),
+  vb = NULL
 ) {
   t_start <- elapsed()
   call <- match.call()
@@ -618,7 +623,16 @@ inla_vanilla <- function(
       ))
     }
   }
-  vb <- check_vb(vb)
+  if (!is.null(vb)) {
+    if (!missing(vb_correction)) {
+      abort(c(
+        "Give {.arg vb_correction} alone.",
+        "i" = "{.arg vb} is its old name."
+      ))
+    }
+    vb_correction <- old_vb(vb)
+  }
+  vb_correction <- check_vb(vb_correction)
   marginals <- check_marginals(marginals)
   width <- check_choice(width, c("trace", "cmp", "tk"), "width")
   check_flag(tk_fallback, "tk_fallback")
@@ -649,22 +663,32 @@ inla_vanilla <- function(
   # Errors pass through either way.
   prog <- progress_new(show = !silent, detail = verbose)
   withCallingHandlers(
-    vanilla_fit(
-      logpost_x,
-      grad_x,
-      hess_x,
-      init,
-      vb = vb,
-      marginals = marginals,
-      width = width,
-      tk_fallback = tk_fallback,
-      transform = transform,
-      cores = cores,
-      ctrl = ctrl,
-      prog = prog,
-      call = call,
-      t_start = t_start
-    ),
+    {
+      if (!is.null(vb)) {
+        warn_renamed(
+          "vb",
+          "vb_correction",
+          "{.code vb = \"off\"} is now {.code vb_correction = \"none\"}.",
+          silent
+        )
+      }
+      vanilla_fit(
+        logpost_x,
+        grad_x,
+        hess_x,
+        init,
+        vb_correction = vb_correction,
+        marginals = marginals,
+        width = width,
+        tk_fallback = tk_fallback,
+        transform = transform,
+        cores = cores,
+        ctrl = ctrl,
+        prog = prog,
+        call = call,
+        t_start = t_start
+      )
+    },
     warning = function(w) {
       msg <- warning_text(w)
       if (!msg %in% prog$warnings) {
@@ -682,6 +706,34 @@ inla_vanilla <- function(
       }
     }
   )
+}
+
+# Arguments renamed in 26.11.24 keep working, with a warning once per session
+# for each. A silent fit records the warning, which the handler of
+# inla_vanilla() muffles, and leaves the next fit to show it.
+renamed <- new.env(parent = emptyenv())
+
+warn_renamed <- function(old, new, details = NULL, silent = FALSE) {
+  if (isTRUE(renamed[[old]])) {
+    return(invisible(FALSE))
+  }
+  if (!silent) {
+    renamed[[old]] <- TRUE
+  }
+  warn(
+    c(
+      paste0(
+        "{.arg ",
+        old,
+        "} is deprecated: it was renamed {.arg ",
+        new,
+        "} in inlavanilla 26.11.24."
+      ),
+      "i" = details
+    ),
+    class = "inlavanilla_deprecated"
+  )
+  invisible(TRUE)
 }
 
 # The wrappers the stages call in place of the user's functions, which have
@@ -746,7 +798,7 @@ vanilla_fit <- function(
   grad_x,
   hess_x,
   init,
-  vb,
+  vb_correction,
   marginals,
   width,
   tk_fallback,
@@ -913,7 +965,7 @@ vanilla_fit <- function(
   t0 <- elapsed()
   t_starts[["vb"]] <- t0
   vbc <- NULL
-  use_vb <- vb != "off"
+  use_vb <- vb_correction != "none"
   if (use_vb) {
     stage_calls()
     progress_start(
@@ -930,7 +982,7 @@ vanilla_fit <- function(
         lap$R,
         lap$A,
         ctrl,
-        method = vb,
+        method = vb_correction,
         budget = st$n_lp + st$n_gr + st$n_he
       )
     )
@@ -961,7 +1013,7 @@ vanilla_fit <- function(
       report_vb(prog, vbc, sds, lap$logml, calls_since())
     }
   } else {
-    progress_info(prog, "No VB correction (vb = \"off\")")
+    progress_info(prog, "No VB correction (vb_correction = \"none\")")
   }
   shift <- if (use_vb) vbc$shift else stats::setNames(numeric(m), parnames)
   mean_vb <- lap$mode + shift
@@ -1086,7 +1138,7 @@ vanilla_fit <- function(
 
   # The diagnostics, in the names and order of INLAvaan's diagnostics() where
   # it has the quantity. Checks that did not run are NA: the VB columns with
-  # vb = "off", the scan columns with Gaussian marginals.
+  # vb_correction = "none", the scan columns with Gaussian marginals.
   skew <- marginals == "skewnorm"
   na <- rep(NA_real_, m)
   diagnostics <- list(
@@ -1162,7 +1214,7 @@ vanilla_fit <- function(
       stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
       total = t_total
     ),
-    vb = vb,
+    vb_correction = vb_correction,
     marginals = marginals,
     width = if (skew) width else NA_character_,
     tk_fallback = tk_fallback,
@@ -1189,7 +1241,7 @@ new_inla_vanilla <- function(
   cores,
   workers,
   timing,
-  vb,
+  vb_correction,
   marginals,
   width,
   tk_fallback,
@@ -1216,7 +1268,7 @@ new_inla_vanilla <- function(
       cores = cores,
       workers = workers,
       timing = timing,
-      vb = vb,
+      vb_correction = vb_correction,
       marginals = marginals,
       width = width,
       tk_fallback = tk_fallback,
@@ -1357,16 +1409,28 @@ check_flag <- function(x, arg) {
   }
 }
 
-# The VB method: one of "onestep", "full" and "off", where TRUE is the default
-# and FALSE is "off"
-check_vb <- function(vb) {
+# The VB method: one of "onestep", "full" and "none", where TRUE is the
+# default and FALSE is "none", as in INLAvaan's `vb_correction`
+check_vb <- function(vb_correction) {
+  if (isTRUE(vb_correction)) {
+    return("onestep")
+  }
+  if (isFALSE(vb_correction)) {
+    return("none")
+  }
+  check_choice(vb_correction, c("onestep", "full", "none"), "vb_correction")
+}
+
+# The VB method from `vb`, its name before 26.11.24, with "off" for "none"
+old_vb <- function(vb) {
   if (isTRUE(vb)) {
     return("onestep")
   }
   if (isFALSE(vb)) {
-    return("off")
+    return("none")
   }
-  check_choice(vb, c("onestep", "full", "off"), "vb")
+  vb <- check_choice(vb, c("onestep", "full", "off"), "vb")
+  if (vb == "off") "none" else vb
 }
 
 # The marginals: "skewnorm" or "gaussian", with "skewnormal" (in any case) a

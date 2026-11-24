@@ -173,15 +173,14 @@ warning_text <- function(w) {
 }
 
 # The checks that summary() flags, each TRUE when flagged: the gap between
-# grad and logpost, the mode, the VB step, the Hessian condition number, the VB shift, and, for skew-normal
-# marginals, NMAD, the unscanned mass, the tails, the ridge bend and the mean
-# gap.
-# `dg` is from diagnostics_internal(). The levels are those of the fit-time
-# warning (warn_levels), which raises every one of these but the ridge bend
-# and the mean gap (summary_levels). A check that did not run is not
-# flagged; a value that is not finite is. print() counts the flags, and
-# summary() prints one "!" line for each and colours the flagged cells of
-# its table, all from param_flags().
+# grad and logpost, the mode, the VB step, the Hessian condition number, the VB
+# shift, and, for skew-normal marginals, NMAD, the unscanned mass, the tails,
+# the ridge bend and the mean gap. `dg` is from diagnostics_internal(). The
+# levels are those of the fit-time warning (warn_levels), which raises every one
+# of these but the ridge bend and the mean gap (summary_levels). A check that
+# did not run is not flagged; a value that is not finite is. print() counts the
+# flags, and summary() prints one "!" line for each and colours the flagged
+# cells of its table, all from param_flags().
 check_flags <- function(dg, gaussian) {
   pf <- param_flags(dg, gaussian)
   c(

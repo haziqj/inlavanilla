@@ -3,15 +3,16 @@
 # the Gaussian expectation of the log-posterior. At the optimum the expected
 # gradient vanishes, E[grad log pi(mode + shift + z)] = 0 for z ~ N(0, Sigma).
 #
-# There are two ways to solve it. vb = "full" iterates to the solution: a
-# fixed-point iteration with Anderson(1) acceleration and an nlminb() fallback,
-# on a degree-5 cubature rule built on a regular simplex (vb_nodes()). With a
-# gradient it uses the expected gradient over the nodes. Without one it uses
-# Stein's identity on the same nodes, from log-posterior values alone.
+# There are two ways to solve it. vb_correction = "full" iterates to the
+# solution: a fixed-point iteration with Anderson(1) acceleration and an
+# nlminb() fallback, on a degree-5 cubature rule built on a regular simplex
+# (vb_nodes()). With a gradient it uses the expected gradient over the nodes.
+# Without one it uses Stein's identity on the same nodes, from log-posterior
+# values alone.
 #
-# vb = "onestep", the default, takes the first step of that iteration and
-# stops. The fixed-point map is nearly flat (its slope is O(1/n)), so the first
-# step holds most of the movement, and exact VB is itself only O(n^-3/2)
+# vb_correction = "onestep", the default, takes the first step of that iteration
+# and stops. The fixed-point map is nearly flat (its slope is O(1/n)), so the
+# first step holds most of the movement, and exact VB is itself only O(n^-3/2)
 # posterior SDs from the posterior mean. With a gradient the step uses 2m + 1
 # nodes on the axes of cov_root() (axis_nodes()), about one numerical Hessian.
 # Without one it is one Stein pass on vb_nodes(), since Stein's identity needs
@@ -174,12 +175,12 @@ simplex_rule <- function(m) {
 # The largest fixed-point step, in posterior SDs (see vb_correct())
 vb_maxstep <- 1.5
 
-# The largest first step that vb = "onestep" accepts, in posterior SDs. Beyond
-# it the premise of a small correction has failed, and the iteration carries
-# on with capped steps. The level is a heuristic: at 2 SDs the guard fired on
-# large logistic regressions where the plain step was mostly better, and at 3
-# SDs it let through a strongly skewed posterior whose first step was 2.9 SDs
-# (lab/ideas/2026-11-one-step-vb).
+# The largest first step that vb_correction = "onestep" accepts, in posterior
+# SDs. Beyond it the premise of a small correction has failed, and the iteration
+# carries on with capped steps. The level is a heuristic: at 2 SDs the guard
+# fired on large logistic regressions where the plain step was mostly better,
+# and at 3 SDs it let through a strongly skewed posterior whose first step was
+# 2.9 SDs (lab/ideas/2026-11-one-step-vb).
 vb_onestep_guard <- 2.5
 
 # `method` is "onestep" or "full". `budget` is the calls of the mode and
@@ -298,7 +299,7 @@ vb_correct <- function(
                needs {.arg logpost} finite at all of them.",
         "i" = "Reparameterise any bounded parameter so that every real value
                is allowed (for example its log or logit, with the
-               log-Jacobian), or set {.code vb = FALSE}."
+               log-Jacobian), or set {.code vb_correction = \"none\"}."
       ),
       call = quote(inla_vanilla())
     )
@@ -318,10 +319,11 @@ vb_correct <- function(
   # cut and whether the Anderson secant replaced it) and the reason for a
   # fallback are kept for verbose output.
   #
-  # With vb = "onestep" the first step is taken whole and the iteration stops
-  # there, unless it is not finite or larger than the guard. Then the iteration
-  # goes on as above, within the budget: on running out, the last point stands,
-  # and the settling check reports how far it still had to go.
+  # With vb_correction = "onestep" the first step is taken whole and the
+  # iteration stops there, unless it is not finite or larger than the guard.
+  # Then the iteration goes on as above, within the budget: on running out, the
+  # last point stands, and the settling check reports how far it still had to
+  # go.
   maxstep <- vb_maxstep
   maxit <- ctrl$vb_maxit
   if (onestep) {

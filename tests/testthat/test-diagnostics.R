@@ -163,7 +163,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
     paste0(
       "x The VB correction did not settle: one more step would move `b` by ",
       "0.5 SD.\n",
-      "i The skew-normal marginals do not depend on it; `vb = \"off\"` leaves ",
+      "i The skew-normal marginals do not depend on it; `vb_correction = \"none\"` leaves ",
       "it out."
     ),
     fixed = TRUE
@@ -185,7 +185,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   expect_match(
     warning_text(d, gaussian = TRUE),
     paste0(
-      "i The Gaussian marginals are centred on the VB mean; `vb = \"off\"` ",
+      "i The Gaussian marginals are centred on the VB mean; `vb_correction = \"none\"` ",
       "centres them at the mode."
     ),
     fixed = TRUE
@@ -622,7 +622,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
 
 test_that("diagnostics() prints in INLAvaan's formats", {
   testthat::local_reproducible_output(width = 80)
-  fit <- inla_vanilla(lp_reg, init_reg, vb = "full", silent = TRUE)
+  fit <- inla_vanilla(lp_reg, init_reg, vb_correction = "full", silent = TRUE)
   g <- diagnostics(fit)
   out <- capture_output(res <- withVisible(print(g)))
   expect_false(res$visible)
@@ -659,7 +659,7 @@ test_that("diagnostics() prints in INLAvaan's formats", {
   expect_match(out, format(signif(p$unscanned_mass[1], 3)), fixed = TRUE)
 
   # Missing values print as NA
-  fit <- inla_vanilla(lp_reg, init_reg, vb = FALSE, silent = TRUE)
+  fit <- inla_vanilla(lp_reg, init_reg, vb_correction = "none", silent = TRUE)
   out <- capture_output(print(diagnostics(fit)))
   expect_match(out, "NA")
 })

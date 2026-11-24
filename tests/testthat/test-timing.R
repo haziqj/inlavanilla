@@ -23,7 +23,7 @@ test_that("timing(what = \"all\") gives every segment, which add up to the total
   fit <- inla_vanilla(
     lp_timing,
     c(a = 0, b = 0),
-    vb = FALSE,
+    vb_correction = "none",
     marginals = "gaussian",
     silent = TRUE
   )

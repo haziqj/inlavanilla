@@ -47,8 +47,8 @@ A posterior SD here is the Laplace SD at the mode,
 \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 is not the SD column of the summary table, which is the skew-normal's.
 Values that a fit did not compute are \code{NA}: the VB quantities with
-\code{vb = "off"}, the scan quantities with \code{marginals = "gaussian"}, and
-\code{grad_gap} without \code{grad} or with \code{hess}.
+\code{vb_correction = "none"}, the scan quantities with \code{marginals = "gaussian"},
+and \code{grad_gap} without \code{grad} or with \code{hess}.
 
 \strong{Global diagnostics} (\code{type = "global"}), a named numeric vector:
 \itemize{
@@ -110,7 +110,7 @@ differences of \code{logpost} a thousandth of a posterior SD apart. It
 should be close to 0.
 \item \code{grad_abs}: its absolute value.
 \item \code{grad_rel}: \code{grad_abs / (abs(par) + 1e-6)}, with \code{par} the VB mean (the
-mode when \code{vb = "off"}), as in INLAvaan.
+mode when \code{vb_correction = "none"}), as in INLAvaan.
 \item \code{mode_shift_sigma}: the Newton step at the mode, in posterior SDs,
 \eqn{|(\Sigma g)_j| / s_j} with \eqn{g} the gradient. It should be
 close to 0.

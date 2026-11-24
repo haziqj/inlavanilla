@@ -21,7 +21,7 @@ The posterior mean of each parameter, from its skew-normal marginal: the
 unless the fit was made with \code{transform = FALSE}; the others are on the
 scale of \code{logpost}. These are the estimates INLAvaan's \code{coef()} gives. For
 a fit with \code{marginals = "gaussian"} and no transformed parameters they are
-the VB-corrected means, or, with \code{vb = "off"}, the mode. The joint
-posterior mode is \code{fit$mode}, and the VB-corrected mean \code{fit$mean_vb},
+the VB-corrected means, or, with \code{vb_correction = "none"}, the mode. The
+joint posterior mode is \code{fit$mode}, and the VB-corrected mean \code{fit$mean_vb},
 both on the scale of \code{logpost}.
 }

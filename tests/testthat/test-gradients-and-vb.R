@@ -10,7 +10,7 @@
 # (d) vb_nodes() integrates Gaussian moments up to degree five exactly;
 # (e) the VB shift against a reference VB solution computed here by tensor
 #     Gauss-Hermite quadrature (nodes by the Golub-Welsch method);
-# (f) vb = FALSE against vb = TRUE;
+# (f) vb_correction = "none" against the default;
 # (g) the nlminb() fallback of vb_correct();
 # (h) a supplied Hessian: fits agree with those from the gradient alone, the
 #     default marginals do not call it, and nlminb() reaches a badly scaled
@@ -23,8 +23,8 @@
 # comment states the observed value.
 # The tests in this file check the VB solver against its exact target, so they
 # ask for it. test-vb-onestep.R tests the default.
-inla_vanilla <- function(..., vb = "full") {
-  inlavanilla::inla_vanilla(..., vb = vb)
+inla_vanilla <- function(..., vb_correction = "full") {
+  inlavanilla::inla_vanilla(..., vb_correction = vb_correction)
 }
 
 # Helpers ----------------------------------------------------------------------
@@ -1120,18 +1120,18 @@ test_that("without a gradient each VB sweep costs one log-posterior call per nod
   expect_equal(vb$shift, fit$mean_vb - fit$mode, tolerance = 1e-12)
 })
 
-# (f) vb = FALSE against vb = TRUE ---------------------------------------------
+# (f) vb_correction = "none" against the default ---------------------------
 
-test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likelihood", {
+test_that("vb_correction = \"none\" keeps the mean at the mode and the Laplace marginal likelihood", {
   mod <- poisson_regression_model(2)
   fit <- inla_vanilla(
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    vb = FALSE,
+    vb_correction = "none",
     silent = TRUE
   )
-  expect_identical(fit$vb, "off")
+  expect_identical(fit$vb_correction, "none")
   expect_identical(fit$mean_vb, fit$mode)
   expect_identical(fit$logml, fit$logml_laplace)
   expect_null(fit$diagnostics$vb)
@@ -1162,7 +1162,7 @@ test_that("vb = FALSE keeps the mean at the mode and the Laplace marginal likeli
   }
 })
 
-test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
+test_that("the VB correction adds 0.5 shift' H shift to the log marginal likelihood", {
   mod <- poisson_regression_model(2)
   fit_vb <- inla_vanilla(
     mod$logpost,
@@ -1174,7 +1174,7 @@ test_that("vb = TRUE adds 0.5 shift' H shift to the log marginal likelihood", {
     mod$logpost,
     mod$init,
     grad = mod$grad,
-    vb = FALSE,
+    vb_correction = "none",
     silent = TRUE
   )
   shift <- fit_vb$mean_vb - fit_vb$mode
@@ -1492,7 +1492,11 @@ test_that("the fallback stops with its own error where logpost is -Inf at the no
       "The VB mean correction cannot be computed.",
       fixed = TRUE
     )
-    expect_match(msg, "or set `vb = FALSE`.", fixed = TRUE)
+    expect_match(
+      gsub("\\s+", " ", msg),
+      "or set `vb_correction = \"none\"`.",
+      fixed = TRUE
+    )
     expect_no_match(msg, "instead of failing")
     expect_no_match(msg, "NA/NaN")
     msg
@@ -1513,7 +1517,7 @@ test_that("the fallback stops with its own error where logpost is -Inf at the no
     expect_match(msg, "It stopped at the edge of the region", fixed = TRUE)
   }
   # Without the VB correction the fit goes ahead
-  fit <- inla_vanilla(mod$logpost, init, vb = FALSE, silent = TRUE)
+  fit <- inla_vanilla(mod$logpost, init, vb_correction = "none", silent = TRUE)
   expect_s3_class(fit, "inla_vanilla")
 })
 
@@ -1700,7 +1704,7 @@ test_that("fits with a Hessian agree with fits from the gradient alone", {
       mod$logpost,
       mod$init,
       grad = mod$grad,
-      vb = FALSE,
+      vb_correction = "none",
       marginals = "gaussian",
       silent = TRUE
     )
@@ -1709,7 +1713,7 @@ test_that("fits with a Hessian agree with fits from the gradient alone", {
       mod$init,
       grad = mod$grad,
       hess = mod$hessian,
-      vb = FALSE,
+      vb_correction = "none",
       marginals = "gaussian",
       silent = TRUE
     )

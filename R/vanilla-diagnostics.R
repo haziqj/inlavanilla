@@ -18,9 +18,9 @@
 # The VB fallback is recorded only, as in INLAvaan: it is a route of the
 # solver, and the settling check judges where it lands. summary() flags
 # every warned check at the same level, and also the ridge bend and the mean
-# gap, which never warn. A check that did not run (VB with vb = "off", the
-# scans with Gaussian marginals) is NA and never flagged; one that ran and
-# gave a value that is not finite is.
+# gap, which never warn. A check that did not run (VB with vb_correction =
+# "none", the scans with Gaussian marginals) is NA and never flagged; one that
+# ran and gave a value that is not finite is.
 warn_levels <- list(
   mode_shift = 0.1,
   nmad = 0.1,
@@ -63,9 +63,9 @@ check_ran <- function(x) {
 }
 
 # The global and per-parameter diagnostics, from the parts of a fit:
-# fit$diagnostics$optim, $vb (NULL when vb = "off") and $marginals, and the
-# VB mean (`pars`, for grad_inf_rel and grad_rel; NA when not given). It runs
-# before the fit object exists, for the warning. The definitions are
+# fit$diagnostics$optim, $vb (NULL when vb_correction = "none") and $marginals,
+# and the VB mean (`pars`, for grad_inf_rel and grad_rel; NA when not given). It
+# runs before the fit object exists, for the warning. The definitions are
 # INLAvaan's (R/method-diagnostics.R), with `grad` the gradient of minus the
 # log-posterior; the unscanned mass, the VB shifts and the KL divergences are
 # computed in vanilla_fit(). The per-parameter frame has no row names, as
@@ -375,8 +375,8 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
       out <- c(
         out,
         i = paste0(
-          "Compare with {.code vb = \"full\"}, and treat the log marginal ",
-          "likelihood with care."
+          "Compare with {.code vb_correction = \"full\"}, and treat the log ",
+          "marginal likelihood with care."
         )
       )
     }
@@ -400,12 +400,12 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
         i = if (gaussian) {
           paste0(
             "The Gaussian marginals are centred on the VB mean; ",
-            "{.code vb = \"off\"} centres them at the mode."
+            "{.code vb_correction = \"none\"} centres them at the mode."
           )
         } else {
           paste0(
             "The skew-normal marginals do not depend on it; ",
-            "{.code vb = \"off\"} leaves it out."
+            "{.code vb_correction = \"none\"} leaves it out."
           )
         }
       )

@@ -50,8 +50,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' \eqn{s_j = \sqrt{\Sigma_{jj}}}{s_j = sqrt(Sigma_jj)}, as in INLAvaan; it
 #' is not the SD column of the summary table, which is the skew-normal's.
 #' Values that a fit did not compute are `NA`: the VB quantities with
-#' `vb = "off"`, the scan quantities with `marginals = "gaussian"`, and
-#' `grad_gap` without `grad` or with `hess`.
+#' `vb_correction = "none"`, the scan quantities with `marginals = "gaussian"`,
+#' and `grad_gap` without `grad` or with `hess`.
 #'
 #' **Global diagnostics** (`type = "global"`), a named numeric vector:
 #' * `npar`: the number of parameters.
@@ -108,7 +108,7 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   should be close to 0.
 #' * `grad_abs`: its absolute value.
 #' * `grad_rel`: `grad_abs / (abs(par) + 1e-6)`, with `par` the VB mean (the
-#'   mode when `vb = "off"`), as in INLAvaan.
+#'   mode when `vb_correction = "none"`), as in INLAvaan.
 #' * `mode_shift_sigma`: the Newton step at the mode, in posterior SDs,
 #'   \eqn{|(\Sigma g)_j| / s_j} with \eqn{g} the gradient. It should be
 #'   close to 0.

@@ -3,7 +3,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
   cli::cat_rule(
     width = out_width(),
     left = header_title(x$version),
-    right = cli::col_grey(method_label(is_gaussian(x), x$vb)),
+    right = cli::col_grey(method_label(is_gaussian(x), vb_setting(x))),
     line_col = vanilla_hex
   )
   cli::cat_line()
@@ -201,7 +201,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check
 #' with examples.
 #'
-#' With `vb = "off"` there is no VB mean: the VB columns of
+#' With `vb_correction = "none"` there is no VB mean: the VB columns of
 #' `summary(fit)$diagnostics` are `NA`, as INLAvaan's `diagnostics()` leaves
 #' them, and are left out of the table. With `marginals = "gaussian"` there
 #' are no scans, so the scan columns are `NA` and only the VB shift is shown.
@@ -252,7 +252,7 @@ summary.inla_vanilla <- function(
       diagnostics = object$diagnostics$marginals,
       optim = object$diagnostics$optim,
       vb = object$diagnostics$vb,
-      vb_method = object$vb,
+      vb_method = vb_setting(object),
       version = object$version,
       counts = object$counts,
       timing = object$timing,
@@ -424,7 +424,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
           "VB correction in one step delivered {gain} of the gain it ",
           "promised (warning < ",
           warn_levels$vb_gain,
-          "): compare with {.code vb = \"full\"}."
+          "): compare with {.code vb_correction = \"full\"}."
         )
       )
     }
@@ -465,7 +465,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       )
     }
   } else {
-    cat_status("info", "No VB correction (vb = \"off\").")
+    cat_status("info", "No VB correction (vb_correction = \"none\").")
   }
 
   if (gaussian) {
@@ -561,8 +561,8 @@ cat_width <- function(x, diag, env) {
 #' unless the fit was made with `transform = FALSE`; the others are on the
 #' scale of `logpost`. These are the estimates INLAvaan's `coef()` gives. For
 #' a fit with `marginals = "gaussian"` and no transformed parameters they are
-#' the VB-corrected means, or, with `vb = "off"`, the mode. The joint
-#' posterior mode is `fit$mode`, and the VB-corrected mean `fit$mean_vb`,
+#' the VB-corrected means, or, with `vb_correction = "none"`, the mode. The
+#' joint posterior mode is `fit$mode`, and the VB-corrected mean `fit$mean_vb`,
 #' both on the scale of `logpost`.
 #'
 #' @param object An object of class `inla_vanilla`.
@@ -584,8 +584,9 @@ coef.inla_vanilla <- function(object, ...) {
 #' both densities are carried there by the change of variables, so the
 #' Laplace curve is the density that a Gaussian `log_sigma` gives `sigma`.
 #' For a fit with `marginals = "gaussian"` the marginals are Gaussian on the
-#' scale of `logpost`: centred at the VB mean, or, with `vb = "off"`, the
-#' Laplace marginals themselves, drawn without a second copy.
+#' scale of `logpost`: centred at the VB mean, or, with
+#' `vb_correction = "none"`, the Laplace marginals themselves, drawn without a
+#' second copy.
 #'
 #' `type = "sn_fit"` shows each skew-normal fit against the scan it was
 #' fitted to, as INLAvaan's `plot(type = "sn_fit")` does. The x axis is the
@@ -709,7 +710,7 @@ plot_marginals <- function(x, idx, laplace, tr = NULL, ...) {
   col_lap <- "#0F766E"
   label <- if (!is_gaussian(x)) {
     "Skew-normal"
-  } else if (x$vb != "off") {
+  } else if (vb_setting(x) != "none") {
     "VB Gaussian"
   } else {
     # The marginals are the Laplace ones: nothing to overlay
@@ -1170,6 +1171,20 @@ header_title <- function(version, what = NULL) {
 method_label <- function(gaussian, vb) {
   paste0(
     if (gaussian) "Laplace" else "Skew-normal",
-    switch(vb, onestep = " + one-step VB", full = " + full VB", off = "")
+    switch(vb, onestep = " + one-step VB", full = " + full VB", none = "")
   )
+}
+
+# The VB method of a fit, "onestep", "full" or "none". A fit made before
+# 26.11.24 has it as `vb`, with "off" for "none". The names are matched
+# exactly: `$` would take `vb` for `vb_correction`.
+vb_setting <- function(x) {
+  vb <- x[["vb_correction"]]
+  if (is.null(vb)) {
+    vb <- x[["vb"]]
+    if (identical(vb, "off")) {
+      vb <- "none"
+    }
+  }
+  vb
 }

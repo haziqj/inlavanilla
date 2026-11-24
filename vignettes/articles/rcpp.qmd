@@ -297,12 +297,12 @@ us_r <- time_per_call(function() logpost_r(init), n = 1000)
 us_r
 ```
 
-With `vb = "off"`, `inla_vanilla()` skips the VB correction and runs only the
+With `vb_correction = "none"`, `inla_vanilla()` skips the VB correction and runs only the
 mode search and the skew-normal marginals:
 
 ```{r}
 #| label: fit-r
-fit_r <- inla_vanilla(logpost_r, init, vb = "off")
+fit_r <- inla_vanilla(logpost_r, init, vb_correction = "none")
 fit_r$counts
 ```
 

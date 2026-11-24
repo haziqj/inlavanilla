@@ -175,7 +175,7 @@ test_that("the expansion is at the VB mean, or at the mode without VB", {
     c(a = 0, b = 0),
     x = pois_x,
     y = pois_y,
-    vb = FALSE,
+    vb_correction = "none",
     silent = TRUE
   )
   res <- loo(fit, ll_pois, x = pois_x, y = pois_y)
