@@ -30,7 +30,8 @@ healthy_optim <- list(
   iterations = 5L,
   grad = c(a = 1e-7, b = -2e-7),
   grad_mode = 2e-7,
-  hess_cond = 3
+  hess_cond = 3,
+  hess_cond_cor = 3
 )
 healthy_vb <- list(iterations = 3L, fallback = FALSE, kld_global = 0.03)
 healthy <- data.frame(
@@ -194,7 +195,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   expect_length(problems(d), 0)
 
   o <- healthy_optim
-  o$hess_cond <- 2e10
+  o$hess_cond_cor <- 2e10
   expect_match(
     warning_text(optim = o),
     paste0(
@@ -203,8 +204,19 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
       "2e\\+10\\); some parameters may be weakly identified\\.\n"
     )
   )
-  o$hess_cond <- 1e8
+  o$hess_cond_cor <- 1e8
   expect_length(problems(optim = o), 0)
+  # The raw condition number is not checked: it depends on the units
+  o$hess_cond <- 1e20
+  expect_length(problems(optim = o), 0)
+  # A fit made before 26.11.24 has the correlation-scale number as hess_cond
+  old <- healthy_optim
+  old$hess_cond_cor <- NULL
+  old$hess_cond <- 2e10
+  dg <- dg_of(optim = old)
+  expect_identical(dg$global[["hess_cond_cor"]], 2e10)
+  expect_identical(dg$global[["hess_cond"]], NA_real_)
+  expect_length(problems(optim = old), 1)
 })
 
 test_that("the VB fallback is recorded, not warned about, as in INLAvaan", {
@@ -252,7 +264,7 @@ test_that("lists name at most three parameters, worst first, with values where t
 test_that("every problem at once gives one warning, in INLAvaan's order", {
   o <- healthy_optim
   o$grad <- c(a = 2, b = 0)
-  o$hess_cond <- 1e9
+  o$hess_cond_cor <- 1e9
   d <- healthy
   d$mode_shift_sigma[1] <- 0.5
   d$tails[1] <- FALSE
@@ -404,19 +416,30 @@ test_that("an ill-conditioned Hessian warns, whatever the units", {
   )
   expect_match(conditionMessage(w), "The Hessian at the mode is near-singular")
   expect_equal(
-    fit$diagnostics$optim$hess_cond,
+    fit$diagnostics$optim$hess_cond_cor,
     2 * 100 * 1e4^2 + 1,
     tolerance = 1e-4
+  )
+  expect_identical(
+    diagnostics(fit)[["hess_cond_cor"]],
+    fit$diagnostics$optim$hess_cond_cor
+  )
+  # The two parameters have the same SD, so the raw number is the same
+  expect_equal(
+    fit$diagnostics$optim$hess_cond,
+    fit$diagnostics$optim$hess_cond_cor,
+    tolerance = 1e-6
   )
   expect_identical(
     diagnostics(fit)[["hess_cond"]],
     fit$diagnostics$optim$hess_cond
   )
   fit <- inla_vanilla(lp, c(a = 0, b = 0), grad = gr, tau = 1, silent = TRUE)
-  expect_equal(fit$diagnostics$optim$hess_cond, 201, tolerance = 1e-4)
+  expect_equal(fit$diagnostics$optim$hess_cond_cor, 201, tolerance = 1e-4)
 
-  # Independent parameters with posterior SDs 1e-5 and 1e3: INLAvaan's raw
-  # condition number would be 1e16, but in posterior-SD units it is 1
+  # Independent parameters with posterior SDs 1e-5 and 1e3: the raw condition
+  # number, INLAvaan's, is 1e16, but in posterior-SD units it is 1, and the
+  # fit does not warn
   lp2 <- function(theta) {
     dnorm(theta[[1]], 0, 1e-5, log = TRUE) +
       dnorm(theta[[2]], 0, 1e3, log = TRUE)
@@ -425,7 +448,8 @@ test_that("an ill-conditioned Hessian warns, whatever the units", {
     fit <- inla_vanilla(lp2, c(a = 1e-6, b = 10), silent = TRUE)
   )
   expect_identical(fit$warnings, character())
-  expect_equal(fit$diagnostics$optim$hess_cond, 1, tolerance = 1e-6)
+  expect_equal(fit$diagnostics$optim$hess_cond_cor, 1, tolerance = 1e-6)
+  expect_equal(fit$diagnostics$optim$hess_cond, 1e16, tolerance = 1e-4)
 })
 
 test_that("the mode shift is INLAvaan's Newton step in posterior SDs", {
@@ -474,6 +498,7 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "grad_l2",
       "mode_shift_max",
       "hess_cond",
+      "hess_cond_cor",
       "vb_applied",
       "vb_shift_max",
       "vb_kld_global",

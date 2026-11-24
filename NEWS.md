@@ -1,5 +1,12 @@
 # inlavanilla (development version)
 
+* `diagnostics()` has two Hessian condition numbers, each with one meaning in
+  inlavanilla and INLAvaan: `hess_cond` is now the raw condition number of the
+  Laplace covariance, as INLAvaan defines it, and `hess_cond_cor` is the one
+  that was called `hess_cond` before, on the correlation scale, free of units.
+  The fit-time warning, `summary()` and `verbose = TRUE` use `hess_cond_cor`,
+  at the same level as before (1e8), so no fit warns differently.
+
 * `width` is renamed `marginal_scan`, the name INLAvaan uses, with the values
   `"linear"` (was `"trace"`, the default), `"exact"` (was `"cmp"`) and
   `"laplace"` (was `"tk"`), and one new value, `"plain"`, a scan with no width

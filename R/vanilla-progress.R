@@ -387,8 +387,12 @@ report_mode <- function(p, lap, calls) {
         }
       ),
       paste0(
-        grey("Hessian condition number ", fmt_num(lap$hess_cond)),
-        if (off_level(lap$hess_cond, warn_levels$hess_cond)) flag() else "",
+        grey("Hessian condition number ", fmt_num(lap$hess_cond_cor)),
+        if (off_level(lap$hess_cond_cor, warn_levels$hess_cond)) {
+          flag()
+        } else {
+          ""
+        },
         grey(
           ", in SD units (warning > ",
           fmt_num(warn_levels$hess_cond),

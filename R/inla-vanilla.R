@@ -519,8 +519,9 @@
 #'     [stats::nlminb()] (the iterations of both runs if it was restarted,
 #'     the code and message of the run that was kept), the gradient of minus
 #'     the log-posterior at the mode (`grad`), the whitened gradient there
-#'     (`grad_mode`), and the condition number of the Hessian in posterior-SD
-#'     units (`hess_cond`). `vb` holds
+#'     (`grad_mode`), and the condition number of the Hessian, on the raw
+#'     scale (`hess_cond`) and in posterior-SD units (`hess_cond_cor`). `vb`
+#'     holds
 #'     the iterations of the VB correction, whether it stopped at the first
 #'     step (`one_pass`), whether it fell back to
 #'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
@@ -1182,7 +1183,8 @@ vanilla_fit <- function(
       # INLAvaan's sign: the gradient of nlminb()'s objective, -logpost
       grad = -lap$grad,
       grad_mode = lap$grad_mode,
-      hess_cond = lap$hess_cond
+      hess_cond = lap$hess_cond,
+      hess_cond_cor = lap$hess_cond_cor
     ),
     vb = if (use_vb) {
       list(

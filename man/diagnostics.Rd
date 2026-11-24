@@ -64,13 +64,15 @@ largest relative value and the Euclidean norm of \code{grad} (see below).
 They depend on the scale of each parameter.
 \item \code{mode_shift_max}: the largest \code{mode_shift_sigma}. Unlike the gradient
 norms it is scale-free. It should be close to 0.
-\item \code{hess_cond}: the condition number of the Hessian at the mode, with each
-parameter in its own posterior-SD units: the ratio of the largest to
-the smallest eigenvalue of the posterior correlation matrix. Large
-values mean that some combination of the parameters is weakly
-identified. INLAvaan takes it on the raw scale of the parameters, where
-a mere change of units makes it large, so the two agree only when the
-posterior SDs are similar.
+\item \code{hess_cond}: the condition number of the Hessian at the mode, the ratio
+of the largest to the smallest eigenvalue of the Laplace covariance, as
+INLAvaan defines it. It depends on the units of the parameters: posterior
+SDs of 1e-3 and 1e3 alone make it 1e12.
+\item \code{hess_cond_cor}: the same with each parameter in its own posterior-SD
+units, the ratio of the largest to the smallest eigenvalue of the
+posterior correlation matrix. It is free of units. Large values mean that
+some combination of the parameters is weakly identified, and the fit
+warns above \eqn{10^8}.
 \item \code{vb_applied}: 1 if the VB correction ran, 0 otherwise.
 \item \code{vb_shift_max}: the largest absolute \code{vb_shift_sigma}.
 \item \code{vb_kld_global}: the Kullback-Leibler divergence between the Laplace

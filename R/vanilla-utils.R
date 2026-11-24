@@ -191,7 +191,10 @@ check_flags <- function(dg, gaussian) {
       dg$global[["vb_gain_ratio"]],
       warn_levels$vb_gain
     )),
-    hess_cond = off_level(dg$global[["hess_cond"]], warn_levels$hess_cond),
+    hess_cond = off_level(
+      dg$global[["hess_cond_cor"]],
+      warn_levels$hess_cond
+    ),
     vb = any(pf[, "vb_shift_sigma"]),
     nmad = any(pf[, "nmad"]),
     unscanned_mass = any(pf[, "unscanned_mass"]),

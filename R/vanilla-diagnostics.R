@@ -83,6 +83,14 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
   mean_na <- function(x) if (all(is.na(x))) NA_real_ else mean(x, na.rm = TRUE)
   # A fit saved before the check existed has no such column
   grad_gap <- if (is.null(d$grad_gap)) rep(NA_real_, m) else d$grad_gap
+  # A fit made before 26.11.24 has only the condition number on the
+  # correlation scale, under the name `hess_cond`
+  hess_cond <- optim$hess_cond
+  hess_cond_cor <- optim$hess_cond_cor
+  if (is.null(hess_cond_cor)) {
+    hess_cond_cor <- hess_cond
+    hess_cond <- NA_real_
+  }
 
   global <- c(
     npar = m,
@@ -92,7 +100,8 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     grad_inf_rel = max(abs(g) / (abs(pars) + 1e-06)),
     grad_l2 = sqrt(sum(g^2)),
     mode_shift_max = max(d$mode_shift_sigma),
-    hess_cond = optim$hess_cond,
+    hess_cond = hess_cond,
+    hess_cond_cor = hess_cond_cor,
     vb_applied = as.numeric(vb_applied),
     vb_shift_max = max_na(abs(d$vb_shift_sigma)),
     vb_kld_global = if (vb_applied) vb$kld_global else NA_real_,
@@ -312,7 +321,7 @@ problem_text <- function(check, dg, env, n = 3L) {
       )
     },
     hess_cond = {
-      env$hess_cond <- fmt_g3(glob[["hess_cond"]])
+      env$hess_cond <- fmt_g3(glob[["hess_cond_cor"]])
       paste0(
         "The Hessian at the mode is near-singular (condition number = ",
         "{hess_cond}); some parameters may be weakly identified."

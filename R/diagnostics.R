@@ -66,13 +66,15 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   They depend on the scale of each parameter.
 #' * `mode_shift_max`: the largest `mode_shift_sigma`. Unlike the gradient
 #'   norms it is scale-free. It should be close to 0.
-#' * `hess_cond`: the condition number of the Hessian at the mode, with each
-#'   parameter in its own posterior-SD units: the ratio of the largest to
-#'   the smallest eigenvalue of the posterior correlation matrix. Large
-#'   values mean that some combination of the parameters is weakly
-#'   identified. INLAvaan takes it on the raw scale of the parameters, where
-#'   a mere change of units makes it large, so the two agree only when the
-#'   posterior SDs are similar.
+#' * `hess_cond`: the condition number of the Hessian at the mode, the ratio
+#'   of the largest to the smallest eigenvalue of the Laplace covariance, as
+#'   INLAvaan defines it. It depends on the units of the parameters: posterior
+#'   SDs of 1e-3 and 1e3 alone make it 1e12.
+#' * `hess_cond_cor`: the same with each parameter in its own posterior-SD
+#'   units, the ratio of the largest to the smallest eigenvalue of the
+#'   posterior correlation matrix. It is free of units. Large values mean that
+#'   some combination of the parameters is weakly identified, and the fit
+#'   warns above \eqn{10^8}.
 #' * `vb_applied`: 1 if the VB correction ran, 0 otherwise.
 #' * `vb_shift_max`: the largest absolute `vb_shift_sigma`.
 #' * `vb_kld_global`: the Kullback-Leibler divergence between the Laplace
@@ -249,6 +251,7 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
   )
   sci_names <- c(
     "hess_cond",
+    "hess_cond_cor",
     "mode_shift_max",
     "unscanned_mass_max",
     "vb_step_max"

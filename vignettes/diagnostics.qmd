@@ -57,7 +57,7 @@ can still do badly.
 | Gradient | `grad_gap` | above 0.1 | the same | inlavanilla |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
 | VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
-| Hessian | `hess_cond` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
+| Hessian | `hess_cond_cor` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
 | Unscanned mass | `unscanned_mass` | above 0.05 | the same | INLAvaan |
@@ -134,13 +134,13 @@ and the VB correction did not settle. Integrate random effects out, as in the
 article [Multilevel models](multilevel.html), and draw them back afterwards
 with `sampling(fit, fun = )`.
 
-`hess_cond` is the condition number of the Hessian at the mode, with each
+`hess_cond_cor` is the condition number of the Hessian at the mode, with each
 parameter in posterior-SD units: the ratio of the largest to the smallest
 eigenvalue of the posterior correlation matrix. Above $10^8$ some
-combination of the parameters is weakly identified. INLAvaan takes the
-condition number on the raw scale of the parameters, where a mere change of
-units can make it large; inlavanilla allows posterior SDs from $10^{-6}$ to
-$10^4$, so it measures it in posterior SDs instead.
+combination of the parameters is weakly identified. `hess_cond` is the
+condition number on the raw scale of the parameters, as INLAvaan defines it,
+where a mere change of units can make it large; inlavanilla allows posterior
+SDs from $10^{-6}$ to $10^4$, so the check uses `hess_cond_cor`.
 
 The VB correction recentres the Gaussian at the shift that minimises its
 Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026, Section

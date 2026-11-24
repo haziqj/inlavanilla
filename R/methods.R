@@ -94,7 +94,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   flagged above 0.1, costs no calls, and is `NA` without `grad` or with
 #'   `hess`. A wrong gradient mostly harms the log marginal likelihood and the
 #'   covariance, since the scans use `logpost` itself.
-#' * **Hessian.** `hess_cond`, the condition number of the Hessian at the
+#' * **Hessian.** `hess_cond_cor`, the condition number of the Hessian at the
 #'   mode with each parameter in posterior-SD units (the eigenvalue ratio of
 #'   the posterior correlation matrix). It is flagged above \eqn{10^8}: some
 #'   combination of the parameters is then weakly identified. Its line is
@@ -386,7 +386,7 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
   if (flags[["hess_cond"]]) {
     flagged_line("hess_cond")
   } else if (glob[["npar"]] > 1) {
-    hc <- glob[["hess_cond"]]
+    hc <- glob[["hess_cond_cor"]]
     cat_status("ok", "Hessian condition number {fmt_num(hc)}, in SD units.")
   }
 

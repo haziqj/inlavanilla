@@ -164,8 +164,9 @@ returns under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.in
 \code{\link[stats:nlminb]{stats::nlminb()}} (the iterations of both runs if it was restarted,
 the code and message of the run that was kept), the gradient of minus
 the log-posterior at the mode (\code{grad}), the whitened gradient there
-(\code{grad_mode}), and the condition number of the Hessian in posterior-SD
-units (\code{hess_cond}). \code{vb} holds
+(\code{grad_mode}), and the condition number of the Hessian, on the raw
+scale (\code{hess_cond}) and in posterior-SD units (\code{hess_cond_cor}). \code{vb}
+holds
 the iterations of the VB correction, whether it stopped at the first
 step (\code{one_pass}), whether it fell back to
 \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of

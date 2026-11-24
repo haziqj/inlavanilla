@@ -2222,7 +2222,7 @@ test_that("print() points to the fit's warnings and to flagged checks", {
       f
     },
     hess_cond = function(f) {
-      f$diagnostics$optim$hess_cond <- 1e9
+      f$diagnostics$optim$hess_cond_cor <- 1e9
       f
     },
     vb = function(f) {
@@ -2691,7 +2691,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   # the warning's sentence where it has one.
   testthat::local_reproducible_output(width = 200, crayon = FALSE)
   below <- summary(fit_reg)
-  below$optim$hess_cond <- 0.98e8
+  below$optim$hess_cond_cor <- 0.98e8
   below$diagnostics$mode_shift_sigma <- c(0.098, 0.098)
   below$diagnostics$vb_shift_sigma <- c(0.98, -0.98)
   below$diagnostics$ridge_bend <- c(0.245, 0.245)
@@ -2723,7 +2723,7 @@ test_that("summary() flags each diagnostic at its documented level", {
   }
 
   above <- below
-  above$optim$hess_cond <- 1.02e8
+  above$optim$hess_cond_cor <- 1.02e8
   above$diagnostics$mode_shift_sigma <- c(0.098, 0.102)
   above$diagnostics$vb_shift_sigma <- c(0.98, -1.02)
   above$diagnostics$ridge_bend <- c(0.245, 0.255)
@@ -2791,7 +2791,7 @@ test_that("summary() flags each diagnostic at its documented level", {
     expect_length(flagged(odd), 1)
   }
   odd <- below
-  odd$optim$hess_cond <- Inf
+  odd$optim$hess_cond_cor <- Inf
   expect_identical(
     flagged(odd),
     "! The Hessian at the mode is near-singular (condition number = Inf); some parameters may be weakly identified."

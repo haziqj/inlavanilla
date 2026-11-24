@@ -81,20 +81,23 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
     )
   }
   m <- length(init)
-  # The condition number of the Hessian with each parameter in its own
-  # posterior-SD units, D^1/2 H D^1/2 with D = diag(Sigma): the eigenvalue
-  # ratio of its inverse, the correlation matrix cov2cor(Sigma). INLAvaan
-  # takes it on the raw scale, which a mere change of units can make large;
-  # posterior SDs here run from 1e-6 to 1e4.
-  ev <- eigen(stats::cov2cor(cur$Sigma), symmetric = TRUE, only.values = TRUE)
-  ev <- ev$values
-  hess_cond <- if (min(ev) > 0) max(ev) / min(ev) else Inf
+  # Two condition numbers of the Hessian at the mode, the eigenvalue ratio of
+  # its inverse. `hess_cond` is INLAvaan's, on the raw scale: that of Sigma,
+  # which a mere change of units can make large (posterior SDs of 1e-6 and 1e4
+  # give 1e20). `hess_cond_cor` has each parameter in its own posterior-SD
+  # units, D^1/2 H D^1/2 with D = diag(Sigma): that of the correlation matrix
+  # cov2cor(Sigma), free of units, which the fit-time warning checks.
+  cond <- function(S) {
+    ev <- eigen(S, symmetric = TRUE, only.values = TRUE)$values
+    if (min(ev) > 0) max(ev) / min(ev) else Inf
+  }
   c(
     cur,
     list(
       opt = opt,
       restart = restart,
-      hess_cond = hess_cond,
+      hess_cond = cond(cur$Sigma),
+      hess_cond_cor = cond(stats::cov2cor(cur$Sigma)),
       # log pi(y) ~ log pi(y, mode) - log N(mode | mode, Sigma), with
       # log det(Sigma) = -2 sum(log(diag(R)))
       logml = cur$lp_max + (m / 2) * log(2 * pi) - sum(log(diag(cur$R)))
