@@ -96,9 +96,9 @@ test_that("a fit on workers is the same as a serial fit", {
   force_workers()
   grads <- list(no_grad = NULL, grad = gr_reg)
   for (g in names(grads)) {
-    for (w in c("trace", "cmp", "tk")) {
-      ref <- fit_reg(gr = grads[[g]], width = w)
-      fit <- on_forks(fit_reg(gr = grads[[g]], width = w))
+    for (w in c("linear", "exact", "laplace", "plain")) {
+      ref <- fit_reg(gr = grads[[g]], marginal_scan = w)
+      fit <- on_forks(fit_reg(gr = grads[[g]], marginal_scan = w))
       expect_identical(fit$workers, 2L, label = paste(g, w))
       expect_same_fit(fit, ref)
     }
@@ -533,20 +533,21 @@ test_that("the items are dealt out in turn, with none left out", {
   expect_identical(sort(unlist(g)), 1:10)
 })
 
-test_that("the estimate of the calls follows the width and the route", {
-  expect_identical(scan_calls(5, 21L, "trace", TRUE, FALSE), 22)
-  expect_identical(scan_calls(5, 21L, "trace", FALSE, FALSE), 37)
+test_that("the estimate of the calls follows the scan and the route", {
+  expect_identical(scan_calls(5, 21L, "linear", TRUE, FALSE), 22)
+  expect_identical(scan_calls(5, 21L, "linear", FALSE, FALSE), 37)
+  expect_identical(scan_calls(5, 21L, "plain", TRUE, FALSE), 22)
   expect_gt(
-    scan_calls(5, 21L, "cmp", TRUE, FALSE),
-    scan_calls(5, 21L, "trace", TRUE, FALSE)
+    scan_calls(5, 21L, "exact", TRUE, FALSE),
+    scan_calls(5, 21L, "linear", TRUE, FALSE)
   )
   expect_gt(
-    scan_calls(5, 21L, "tk", FALSE, FALSE),
-    scan_calls(5, 21L, "tk", TRUE, FALSE)
+    scan_calls(5, 21L, "laplace", FALSE, FALSE),
+    scan_calls(5, 21L, "laplace", TRUE, FALSE)
   )
   expect_lt(
-    scan_calls(5, 21L, "cmp", TRUE, TRUE),
-    scan_calls(5, 21L, "cmp", TRUE, FALSE)
+    scan_calls(5, 21L, "exact", TRUE, TRUE),
+    scan_calls(5, 21L, "exact", TRUE, FALSE)
   )
 })
 

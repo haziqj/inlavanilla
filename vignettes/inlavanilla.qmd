@@ -503,7 +503,7 @@ Here `omit = 1` leaves one free for everything else:
 #| label: cores
 #| eval: false
 cores <- parallelly::availableCores(omit = 1)
-fit_par <- inla_vanilla(logpost, init, width = "tk", cores = cores)
+fit_par <- inla_vanilla(logpost, init, marginal_scan = "laplace", cores = cores)
 ```
 
 The results and the progress line are those of a serial fit, and `loo()` and
@@ -511,10 +511,10 @@ The results and the progress line are those of a serial fit, and `loo()` and
 fewer, and a scan expected to take under a second stays serial, so `cores`
 changes nothing on a model as small as this one. The gain depends on how much
 of the fit is scanning: the mode, the Hessian and the VB correction stay
-serial. With `width = "tk"` the scans are nearly the whole fit, and a logistic
-regression with 40 parameters went from 25.5 s to 3.6 s on 12 cores. With the
-default width they are about half of a slow fit, and that fit gained about 1.5
-times.
+serial. With `marginal_scan = "laplace"` the scans are nearly the whole fit,
+and a logistic regression with 40 parameters went from 25.5 s to 3.6 s on 12
+cores. With the default scan they are about half of a slow fit, and that fit
+gained about 1.5 times.
 
 In a terminal on macOS or Linux the workers are forks of the R session, which
 share everything. In RStudio, on Windows and in Positron, whose console refuses

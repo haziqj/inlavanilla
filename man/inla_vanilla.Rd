@@ -12,14 +12,15 @@ inla_vanilla(
   ...,
   vb_correction = c("onestep", "full", "none"),
   marginals = c("skewnorm", "gaussian"),
-  width = c("trace", "cmp", "tk"),
+  marginal_scan = c("linear", "exact", "laplace", "plain"),
   tk_fallback = FALSE,
   transform = TRUE,
   cores = NULL,
   verbose = FALSE,
   silent = FALSE,
   control = list(),
-  vb = NULL
+  vb = NULL,
+  width = NULL
 )
 }
 \arguments{
@@ -41,15 +42,15 @@ differences are used.}
 from the Matrix package, and a number when m = 1, work too). It needs
 \code{grad}. When \code{NULL} (the default), finite differences of \code{grad} are used.}
 
-\item{...}{Further arguments passed to \code{logpost}, \code{grad} and \code{hess}, such
-as the data. As in \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the gradient and
-the Hessian, and the arguments after them (\code{vb_correction}, \code{marginals},
-\code{width}, \code{tk_fallback}, \code{transform}, \code{cores}, \code{verbose}, \code{silent},
-\code{control}) must be given by their full names, so data arguments cannot
-partially match them. A data argument cannot take one of those names. The
-arguments before them can be matched, as in \code{nlminb()}: a data argument
-named \code{g} or \code{gr} would be taken as \code{grad}, and one named \code{h} or \code{he} as
-\code{hess}, so give it a longer name.}
+\item{...}{Further arguments passed to \code{logpost}, \code{grad} and \code{hess}, such as
+the data. As in \code{\link[stats:nlminb]{stats::nlminb()}}, they come after the gradient and the
+Hessian, and the arguments after them (\code{vb_correction}, \code{marginals},
+\code{marginal_scan}, \code{tk_fallback}, \code{transform}, \code{cores}, \code{verbose}, \code{silent},
+\code{control}, and the deprecated \code{vb} and \code{width}) must be given by their full
+names, so data arguments cannot partially match them. A data argument
+cannot take one of those names. The arguments before them can be matched,
+as in \code{nlminb()}: a data argument named \code{g} or \code{gr} would be taken as
+\code{grad}, and one named \code{h} or \code{he} as \code{hess}, so give it a longer name.}
 
 \item{vb_correction}{The VB mean correction: \code{"onestep"} (the default)
 takes one Newton step from the mode, \code{"full"} iterates to the VB solution,
@@ -65,38 +66,42 @@ VB mean unless \code{vb_correction = "none"}, with no scans. \code{"skewnormal"}
 the same as \code{"skewnorm"}, and abbreviations such as \code{"skew"} and \code{"gauss"}
 work too.}
 
-\item{width}{How each skew-normal scan accounts for the changing volume of
-the other parameters, the width term
+\item{marginal_scan}{How each skew-normal scan is taken, and how it
+accounts for the changing volume of the other parameters, the width term
 \eqn{\gamma_j(t) = -\frac12 \log|H_{-j}|}{gamma_j(t) = -1/2 log|H_-j|}
-(see the section on the width term). With m parameters and
+(see the section on the scans). With m parameters and
 \code{n_grid} scan points, per parameter:
 \itemize{
-\item \code{"trace"} (the default): its linear term \eqn{\gamma_j' t}{gamma_j' t},
-as in INLAvaan, from 4 \code{grad} calls, and one more for all the parameters
-together (2m + 5 \code{logpost} calls without \code{grad}), on top of the
-\code{n_grid - 1} \code{logpost} calls of the scan.
-\item \code{"cmp"}: the exact width term along the same straight scan, from the
+\item \code{"linear"} (the default): its linear term
+\eqn{\gamma_j' t}{gamma_j' t}, as in INLAvaan, from 4 \code{grad} calls, and
+one more for all the parameters together (2m + 5 \code{logpost} calls without
+\code{grad}), on top of the \code{n_grid - 1} \code{logpost} calls of the scan.
+\item \code{"exact"}: the exact width term along the same straight scan, from the
 Hessian of the other parameters at each scan point: about
 \code{n_grid - 1} times 2(m - 1) \code{grad} calls (\code{n_grid - 1} \code{hess} calls
 with \code{hess}, or \code{n_grid - 1} times (m - 1)m \code{logpost} calls without
 \code{grad}).
-\item \code{"tk"}: the Laplace marginal of Tierney and Kadane (1986). At each scan
-point the other parameters are moved to their conditional mode by
+\item \code{"laplace"}: the Laplace marginal of Tierney and Kadane (1986). At each
+scan point the other parameters are moved to their conditional mode by
 \code{\link[stats:nlminb]{stats::nlminb()}}, started from the straight scan, and the height and
-the width term are taken there: the calls of \code{"cmp"} plus those of
+the width term are taken there: the calls of \code{"exact"} plus those of
 \code{n_grid - 1} conditional optimisations, typically 5 to 20 \code{logpost}
 and \code{grad} calls each with \code{grad}, and many more without.
+\item \code{"plain"}: no width term, only the \code{n_grid - 1} \code{logpost} calls of the
+scan. It shows what the volume correction adds.
 }
 
-With one parameter the three are the same. Abbreviations work. Ignored
-for Gaussian marginals.}
+With one parameter there is no width term, and the four are the same scan
+(\code{"plain"} leaves out the volume correction's rounding error).
+Abbreviations work. Ignored for Gaussian marginals.}
 
-\item{tk_fallback}{Logical. Rescan with \code{width = "tk"} every parameter
-whose \code{ridge_bend} is flagged (above 0.25, see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}})?
-Default \code{FALSE}, so that a fit costs what \code{width} says and gives the same
-marginals whatever its diagnostics. The parameters rescanned are listed
-in \code{fit$fallback} and by \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. Ignored for Gaussian
-marginals and with \code{width = "tk"}.}
+\item{tk_fallback}{Logical. Rescan with \code{marginal_scan = "laplace"} every
+parameter whose \code{ridge_bend} is flagged (above 0.25, see
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}})? Default \code{FALSE}, so that a fit costs what
+\code{marginal_scan} says and gives the same marginals whatever its
+diagnostics. The parameters rescanned are listed in \code{fit$fallback} and by
+\code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}. Ignored for Gaussian marginals and with
+\code{marginal_scan = "laplace"}.}
 
 \item{transform}{Logical. Report a parameter named \code{log_x}, \code{logit_x} or
 \code{atanh_x} on its natural scale, as \code{x}? Default \code{TRUE}. \code{FALSE} reports
@@ -120,6 +125,10 @@ recorded in \code{fit$warnings}. Cannot be combined with \code{verbose = TRUE}.}
 
 \item{vb}{Deprecated: the name of \code{vb_correction} before inlavanilla
 26.11.24, where \code{"off"} is now \code{"none"}. It still works, with a warning.}
+
+\item{width}{Deprecated: the name of \code{marginal_scan} before inlavanilla
+26.11.24, with the values \code{"trace"} (now \code{"linear"}), \code{"cmp"} (now
+\code{"exact"}) and \code{"tk"} (now \code{"laplace"}). It still works, with a warning.}
 }
 \value{
 An object of class \code{inla_vanilla}, with methods for \code{\link[=print]{print()}},
@@ -139,11 +148,11 @@ for none).
 \code{vb_correction = "none"}).
 \item \code{sn}: the skew-normal parameters \code{xi}, \code{omega} and \code{alpha} per
 parameter (with \code{alpha = 0} for Gaussian marginals).
-\item \code{vb_correction}, \code{marginals}, \code{width}, \code{tk_fallback}, \code{cores}, \code{verbose},
-\code{silent}: the settings the fit used (\code{width} is \code{NA} for Gaussian
-marginals).
+\item \code{vb_correction}, \code{marginals}, \code{marginal_scan}, \code{tk_fallback}, \code{cores},
+\code{verbose}, \code{silent}: the settings the fit used (\code{marginal_scan} is \code{NA}
+for Gaussian marginals).
 \item \code{fallback}: the parameters that \code{tk_fallback} rescanned with
-\code{width = "tk"} (empty when there were none).
+\code{marginal_scan = "laplace"} (empty when there were none).
 \item \code{logml}: the log marginal likelihood, and \code{logml_laplace} its Laplace
 part.
 \item \code{version}: the version of inlavanilla that made the fit, the string in
@@ -164,14 +173,15 @@ the shift (\code{kld_global}); it is \code{NULL} when \code{vb_correction = "non
 \code{marginals} is a data frame with a row per parameter: \code{mode_shift_sigma},
 \code{kld}, \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
 \code{vb_step_sigma}, \code{grad_gap}, \code{mean_gap}, \code{gamma1}, \code{tails} and
-\code{ridge_bend}, with \code{NA} for the checks the fit did not run, and \code{width},
-the width method of each scan (see the section on the width term).
+\code{ridge_bend}, with \code{NA} for the checks the fit did not run, and
+\code{marginal_scan}, the scan of each parameter (see the section on the
+scans).
 \item \code{scan}: the scans the skew-normals were fitted to, for
 \code{plot(fit, type = "sn_fit")}: the grid \code{z} in posterior SDs from the
 mode, the log-posterior at each point (\code{logpost}, a column per
 parameter: along the CMP, or at the conditional modes for
-\code{width = "tk"}), the width term added to it (\code{width}, zero at the
-mode), and the log scale factor \code{logC} of each fit on that grid.
+\code{marginal_scan = "laplace"}), the width term added to it (\code{width}, zero
+at the mode), and the log scale factor \code{logC} of each fit on that grid.
 It is \code{NULL} for Gaussian marginals.
 \item \code{workers}: the number of parallel jobs the scans ran on, 1 for a serial
 fit (see the section on parallel computation).
@@ -306,10 +316,11 @@ O(1/n). Examples are a regression coefficient or a mean when the noise SD
 is uncertain. For a normal mean with unknown variance the SD is about 11\%
 too small at n = 12, 3\% at n = 50, and under 1\% at n = 200. The
 \code{ridge_bend} diagnostic of \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} flags this narrowing
-where it predicts about 10\% or more. By default (\code{width = "trace"}) this
-is the scan of INLAvaan; \code{width = "tk"}, or \code{tk_fallback = TRUE} for the
-flagged parameters only, removes the narrowing at a higher cost (see the
-section on the width term).
+where it predicts about 10\% or more. By default
+(\code{marginal_scan = "linear"}) this is the scan of INLAvaan;
+\code{marginal_scan = "laplace"}, or \code{tk_fallback = TRUE} for the flagged
+parameters only, removes the narrowing at a higher cost (see the section on
+the scans).
 
 A skew-normal also cannot follow a tail heavier than a Gaussian's. In a
 structural equation model with 39 parameters and n = 75, the data could not
@@ -329,7 +340,7 @@ that of marginals within 7\% in SD, and the \code{tails} check, which looks only
 4 posterior SDs either side of the mode (the Laplace SDs), missed both.
 }
 
-\section{The width term}{
+\section{The scans}{
 
 Each skew-normal scan follows the conditional mode path (CMP) of the
 Laplace Gaussian, \eqn{\vartheta(t) = \vartheta^* + t v_j} with
@@ -339,31 +350,32 @@ is then about the height of the log-posterior along the path plus the
 width term \eqn{\gamma_j(t) = -\frac12 \log|H_{-j}(t)|}{gamma_j(t) =
 -1/2 log|H_-j(t)|}, where \eqn{H_{-j}}{H_-j} is the negative Hessian of
 the log-posterior with row and column j deleted: the log-volume of the
-other parameters. \code{width} sets how it is taken, in three levels that each
-remove one error:
+other parameters. \code{marginal_scan} sets how the scan is taken, in four
+levels that each remove one error:
 \itemize{
-\item \code{"trace"}, the default and INLAvaan's, linearises it,
+\item \code{"plain"} leaves the width term out, and fits the heights alone.
+\item \code{"linear"}, the default and INLAvaan's, linearises the width term,
 \eqn{\gamma_j(t) \approx \gamma_j' t}{gamma_j(t) ~ gamma_j' t}, with
 the slope from whitened differences of the gradient (Jamil & Rue, 2026a,
-Corollary 3.3).
-\item \code{"cmp"} takes \eqn{\gamma_j(t)}{gamma_j(t)} exactly along the same
-path. Its difference from \code{"trace"} is the error of the linearisation.
-\item \code{"tk"} moves the other parameters to their conditional mode at each
+Corollary 3.3). Its difference from \code{"plain"} is the volume correction.
+\item \code{"exact"} takes \eqn{\gamma_j(t)}{gamma_j(t)} exactly along the same
+path. Its difference from \code{"linear"} is the error of the linearisation.
+\item \code{"laplace"} moves the other parameters to their conditional mode at each
 point of the scan and takes the height and the width term there: the
 Laplace approximation of the marginal (Tierney & Kadane, 1986), INLA's
-"Laplace strategy". Its difference from \code{"cmp"} is the error of the
+"Laplace strategy". Its difference from \code{"exact"} is the error of the
 straight path, which the \code{ridge_bend} diagnostic of
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} predicts.
 }
 
 The skew-normal is fitted to the corrected heights in the same way for
-all three, on the same grid. \code{tk_fallback = TRUE} keeps the cheap scan
+all four, on the same grid. \code{tk_fallback = TRUE} keeps the cheap scan
 for every parameter but those whose ridge bend is flagged, and rescans
-those with \code{"tk"}. In \code{fit$diagnostics$marginals}, \code{width} gives the
-method each parameter used and \code{gamma1} the slope of its width term at
-the mode (for \code{"cmp"} and \code{"tk"}, a central difference across the mode).
-The ridge bend of a parameter scanned with \code{"tk"} is still reported, but
-not flagged.
+those with \code{"laplace"}. In \code{fit$diagnostics$marginals}, \code{marginal_scan}
+gives the scan each parameter used and \code{gamma1} the slope of its width term
+at the mode (for \code{"exact"} and \code{"laplace"}, a central difference across the
+mode, and \code{NA} for \code{"plain"}). The ridge bend of a parameter scanned with
+\code{"laplace"} is still reported, but not flagged.
 }
 
 \section{Gradients and Hessians}{
@@ -403,12 +415,12 @@ it, \code{\link[stats:nlminb]{stats::nlminb()}} takes Newton steps to the mode, 
 the mode is the supplied one. The VB correction does not use it, nor do the
 default marginals, whose volume correction takes 4m + 1 \code{grad} calls for all
 the parameters together, where a Hessian each would cost far more.
-\code{width = "cmp"} and \code{width = "tk"} do use it. The fit is the one \code{grad}
-alone gives, to the error of its finite differences (about 1e-8, relative),
-except that the mode is found more precisely. A dense Hessian costs about m
-gradients, so this takes a little longer: a structural equation model with
-39 parameters and an automatic-differentiation Hessian (RTMB) took 0.18 s
-with it and 0.17 s without.
+\code{marginal_scan = "exact"} and \code{"laplace"} do use it. The fit is the one
+\code{grad} alone gives, to the error of its finite differences (about 1e-8,
+relative), except that the mode is found more precisely. A dense Hessian
+costs about m gradients, so this takes a little longer: a structural equation
+model with 39 parameters and an automatic-differentiation Hessian (RTMB) took
+0.18 s with it and 0.17 s without.
 
 The fit goes straight to the mode: at \code{init} it only checks that \code{logpost},
 \code{grad} and \code{hess} return finite values of the right shape. A supplied \code{grad}
@@ -419,14 +431,14 @@ symmetry, with a warning if either check fails (see \code{grad_gap} in
 central differences of \code{grad}, along two directions, with a warning if it
 does not match; \code{grad} is then not compared with \code{logpost}, since no
 differences of \code{logpost} are taken. Any R function works for \code{logpost},
-\code{grad} and \code{hess}, including compiled code (Rcpp, TMB) and RTMB, which differentiates R code.
-An RTMB function can return the log-posterior itself, and its \code{obj$fn},
-\code{obj$gr} and \code{obj$he} are then passed as they are. For a TMB template that
-returns the negative log-posterior, pass \code{function(x) -obj$fn(x)},
-\code{function(x) -as.vector(obj$gr(x))} and \code{function(x) -obj$he(x)}, with
-\code{init = obj$par}; its repeated names (one per element of a parameter
-vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so on. TMB gives no
-Hessian for a model with random effects.
+\code{grad} and \code{hess}, including compiled code (Rcpp, TMB) and RTMB, which
+differentiates R code. An RTMB function can return the log-posterior itself,
+and its \code{obj$fn}, \code{obj$gr} and \code{obj$he} are then passed as they are. For a
+TMB template that returns the negative log-posterior, pass
+\code{function(x) -obj$fn(x)}, \code{function(x) -as.vector(obj$gr(x))} and
+\code{function(x) -obj$he(x)}, with \code{init = obj$par}; its repeated names (one per
+element of a parameter vector) are numbered, as \code{beta[1]}, \code{beta[2]}, and so
+on. TMB gives no Hessian for a model with random effects.
 }
 
 \section{The VB correction}{
@@ -465,18 +477,18 @@ Set \code{cores} to run the per-parameter scans of the skew-normal marginals in
 parallel:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{cores <- parallelly::availableCores(omit = 1)
-fit <- inla_vanilla(logpost, init, width = "tk", cores = cores)
+fit <- inla_vanilla(logpost, init, marginal_scan = "laplace", cores = cores)
 }\if{html}{\out{</div>}}
 
 \code{parallelly::availableCores()} counts the cores the machine offers, and
 \code{omit = 1} leaves one free. A fit never asks for more workers than the
 machine offers. The results and the progress line are those of a serial fit.
 A long scan uses all the \code{cores}, a shorter one fewer, and a scan expected to
-take under a second stays serial. The mode, the Hessian and the VB correction stay
-serial, so the gain is largest with \code{width = "tk"} or \code{"cmp"}, where the
-scans are nearly the whole fit: about 7.5 times faster on 12 cores on test
-models. With the default width the scans are about half of a slow fit, and
-it was about 1.5 times at most.
+take under a second stays serial. The mode, the Hessian and the VB correction
+stay serial, so the gain is largest with \code{marginal_scan = "laplace"} or
+\code{"exact"}, where the scans are nearly the whole fit: about 7.5 times faster
+on 12 cores on test models. With the default scan the scans are about half of
+a slow fit, and it was about 1.5 times at most.
 
 \code{cores} needs the future package, which is optional. It uses forked workers
 where those are safe, in a terminal on macOS or Linux, and separate R

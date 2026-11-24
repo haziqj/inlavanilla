@@ -171,13 +171,13 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' `inlavanilla_diagnostics_warning`, at the same level. The levels of the
 #' mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
 #' are those of INLAvaan's fit-time warning; the VB settling and
-#' heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap flags. Every
-#' level is a package default, chosen so that a healthy fit stays silent, and
-#' not a calibrated cut-off: a tripped check is a prompt to look again, and
-#' silence is not a certificate of accuracy. In the simulations of Jamil and
-#' Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
-#' and the paper reports a calibration of the expected error against them in
-#' its Supplementary Material.
+#' heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap
+#' flags. Every level is a package default, chosen so that a healthy fit stays
+#' silent, and not a calibrated cut-off: a tripped check is a prompt to look
+#' again, and silence is not a certificate of accuracy. In the simulations of
+#' Jamil and Rue (2026, Section 4.4) the VB shift and NMAD track the loss of
+#' accuracy, and the paper reports a calibration of the expected error against
+#' them in its Supplementary Material.
 #'
 #' The table gives each value to two significant figures, as a tibble
 #' prints numbers, with the flagged values in red where the console shows
@@ -257,7 +257,7 @@ summary.inla_vanilla <- function(
       counts = object$counts,
       timing = object$timing,
       marginals = object$marginals,
-      width = object$width,
+      marginal_scan = scan_setting(object),
       fallback = object$fallback
     ),
     class = "summary.inla_vanilla"
@@ -486,8 +486,8 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
       },
       # Over the straight scans only: the ridge bend of a parameter scanned
       # at its conditional modes is not a check of that scan
-      if (!flags[["ridge_bend"]] && !all(scanned_tk(dg))) {
-        bends <- dg$param$ridge_bend[!scanned_tk(dg)]
+      if (!flags[["ridge_bend"]] && !all(scanned_laplace(dg))) {
+        bends <- dg$param$ridge_bend[!scanned_laplace(dg)]
         paste("ridge bend", fmt_cell(max(bends)))
       },
       if (has_vb && !flags[["mean_gap"]]) {
@@ -509,25 +509,32 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         flagged_line(check)
       }
     }
-    # How the width term was taken, when not by the default linear trace
-    cat_width(x, diag, env)
+    # How the scans were taken, when not by the default linear width term
+    cat_scan(x, diag, env)
   }
   invisible(x)
 }
 
-# The status lines for the width term: the method, when it is not the
-# default "trace", and the parameters the TK fallback rescanned, with their
-# ridge bends.
-cat_width <- function(x, diag, env) {
-  width <- x$width
-  if (!is.null(width) && !is.na(width) && width != "trace") {
+# The status lines for the scans: how they were taken, when not with the
+# default linear width term, and the parameters the TK fallback rescanned,
+# with their ridge bends.
+cat_scan <- function(x, diag, env) {
+  scan <- x$marginal_scan
+  if (!is.null(scan) && !is.na(scan) && scan != "linear") {
     how <- c(
-      cmp = "exact along the conditional mode path",
-      tk = "Laplace (Tierney-Kadane), at the conditional modes"
-    )[[width]]
+      plain = "no width term",
+      exact = "the exact width term along the conditional mode path",
+      laplace = "Laplace (Tierney-Kadane), at the conditional modes"
+    )[[scan]]
     cat_status(
       "info",
-      paste0("Width term: ", how, " ({.code width = \"", width, "\"}).")
+      paste0(
+        "Scans: ",
+        how,
+        " ({.code marginal_scan = \"",
+        scan,
+        "\"})."
+      )
     )
   }
   fb <- x$fallback
@@ -817,7 +824,7 @@ plot_scans <- function(x, idx, log = FALSE, ...) {
   draw <- function(j) {
     raw <- x$scan$logpost[, j]
     # The width term added to the heights: the linear volume correction, or
-    # the curve the fit kept for width = "cmp" or "tk"
+    # the curve the fit kept for the other scans
     w <- if (is.null(x$scan$width)) gamma1[j] * z else x$scan$width[, j]
     ok <- is.finite(raw) & is.finite(w)
     zs <- z[ok]
@@ -1173,6 +1180,19 @@ method_label <- function(gaussian, vb) {
     if (gaussian) "Laplace" else "Skew-normal",
     switch(vb, onestep = " + one-step VB", full = " + full VB", none = "")
   )
+}
+
+# The scan of a fit, "linear", "exact", "laplace" or "plain", or NA for
+# Gaussian marginals. A fit made before 26.11.24 has it as `width`, with its
+# old values.
+scan_setting <- function(x) {
+  scan <- x[["marginal_scan"]]
+  if (is.null(x[["vb_correction"]]) && !is.null(x[["width"]])) {
+    scan <- unname(c(trace = "linear", cmp = "exact", tk = "laplace")[
+      x[["width"]]
+    ])
+  }
+  scan
 }
 
 # The VB method of a fit, "onestep", "full" or "none". A fit made before

@@ -162,10 +162,12 @@ test_that("tk_fallback rescans a flagged parameter without a gradient", {
   expect_identical(fit$fallback, "mu")
 })
 
-test_that("the other widths keep the full route without a gradient", {
+test_that("the other scans keep the full route without a gradient", {
   mod <- reg_model(100, p = 2L)
-  trace_fit <- marginals_no_grad(mod)
-  cmp_fit <- marginals_no_grad(mod, width = "cmp")
-  expect_equal(cmp_fit$bend, trace_fit$bend, tolerance = 1e-3)
-  expect_equal(cmp_fit$bend[["b1"]], 4 / 100, tolerance = 1e-3)
+  linear_fit <- marginals_no_grad(mod)
+  for (scan in c("exact", "plain")) {
+    fit <- marginals_no_grad(mod, marginal_scan = scan)
+    expect_equal(fit$bend, linear_fit$bend, tolerance = 1e-3)
+    expect_equal(fit$bend[["b1"]], 4 / 100, tolerance = 1e-3)
+  }
 })

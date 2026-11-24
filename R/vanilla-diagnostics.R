@@ -144,25 +144,25 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
   )
   class(param) <- c("inla_vanilla_diagnostics_param", "data.frame")
 
-  # The width method of each scan, which decides whether the ridge bend is
-  # flagged (it is not for a parameter scanned by "tk"); NULL for a fit
-  # without it
+  # The scan of each parameter, which decides whether the ridge bend is
+  # flagged (it is not for a parameter scanned at its conditional modes);
+  # NULL for a fit without it. A fit made before 26.11.24 calls it `width`.
   list(
     global = global,
     param = param,
     message = optim$message,
-    width = d$width
+    marginal_scan = if (is.null(d$marginal_scan)) d$width else d$marginal_scan
   )
 }
 
-# TRUE for the parameters scanned at their conditional modes ("tk"), whose
-# ridge bend is not flagged: it measures what the straight scan misses, and
-# those scans do not take it.
-scanned_tk <- function(dg) {
-  if (is.null(dg$width)) {
+# TRUE for the parameters scanned at their conditional modes ("laplace", which
+# was "tk" before 26.11.24), whose ridge bend is not flagged: it measures what
+# the straight scan misses, and those scans do not take it.
+scanned_laplace <- function(dg) {
+  if (is.null(dg$marginal_scan)) {
     rep(FALSE, nrow(dg$param))
   } else {
-    dg$width %in% "tk"
+    dg$marginal_scan %in% c("laplace", "tk")
   }
 }
 
@@ -209,7 +209,7 @@ flagged_list <- function(env, key, dg, column, level, n) {
   }
   bad <- check_ran(x) & off_level(x, level)
   if (column == "ridge_bend") {
-    bad <- bad & !scanned_tk(dg)
+    bad <- bad & !scanned_laplace(dg)
   }
   bad <- which(bad)
   bad <- bad[worst_first(x[bad])]

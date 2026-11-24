@@ -222,7 +222,7 @@ param_flags <- function(dg, gaussian) {
     tails = sn & !p$tails %in% TRUE,
     ridge_bend = sn &
       off_level(p$ridge_bend, summary_levels$ridge_bend) &
-      !scanned_tk(dg),
+      !scanned_laplace(dg),
     mean_gap = sn & vb & off_level(abs(p$mean_gap), summary_levels$mean_gap)
   )
 }

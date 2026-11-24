@@ -1,5 +1,15 @@
 # inlavanilla (development version)
 
+* `width` is renamed `marginal_scan`, the name INLAvaan uses, with the values
+  `"linear"` (was `"trace"`, the default), `"exact"` (was `"cmp"`) and
+  `"laplace"` (was `"tk"`), and one new value, `"plain"`, a scan with no width
+  term, which shows what the volume correction adds. `width` still works, with
+  a warning once per session, and will be removed in a later version. The fit
+  stores the setting as `fit$marginal_scan`, and each parameter's scan is the
+  `marginal_scan` column of `fit$diagnostics$marginals` (was `width`).
+  `summary()` names a scan other than the default on a line that starts
+  "Scans:". `tk_fallback` is unchanged.
+
 * `vb` is renamed `vb_correction`, the name INLAvaan uses, and its `"off"` is
   now `"none"`: `vb_correction = c("onestep", "full", "none")`. `TRUE` and
   `FALSE` still mean `"onestep"` and `"none"`. `vb` still works, with a warning

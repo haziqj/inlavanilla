@@ -10,13 +10,14 @@
 # skew-normal is fitted to the corrected log-heights on a grid of t.
 #
 # The correction is the linear term of the width gamma_j(t) =
-# -1/2 log|H_{-j}(theta(t))|, the log-volume of the other parameters. Two
-# more accurate scans can replace it, each removing one error (the `width`
-# argument of inla_vanilla()): "cmp" takes the width exactly along the CMP,
-# removing the linearisation, and "tk" moves the other parameters to their
+# -1/2 log|H_{-j}(theta(t))|, the log-volume of the other parameters. The
+# `marginal_scan` argument chooses it ("linear", the default), or one of three
+# other scans, each one error away from the next: "plain" leaves the width term
+# out, "exact" takes the width exactly along the CMP, removing the
+# linearisation, and "laplace" moves the other parameters to their
 # conditional mode at each point and takes height and width there, the
 # Laplace marginal of Tierney and Kadane (1986), removing the error of the
-# straight path as well. The skew-normal fit is the same for all three.
+# straight path as well. The skew-normal fit is the same for all four.
 #
 # Jamil, H., & Rue, H. (2026). Approximate Bayesian inference for structural
 # equation models using integrated nested Laplace approximations
@@ -162,11 +163,11 @@ half_log_det <- function(H) {
   if (is.null(R)) NA_real_ else -sum(log(diag(R)))
 }
 
-# Level 2, "cmp": the exact width term along the CMP, gamma_j(t) - gamma_j(0)
+# "exact": the exact width term along the CMP, gamma_j(t) - gamma_j(0)
 # at each scan point, with the heights `raw` already known. The volume at
 # the mode is that of lap$H. Points where the height is not finite are left
 # NA, with no calls.
-width_cmp <- function(j, lp, gr, he, lap, Vscan, z, raw) {
+width_exact <- function(j, lp, gr, he, lap, Vscan, z, raw) {
   g0 <- half_log_det(lap$H[-j, -j, drop = FALSE])
   vapply(
     seq_along(z),
@@ -184,7 +185,7 @@ width_cmp <- function(j, lp, gr, he, lap, Vscan, z, raw) {
   )
 }
 
-# Level 1, "tk": the Laplace marginal of Tierney and Kadane (1986). At each
+# "laplace": the Laplace marginal of Tierney and Kadane (1986). At each
 # scan point, theta_j = mode_j + t sd_j, the other parameters are moved to
 # their conditional mode, found by stats::nlminb() from the CMP point, in the
 # whitened coordinates of their conditional Laplace covariance C_j (where the
@@ -192,7 +193,7 @@ width_cmp <- function(j, lp, gr, he, lap, Vscan, z, raw) {
 # log-posterior there and the width the volume there, relative to the mode.
 # Returns both, with NA where the conditional mode or its volume could not be
 # found. Needs m > 1.
-scan_tk <- function(j, lp, gr, he, lap, Vscan, z) {
+scan_laplace <- function(j, lp, gr, he, lap, Vscan, z) {
   others <- seq_along(lap$mode)[-j]
   height <- width <- rep(NA_real_, length(z))
   g0 <- half_log_det(lap$H[-j, -j, drop = FALSE])
@@ -276,24 +277,26 @@ width_slope <- function(z, w) {
 # bulk of others (a Fisher-z correlation lost an order of magnitude in SD
 # accuracy), so the problem is reported instead.
 #
-# The width term (the volume of the other parameters) comes from `width`:
-# "trace" (the default) adds the linear term gamma1_j t, "cmp" the exact
-# volume along the CMP (width_cmp()), and "tk" replaces the scan by the
-# Laplace marginal of Tierney and Kadane (scan_tk()), heights included. With
-# `tk_fallback`, a parameter whose ridge bend is flagged (above
-# summary_levels$ridge_bend) is scanned by "tk" whatever `width` says. The
-# linear volume correction takes gamma1_grad() with a gradient, whether or not
-# there is a Hessian, because a Hessian per parameter costs far more than the
-# gradients it would save, and gamma1_lp() otherwise. With one parameter there
-# are no other parameters, and the two agree.
+# The width term (the volume of the other parameters) comes from
+# `marginal_scan`: "linear" (the default) adds the linear term gamma1_j t,
+# "plain" adds nothing, "exact" the exact volume along the CMP
+# (width_exact()), and "laplace" replaces the scan by the Laplace marginal of
+# Tierney and Kadane (scan_laplace()), heights included. With `tk_fallback`, a
+# parameter whose ridge bend is flagged (above summary_levels$ridge_bend) is
+# scanned by "laplace" whatever `marginal_scan` says. The linear volume
+# correction takes gamma1_grad() with a gradient, whether or not there is a
+# Hessian, because a Hessian per parameter costs far more than the gradients
+# it would save, and gamma1_lp() otherwise. With one parameter there are no
+# other parameters: "exact" and "laplace" are then the linear scan, and the two
+# routes of the linear term agree.
 #
 # Returns `sn`, a matrix with a row per parameter (the skew-normal on the
 # theta scale, the diagnostics, and `logC`, the log scale factor that sets
 # the fitted density's height against the scan normalised to a peak of 1),
 # the scan grid `z`, `logpost`, the log-heights along each scan (a column per
-# parameter: along the CMP, or at the conditional modes for "tk"), `width`,
-# the width term added to them (zero at the mode), and `method`, the width
-# method each parameter used. plot(type = "sn_fit") draws them as INLAvaan's
+# parameter: along the CMP, or at the conditional modes for "laplace"),
+# `width`, the width term added to them (zero at the mode), and `method`, the
+# scan each parameter used. plot(type = "sn_fit") draws them as INLAvaan's
 # visual_debug() does.
 fit_marginals <- function(
   lp,
@@ -303,7 +306,7 @@ fit_marginals <- function(
   tick = function() NULL,
   start = function(step) NULL,
   he = NULL,
-  width = "trace",
+  marginal_scan = "linear",
   tk_fallback = FALSE,
   par = NULL
 ) {
@@ -315,8 +318,12 @@ fit_marginals <- function(
   Vscan <- sweep(Sigma, 2, sds, "/")
   z <- seq(-4, 4, length.out = ctrl$n_grid)
 
+  # Whether the scans take the linear width term: with "linear", and with one
+  # parameter unless the scan is "plain"
+  linear <- marginal_scan == "linear" ||
+    (m == 1L && marginal_scan != "plain")
   # The baselines at the mode for gamma1_lp(), only when some parameter uses it
-  at_mode <- if (is.null(gr) && (width == "trace" || m == 1L)) {
+  at_mode <- if (is.null(gr) && linear) {
     whitened_lp(lp, mode, lap$lp_max, A)
   } else {
     NULL
@@ -324,7 +331,7 @@ fit_marginals <- function(
   # The linear width term from the gradient, for all the parameters at once.
   # It has a progress line of its own, ahead of the per-parameter one, whose
   # estimate of the time left would otherwise charge it to the first parameter.
-  g1_grad <- if (!is.null(gr) && (width == "trace" || m == 1L)) {
+  g1_grad <- if (!is.null(gr) && linear) {
     start("shared")
     gamma1_grad(gr, mode, Vscan, A)
   } else {
@@ -337,7 +344,7 @@ fit_marginals <- function(
     z = z,
     # Scan points for the ridge bend (see scan_bend())
     i_bend = unique(c(which.min(abs(z + 2)), which.min(abs(z - 2)))),
-    width = width,
+    marginal_scan = marginal_scan,
     tk_fallback = tk_fallback,
     log_threshold = ctrl$log_threshold,
     at_mode = at_mode,
@@ -356,7 +363,7 @@ fit_marginals <- function(
       data,
       est_s = par$call_s *
         m *
-        scan_calls(m, ctrl$n_grid, width, !is.null(gr), !is.null(he)),
+        scan_calls(m, ctrl$n_grid, marginal_scan, !is.null(gr), !is.null(he)),
       n = m,
       note = par$note,
       label = "The skew-normal scans",
@@ -445,9 +452,9 @@ scan_probe <- function(ids, data) {
 
 # A rough number of calls per parameter of the user's functions in the scan,
 # from the counts in ?inla_vanilla, to judge whether the scans are long. The
-# conditional optimisations of "tk" took about 12 calls per scan point with a
-# gradient and 7m without one on the fits tried.
-scan_calls <- function(m, n_grid, width, has_grad, has_hess) {
+# conditional optimisations of "laplace" took about 12 calls per scan point
+# with a gradient and 7m without one on the fits tried.
+scan_calls <- function(m, n_grid, marginal_scan, has_grad, has_hess) {
   n <- n_grid - 1
   volume <- if (has_hess) {
     1
@@ -457,10 +464,11 @@ scan_calls <- function(m, n_grid, width, has_grad, has_hess) {
     m * (m - 1)
   }
   switch(
-    width,
-    trace = n + 2 + if (has_grad) 0 else 2 * m + 5,
-    cmp = n + 2 + n * volume,
-    tk = 2 + n * (volume + if (has_grad) 12 else 7 * m)
+    marginal_scan,
+    linear = n + 2 + if (has_grad) 0 else 2 * m + 5,
+    plain = n + 2,
+    exact = n + 2 + n * volume,
+    laplace = 2 + n * (volume + if (has_grad) 12 else 7 * m)
   )
 }
 
@@ -468,7 +476,7 @@ scan_calls <- function(m, n_grid, width, has_grad, has_hess) {
 # from wrap_fns(), and `ctx` holds what the parameters share, set up by
 # fit_marginals(). Nothing here depends on another parameter's scan. Returns
 # `row`, the parameter's row of `sn`, `raw` and `w`, its log-heights and width
-# term, and `method`, the width method it used.
+# term, and `method`, the scan it used.
 scan_parameter <- function(j, lp, gr, he, ctx) {
   lap <- ctx$lap
   mode <- lap$mode
@@ -477,8 +485,7 @@ scan_parameter <- function(j, lp, gr, he, ctx) {
   Vscan <- ctx$Vscan
   z <- ctx$z
   i_bend <- ctx$i_bend
-  width <- ctx$width
-  method <- width
+  method <- ctx$marginal_scan
   # Log-posterior along the CMP; the mode's height is known
   cmp_height <- function(t) {
     vapply(
@@ -491,9 +498,9 @@ scan_parameter <- function(j, lp, gr, he, ctx) {
     is.finite(h) && h - max(y[is.finite(y)]) > -3
   }
 
-  # The heights along the CMP, which "tk" does not need beyond the ridge
+  # The heights along the CMP, which "laplace" does not need beyond the ridge
   # bend, and that only without a gradient
-  raw <- if (width != "tk" || m == 1L) {
+  raw <- if (method != "laplace" || m == 1L) {
     cmp_height(z)
   } else {
     replace(
@@ -520,21 +527,24 @@ scan_parameter <- function(j, lp, gr, he, ctx) {
     g1_lp$bend_dir
   )
   if (ctx$tk_fallback && off_level(bend, summary_levels$ridge_bend)) {
-    method <- "tk"
+    method <- "laplace"
   }
 
   # The width term, and the heights it is added to. With one parameter
-  # there are no others, so the three methods are the same scan, taken by
-  # the linear route as before.
-  use <- if (m == 1L) "trace" else method
-  if (use == "trace") {
+  # there are no others, so "exact" and "laplace" are the linear scan, taken
+  # by the linear route.
+  use <- if (m == 1L && method != "plain") "linear" else method
+  if (use == "linear") {
     g1 <- if (is.null(gr)) g1_lp$gamma1 else ctx$g1_grad[[j]]
     w <- g1 * z
-  } else if (use == "cmp") {
-    w <- width_cmp(j, lp, gr, he, lap, Vscan, z, raw)
+  } else if (use == "plain") {
+    g1 <- NA_real_
+    w <- numeric(length(z))
+  } else if (use == "exact") {
+    w <- width_exact(j, lp, gr, he, lap, Vscan, z, raw)
     g1 <- width_slope(z, w)
   } else {
-    tk <- scan_tk(j, lp, gr, he, lap, Vscan, z)
+    tk <- scan_laplace(j, lp, gr, he, lap, Vscan, z)
     raw <- tk$height
     w <- tk$width
     g1 <- width_slope(z, w)

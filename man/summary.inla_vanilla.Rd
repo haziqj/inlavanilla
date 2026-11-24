@@ -148,13 +148,13 @@ one warning at the end of the fit, of class
 \code{inlavanilla_diagnostics_warning}, at the same level. The levels of the
 mode shift, NMAD, unscanned mass, VB shift and Hessian condition number
 are those of INLAvaan's fit-time warning; the VB settling and
-heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap flags. Every
-level is a package default, chosen so that a healthy fit stays silent, and
-not a calibrated cut-off: a tripped check is a prompt to look again, and
-silence is not a certificate of accuracy. In the simulations of Jamil and
-Rue (2026, Section 4.4) the VB shift and NMAD track the loss of accuracy,
-and the paper reports a calibration of the expected error against them in
-its Supplementary Material.
+heavy-tails checks are inlavanilla's own, as are the ridge bend and mean gap
+flags. Every level is a package default, chosen so that a healthy fit stays
+silent, and not a calibrated cut-off: a tripped check is a prompt to look
+again, and silence is not a certificate of accuracy. In the simulations of
+Jamil and Rue (2026, Section 4.4) the VB shift and NMAD track the loss of
+accuracy, and the paper reports a calibration of the expected error against
+them in its Supplementary Material.
 
 The table gives each value to two significant figures, as a tibble
 prints numbers, with the flagged values in red where the console shows
