@@ -113,7 +113,7 @@
         nlminb: <message>, after <n> iteration(s) (<n> function and <n> gradient evaluations)
         logpost at the mode #, whitened gradient # SD, Newton step <g> SD (warning > 0.1 SD)
         Hessian by central differences of grad: 4 calls, and <n> logpost calls to set the steps
-        Jacobian asymmetry # (warning > 0.001)
+        Asymmetry of the Hessian # (warning > 0.001)
         Gap between grad and logpost # (warning > 0.1)
         Posterior correlation matrix: largest correlation # (intercept, slope), smallest eigenvalue #
         Hessian condition number #, in SD units (warning > 1e+08)

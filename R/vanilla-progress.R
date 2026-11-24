@@ -315,11 +315,28 @@ report_mode <- function(p, lap, calls) {
   } else {
     max(lap$grad_gap, na.rm = TRUE)
   }
+  asymmetry_line <- paste0(
+    grey("Asymmetry of the Hessian ", fmt_num(lap$asymmetry)),
+    if (lap$asymmetry > 1e-3) flag() else "",
+    grey(" (warning > 0.001)")
+  )
+  gap_line <- paste0(
+    grey("Gap between grad and logpost ", fmt_num(gap)),
+    if (isTRUE(off_level(gap, warn_levels$grad_gap))) flag() else "",
+    grey(" (warning > ", warn_levels$grad_gap, ")")
+  )
   lines <- c(
     lines,
     if (hs$by == "hess") {
       c(
-        grey("Hessian from hess: ", plural(hs$calls, "call")),
+        grey(
+          "Hessian from hess: ",
+          plural(hs$calls, "call"),
+          ", and ",
+          hs$step_calls,
+          " logpost calls to check grad"
+        ),
+        asymmetry_line,
         paste0(
           grey(
             "Discrepancy from central differences of grad ",
@@ -327,7 +344,8 @@ report_mode <- function(p, lap, calls) {
           ),
           if (!isTRUE(lap$hess_error <= 1e-3)) flag() else "",
           grey(" (warning > 0.001), ", plural(hs$check_calls, "grad call"))
-        )
+        ),
+        gap_line
       )
     } else if (hs$by == "grad") {
       c(
@@ -338,16 +356,8 @@ report_mode <- function(p, lap, calls) {
           hs$step_calls,
           " logpost calls to set the steps"
         ),
-        paste0(
-          grey("Jacobian asymmetry ", fmt_num(lap$asymmetry)),
-          if (lap$asymmetry > 1e-3) flag() else "",
-          grey(" (warning > 0.001)")
-        ),
-        paste0(
-          grey("Gap between grad and logpost ", fmt_num(gap)),
-          if (isTRUE(off_level(gap, warn_levels$grad_gap))) flag() else "",
-          grey(" (warning > ", warn_levels$grad_gap, ")")
-        )
+        asymmetry_line,
+        gap_line
       )
     } else {
       grey(

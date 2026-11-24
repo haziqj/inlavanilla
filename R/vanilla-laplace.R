@@ -152,13 +152,14 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
       fds
     }
   }
-  # A Hessian is symmetric. A Jacobian of the user's gradient that is not
-  # (relative to the curvatures) means the gradient is wrong. A user Hessian
-  # is checked against the gradient instead, by hess_discrepancy().
+  # A Hessian is symmetric, so an asymmetry relative to the curvatures, the
+  # largest |H_ij - H_ji| / sqrt(H_ii H_jj), means an error: in the gradient
+  # whose Jacobian it is, or in a supplied Hessian, which is also checked
+  # against the gradient by hess_discrepancy(). It is measured on every route
+  # (second differences of logpost are symmetric by construction), and the
+  # Hessian is then symmetrised.
   d <- sqrt(abs(diag(H)))
-  asymmetry <- if (!is.null(he)) {
-    NA_real_
-  } else if (all(is.finite(H)) && all(d > 0)) {
+  asymmetry <- if (all(is.finite(H)) && all(d > 0)) {
     max(abs(H - t(H)) / outer(d, d))
   } else {
     0

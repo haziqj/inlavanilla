@@ -167,13 +167,23 @@ vanilla_core <- function(
     "finding the posterior mode",
     laplace_fit(lp, gr, init, ctrl, he)
   )
-  if (has_grad && !has_hess && lap$asymmetry > 1e-3) {
+  if (lap$asymmetry > 1e-3 && lap$hessian$by == "grad") {
     warn(c(
       "{.arg grad} does not look like the gradient of {.arg logpost}.",
       "x" = "Its Jacobian at the mode is not symmetric (relative asymmetry
              {signif(lap$asymmetry, 2)}), as the Hessian of a function must
              be.",
       "i" = "A wrong gradient gives a wrong mode and wrong marginals."
+    ))
+  }
+  if (lap$asymmetry > 1e-3 && lap$hessian$by == "hess") {
+    warn(c(
+      "{.arg hess} does not look like the Hessian of {.arg logpost}.",
+      "x" = "It is not symmetric at the mode (relative asymmetry
+             {signif(lap$asymmetry, 2)}), as the Hessian of a function must
+             be.",
+      "i" = "The fit used its symmetric part. A wrong Hessian gives a wrong
+             covariance and wrong marginals."
     ))
   }
   if (has_hess && !isTRUE(lap$hess_error <= 1e-3)) {

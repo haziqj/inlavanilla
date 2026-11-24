@@ -1,5 +1,11 @@
 # inlavanilla (development version)
 
+* A supplied `hess` is now checked for symmetry at the mode, as the Hessian
+  from `grad` already was, with a warning when it is not symmetric to 1e-3
+  relative to its diagonal. The fit then uses its symmetric part, as before.
+  `verbose = TRUE` reports the asymmetry for both, as "Asymmetry of the
+  Hessian".
+
 * A fit with `hess` now compares `grad` with `logpost` at the mode, as a fit
   without one does: `grad_gap` is no longer `NA` there, and its curvature part
   now checks the diagonal of `hess`. It reads the differences of `logpost` that

@@ -1119,6 +1119,30 @@ test_that("a wrong Hessian is caught at the mode, and a right one passes", {
       all = FALSE
     )
   }
+  # The one that is not symmetric is also caught by its asymmetry, and the
+  # fit uses its symmetric part
+  fit <- inla_vanilla(
+    lp_reg,
+    init_reg,
+    grad = gr_reg,
+    hess = hess_upper,
+    silent = TRUE
+  )
+  expect_match(fit$warnings, "It is not symmetric at the mode", all = FALSE)
+  H <- hess_upper(fit$mode)
+  expect_equal(
+    unname(fit$cov),
+    unname(solve(-0.5 * (H + t(H)))),
+    tolerance = 1e-10
+  )
+  fit <- inla_vanilla(
+    lp_reg,
+    init_reg,
+    grad = gr_reg,
+    hess = hess_diag,
+    silent = TRUE
+  )
+  expect_no_match(fit$warnings, "not symmetric")
   # A right one passes, as does a 1 x 1 Hessian given as a number
   fit <- inla_vanilla(
     lp_reg,
@@ -1804,20 +1828,24 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
   expect_identical(sum(per_stage), fit$counts[["logpost"]])
   expect_match(text, paste("Done:", fit$counts[["logpost"]], "logpost calls"))
 
-  # With a gradient: the asymmetry of its Jacobian and its gap from logpost
+  # With a gradient: the asymmetry of the Hessian and the gap from logpost
   text <- unwrap_msgs(capture_messages(
     inla_vanilla(lp_reg, init_reg, grad = gr_reg, verbose = TRUE)
   ))
   expect_match(text, "Gradient from grad")
   expect_match(text, "Hessian by central differences of grad: 4 calls")
-  expect_match(text, "Jacobian asymmetry [0-9.e-]+ \\(warning > 0.001\\)")
+  expect_match(
+    text,
+    "Asymmetry of the Hessian [0-9.e-]+ \\(warning > 0.001\\)"
+  )
   expect_match(
     text,
     "Gap between grad and logpost [0-9.e-]+ \\(warning > 0.1\\)"
   )
   expect_match(text, "Done: [0-9]+ logpost and [0-9]+ grad calls")
 
-  # With a Hessian: where it comes from, and its check against the gradient
+  # With a Hessian: where it comes from, and its checks: its symmetry, against
+  # the gradient, and the gradient and its diagonal against logpost
   text <- unwrap_msgs(capture_messages(
     fit <- inla_vanilla(
       lp_reg,
@@ -1828,12 +1856,22 @@ test_that("verbose = TRUE adds detail lines under the stage lines", {
     )
   ))
   expect_match(text, "Hessian from hess, checked at the mode")
-  expect_match(text, "Hessian from hess: 1 call")
+  expect_match(
+    text,
+    "Hessian from hess: 1 call, and [0-9]+ logpost calls to check grad"
+  )
   expect_match(
     text,
     "Discrepancy from central differences of grad [0-9.e-]+ \\(warning > 0.001\\), 4 grad calls"
   )
-  expect_no_match(text, "Jacobian asymmetry")
+  expect_match(
+    text,
+    "Asymmetry of the Hessian [0-9.e-]+ \\(warning > 0.001\\)"
+  )
+  expect_match(
+    text,
+    "Gap between grad and logpost [0-9.e-]+ \\(warning > 0.1\\)"
+  )
   expect_match(
     text,
     paste0(
