@@ -29,51 +29,52 @@
 # log CPO_u = l_u - s' Omega s / 2 and lpd_u = l_u + s' Omega s / 2.
 #
 # Returns a data frame with a row per unit: `l_star`, `quad` (s' Omega s),
-# `log_cpo_1`, `lpd_1`, `log_cpo_2`, `lpd_2`, `k_max` (at least 0), `k_min`,
-# `k_sum` (the total leverage, -tr(Omega H_u)) and `k_ssq` (tr[(Omega H_u)^2]),
-# with the second-order terms NA when `H` is NULL.
+# `log_cpo_1`, `lpd_1`, `log_cpo_2`, `lpd_2`, `det_term` (the determinant term
+# of the log CPO, log |I + Omega H_u| / 2, NA where the log CPO is), `k_max`
+# (at least 0), `k_min`, `k_sum` (the total leverage, -tr(Omega H_u)) and
+# `k_ssq` (tr[(Omega H_u)^2]), with the second-order terms NA when `H` is
+# NULL.
 taylor_terms <- function(l, s, H = NULL, Omega, root = cov_root(Omega)) {
   n <- length(l)
   l <- unname(as.numeric(l))
   S <- s %*% root
   quad <- rowSums(S^2)
-  na <- rep(NA_real_, n)
-  out <- data.frame(
+  log_cpo_2 <- lpd_2 <- det_term <- rep(NA_real_, n)
+  k_max <- k_min <- k_sum <- k_ssq <- rep(NA_real_, n)
+  if (!is.null(H)) {
+    for (u in seq_len(n)) {
+      Hw <- crossprod(root, H[,, u] %*% root)
+      eg <- eigen(Hw, symmetric = TRUE)
+      lam <- eg$values
+      proj2 <- drop(crossprod(eg$vectors, S[u, ]))^2
+      k_max[u] <- max(-lam, 0)
+      k_min[u] <- min(-lam)
+      k_sum[u] <- -sum(lam)
+      k_ssq[u] <- sum(lam^2)
+      if (all(1 + lam > 0)) {
+        det_term[u] <- 0.5 * sum(log1p(lam))
+        log_cpo_2[u] <- l[u] - 0.5 * sum(proj2 / (1 + lam)) + det_term[u]
+      }
+      if (all(1 - lam > 0)) {
+        lpd_2[u] <- l[u] +
+          0.5 * sum(proj2 / (1 - lam)) -
+          0.5 * sum(log1p(-lam))
+      }
+    }
+  }
+  data.frame(
     l_star = l,
     quad = quad,
     log_cpo_1 = l - 0.5 * quad,
     lpd_1 = l + 0.5 * quad,
-    log_cpo_2 = na,
-    lpd_2 = na,
-    k_max = na,
-    k_min = na,
-    k_sum = na,
-    k_ssq = na
+    log_cpo_2 = log_cpo_2,
+    lpd_2 = lpd_2,
+    det_term = det_term,
+    k_max = k_max,
+    k_min = k_min,
+    k_sum = k_sum,
+    k_ssq = k_ssq
   )
-  if (is.null(H)) {
-    return(out)
-  }
-  for (u in seq_len(n)) {
-    Hw <- crossprod(root, H[,, u] %*% root)
-    eg <- eigen(Hw, symmetric = TRUE)
-    lam <- eg$values
-    proj2 <- drop(crossprod(eg$vectors, S[u, ]))^2
-    out$k_max[u] <- max(-lam, 0)
-    out$k_min[u] <- min(-lam)
-    out$k_sum[u] <- -sum(lam)
-    out$k_ssq[u] <- sum(lam^2)
-    if (all(1 + lam > 0)) {
-      out$log_cpo_2[u] <- l[u] -
-        0.5 * sum(proj2 / (1 + lam)) +
-        0.5 * sum(log1p(lam))
-    }
-    if (all(1 - lam > 0)) {
-      out$lpd_2[u] <- l[u] +
-        0.5 * sum(proj2 / (1 - lam)) -
-        0.5 * sum(log1p(-lam))
-    }
-  }
-  out
 }
 
 # The standard error of a sum over the units, as the loo package takes it

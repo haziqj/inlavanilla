@@ -211,6 +211,7 @@ test_that("taylor_terms() gives the closed forms, for any root of Omega", {
       "lpd_1",
       "log_cpo_2",
       "lpd_2",
+      "det_term",
       "k_max",
       "k_min",
       "k_sum",
@@ -236,6 +237,10 @@ test_that("taylor_terms() gives the closed forms, for any root of Omega", {
         0.5 * sum(su * solve(solve(Omega) - Hu, su)) -
         0.5 * determinant(diag(m) - OH)$modulus[[1]]
     )
+    expect_equal(
+      terms$det_term[u],
+      0.5 * determinant(diag(m) + OH)$modulus[[1]]
+    )
     k <- Re(eigen(-OH, only.values = TRUE)$values)
     expect_equal(terms$k_max[u], max(k, 0))
     expect_equal(terms$k_min[u], min(k))
@@ -243,11 +248,13 @@ test_that("taylor_terms() gives the closed forms, for any root of Omega", {
     expect_equal(terms$k_ssq[u], sum(diag(OH %*% OH)))
   }
   expect_true(is.na(terms$log_cpo_2[4]))
+  expect_true(is.na(terms$det_term[4]))
   expect_equal(terms$k_max[4], 2)
   # Without Hessians, the first order alone
   first <- taylor_terms(l, s, NULL, Omega)
   expect_identical(first[, 1:4], terms[, 1:4])
   expect_true(all(is.na(first$log_cpo_2)))
+  expect_true(all(is.na(first$det_term)))
 })
 
 test_that("a unit with no second-order term sends every estimate to first order", {
