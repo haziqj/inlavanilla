@@ -86,21 +86,7 @@ sampling.inla_vanilla <- function(
   }
   check_flag(transform, "transform")
 
-  sn <- object$sn
-  m <- nrow(sn)
-  U <- chol(stats::cov2cor(object$cov))
-  z <- matrix(stats::rnorm(nsamp * m), nsamp, m) %*% U
-  theta <- matrix(0, nsamp, m, dimnames = list(NULL, rownames(sn)))
-  for (j in seq_len(m)) {
-    if (sn[j, "alpha"] == 0) {
-      # a Gaussian marginal: the quantile map is linear
-      theta[, j] <- sn[j, "xi"] + sn[j, "omega"] * z[, j]
-    } else {
-      # z -> Q_j(Phi(z)), the skew-normal quantile of each normal score
-      map <- sn_score_map(sn[j, "xi"], sn[j, "omega"], sn[j, "alpha"])
-      theta[, j] <- map(z[, j])
-    }
-  }
+  theta <- sn_draws(object$sn, object$cov, nsamp)
   if (is.null(fun)) {
     tr <- active_transforms(object, transform)
     return(if (is.null(tr)) theta else natural_draws(theta, tr))
