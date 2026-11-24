@@ -230,7 +230,14 @@ format_value <- function(x) {
 
 # Before the mode search: the parameters, where the derivatives come from, and
 # logpost at init.
-report_start <- function(p, init, lp_init, has_grad, has_hess) {
+report_start <- function(
+  p,
+  init,
+  lp_init,
+  has_grad,
+  has_hess,
+  has_hess_mode = FALSE
+) {
   m <- length(init)
   progress_info(
     p,
@@ -245,6 +252,9 @@ report_start <- function(p, init, lp_init, has_grad, has_hess) {
   )
   if (has_hess) {
     lines <- c(lines, grey("Hessian from hess, checked at the mode"))
+  }
+  if (has_hess_mode) {
+    lines <- c(lines, grey("Hessian at the mode from hess_mode, checked there"))
   }
   lines <- c(lines, grey("logpost at init ", format_value(lp_init[[1L]])))
   progress_detail(p, lines)
@@ -327,10 +337,14 @@ report_mode <- function(p, lap, calls) {
   )
   lines <- c(
     lines,
-    if (hs$by == "hess") {
+    if (hs$by %in% c("hess", "hess_mode")) {
       c(
         grey(
-          "Hessian from hess: ",
+          if (hs$by == "hess") {
+            "Hessian from hess: "
+          } else {
+            "Hessian from hess_mode: "
+          },
           plural(hs$calls, "call"),
           ", and ",
           hs$step_calls,

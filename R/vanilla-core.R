@@ -23,6 +23,7 @@ vanilla_core <- function(
   gr = NULL,
   init,
   hess = NULL,
+  hess_mode = NULL,
   vb_correction = c("onestep", "full", "none"),
   marginals = c("skewnorm", "gaussian"),
   marginal_scan = c("linear", "exact", "laplace", "plain"),
@@ -41,6 +42,12 @@ vanilla_core <- function(
     check_function(hess, "hess")
     if (is.null(gr)) {
       abort("{.arg hess} needs {.arg gr}.")
+    }
+  }
+  if (!is.null(hess_mode)) {
+    check_function(hess_mode, "hess_mode")
+    if (is.null(gr)) {
+      abort("{.arg hess_mode} needs {.arg gr}.")
     }
   }
   if (!is.numeric(init) || length(init) == 0L || !is_named(init)) {
@@ -70,6 +77,7 @@ vanilla_core <- function(
   logpost_x <- lp
   grad_x <- gr
   hess_x <- hess
+  hess_mode_x <- hess_mode
 
   m <- length(init)
   parnames <- names(init)
@@ -89,10 +97,18 @@ vanilla_core <- function(
       progress_tick(prog, set = n - n_base)
     }
   }
-  fns <- wrap_fns(logpost_x, grad_x, hess_x, init, on_call = tick)
+  fns <- wrap_fns(
+    logpost_x,
+    grad_x,
+    hess_x,
+    init,
+    on_call = tick,
+    hess_mode_x = hess_mode_x
+  )
   lp <- fns$lp
   gr <- fns$gr
   he <- fns$he
+  he_mode <- fns$he_mode
   st <- fns$state
   # The calls since the last stage, for verbose output
   calls_seen <- c(0L, 0L, 0L)
@@ -148,7 +164,7 @@ vanilla_core <- function(
     )
   }
   if (prog$detail) {
-    report_start(prog, init, lp_init, has_grad, has_hess)
+    report_start(prog, init, lp_init, has_grad, has_hess, !is.null(hess_mode))
   }
 
   # 1a. Joint Gaussian -------------------------------------------------------
@@ -165,7 +181,7 @@ vanilla_core <- function(
   )
   lap <- with_context(
     "finding the posterior mode",
-    laplace_fit(lp, gr, init, ctrl, he)
+    laplace_fit(lp, gr, init, ctrl, he, he_mode)
   )
   if (lap$asymmetry > 1e-3 && lap$hessian$by == "grad") {
     warn(c(
@@ -176,9 +192,16 @@ vanilla_core <- function(
       "i" = "A wrong gradient gives a wrong mode and wrong marginals."
     ))
   }
-  if (lap$asymmetry > 1e-3 && lap$hessian$by == "hess") {
+  # A supplied Hessian, through `hess` or `hess_mode`, is checked for
+  # symmetry and against differences of the gradient
+  supplied <- c(
+    hess = "{.arg hess} does not look like the Hessian of {.arg logpost}.",
+    hess_mode = "The Hessian at the mode does not look like the Hessian of the
+                 log-posterior."
+  )[lap$hessian$by]
+  if (lap$asymmetry > 1e-3 && !is.na(supplied)) {
     warn(c(
-      "{.arg hess} does not look like the Hessian of {.arg logpost}.",
+      supplied,
       "x" = "It is not symmetric at the mode (relative asymmetry
              {signif(lap$asymmetry, 2)}), as the Hessian of a function must
              be.",
@@ -186,10 +209,10 @@ vanilla_core <- function(
              covariance and wrong marginals."
     ))
   }
-  if (has_hess && !isTRUE(lap$hess_error <= 1e-3)) {
+  if (!is.na(supplied) && !isTRUE(lap$hess_error <= 1e-3)) {
     warn(c(
-      "{.arg hess} does not look like the Hessian of {.arg logpost}.",
-      "x" = "At the mode it differs from central differences of {.arg grad}
+      supplied,
+      "x" = "At the mode it differs from central differences of the gradient
              by {signif(lap$hess_error, 2)}, in units where the Hessian is
              the identity.",
       "i" = "A wrong Hessian gives a wrong covariance and wrong marginals."
@@ -482,13 +505,15 @@ vanilla_core <- function(
 # The wrappers the stages call in place of the user's functions, which have
 # `...` already bound. They name the parameters, and count the calls and record
 # the last parameter value in the environment `state`. `on_call` runs at each
-# call, for the progress bar. `gr` and `he` are NULL when the user gave none.
+# call, for the progress bar. `gr` and `he` are NULL when the user gave none,
+# and `he_mode`, from `hess_mode_x`, a Hessian for the mode alone, too.
 wrap_fns <- function(
   logpost_x,
   grad_x,
   hess_x,
   init,
-  on_call = function() NULL
+  on_call = function() NULL,
+  hess_mode_x = NULL
 ) {
   m <- length(init)
   parnames <- names(init)
@@ -518,10 +543,12 @@ wrap_fns <- function(
     }
   }
   # A plain m x m matrix, whatever the user's function returns (a sparse
-  # matrix from the Matrix package, or a number when m = 1)
-  he <- if (is.null(hess_x)) {
-    NULL
-  } else {
+  # matrix from the Matrix package, or a number when m = 1). A Hessian for the
+  # mode alone counts as a call of `hess`.
+  wrap_hess <- function(hess_x) {
+    if (is.null(hess_x)) {
+      return(NULL)
+    }
     function(x) {
       names(x) <- parnames
       state$last_x <- x
@@ -530,7 +557,13 @@ wrap_fns <- function(
       matrix(as.numeric(as.matrix(hess_x(x))), m, m)
     }
   }
-  list(lp = lp, gr = gr, he = he, state = state)
+  list(
+    lp = lp,
+    gr = gr,
+    he = wrap_hess(hess_x),
+    he_mode = wrap_hess(hess_mode_x),
+    state = state
+  )
 }
 
 # The log-posterior as the stages read it: -Inf where it failed. NA and NaN

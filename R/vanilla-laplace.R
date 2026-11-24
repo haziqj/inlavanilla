@@ -3,7 +3,10 @@
 #
 # `lp`, `gr` and `he` are the wrapped log-posterior, gradient and Hessian
 # (`gr` and `he` are NULL when the user gave none). With `he`, nlminb() takes
-# Newton steps with it, and the Hessian at the mode is the user's. Returns
+# Newton steps with it, and the Hessian at the mode is the user's. `he_mode`
+# is a Hessian for the mode alone, such as one that is cheap or valid only
+# there: it replaces the differences at the mode, once or, after a restart,
+# twice, and nlminb() never calls it. Returns
 # the mode, the log-posterior there, the upper Cholesky factor R of the
 # precision (R'R = H), the covariance Sigma, its square root A = cov_root()
 # (A A' = Sigma), the optimiser output, the gradient of the log-posterior at
@@ -12,7 +15,7 @@
 # output it also says how the Hessian was taken (`hessian`) and whether
 # nlminb() was restarted (`restart`, NULL when it was not). After a restart
 # the iterations and evaluations of `opt` are the totals over both runs.
-laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
+laplace_fit <- function(lp, gr, init, ctrl, he = NULL, he_mode = NULL) {
   ob <- function(x) {
     v <- lp(x)
     if (is.finite(v)) -v else Inf
@@ -26,7 +29,18 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
     hessian = heo,
     control = mode_nlminb(ctrl)
   )
-  cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), he)
+  # The Hessian at the mode, and how it was taken
+  at_mode <- if (is.null(he_mode)) he else he_mode
+  by <- if (!is.null(he_mode)) {
+    "hess_mode"
+  } else if (!is.null(he)) {
+    "hess"
+  } else if (is.null(gr)) {
+    "logpost"
+  } else {
+    "grad"
+  }
+  cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), at_mode, by)
 
   # nlminb() works on the raw parameters, and its convergence tests assume
   # they are on a unit scale. Far from that (posterior SDs of 1e4, or 1e-6)
@@ -57,7 +71,15 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
     evaluations <- opt$evaluations + opt2$evaluations
     if (restart$kept) {
       opt <- opt2
-      cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), he)
+      cur <- laplace_at(
+        lp,
+        gr,
+        opt$par,
+        -opt$objective,
+        names(init),
+        at_mode,
+        by
+      )
     }
     opt$iterations <- iterations
     opt$evaluations <- evaluations
@@ -120,8 +142,8 @@ grad_sign_hint <- function(H, scales) {
 }
 
 # Hessian, its Cholesky factor, the covariance and the whitened gradient at
-# `mode`. With `he` the Hessian is the user's, checked against the gradient
-# by hess_discrepancy(). Otherwise finite-difference steps are set per
+# `mode`. With `he` the Hessian is the user's (`by` says from which of its
+# functions), checked against the gradient by hess_discrepancy(). Otherwise finite-difference steps are set per
 # coordinate from fd_scales(), so they suit each parameter's own scale:
 # central differences of the gradient at 1e-4 of that scale, or, without a
 # gradient, second differences of the log-posterior at a hundredth of it. R
@@ -130,7 +152,19 @@ grad_sign_hint <- function(H, scales) {
 # a user gradient, and the diagonal of the Hessian, with `logpost` there: NA
 # without a gradient. `hessian` records the method and its calls, those of
 # fd_scales() counted apart.
-laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
+laplace_at <- function(
+  lp,
+  gr,
+  mode,
+  lp_max,
+  parnames,
+  he = NULL,
+  by = if (is.null(he)) {
+    if (is.null(gr)) "logpost" else "grad"
+  } else {
+    "hess"
+  }
+) {
   m <- length(mode)
   mode <- stats::setNames(mode, parnames)
   fds <- fd_scales(lp, mode, lp_max)
@@ -178,13 +212,7 @@ laplace_at <- function(lp, gr, mode, lp_max, parnames, he = NULL) {
     grad_gap = stats::setNames(rep(NA_real_, m), parnames),
     grad_mode = Inf,
     hessian = list(
-      by = if (!is.null(he)) {
-        "hess"
-      } else if (is.null(gr)) {
-        "logpost"
-      } else {
-        "grad"
-      },
+      by = by,
       calls = if (!is.null(he)) {
         1L
       } else if (is.null(gr)) {
