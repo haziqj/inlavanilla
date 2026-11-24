@@ -666,10 +666,24 @@ inla_vanilla <- function(
 
   # The user's functions with `...` bound once here: forwarding `...` to
   # internal helpers would let a data argument such as `g` partially match
-  # one of their formals.
-  logpost_x <- function(x) logpost(x, ...)
-  grad_x <- if (is.null(grad)) NULL else function(x) grad(x, ...)
-  hess_x <- if (is.null(hess)) NULL else function(x) hess(x, ...)
+  # one of their formals. The wrappers call them by names that no function of
+  # the user's can use, because parallel workers receive the globals of both
+  # under their names: a global helper called `logpost` would otherwise take
+  # the place of the user's function.
+  .vanilla_user_logpost <- logpost
+  .vanilla_user_grad <- grad
+  .vanilla_user_hess <- hess
+  logpost_x <- function(x) .vanilla_user_logpost(x, ...)
+  grad_x <- if (is.null(grad)) {
+    NULL
+  } else {
+    function(x) .vanilla_user_grad(x, ...)
+  }
+  hess_x <- if (is.null(hess)) {
+    NULL
+  } else {
+    function(x) .vanilla_user_hess(x, ...)
+  }
 
   # Every warning raised during the fit, by the package or by logpost, grad
   # and hess, is recorded once in fit$warnings. With silent = TRUE it is then

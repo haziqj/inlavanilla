@@ -653,3 +653,54 @@ test_that("separate sessions find global helpers and data passed in the dots", {
   expect_identical(fit$workers, 2L)
   expect_same_fit(fit, ref)
 })
+
+test_that("a global helper named logpost or grad is not taken for the user's", {
+  skip_if(
+    exists(
+      ".__DEVTOOLS__",
+      envir = asNamespace("inlavanilla"),
+      inherits = FALSE
+    ),
+    "needs an installed copy"
+  )
+  skip_if(
+    any(c("logpost", "grad") %in% ls(globalenv(), all.names = TRUE)),
+    "the global environment has logpost or grad"
+  )
+  force_workers()
+  # The user's functions call global helpers with the names of the arguments
+  # of inla_vanilla(), which workers must keep apart from the user's own
+  assign(
+    "logpost",
+    function(theta, x, y) {
+      sum(dnorm(y, drop(x %*% theta[1:3]), exp(theta[[4]]), log = TRUE)) +
+        sum(dnorm(theta[1:3], 0, 10, log = TRUE)) +
+        dnorm(theta[[4]], 0, 2, log = TRUE)
+    },
+    envir = globalenv()
+  )
+  assign(
+    "grad",
+    function(theta, x, y) {
+      res <- y - drop(x %*% theta[1:3])
+      s2 <- exp(2 * theta[[4]])
+      c(
+        drop(crossprod(x, res)) / s2 - theta[1:3] / 100,
+        -length(y) + sum(res^2) / s2 - theta[[4]] / 4
+      )
+    },
+    envir = globalenv()
+  )
+  on.exit(rm(logpost, grad, envir = globalenv()), add = TRUE)
+  lp <- function(theta, x, y) logpost(theta, x, y)
+  gr <- function(theta, x, y) grad(theta, x, y)
+  environment(lp) <- environment(gr) <- globalenv()
+  ref <- inla_vanilla(lp, init_reg, gr, x = reg_x, y = reg_y, silent = TRUE)
+  fit <- on_plan(
+    future::multisession,
+    2L,
+    inla_vanilla(lp, init_reg, gr, x = reg_x, y = reg_y, silent = TRUE)
+  )
+  expect_identical(fit$workers, 2L)
+  expect_same_fit(fit, ref)
+})

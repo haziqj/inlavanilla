@@ -233,8 +233,10 @@ loo.inla_vanilla <- function(
   check_function(loglik, "loglik")
   hessian <- check_choice(hessian, c("full", "diagonal"), "hessian")
   # Bind `...` here, so a data argument cannot partially match a formal of
-  # an internal helper
-  loglik_x <- function(theta) loglik(theta, ...)
+  # an internal helper. The name the wrapper calls cannot clash with a global
+  # of `loglik` on a parallel worker (see inla_vanilla()).
+  .vanilla_user_loglik <- loglik
+  loglik_x <- function(theta) .vanilla_user_loglik(theta, ...)
   tp <- taylor_pointwise(object, loglik_x, hessian = hessian)
   loo_from_taylor(tp, silent = isTRUE(object$silent))
 }
@@ -255,7 +257,8 @@ waic.inla_vanilla <- function(
   }
   check_function(loglik, "loglik")
   hessian <- check_choice(hessian, c("full", "diagonal"), "hessian")
-  loglik_x <- function(theta) loglik(theta, ...)
+  .vanilla_user_loglik <- loglik
+  loglik_x <- function(theta) .vanilla_user_loglik(theta, ...)
   tp <- taylor_pointwise(object, loglik_x, hessian = hessian)
   waic_from_taylor(tp, silent = isTRUE(object$silent))
 }
