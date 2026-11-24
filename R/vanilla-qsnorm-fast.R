@@ -34,22 +34,22 @@
 # functions for random number generation. Doctoral thesis, UCL (University
 # College London). https://discovery.ucl.ac.uk/1482128/
 
-# Fast approximation of the skew-normal quantile function, from the INLA
-# GMRFLib C source and originally by Thomas Luu (2016), as ported in INLAvaan.
-# The domain is split into tail regions, handled through the Lambert W
-# function, and a central region, handled by a fifth-order Taylor expansion of
-# the inverse error function about a well-chosen expansion point. It needs no
-# iterative inversion, but it is only a starting value (Luu's original uses a
-# tolerance of 0.01), so qsnorm() and sn_score_map() refine it by Newton's
-# method. For |alpha| up to 30 its error, in units of omega, is at most 7e-3
-# for p in [0.01, 0.99], and at most 0.085 down to a tail probability of 1e-15
-# (largest near |alpha| = 1.06 and a tail probability of 1.5e-3), except in a
-# narrow window of |alpha| near 2.18, in the lighter tail below a tail
-# probability of about 1e-6, where it reaches 0.36 at 1e-9, 0.9 at 1e-12 and
-# 2 at 1e-16. Below 1e-15 in the heavier tail, where 1 - p rounds, it is off
-# by up to 0.1, and it is +-Inf below about 1.7e-16. It is exact for
-# alpha = 0, and for alpha = +-1 except far in the heavier tail (2e-5 at a tail
-# probability of 1e-12).
+# Fast approximation of the skew-normal quantile function, from the INLA GMRFLib
+# C source and originally by Thomas Luu (2016), as ported in INLAvaan. The
+# domain is split into tail regions, handled through the Lambert W function, and
+# a central region, handled by a fifth-order Taylor expansion of the inverse
+# error function about a well-chosen expansion point. It needs no iterative
+# inversion, but it is only a starting value (Luu's original uses a tolerance of
+# 0.01), so qsnorm() and sn_score_map() refine it by Newton's method. For
+# |alpha| up to 30 its error, in units of omega, is at most 7e-3 for p between
+# 0.01 and 0.99, and at most 0.085 down to a tail probability of 1e-15 (largest
+# near |alpha| = 1.06 and a tail probability of 1.5e-3), except in a narrow
+# window of |alpha| near 2.18, in the lighter tail below a tail probability of
+# about 1e-6. There the error grows with the depth: 0.36 at 1e-9, 0.9 at 1e-12,
+# 2 at 1e-16 and 40 at 1e-50. Below 1e-15 in the heavier tail, where 1 - p
+# rounds, it is off by up to 0.1, and it is +-Inf below about 1.7e-16. It is
+# exact when alpha is 0, and when alpha is +-1 except far in the heavier tail
+# (2e-5 at a tail probability of 1e-12).
 #
 # Luu, T. (2016). Fast and accurate parallel computation of quantile functions
 # for random number generation (Doctoral thesis). University College London.
