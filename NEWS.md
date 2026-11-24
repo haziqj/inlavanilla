@@ -1,22 +1,32 @@
 # inlavanilla (development version)
 
-* A supplied `hess` is now checked for symmetry at the mode, as the Hessian
-  from `grad` already was, with a warning when it is not symmetric to 1e-3
-  relative to its diagonal. The fit then uses its symmetric part, as before.
-  `verbose = TRUE` reports the asymmetry for both, as "Asymmetry of the
-  Hessian".
+* This version renames arguments and diagnostics so that inlavanilla and
+  INLAvaan, which takes its engine from inlavanilla from its version 0.4.0, use
+  one name for one thing. The old names of arguments still work, with a
+  warning. A fit gives the same numbers as in 26.11.23, except where a bullet
+  below says otherwise: on the tests, vignettes and articles, every summary,
+  marginal, VB mean, covariance, log marginal likelihood and LOO estimate is
+  the same to the last digit, and only the fits with `hess` make more
+  `logpost` calls.
 
-* A fit with `hess` now compares `grad` with `logpost` at the mode, as a fit
-  without one does: `grad_gap` is no longer `NA` there, and its curvature part
-  now checks the diagonal of `hess`. It reads the differences of `logpost` that
-  set the steps of the Hessian in a fit without `hess`, about 4m more
-  `logpost` calls. The marginals do not change.
+* `vb` is renamed `vb_correction`, the name INLAvaan uses, and its `"off"` is
+  now `"none"`: `vb_correction = c("onestep", "full", "none")`. `TRUE` and
+  `FALSE` still mean `"onestep"` and `"none"`. `vb` still works, with a warning
+  once per session, and will be removed in a later version. The fit stores the
+  setting as `fit$vb_correction`.
 
-* A `logpost` value at or below -1e39 now counts as `-Inf`, as `NA` and `NaN`
-  already did. Some code returns -1e40 where it fails, as lavaan's and
-  INLAvaan's likelihoods do. As a finite number it passed for a very low
-  density: the VB fallback could take a failed node for one it can average
-  over, and a failed start did not stop the fit.
+* `width` is renamed `marginal_scan`, the name INLAvaan uses, with the values
+  `"linear"` (was `"trace"`, the default), `"exact"` (was `"cmp"`) and
+  `"laplace"` (was `"tk"`), and one new value, `"plain"`, a scan with no width
+  term, which shows what the volume correction adds. `width` still works, with
+  a warning once per session, and will be removed in a later version. The fit
+  stores the setting as `fit$marginal_scan`, and each parameter's scan is the
+  `marginal_scan` column of `fit$diagnostics$marginals` (was `width`).
+  `summary()` names a scan other than the default on a line that starts
+  "Scans:". `tk_fallback` is unchanged.
+
+* `marginals = "skewnorm"` is the new name of the skew-normal marginals, as
+  INLAvaan will name them. `"skewnormal"` still works, as an alias.
 
 * New `vanilla_control()` builds the `control` list of `inla_vanilla()`, with
   one entry per setting, so that an editor can complete the names. It has three
@@ -35,24 +45,53 @@
   The fit-time warning, `summary()` and `verbose = TRUE` use `hess_cond_cor`,
   at the same level as before (1e8), so no fit warns differently.
 
-* `width` is renamed `marginal_scan`, the name INLAvaan uses, with the values
-  `"linear"` (was `"trace"`, the default), `"exact"` (was `"cmp"`) and
-  `"laplace"` (was `"tk"`), and one new value, `"plain"`, a scan with no width
-  term, which shows what the volume correction adds. `width` still works, with
-  a warning once per session, and will be removed in a later version. The fit
-  stores the setting as `fit$marginal_scan`, and each parameter's scan is the
-  `marginal_scan` column of `fit$diagnostics$marginals` (was `width`).
-  `summary()` names a scan other than the default on a line that starts
-  "Scans:". `tk_fallback` is unchanged.
+* A `logpost` value at or below -1e39 now counts as `-Inf`, as `NA` and `NaN`
+  already did. Some code returns -1e40 where it fails, as lavaan's and
+  INLAvaan's likelihoods do. As a finite number it passed for a very low
+  density: the VB fallback could take a failed node for one it can average
+  over, and a failed start did not stop the fit.
 
-* `vb` is renamed `vb_correction`, the name INLAvaan uses, and its `"off"` is
-  now `"none"`: `vb_correction = c("onestep", "full", "none")`. `TRUE` and
-  `FALSE` still mean `"onestep"` and `"none"`. `vb` still works, with a warning
-  once per session, and will be removed in a later version. The fit stores the
-  setting as `fit$vb_correction`.
+* A fit with `hess` now compares `grad` with `logpost` at the mode, as a fit
+  without one does: `grad_gap` is no longer `NA` there, and its curvature part
+  now checks the diagonal of `hess`. It reads the differences of `logpost` that
+  set the steps of the Hessian in a fit without `hess`, about 4m more
+  `logpost` calls. The marginals do not change.
 
-* `marginals = "skewnorm"` is the new name of the skew-normal marginals, as
-  INLAvaan will name them. `"skewnormal"` still works, as an alias.
+* A supplied `hess` is now checked for symmetry at the mode, as the Hessian
+  from `grad` already was, with a warning when it is not symmetric to 1e-3
+  relative to its diagonal. The fit then uses its symmetric part, as before.
+  `verbose = TRUE` reports the asymmetry for both, as "Asymmetry of the
+  Hessian".
+
+* Internal changes, for INLAvaan and other packages that copy the engine:
+
+  * The engine, every stage of a fit, is in the files `R/vanilla-*.R`, which
+    hold only internal code: no help, exports, S3 generics or methods, and
+    not the name of the package. Another package copies them unchanged. A
+    check in CI keeps them so, and the tests check that they call nothing
+    from the other files. Parallel workers load the package that holds the
+    engine, whatever its name.
+  * `vanilla_core()` runs the stages and returns a plain list, which
+    `inla_vanilla()` turns into its fit. It raises the warnings of the stages
+    but installs no handler, so a caller records and muffles them as it
+    wants. It takes two hooks that `inla_vanilla()` does not expose:
+    `hess_mode`, a Hessian called only at the mode, and
+    `gaussian_marginals`, parameters whose marginal is taken as Gaussian, with
+    their VB shift held at zero and no scan.
+  * `sn_draws()` makes the copula draws of `sampling()`, with the
+    correlation matrix of the copula as an argument.
+  * The Taylor terms of `loo()` and `waic()` (`taylor_terms()`) and their
+    summaries are in `R/vanilla-taylor.R`, under INLAvaan's names for the
+    per-unit terms: `l_star`, and the leverages `k_max`, `k_min`, `k_sum`
+    (the total, `-tr(Omega H_u)`) and `k_ssq`.
+  * `diagnostic_problems()` gives the bullets of the fit-time warning, worded
+    by a list of advice that the caller passes, so that each package names its
+    own arguments.
+  * CI checks the package on R 4.1, the floor in `DESCRIPTION`, and checks
+    the formatting with air, whose settings are in `air.toml`.
+  * INLAvaan's Sobol VB rule, which it drops in 0.4.0, is kept as research
+    code in `lab/sobol-vb/`, with a check that it reproduces the shifts of
+    INLAvaan 0.3.5.
 
 # inlavanilla 26.11.23
 
