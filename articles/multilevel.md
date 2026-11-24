@@ -97,13 +97,13 @@ init <- c(
   atanh_rho = 0, log_sigma = log(25)
 )
 fit <- inla_vanilla(make_logpost(ys, xs), init)
-#> ✔ Found the posterior mode in 20 iterations [145ms]
-#> ✔ VB mean correction, max shift 0.31σ [53ms]
-#> ✔ Fitted 6 skew-normal marginals [156ms]
+#> ✔ Found the posterior mode in 20 iterations [139ms]
+#> ✔ VB mean correction, max shift 0.31σ [52ms]
+#> ✔ Fitted 6 skew-normal marginals [148ms]
 fit
 #> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -894.66 · Converged in 20 iterations (385ms)
+#> Log marginal likelihood: -894.66 · Converged in 20 iterations (369ms)
 #> 
 #>             Mean     SD     2.5%      50%    97.5%     Mode
 #> 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 
@@ -329,7 +329,7 @@ summary(fit_6)
 #> 
 #> Log marginal likelihood: -322.686 · Converged in 20 iterations (142ms)
 #> Laplace -322.994 + VB term 0.31
-#> 665 logpost calls: mode 55ms, VB 15ms, marginals 65ms
+#> 665 logpost calls: mode 55ms, VB 15ms, marginals 64ms
 #> 
 #> ── Posterior marginals ──
 #> 

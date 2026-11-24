@@ -96,10 +96,10 @@ timing(fit)
 # Every stage
 timing(fit, what = "all")
 #>        init     laplace          vb   marginals diagnostics       total 
-#>         0ms         2ms         0ms         6ms         2ms        10ms 
+#>         0ms         1ms         1ms         6ms         2ms        10ms 
 
 # Some stages
 timing(fit, what = c("vb", "marginals"))
 #>        vb marginals 
-#>       0ms       6ms 
+#>       1ms       6ms 
 ```

@@ -87,7 +87,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/multilevel.qmd" class="external-link"><code>vignettes/articles/multilevel.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.24/vignettes/articles/multilevel.qmd" class="external-link"><code>vignettes/articles/multilevel.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -170,13 +170,13 @@ y_j \sim N\left(X_j \beta,\; X_j G X_j^\top + \sigma^2 I\right),
 <span>  atanh_rho <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">25</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="fu">make_logpost</span><span class="op">(</span><span class="va">ys</span>, <span class="va">xs</span><span class="op">)</span>, <span class="va">init</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [145ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.31σ [53ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [156ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 20 iterations [139ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.31σ [52ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 6 skew-normal marginals [148ms]</span></span>
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -894.66 · Converged in 20 iterations (385ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -894.66 · Converged in 20 iterations (369ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;             Mean     SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt; 1 b0     251.35   6.84   237.93   251.35   264.75   251.36 </span></span>
@@ -367,7 +367,7 @@ m_j = V_j X_j^\top (y_j - X_j \beta) / \sigma^2.
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -322.686 · Converged in 20 iterations (142ms)</span></span>
 <span><span class="co">#&gt; Laplace -322.994 + VB term 0.31</span></span>
-<span><span class="co">#&gt; 665 logpost calls: mode 55ms, VB 15ms, marginals 65ms</span></span>
+<span><span class="co">#&gt; 665 logpost calls: mode 55ms, VB 15ms, marginals 64ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>

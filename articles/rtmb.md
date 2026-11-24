@@ -374,16 +374,16 @@ us <- rbind(
 )
 round(us, 1)
 #>              R    RTMB C++
-#> logpost  107.9   150.3 9.0
-#> gradient    NA   253.6 9.2
-#> hessian     NA 16890.0  NA
+#> logpost  111.5   150.0 8.8
+#> gradient    NA   251.1 9.1
+#> hessian     NA 16720.0  NA
 ```
 
-Replaying the tape takes 1.4 times as long as a call of `logpost_r()`,
+Replaying the tape takes 1.3 times as long as a call of `logpost_r()`,
 and RTMB’s gradient costs as much as 1.7 calls of its log-posterior. C++
-is 12 times faster than R, and the hand-written gradient costs as much
+is 13 times faster than R, and the hand-written gradient costs as much
 as 1 calls of its log-posterior. RTMB’s Hessian tape costs as much as 67
-gradients, about one for each of the 39 parameters, and `obj$he` 38. The
+gradients, about one for each of the 39 parameters, and `obj$he` 40. The
 five fits, with the Hessian tape in the third:
 
 ``` r
@@ -409,9 +409,9 @@ fits <- list(
 seconds <- vapply(fits, function(f) f$timing[["total"]], 0)
 cbind(t(sapply(fits, function(f) f$counts)), seconds = round(seconds, 2))
 #>                  logpost grad hess seconds
-#> R                  13582    0    0    1.73
+#> R                  13582    0    0    1.71
 #> RTMB                1291  483    0    0.48
-#> RTMB and Hessian    1187  330   12    0.60
+#> RTMB and Hessian    1187  330   12    0.61
 #> C++                13433    0    0    0.35
 #> C++ and gradient    1290  484    0    0.18
 ```
@@ -488,13 +488,13 @@ would cost far more. The time each stage took, in seconds:
 rtmb_fits <- fits[c("RTMB", "RTMB and Hessian")]
 t(sapply(rtmb_fits, function(f) round(f$timing, 2)))
 #>                  init laplace   vb marginals diagnostics total
-#> RTMB             0.00    0.09 0.06      0.33           0  0.48
-#> RTMB and Hessian 0.02    0.21 0.06      0.31           0  0.60
+#> RTMB             0.00    0.09 0.05      0.33           0  0.48
+#> RTMB and Hessian 0.02    0.22 0.05      0.32           0  0.61
 ```
 
 The marginals and the VB correction take the same time with and without
 it. The mode stage takes a little longer, because a Hessian costs about
-as much as m gradients, and the whole fit takes 1.25 times as long. The
+as much as m gradients, and the whole fit takes 1.28 times as long. The
 gap is smaller where the Hessian is sparse, as when each of many
 parameters enters only a few terms of the log-posterior: a Hessian tape
 then costs far fewer than m gradients.

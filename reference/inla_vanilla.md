@@ -750,12 +750,12 @@ logpost <- function(theta) {
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 #> ✔ Found the posterior mode in 10 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.25σ [2ms]
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ VB mean correction, max shift 0.25σ [1ms]
+#> ✔ Fitted 2 skew-normal marginals [8ms]
 fit
 #> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (15ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (16ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -794,7 +794,7 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.25σ [2ms]
+#> ✔ VB mean correction, max shift 0.25σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25
 #>   One step, accepted (guard > 2.5σ)
 #>   Gain ratio 0.94 (warning < 0.5)
@@ -808,7 +808,7 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 35ms
+#> ℹ Done: 147 logpost calls in 33ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)

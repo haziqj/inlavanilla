@@ -83,7 +83,7 @@ fit <- inla_vanilla(logpost, init)
 fit
 #> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.60 · Converged in 10 iterations (45ms)
+#> Log marginal likelihood: -11.60 · Converged in 10 iterations (43ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -112,9 +112,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla v26.11.24 summary ────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.595 · Converged in 10 iterations (45ms)
+#> Log marginal likelihood: -11.595 · Converged in 10 iterations (43ms)
 #> Laplace -11.709 + VB term 0.11
-#> 233 logpost calls: mode 11ms, VB 17ms, marginals 12ms
+#> 233 logpost calls: mode 10ms, VB 16ms, marginals 12ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -490,7 +490,7 @@ fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), silent = TRUE)
 fit_p
 #> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -23.17 · Converged in 4 iterations (13ms)
+#> Log marginal likelihood: -23.17 · Converged in 4 iterations (12ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063

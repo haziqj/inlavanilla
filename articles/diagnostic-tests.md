@@ -243,9 +243,9 @@ start <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_Sp_", tests))
 )
 fit_lc <- inla_vanilla(lp_lc, start, vb_correction = "full")
-#> ✔ Found the posterior mode in 30 iterations [47ms]
-#> ✔ VB mean correction, max shift 0.38σ [52ms]
-#> ✔ Fitted 11 skew-normal marginals [57ms]
+#> ✔ Found the posterior mode in 30 iterations [45ms]
+#> ✔ VB mean correction, max shift 0.38σ [50ms]
+#> ✔ Fitted 11 skew-normal marginals [55ms]
 fit_lcre <- inla_vanilla(
   lp_lcre,
   c(start, log_sigma1 = log(0.3), log_sigma0 = log(0.3)),
@@ -260,9 +260,9 @@ start_fm <- c(
   setNames(rep(qlogis(0.7), 5), paste0("logit_w0_", tests))
 )
 fit_fm <- inla_vanilla(lp_fm, start_fm, vb_correction = "full")
-#> ✔ Found the posterior mode in 25 iterations [73ms]
-#> ✔ VB mean correction, max shift 0.42σ [113ms]
-#> ✔ Fitted 13 skew-normal marginals [104ms]
+#> ✔ Found the posterior mode in 25 iterations [66ms]
+#> ✔ VB mean correction, max shift 0.42σ [109ms]
+#> ✔ Fitted 13 skew-normal marginals [99ms]
 ```
 
 The random effects fit runs with `silent = TRUE`. Its posterior is far
@@ -278,7 +278,7 @@ The seconds each fit took:
 fits <- list(LC = fit_lc, LCRE = fit_lcre, FM = fit_fm)
 round(sapply(fits, function(f) f$timing[["total"]]), 2)
 #>   LC LCRE   FM 
-#> 0.17 2.48 0.31
+#> 0.17 2.41 0.29
 ```
 
 ## Results
