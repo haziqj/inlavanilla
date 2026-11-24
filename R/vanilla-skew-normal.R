@@ -290,8 +290,20 @@ mills_ratio <- function(u) {
 # Points more than `threshold_log_drop` below the maximum are ignored, but the
 # five highest points are always kept. This is the R-INLA approach
 # (gmrflib/fit-sn.c), as ported in INLAvaan, with the temperature fixed rather
-# than estimated. `y` should be normalised so that max(y) = 0.
+# than estimated. `y` should be normalised so that max(y) = 0. `temp` must be a
+# single finite positive number, and `threshold_log_drop` a single finite
+# negative number.
 fit_skew_normal <- function(x, y, threshold_log_drop = -6, temp = 1) {
+  is_num <- function(v) is.numeric(v) && length(v) == 1L && is.finite(v)
+  if (!is_num(temp) || temp <= 0) {
+    abort("{.arg temp} must be a single finite positive number.")
+  }
+  if (!is_num(threshold_log_drop) || threshold_log_drop >= 0) {
+    abort(
+      "{.arg threshold_log_drop} must be a single finite negative number."
+    )
+  }
+
   # Trapezoidal integration weights, for moment-based starting values. Each
   # point gets half the width of the intervals beside it, so a symmetric scan
   # gives symmetric starting values.

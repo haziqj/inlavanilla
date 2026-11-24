@@ -986,6 +986,32 @@ test_that("fit_skew_normal keeps at least five points for a narrow scan", {
   }
 })
 
+test_that("fit_skew_normal stops when temp or threshold_log_drop is out of range", {
+  p <- scan_sn_pars(2)
+  y <- sn_logdens_ref(grid_scan, p[1], p[2], p[3])
+  y <- y - max(y)
+  bad_temp <- list(0, -1, NA_real_, NaN, Inf, c(1, 2), numeric(0), "1", TRUE)
+  for (temp in bad_temp) {
+    expect_error(
+      fit_skew_normal(grid_scan, y, temp = temp),
+      "temp",
+      class = "inlavanilla_error"
+    )
+  }
+  bad_threshold <- list(0, 1, -Inf, NA_real_, c(-6, -3), numeric(0), "-6")
+  for (threshold in bad_threshold) {
+    expect_error(
+      fit_skew_normal(grid_scan, y, threshold_log_drop = threshold),
+      "threshold_log_drop",
+      class = "inlavanilla_error"
+    )
+  }
+
+  # Valid values, whole numbers included, still recover the parameters
+  fit <- fit_skew_normal(grid_scan, y, threshold_log_drop = -3L, temp = 2L)
+  expect_lt(max(abs(c(fit$xi, fit$omega, fit$alpha) - p)), 5e-15)
+})
+
 test_that("fit_skew_normal returns the least-squares fit and its nmad for a non-skew-normal input", {
   # The scan of log(lambda) for lambda ~ Gamma(k, 1), centred at the mode
   # with unit curvature: y(t) = sqrt(k) t - k (exp(t / sqrt(k)) - 1). The
