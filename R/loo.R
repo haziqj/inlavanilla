@@ -150,8 +150,8 @@
 #'
 #' @references
 #' Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). *Deterministic
-#' leave-one-cluster-out cross-validation for multilevel Bayesian models*
-#' (arXiv:2609.00670 \[stat.ME\]). arXiv.
+#' leave-one-cluster-out cross-validation for multilevel Bayesian structural
+#' equation models* (arXiv:2609.00670 \[stat.ME\]). arXiv.
 #' <https://doi.org/10.48550/arXiv.2609.00670>
 #'
 #' Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
