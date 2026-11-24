@@ -692,21 +692,77 @@ inla_vanilla <- function(
           silent
         )
       }
-      vanilla_fit(
+      # Which parameters are reported on the natural scale, read from their
+      # names. Only the methods use it: the fit works on the scale of logpost.
+      transform <- detect_transforms(names(init), transform)
+      t_core <- elapsed()
+      core <- vanilla_core(
         logpost_x,
         grad_x,
-        hess_x,
         init,
+        hess = hess_x,
         vb_correction = vb_correction,
         marginals = marginals,
         marginal_scan = marginal_scan,
         tk_fallback = tk_fallback,
-        transform = transform,
         cores = cores,
-        ctrl = ctrl,
-        prog = prog,
-        call = call,
-        t_start = t_start
+        control = ctrl,
+        verbose = verbose,
+        silent = silent
+      )
+      t_after <- elapsed()
+      # One warning for every check that looks off, before the fit is built
+      # so that fit$warnings records it
+      warn_diagnostics(
+        diagnostics_internal(
+          core$diagnostics$optim,
+          core$diagnostics$vb,
+          core$diagnostics$marginals,
+          pars = core$mean_vb
+        ),
+        gaussian = core$marginals == "gaussian",
+        has_grad = core$has_grad
+      )
+      # The checks of the arguments count with the start of the fit, and the
+      # warning with its diagnostics
+      t_end <- elapsed()
+      timing <- core$timing
+      timing[["init"]] <- timing[["init"]] + (t_core - t_start)
+      timing[["diagnostics"]] <- timing[["diagnostics"]] + (t_end - t_after)
+      timing[["total"]] <- t_end - t_start
+      if (prog$detail) {
+        report_end(
+          prog,
+          core$counts[["logpost"]],
+          core$counts[["grad"]],
+          core$counts[["hess"]],
+          timing[["total"]]
+        )
+      }
+      new_inla_vanilla(
+        sn = core$sn[, c("xi", "omega", "alpha"), drop = FALSE],
+        mode = core$mode,
+        cov = core$cov,
+        mean_vb = core$mean_vb,
+        logml = core$logml,
+        logml_laplace = core$logml_laplace,
+        diagnostics = core$diagnostics,
+        scan = core$scan,
+        counts = core$counts,
+        cores = core$cores,
+        workers = core$workers,
+        timing = timing,
+        vb_correction = core$vb_correction,
+        marginals = core$marginals,
+        marginal_scan = core$marginal_scan,
+        tk_fallback = core$tk_fallback,
+        fallback = core$fallback,
+        transform = transform,
+        has_grad = core$has_grad,
+        verbose = prog$detail,
+        silent = !prog$show,
+        warnings = prog$warnings,
+        call = call
       )
     },
     warning = function(w) {
@@ -754,499 +810,6 @@ warn_renamed <- function(old, new, details = NULL, silent = FALSE) {
     class = "inlavanilla_deprecated"
   )
   invisible(TRUE)
-}
-
-# The wrappers the stages call in place of the user's functions, which have
-# `...` already bound. They name the parameters, and count the calls and record
-# the last parameter value in the environment `state`. `on_call` runs at each
-# call, for the progress bar. `gr` and `he` are NULL when the user gave none.
-wrap_fns <- function(
-  logpost_x,
-  grad_x,
-  hess_x,
-  init,
-  on_call = function() NULL
-) {
-  m <- length(init)
-  parnames <- names(init)
-  state <- new.env(parent = emptyenv())
-  state$n_lp <- 0L
-  state$n_gr <- 0L
-  state$n_he <- 0L
-  state$last_x <- init
-  lp <- function(x) {
-    names(x) <- parnames
-    state$last_x <- x
-    state$n_lp <- state$n_lp + 1L
-    on_call()
-    # [[1L]] also accepts a 1 x 1 matrix, such as a quadratic form
-    v <- logpost_x(x)[[1L]]
-    if (is.na(v)) -Inf else v
-  }
-  gr <- if (is.null(grad_x)) {
-    NULL
-  } else {
-    function(x) {
-      names(x) <- parnames
-      state$last_x <- x
-      state$n_gr <- state$n_gr + 1L
-      on_call()
-      as.numeric(grad_x(x))
-    }
-  }
-  # A plain m x m matrix, whatever the user's function returns (a sparse
-  # matrix from the Matrix package, or a number when m = 1)
-  he <- if (is.null(hess_x)) {
-    NULL
-  } else {
-    function(x) {
-      names(x) <- parnames
-      state$last_x <- x
-      state$n_he <- state$n_he + 1L
-      on_call()
-      matrix(as.numeric(as.matrix(hess_x(x))), m, m)
-    }
-  }
-  list(lp = lp, gr = gr, he = he, state = state)
-}
-
-# The stages of the fit, given the user's functions with `...` already bound,
-# the checked arguments, and the progress reporter `prog`, which also holds
-# the record of warnings.
-vanilla_fit <- function(
-  logpost_x,
-  grad_x,
-  hess_x,
-  init,
-  vb_correction,
-  marginals,
-  marginal_scan,
-  tk_fallback,
-  transform,
-  cores,
-  ctrl,
-  prog,
-  call,
-  t_start
-) {
-  m <- length(init)
-  parnames <- names(init)
-  # Which parameters are reported on the natural scale, read from their names.
-  # Only the methods use it: every stage below works on the scale of logpost.
-  transform <- detect_transforms(parnames, transform)
-  has_grad <- !is.null(grad_x)
-  has_hess <- !is.null(hess_x)
-
-  # The engine calls the wrappers of wrap_fns(), and the progress bar ticks
-  # from them. The spinner counts the stage's logpost, grad and hess calls
-  # together, from `stage_calls()`, so stages driven by grad tick too.
-  n_base <- 0L
-  stage_calls <- function() {
-    n_base <<- st$n_lp + st$n_gr + st$n_he
-  }
-  tick <- function() {
-    n <- st$n_lp + st$n_gr + st$n_he
-    if (prog$calls && n %% prog$every == 0L) {
-      progress_tick(prog, set = n - n_base)
-    }
-  }
-  fns <- wrap_fns(logpost_x, grad_x, hess_x, init, on_call = tick)
-  lp <- fns$lp
-  gr <- fns$gr
-  he <- fns$he
-  st <- fns$state
-  # The calls since the last stage, for verbose output
-  calls_seen <- c(0L, 0L, 0L)
-  calls_since <- function() {
-    now <- c(st$n_lp, st$n_gr, st$n_he)
-    out <- now - calls_seen
-    calls_seen <<- now
-    out
-  }
-  # An error inside logpost, grad or hess stops the fit; say where it happened
-  # and at which parameter value.
-  with_context <- function(stage, expr) {
-    tryCatch(expr, error = function(e) {
-      if (inherits(e, "inlavanilla_error")) {
-        stop(e)
-      }
-      at <- paste(parnames, "=", signif(st$last_x, 4), collapse = ", ")
-      abort(
-        c(
-          "The fit stopped with an error while {stage}.",
-          "i" = "The last parameter value tried was {at}.",
-          "i" = "If {.arg logpost} cannot be evaluated somewhere, return
-                 {.code -Inf} there instead of failing."
-        ),
-        parent = e,
-        call = quote(inla_vanilla())
-      )
-    })
-  }
-
-  # One call of each function, to fail at once with a clear message. Anything
-  # more waits for the mode, where it costs nothing (grad_gap())
-  t_first <- elapsed()
-  lp_init <- with_context(
-    "evaluating logpost at init",
-    check_logpost_at_init(logpost_x, init)
-  )
-  # A slow function gets its progress line on time, and an update is nothing
-  # beside the call
-  if (elapsed() - t_first >= progress_slow_s) {
-    prog$every <- 1L
-  }
-  if (has_grad) {
-    with_context(
-      "evaluating grad at init",
-      check_grad_at_init(grad_x, init)
-    )
-  }
-  if (has_hess) {
-    with_context(
-      "evaluating hess at init",
-      check_hess_at_init(hess_x, init)
-    )
-  }
-  if (prog$detail) {
-    report_start(prog, init, lp_init, has_grad, has_hess)
-  }
-
-  # 1a. Joint Gaussian -------------------------------------------------------
-  # Each segment of fit$timing runs from its start to the start of the next,
-  # so the segments add up to the total. The progress lines time the work of
-  # each stage alone, from `t0`.
-  t0 <- elapsed()
-  t_starts <- c(init = t_start, laplace = t0)
-  stage_calls()
-  progress_start(
-    prog,
-    paste0("Finding the posterior mode, ", pb_calls),
-    waited = t0 - t_start
-  )
-  lap <- with_context(
-    "finding the posterior mode",
-    laplace_fit(lp, gr, init, ctrl, he)
-  )
-  if (has_grad && !has_hess && lap$asymmetry > 1e-3) {
-    warn(c(
-      "{.arg grad} does not look like the gradient of {.arg logpost}.",
-      "x" = "Its Jacobian at the mode is not symmetric (relative asymmetry
-             {signif(lap$asymmetry, 2)}), as the Hessian of a function must
-             be.",
-      "i" = "A wrong gradient gives a wrong mode and wrong marginals."
-    ))
-  }
-  if (has_hess && !isTRUE(lap$hess_error <= 1e-3)) {
-    warn(c(
-      "{.arg hess} does not look like the Hessian of {.arg logpost}.",
-      "x" = "At the mode it differs from central differences of {.arg grad}
-             by {signif(lap$hess_error, 2)}, in units where the Hessian is
-             the identity.",
-      "i" = "A wrong Hessian gives a wrong covariance and wrong marginals."
-    ))
-  }
-  # INLAvaan's Newton step at the mode, in posterior SDs, decides whether the
-  # mode is marked here and reported in the fit-time warning, not nlminb()'s
-  # return code: without a gradient nlminb() can report "false convergence"
-  # at an accurate mode, and it can report success short of one.
-  mode_shift_max <- max(lap$mode_shift)
-  mode_ok <- is.finite(mode_shift_max) &&
-    mode_shift_max <= warn_levels$mode_shift
-  t_laplace <- elapsed() - t0
-  progress_done(
-    prog,
-    if (mode_ok) {
-      paste0(
-        "Found the posterior mode in ",
-        hl(lap$opt$iterations),
-        " iteration",
-        if (lap$opt$iterations == 1L) "" else "s"
-      )
-    } else {
-      paste0(
-        "Stopped near the posterior mode (Newton step ",
-        hl(with_sd(mode_shift_max)),
-        ")"
-      )
-    },
-    t_laplace,
-    ok = mode_ok
-  )
-  if (prog$detail) {
-    report_mode(prog, lap, calls_since())
-  }
-
-  sds <- sqrt(diag(lap$Sigma))
-
-  # 1b. VB mean correction ---------------------------------------------------
-  # With the user's gradient when there is one; without, from log-posterior
-  # values alone (see vb_correct())
-  t0 <- elapsed()
-  t_starts[["vb"]] <- t0
-  vbc <- NULL
-  use_vb <- vb_correction != "none"
-  if (use_vb) {
-    stage_calls()
-    progress_start(
-      prog,
-      paste0("Applying the VB mean correction, ", pb_calls)
-    )
-    vbc <- with_context(
-      "applying the VB mean correction",
-      vb_correct(
-        lp,
-        gr,
-        lap$mode,
-        lap$Sigma,
-        lap$R,
-        lap$A,
-        ctrl,
-        method = vb_correction,
-        budget = st$n_lp + st$n_gr + st$n_he
-      )
-    )
-    # The fallback is a route of the solver, reported but not marked, as in
-    # INLAvaan. A correction that did not settle is marked.
-    vb_max <- max(abs(vbc$shift) / sds)
-    gain_ok <- !isTRUE(below_level(vbc$gain_ratio, warn_levels$vb_gain))
-    settled <- !any(
-      check_ran(vbc$step_sigma) &
-        off_level(vbc$step_sigma, warn_levels$vb_step)
-    )
-    progress_done(
-      prog,
-      paste0(
-        "VB mean correction, max shift ",
-        hl(paste0(format(signif(vb_max, 2)), sd_unit())),
-        if (vbc$fallback) " (fallback optimiser)" else "",
-        if (!settled) ", not settled" else "",
-        if (!gain_ok) ", gain below its promise" else ""
-      ),
-      elapsed() - t0,
-      ok = settled &&
-        gain_ok &&
-        is.finite(vb_max) &&
-        vb_max <= warn_levels$vb_shift
-    )
-    if (prog$detail) {
-      report_vb(prog, vbc, sds, lap$logml, calls_since())
-    }
-  } else {
-    progress_info(prog, "No VB correction (vb_correction = \"none\")")
-  }
-  shift <- if (use_vb) vbc$shift else stats::setNames(numeric(m), parnames)
-  mean_vb <- lap$mode + shift
-
-  # 2. Skew-normal marginals -------------------------------------------------
-  # With Gaussian marginals there are no scans: each marginal is the
-  # Gaussian's own, N(mean_vb_j, Sigma_jj), a skew-normal with shape 0.
-  t0 <- elapsed()
-  t_starts[["marginals"]] <- t0
-  if (marginals == "skewnorm") {
-    start_marginals <- function(step) {
-      progress_close(prog)
-      if (step == "shared") {
-        stage_calls()
-        progress_start(
-          prog,
-          paste0("Computing the volume corrections, ", pb_calls)
-        )
-      } else {
-        progress_start(
-          prog,
-          paste0(
-            "Fitting ",
-            pb_item,
-            " skew-normal marginal",
-            if (m == 1L) "" else "s"
-          ),
-          total = m
-        )
-      }
-    }
-    mar <- with_context(
-      "fitting the skew-normal marginals",
-      fit_marginals(
-        lp,
-        gr,
-        lap,
-        ctrl,
-        tick = function() progress_tick(prog),
-        start = start_marginals,
-        he = he,
-        marginal_scan = marginal_scan,
-        tk_fallback = tk_fallback,
-        par = list(
-          logpost = logpost_x,
-          grad = grad_x,
-          hess = hess_x,
-          init = init,
-          cores = cores,
-          # Seconds per call so far, to judge how long the scans will take.
-          # The clock has a resolution of a millisecond
-          call_s = max(elapsed() - t_start, 1e-3) /
-            (st$n_lp + st$n_gr + st$n_he),
-          add_calls = function(n) {
-            st$n_lp <- st$n_lp + n[[1L]]
-            st$n_gr <- st$n_gr + n[[2L]]
-            st$n_he <- st$n_he + n[[3L]]
-          },
-          # A message cannot share the console with a running progress line
-          note = function(text) {
-            progress_close(prog)
-            progress_note(prog, text)
-          }
-        )
-      )
-    )
-    workers <- mar$workers
-    sn <- cbind(
-      mar$sn,
-      unscanned_mass = unscanned_mass(mar$sn, lap$mode, sds)
-    )
-    # The scans, kept for plot(type = "sn_fit"): no further calls
-    scan <- list(
-      z = mar$z,
-      logpost = mar$logpost,
-      width = mar$width,
-      logC = sn[, "logC"]
-    )
-    method <- mar$method
-    progress_done(
-      prog,
-      paste0(
-        "Fitted ",
-        hl(m),
-        " skew-normal marginal",
-        if (m == 1L) "" else "s"
-      ),
-      elapsed() - t0
-    )
-    if (prog$detail) {
-      report_marginals(prog, sn, calls_since(), method, marginal_scan)
-      if (workers > 1L) {
-        progress_info(prog, paste0("The scans ran on ", workers, " workers"))
-      }
-    }
-  } else {
-    workers <- 1L
-    na <- rep(NA_real_, m)
-    sn <- cbind(
-      xi = mean_vb,
-      omega = sds,
-      alpha = 0,
-      gamma1 = na,
-      nmad = na,
-      tails = na,
-      ridge_bend = na,
-      logC = na,
-      unscanned_mass = na
-    )
-    rownames(sn) <- parnames
-    scan <- NULL
-    method <- stats::setNames(rep(NA_character_, m), parnames)
-    progress_info(
-      prog,
-      "Gaussian marginals (marginals = \"gaussian\"): no scans"
-    )
-  }
-  t_starts[["diagnostics"]] <- elapsed()
-
-  logml <- lap$logml + if (use_vb) vbc$kld_global else 0
-  mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
-
-  # The diagnostics, in the names and order of INLAvaan's diagnostics() where
-  # it has the quantity. Checks that did not run are NA: the VB columns with
-  # vb_correction = "none", the scan columns with Gaussian marginals.
-  skew <- marginals == "skewnorm"
-  na <- rep(NA_real_, m)
-  diagnostics <- list(
-    optim = list(
-      convergence = lap$opt$convergence,
-      message = lap$opt$message,
-      iterations = lap$opt$iterations,
-      # INLAvaan's sign: the gradient of nlminb()'s objective, -logpost
-      grad = -lap$grad,
-      grad_mode = lap$grad_mode,
-      hess_cond = lap$hess_cond,
-      hess_cond_cor = lap$hess_cond_cor
-    ),
-    vb = if (use_vb) {
-      list(
-        iterations = vbc$iterations,
-        fallback = vbc$fallback,
-        one_pass = vbc$one_pass,
-        gain_ratio = vbc$gain_ratio,
-        kld_global = vbc$kld_global
-      )
-    },
-    marginals = data.frame(
-      mode_shift_sigma = lap$mode_shift,
-      kld = if (use_vb) 0.5 * (shift / sds)^2 else na,
-      vb_shift = if (use_vb) shift else na,
-      vb_shift_sigma = if (use_vb) shift / sds else na,
-      nmad = sn[, "nmad"],
-      alpha = if (skew) sn[, "alpha"] else na,
-      unscanned_mass = sn[, "unscanned_mass"],
-      vb_step_sigma = if (use_vb) vbc$step_sigma else na,
-      grad_gap = lap$grad_gap,
-      mean_gap = if (use_vb && skew) (mom$mean - mean_vb) / sds else na,
-      gamma1 = sn[, "gamma1"],
-      tails = as.logical(sn[, "tails"]),
-      ridge_bend = sn[, "ridge_bend"],
-      marginal_scan = unname(method),
-      row.names = parnames,
-      stringsAsFactors = FALSE
-    )
-  )
-
-  # One warning for every check that looks off, before the fit is built so
-  # that fit$warnings records it
-  warn_diagnostics(
-    diagnostics_internal(
-      diagnostics$optim,
-      diagnostics$vb,
-      diagnostics$marginals,
-      pars = mean_vb
-    ),
-    gaussian = !skew,
-    has_grad = has_grad
-  )
-
-  t_end <- elapsed()
-  t_total <- t_end - t_start
-  if (prog$detail) {
-    report_end(prog, st$n_lp, st$n_gr, st$n_he, t_total)
-  }
-  new_inla_vanilla(
-    sn = sn[, c("xi", "omega", "alpha"), drop = FALSE],
-    mode = lap$mode,
-    cov = lap$Sigma,
-    mean_vb = mean_vb,
-    logml = logml,
-    logml_laplace = lap$logml,
-    diagnostics = diagnostics,
-    scan = scan,
-    counts = c(logpost = st$n_lp, grad = st$n_gr, hess = st$n_he),
-    cores = cores,
-    workers = workers,
-    timing = c(
-      stats::setNames(diff(c(t_starts, t_end)), names(t_starts)),
-      total = t_total
-    ),
-    vb_correction = vb_correction,
-    marginals = marginals,
-    marginal_scan = if (skew) marginal_scan else NA_character_,
-    tk_fallback = tk_fallback,
-    fallback = if (skew) parnames[method != marginal_scan] else character(),
-    transform = transform,
-    has_grad = has_grad,
-    verbose = prog$detail,
-    silent = !prog$show,
-    warnings = prog$warnings,
-    call = call
-  )
 }
 
 new_inla_vanilla <- function(
@@ -1344,99 +907,6 @@ format_probs <- function(probs) {
   sprintf("%s%%", formatC(100 * probs, format = "fg", width = 1, digits = 7))
 }
 
-check_function <- function(f, arg) {
-  if (!is.function(f)) {
-    abort(
-      "{.arg {arg}} must be a function, not {.obj_type_friendly {f}}."
-    )
-  }
-}
-
-# The `cores` argument, as an integer, or NULL to follow the user's plan.
-check_cores <- function(cores) {
-  if (is.null(cores)) {
-    return(NULL)
-  }
-  ok <- is.numeric(cores) &&
-    length(cores) == 1L &&
-    is.finite(cores) &&
-    cores >= 1 &&
-    cores == round(cores)
-  if (!ok) {
-    abort(
-      "{.arg cores} must be a single positive whole number, or {.code NULL}
-       to follow {.code future::plan()}."
-    )
-  }
-  as.integer(cores)
-}
-
-check_flag <- function(x, arg) {
-  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
-  }
-}
-
-# The VB method: one of "onestep", "full" and "none", where TRUE is the
-# default and FALSE is "none", as in INLAvaan's `vb_correction`
-check_vb <- function(vb_correction) {
-  if (isTRUE(vb_correction)) {
-    return("onestep")
-  }
-  if (isFALSE(vb_correction)) {
-    return("none")
-  }
-  check_choice(vb_correction, c("onestep", "full", "none"), "vb_correction")
-}
-
-# The scan from `width`, its name before 26.11.24, with its old values
-old_width <- function(width) {
-  width <- check_choice(width, c("trace", "cmp", "tk"), "width")
-  c(trace = "linear", cmp = "exact", tk = "laplace")[[width]]
-}
-
-# The VB method from `vb`, its name before 26.11.24, with "off" for "none"
-old_vb <- function(vb) {
-  if (isTRUE(vb)) {
-    return("onestep")
-  }
-  if (isFALSE(vb)) {
-    return("none")
-  }
-  vb <- check_choice(vb, c("onestep", "full", "off"), "vb")
-  if (vb == "off") "none" else vb
-}
-
-# The marginals: "skewnorm" or "gaussian", with "skewnormal" (in any case) a
-# permanent alias of "skewnorm"
-check_marginals <- function(marginals) {
-  if (
-    is.character(marginals) &&
-      length(marginals) == 1L &&
-      identical(tolower(marginals), "skewnormal")
-  ) {
-    return("skewnorm")
-  }
-  check_choice(marginals, c("skewnorm", "gaussian"), "marginals")
-}
-
-# One of `choices` (lower case), or an unambiguous abbreviation of one in any
-# case, as with match.arg(): "skew" and "Gauss" both work. The whole vector
-# (the default) means the first. The package's own error otherwise.
-check_choice <- function(x, choices, arg) {
-  if (identical(x, choices)) {
-    return(choices[[1L]])
-  }
-  i <- NA_integer_
-  if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) {
-    i <- pmatch(tolower(x), choices)
-  }
-  if (is.na(i)) {
-    abort("{.arg {arg}} must be one of {.or {.val {choices}}}.")
-  }
-  choices[[i]]
-}
-
 check_init <- function(init, show = TRUE) {
   if (!is.numeric(init) || length(init) == 0L) {
     abort(
@@ -1471,68 +941,20 @@ check_init <- function(init, show = TRUE) {
   stats::setNames(as.numeric(init), nms)
 }
 
-check_logpost_at_init <- function(logpost, init) {
-  v <- logpost(init)
-  if (!is.numeric(v) || length(v) != 1L) {
-    abort(
-      c(
-        "{.arg logpost} must return a single number.",
-        "x" = "{.code logpost(init)} returned {.obj_type_friendly {v}} of length {length(v)}."
-      )
-    )
-  }
-  if (!is.finite(v)) {
-    abort(
-      c(
-        "{.arg logpost} is not finite at {.arg init}.",
-        "x" = "{.code logpost(init)} returned {.val {v}}.",
-        "i" = "Start inside the support of the posterior, and check that every
-             parameter is on an unconstrained scale."
-      )
-    )
-  }
-  invisible(v)
+# The scan from `width`, its name before 26.11.24, with its old values
+old_width <- function(width) {
+  width <- check_choice(width, c("trace", "cmp", "tk"), "width")
+  c(trace = "linear", cmp = "exact", tk = "laplace")[[width]]
 }
 
-# A Hessian of the right shape, finite at init. Whether it is the Hessian of
-# `logpost` is checked at the mode, against the gradient (hess_discrepancy()).
-check_hess_at_init <- function(hess, init) {
-  m <- length(init)
-  h <- hess(init)
-  H <- tryCatch(as.matrix(h), error = function(e) NULL)
-  if (!is.numeric(H) || !identical(dim(H), c(m, m))) {
-    shape <- if (is.null(dim(h))) {
-      paste("of length", length(h))
-    } else {
-      paste("with dimensions", paste(dim(h), collapse = " x "))
-    }
-    abort(c(
-      "{.arg hess} must return a numeric {m} x {m} matrix.",
-      "x" = "{.code hess(init)} returned {.obj_type_friendly {h}} {shape}."
-    ))
+# The VB method from `vb`, its name before 26.11.24, with "off" for "none"
+old_vb <- function(vb) {
+  if (isTRUE(vb)) {
+    return("onestep")
   }
-  if (!all(is.finite(H))) {
-    abort("{.arg hess} is not finite at {.arg init}.")
+  if (isFALSE(vb)) {
+    return("none")
   }
-  invisible(H)
-}
-
-# A gradient of the right length, finite at init. Whether it is the gradient of
-# `logpost` is checked at the mode (grad_gap()).
-check_grad_at_init <- function(grad, init) {
-  g <- grad(init)
-  if (!is.numeric(g) || length(g) != length(init)) {
-    abort(
-      c(
-        "{.arg grad} must return a numeric vector of length {length(init)}.",
-        "x" = "{.code grad(init)} returned {.obj_type_friendly {g}} of length {length(g)}."
-      )
-    )
-  }
-  if (!all(is.finite(g))) {
-    abort(
-      "{.arg grad} is not finite at {.arg init}.",
-    )
-  }
-  invisible(g)
+  vb <- check_choice(vb, c("onestep", "full", "off"), "vb")
+  if (vb == "off") "none" else vb
 }

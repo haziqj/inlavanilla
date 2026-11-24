@@ -241,3 +241,80 @@ fmt_num <- function(x) {
   }
   format(signif(x, 2), scientific = x != 0 && (abs(x) < 1e-3 || abs(x) >= 1e5))
 }
+
+# Checks of arguments, with the package's own errors
+
+check_function <- function(f, arg) {
+  if (!is.function(f)) {
+    abort(
+      "{.arg {arg}} must be a function, not {.obj_type_friendly {f}}."
+    )
+  }
+}
+
+# The `cores` argument, as an integer, or NULL to follow the user's plan.
+check_cores <- function(cores) {
+  if (is.null(cores)) {
+    return(NULL)
+  }
+  ok <- is.numeric(cores) &&
+    length(cores) == 1L &&
+    is.finite(cores) &&
+    cores >= 1 &&
+    cores == round(cores)
+  if (!ok) {
+    abort(
+      "{.arg cores} must be a single positive whole number, or {.code NULL}
+       to follow {.code future::plan()}."
+    )
+  }
+  as.integer(cores)
+}
+
+check_flag <- function(x, arg) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    abort("{.arg {arg}} must be {.code TRUE} or {.code FALSE}.")
+  }
+}
+
+# The VB method: one of "onestep", "full" and "none", where TRUE is the
+# default and FALSE is "none", as in INLAvaan's `vb_correction`
+check_vb <- function(vb_correction) {
+  if (isTRUE(vb_correction)) {
+    return("onestep")
+  }
+  if (isFALSE(vb_correction)) {
+    return("none")
+  }
+  check_choice(vb_correction, c("onestep", "full", "none"), "vb_correction")
+}
+
+# The marginals: "skewnorm" or "gaussian", with "skewnormal" (in any case) a
+# permanent alias of "skewnorm"
+check_marginals <- function(marginals) {
+  if (
+    is.character(marginals) &&
+      length(marginals) == 1L &&
+      identical(tolower(marginals), "skewnormal")
+  ) {
+    return("skewnorm")
+  }
+  check_choice(marginals, c("skewnorm", "gaussian"), "marginals")
+}
+
+# One of `choices` (lower case), or an unambiguous abbreviation of one in any
+# case, as with match.arg(): "skew" and "Gauss" both work. The whole vector
+# (the default) means the first. The package's own error otherwise.
+check_choice <- function(x, choices, arg) {
+  if (identical(x, choices)) {
+    return(choices[[1L]])
+  }
+  i <- NA_integer_
+  if (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x)) {
+    i <- pmatch(tolower(x), choices)
+  }
+  if (is.na(i)) {
+    abort("{.arg {arg}} must be one of {.or {.val {choices}}}.")
+  }
+  choices[[i]]
+}

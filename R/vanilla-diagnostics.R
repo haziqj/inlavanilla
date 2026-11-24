@@ -68,7 +68,7 @@ check_ran <- function(x) {
 # runs before the fit object exists, for the warning. The definitions are
 # INLAvaan's (R/method-diagnostics.R), with `grad` the gradient of minus the
 # log-posterior; the unscanned mass, the VB shifts and the KL divergences are
-# computed in vanilla_fit(). The per-parameter frame has no row names, as
+# computed in vanilla_core(). The per-parameter frame has no row names, as
 # INLAvaan's. `message` is nlminb()'s, for the warning.
 diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
   d <- marginals
