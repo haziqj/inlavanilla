@@ -328,22 +328,6 @@
 #' session. `cores = 1` runs serially whatever the plan. [loo()] and [waic()]
 #' use the setting of the fit.
 #'
-#' @section Control:
-#' `control` is a list with any of:
-#' * `n_grid`: number of grid points per skew-normal scan, spread over
-#'   \eqn{\pm 4} posterior SDs (default `21`).
-#' * `log_threshold`: grid points whose log-posterior falls more than this
-#'   below the maximum are ignored in the skew-normal fit (default `-6`).
-#' * `vb_maxit`, `vb_tol`: iteration limit (default `25`) and convergence
-#'   tolerance in posterior SDs (default `1e-3`) for the VB correction's
-#'   fixed-point iteration, with `vb_correction = "full"` and when a one-step
-#'   correction has to iterate. A step over 1.5 posterior SDs is cut to 1.5.
-#'   With `vb_correction = "full"`, if two steps in a row are cut, or it has not
-#'   converged after `vb_maxit` steps, [stats::nlminb()] takes over.
-#' * `nlminb`: a list of [stats::nlminb()] controls for the mode search.
-#'   `iter.max` and `eval.max` both default to `5000`, and `trace = 1` prints
-#'   its iterations.
-#'
 #' @section Output:
 #' By default each stage prints one line as it finishes, with the time it
 #' took, and shows a progress bar while it runs for longer than half a
@@ -386,7 +370,7 @@
 #'   with the total time.
 #'
 #' For the iteration trace of [stats::nlminb()] itself, pass
-#' `control = list(nlminb = list(trace = 1))`.
+#' `control = vanilla_control(nlminb = list(trace = 1))`.
 #'
 #' `silent = TRUE` prints nothing, for simulations and other repeated fits:
 #' no progress bars and no stage lines, and every warning and message raised
@@ -480,7 +464,9 @@
 #' @param silent Logical. Print nothing at all, and muffle the warnings and
 #'   messages raised during the fit? Default `FALSE`. The warnings are still
 #'   recorded in `fit$warnings`. Cannot be combined with `verbose = TRUE`.
-#' @param control A list of tuning parameters; see the section on control.
+#' @param control The tuning of the fit: the limits of the mode search, the
+#'   VB correction and the scans, from [vanilla_control()], or a list with some
+#'   of its entries.
 #' @param vb Deprecated: the name of `vb_correction` before inlavanilla
 #'   26.11.24, where `"off"` is now `"none"`. It still works, with a warning.
 #' @param width Deprecated: the name of `marginal_scan` before inlavanilla
@@ -673,7 +659,7 @@ inla_vanilla <- function(
     ))
   }
   init <- check_init(init, show = !silent)
-  ctrl <- vanilla_control(control)
+  ctrl <- check_control(control)
 
   # The user's functions with `...` bound once here: forwarding `...` to
   # internal helpers would let a data argument such as `g` partially match
@@ -1356,59 +1342,6 @@ sn_summary <- function(sn, probs = c(0.025, 0.5, 0.975), transform = NULL) {
 format_probs <- function(probs) {
   # as stats::quantile() names them, with no padding
   sprintf("%s%%", formatC(100 * probs, format = "fg", width = 1, digits = 7))
-}
-
-vanilla_control <- function(control) {
-  defaults <- list(
-    n_grid = 21L,
-    log_threshold = -6,
-    vb_maxit = 25L,
-    vb_tol = 1e-3,
-    nlminb = list()
-  )
-  if (!is.list(control)) {
-    abort("{.arg control} must be a list.")
-  }
-  nms <- names(control)
-  if (length(control) > 0L && (is.null(nms) || any(is.na(nms) | nms == ""))) {
-    abort(c(
-      "Every {.arg control} entry must be named.",
-      "i" = "Valid entries are {.val {names(defaults)}}."
-    ))
-  }
-  unknown <- setdiff(nms, names(defaults))
-  if (length(unknown) > 0L) {
-    abort(c(
-      "Unknown {.arg control} entr{?y/ies}: {.val {unknown}}.",
-      "i" = "Valid entries are {.val {names(defaults)}}."
-    ))
-  }
-  ctrl <- utils::modifyList(defaults, control)
-  is_num <- function(x) is.numeric(x) && length(x) == 1L && is.finite(x)
-  if (!is_num(ctrl$n_grid) || ctrl$n_grid < 7) {
-    abort("{.code control$n_grid} must be a single number of at least 7.")
-  }
-  ctrl$n_grid <- as.integer(round(ctrl$n_grid))
-  if (!is_num(ctrl$log_threshold) || ctrl$log_threshold >= 0) {
-    abort("{.code control$log_threshold} must be a single negative number.")
-  }
-  if (!is_num(ctrl$vb_maxit) || ctrl$vb_maxit < 1) {
-    abort("{.code control$vb_maxit} must be a single number of at least 1.")
-  }
-  ctrl$vb_maxit <- as.integer(round(ctrl$vb_maxit))
-  if (!is_num(ctrl$vb_tol) || ctrl$vb_tol <= 0) {
-    abort("{.code control$vb_tol} must be a single positive number.")
-  }
-  if (!is.list(ctrl$nlminb)) {
-    abort(
-      "{.code control$nlminb} must be a list of {.fn stats::nlminb} controls."
-    )
-  }
-  ctrl$nlminb <- utils::modifyList(
-    list(iter.max = 5000L, eval.max = 5000L),
-    ctrl$nlminb
-  )
-  ctrl
 }
 
 check_function <- function(f, arg) {

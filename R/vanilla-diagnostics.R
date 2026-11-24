@@ -425,7 +425,7 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE) {
         out,
         i = "{.fn nlminb} says: {.val {mode_message}}.",
         i = if (isTRUE(grepl("limit", dg$message))) {
-          "Raise {.code iter.max} or {.code eval.max} in {.code control$nlminb}."
+          "Raise {.code mode_maxit} or {.code mode_maxeval} in {.fn vanilla_control}."
         } else {
           "Try other starting values, or supply {.arg grad}."
         }

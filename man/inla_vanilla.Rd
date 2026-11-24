@@ -121,7 +121,9 @@ progress line? Default \code{FALSE}. See the section on output.}
 messages raised during the fit? Default \code{FALSE}. The warnings are still
 recorded in \code{fit$warnings}. Cannot be combined with \code{verbose = TRUE}.}
 
-\item{control}{A list of tuning parameters; see the section on control.}
+\item{control}{The tuning of the fit: the limits of the mode search, the
+VB correction and the scans, from \code{\link[=vanilla_control]{vanilla_control()}}, or a list with some
+of its entries.}
 
 \item{vb}{Deprecated: the name of \code{vb_correction} before inlavanilla
 26.11.24, where \code{"off"} is now \code{"none"}. It still works, with a warning.}
@@ -536,26 +538,6 @@ session. \code{cores = 1} runs serially whatever the plan. \code{\link[=loo]{loo
 use the setting of the fit.
 }
 
-\section{Control}{
-
-\code{control} is a list with any of:
-\itemize{
-\item \code{n_grid}: number of grid points per skew-normal scan, spread over
-\eqn{\pm 4} posterior SDs (default \code{21}).
-\item \code{log_threshold}: grid points whose log-posterior falls more than this
-below the maximum are ignored in the skew-normal fit (default \code{-6}).
-\item \code{vb_maxit}, \code{vb_tol}: iteration limit (default \code{25}) and convergence
-tolerance in posterior SDs (default \code{1e-3}) for the VB correction's
-fixed-point iteration, with \code{vb_correction = "full"} and when a one-step
-correction has to iterate. A step over 1.5 posterior SDs is cut to 1.5.
-With \code{vb_correction = "full"}, if two steps in a row are cut, or it has not
-converged after \code{vb_maxit} steps, \code{\link[stats:nlminb]{stats::nlminb()}} takes over.
-\item \code{nlminb}: a list of \code{\link[stats:nlminb]{stats::nlminb()}} controls for the mode search.
-\code{iter.max} and \code{eval.max} both default to \code{5000}, and \code{trace = 1} prints
-its iterations.
-}
-}
-
 \section{Output}{
 
 By default each stage prints one line as it finishes, with the time it
@@ -601,7 +583,7 @@ with the total time.
 }
 
 For the iteration trace of \code{\link[stats:nlminb]{stats::nlminb()}} itself, pass
-\code{control = list(nlminb = list(trace = 1))}.
+\code{control = vanilla_control(nlminb = list(trace = 1))}.
 
 \code{silent = TRUE} prints nothing, for simulations and other repeated fits:
 no progress bars and no stage lines, and every warning and message raised

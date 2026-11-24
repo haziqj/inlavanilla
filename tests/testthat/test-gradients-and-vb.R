@@ -340,7 +340,7 @@ test_that("fits with and without a gradient agree on a five-parameter logistic r
 
 test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed model", {
   mod <- poisson_regression_model(3)
-  lap <- laplace_fit(mod$logpost, mod$grad, mod$init, vanilla_control(list()))
+  lap <- laplace_fit(mod$logpost, mod$grad, mod$init, vanilla_control())
   m <- length(lap$mode)
   sds <- sqrt(diag(lap$Sigma))
   v_scan <- sweep(lap$Sigma, 2, sds, "/")
@@ -413,7 +413,7 @@ test_that("gamma1_grad() and gamma1_lp() agree for every parameter of a skewed m
 
 test_that("the shared gradient step comes before the per-parameter progress line", {
   mod <- poisson_regression_model(3)
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   lap <- laplace_fit(mod$logpost, mod$grad, mod$init, ctrl)
   m <- length(lap$mode)
   events <- character()
@@ -452,7 +452,7 @@ test_that("the shared gradient step comes before the per-parameter progress line
 
 test_that("the volume correction vanishes for an exactly Gaussian log-posterior", {
   mod <- gaussian_model()
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   for (gr in list(mod$grad, NULL)) {
     lap <- laplace_fit(mod$logpost, gr, mod$init, ctrl)
     sds <- sqrt(diag(lap$Sigma))
@@ -824,7 +824,7 @@ test_that("the VB shift is zero for an exactly Gaussian posterior", {
     chol2inv(R),
     R,
     cov_root(chol2inv(R)),
-    vanilla_control(list())
+    vanilla_control()
   )
   expect_lt(max(abs(vb$shift) / sds), 1e-14) # observed 3e-17
   expect_false(vb$fallback)
@@ -1110,7 +1110,7 @@ test_that("without a gradient each VB sweep costs one log-posterior call per nod
     fit$cov,
     R,
     cov_root(fit$cov),
-    vanilla_control(list())
+    vanilla_control()
   )
   expect_false(vb$fallback)
   # (m + 1)(m + 2) = 42 calls per sweep, no centre: observed 4 sweeps
@@ -1739,7 +1739,7 @@ test_that("with a Hessian, nlminb() reaches a badly scaled mode without a restar
   lp <- function(x) -0.5 * drop(crossprod(x - mu, P %*% (x - mu)))
   gr <- function(x) -drop(P %*% (x - mu))
   init <- stats::setNames(mu + 1, paste0("x", 1:5))
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   lap_grad <- laplace_fit(lp, gr, init, ctrl)
   lap_hess <- laplace_fit(lp, gr, init, ctrl, he = function(x) -P)
   expect_false(is.null(lap_grad$restart))
@@ -1782,7 +1782,7 @@ test_that("a restarted mode search reports the iterations of both runs", {
   lp <- function(x) -0.5 * drop(crossprod(x - mu, P %*% (x - mu)))
   gr <- function(x) -drop(P %*% (x - mu))
   init <- stats::setNames(mu + 1, paste0("x", 1:5))
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   lap <- laplace_fit(lp, gr, init, ctrl)
   rs <- lap$restart
   expect_false(is.null(rs))

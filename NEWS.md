@@ -1,5 +1,15 @@
 # inlavanilla (development version)
 
+* New `vanilla_control()` builds the `control` list of `inla_vanilla()`, with
+  one entry per setting, so that an editor can complete the names. It has three
+  new entries for the mode search: `mode_maxit`, `mode_maxeval` and `mode_tol`,
+  the `iter.max`, `eval.max` and `rel.tol` of `nlminb()`, with the same
+  defaults as before (5000, 5000 and nlminb's 1e-10). `nlminb = list()` still
+  passes any other `nlminb()` control, such as `trace = 1`. Its `iter.max`,
+  `eval.max` and `rel.tol` still work alone, but setting one of them together
+  with its named entry is an error. A plain list still works as `control`.
+  INLAvaan's `inlavaan_control()` has the same entries.
+
 * `diagnostics()` has two Hessian condition numbers, each with one meaning in
   inlavanilla and INLAvaan: `hess_cond` is now the raw condition number of the
   Laplace covariance, as INLAvaan defines it, and `hess_cond_cor` is the one

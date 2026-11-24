@@ -96,7 +96,7 @@ test_that("each check adds its own line to the warning, in INLAvaan's words", {
   o$message <- "iteration limit reached without convergence (10)"
   expect_match(
     warning_text(d, o),
-    "Raise `iter.max` or `eval.max` in `control$nlminb`.",
+    "Raise `mode_maxit` or `mode_maxeval` in `vanilla_control()`.",
     fixed = TRUE
   )
   # strictly above the level

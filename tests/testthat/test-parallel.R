@@ -122,7 +122,7 @@ test_that("tk_fallback gives the same rescans on workers", {
 
 test_that("the progress line ticks once per parameter", {
   force_workers()
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   lap <- laplace_fit(lp_reg, NULL, init_reg, ctrl)
   ticks <- 0L
   par <- list(

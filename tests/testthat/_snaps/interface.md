@@ -43,8 +43,8 @@
     Condition
       Error:
       ! Unknown `control` entries: "foo" and "ngrid".
-      i Valid entries are "n_grid", "log_threshold", "vb_maxit", "vb_tol", and
-        "nlminb".
+      i Valid entries are "mode_maxit", "mode_maxeval", "mode_tol", "vb_maxit",
+        "vb_tol", "n_grid", "log_threshold", and "nlminb".
 
 # a wrong analytic gradient triggers the mismatch warning
 

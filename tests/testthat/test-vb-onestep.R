@@ -445,7 +445,7 @@ test_that("a node on a boundary is handled by the guard", {
 
 test_that("the iteration after the guard stops within the budget", {
   mod <- skew_normal_model(10)
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   lap <- laplace_fit(mod$logpost, mod$grad, mod$init, ctrl)
   calls <- 0L
   gr <- function(theta) {

@@ -528,16 +528,22 @@ test_that("control must be a list of named, known entries", {
 
 test_that("each numeric control entry is checked", {
   bad_values <- list(
+    mode_maxit = list(0, "a", c(1, 2)),
+    mode_maxeval = list(0.5, NA_real_),
+    mode_tol = list(0, -1e-8, Inf),
     n_grid = list(6, "21", NA_real_, Inf),
     log_threshold = list(0, NA_real_),
     vb_maxit = list(0, "a"),
     vb_tol = list(-1, Inf)
   )
   messages <- c(
-    n_grid = "`control$n_grid` must be a single number of at least 7",
-    log_threshold = "`control$log_threshold` must be a single negative number",
-    vb_maxit = "`control$vb_maxit` must be a single number of at least 1",
-    vb_tol = "`control$vb_tol` must be a single positive number"
+    mode_maxit = "`mode_maxit` must be a single number of at least 1",
+    mode_maxeval = "`mode_maxeval` must be a single number of at least 1",
+    mode_tol = "`mode_tol` must be a single positive number",
+    n_grid = "`n_grid` must be a single number of at least 7",
+    log_threshold = "`log_threshold` must be a single negative number",
+    vb_maxit = "`vb_maxit` must be a single number of at least 1",
+    vb_tol = "`vb_tol` must be a single positive number"
   )
   for (entry in names(bad_values)) {
     for (bad in bad_values[[entry]]) {
@@ -555,9 +561,92 @@ test_that("each numeric control entry is checked", {
       control = list(nlminb = 5),
       silent = TRUE
     ),
-    "`control$nlminb` must be a list",
+    "`nlminb` must be a named list",
     fixed = TRUE,
     class = "inlavanilla_error"
+  )
+})
+
+test_that("vanilla_control() builds the control list, and checks a plain one", {
+  ctrl <- vanilla_control()
+  expect_identical(
+    names(ctrl),
+    c(
+      "mode_maxit",
+      "mode_maxeval",
+      "mode_tol",
+      "vb_maxit",
+      "vb_tol",
+      "n_grid",
+      "log_threshold",
+      "nlminb"
+    )
+  )
+  expect_identical(ctrl$mode_maxit, 5000L)
+  expect_identical(ctrl$mode_maxeval, 5000L)
+  expect_identical(ctrl$mode_tol, 1e-10)
+  expect_identical(ctrl$n_grid, 21L)
+  # A plain list is the constructor's list, and a built one passes again
+  expect_identical(check_control(list()), ctrl)
+  expect_identical(
+    check_control(list(n_grid = 31)),
+    vanilla_control(n_grid = 31)
+  )
+  built <- vanilla_control(n_grid = 31, nlminb = list(iter.max = 7, trace = 0))
+  expect_identical(check_control(built), built)
+  # The mode search gets the named entries, and any other nlminb() control
+  expect_identical(
+    mode_nlminb(built),
+    list(iter.max = 7L, eval.max = 5000L, rel.tol = 1e-10, trace = 0)
+  )
+})
+
+test_that("an nlminb() control and its named entry cannot both be set", {
+  # The twin alone stands in for the named entry
+  expect_identical(
+    vanilla_control(nlminb = list(eval.max = 10)),
+    vanilla_control(mode_maxeval = 10)
+  )
+  expect_identical(
+    vanilla_control(nlminb = list(rel.tol = 1e-8))$mode_tol,
+    1e-8
+  )
+  for (args in list(
+    list(mode_maxit = 10, nlminb = list(iter.max = 10)),
+    list(mode_maxeval = 10, nlminb = list(eval.max = 20)),
+    list(mode_tol = 1e-8, nlminb = list(rel.tol = 1e-8))
+  )) {
+    expect_error(
+      do.call(vanilla_control, args),
+      "not both",
+      class = "inlavanilla_error"
+    )
+  }
+  expect_error(
+    inla_vanilla(
+      lp_gauss,
+      c(a = 0.5),
+      control = list(mode_maxit = 2, nlminb = list(iter.max = 2)),
+      silent = TRUE
+    ),
+    "Set `mode_maxit` or `nlminb$iter.max`, not both",
+    fixed = TRUE,
+    class = "inlavanilla_error"
+  )
+  # mode_maxit is nlminb()'s iter.max
+  lp <- function(theta) -sum((theta - c(1, 2, 3))^2 * c(1, 10, 100))
+  init <- c(a = 0, b = 0, c = 0)
+  a <- inla_vanilla(lp, init, control = list(mode_maxit = 2), silent = TRUE)
+  b <- inla_vanilla(
+    lp,
+    init,
+    control = list(nlminb = list(iter.max = 2)),
+    silent = TRUE
+  )
+  expect_identical(a$summary, b$summary)
+  expect_identical(
+    a$diagnostics$optim$iterations,
+    b$diagnostics$optim$iterations
   )
 })
 
@@ -1412,7 +1501,7 @@ test_that("an unreached mode gives a warning, a flag and a yellow stage line", {
     text,
     "x The gradient at the posterior mode is not zero \\(max \\|grad\\| = [0-9.]+\\): a Newton step"
   )
-  expect_match(text, "Raise `iter.max` or `eval.max`")
+  expect_match(text, "Raise `mode_maxit` or `mode_maxeval`")
   # Observed 3.4 posterior SDs
   expect_gt(max(fit$diagnostics$marginals$mode_shift_sigma), 1)
   expect_output(
@@ -1958,7 +2047,7 @@ test_that("silent = TRUE records each warning once, as plain text", {
   )
   expect_match(
     fit$warnings[1],
-    "Raise `iter.max` or `eval.max` in `control$nlminb`.",
+    "Raise `mode_maxit` or `mode_maxeval` in `vanilla_control()`.",
     fixed = TRUE
   )
   # The diagnostics show the same unreached mode as without silent

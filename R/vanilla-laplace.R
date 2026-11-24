@@ -24,7 +24,7 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
     objective = ob,
     gradient = gro,
     hessian = heo,
-    control = ctrl$nlminb
+    control = mode_nlminb(ctrl)
   )
   cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), he)
 
@@ -42,7 +42,7 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL) {
       gradient = gro,
       hessian = heo,
       scale = scale,
-      control = ctrl$nlminb
+      control = mode_nlminb(ctrl)
     )
     restart <- list(
       grad_mode = cur$grad_mode,

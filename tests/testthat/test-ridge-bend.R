@@ -26,7 +26,7 @@ reg_model <- function(n, p = 5L) {
 # The calls of logpost that fit_marginals() makes without a gradient, and what
 # it returns
 marginals_no_grad <- function(mod, ...) {
-  ctrl <- vanilla_control(list())
+  ctrl <- vanilla_control()
   lap <- laplace_fit(mod$logpost, NULL, mod$init, ctrl)
   calls <- 0L
   lp <- function(x) {
@@ -105,7 +105,7 @@ test_that("the gain along the direction is a lower bound on the full gain", {
 
 test_that("gamma1_lp() gives a unit direction across the scan", {
   mod <- reg_model(100)
-  lap <- laplace_fit(mod$logpost, NULL, mod$init, vanilla_control(list()))
+  lap <- laplace_fit(mod$logpost, NULL, mod$init, vanilla_control())
   v_scan <- sweep(lap$Sigma, 2, sqrt(diag(lap$Sigma)), "/")
   at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$A)
   res <- gamma1_lp(
@@ -127,7 +127,7 @@ test_that("gamma1_lp() gives a unit direction across the scan", {
 
 test_that("with no finite direction the ridge bend takes the full route", {
   mod <- reg_model(100)
-  lap <- laplace_fit(mod$logpost, NULL, mod$init, vanilla_control(list()))
+  lap <- laplace_fit(mod$logpost, NULL, mod$init, vanilla_control())
   sds <- sqrt(diag(lap$Sigma))
   v_scan <- sweep(lap$Sigma, 2, sds, "/")
   at_mode <- whitened_lp(mod$logpost, lap$mode, lap$lp_max, lap$A)
