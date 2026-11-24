@@ -1,3 +1,8 @@
+# inlavanilla (development version)
+
+* `marginals = "skewnorm"` is the new name of the skew-normal marginals, as
+  INLAvaan will name them. `"skewnormal"` still works, as an alias.
+
 # inlavanilla 26.11.23
 
 * When the mode search runs off, or lands far from the posterior mass, the

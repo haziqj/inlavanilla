@@ -4,7 +4,7 @@
       inla_vanilla(lp_reg, init_reg, marginals = "laplace", silent = TRUE)
     Condition
       Error:
-      ! `marginals` must be one of "skewnormal" or "gaussian".
+      ! `marginals` must be one of "skewnorm" or "gaussian".
 
 # print() and summary() describe Gaussian marginals
 

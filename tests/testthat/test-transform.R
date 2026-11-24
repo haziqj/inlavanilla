@@ -317,7 +317,7 @@ test_that("an exactly Gaussian log parameter gives the log-normal", {
   s0 <- 0.45
   lp <- function(theta) dnorm(theta[["log_x"]], m0, s0, log = TRUE)
   # Observed relative errors: 8e-9 at most, the skew-normal fit's
-  for (marg in c("skewnormal", "gaussian")) {
+  for (marg in c("skewnorm", "gaussian")) {
     fit <- inla_vanilla(lp, c(log_x = 0), marginals = marg, silent = TRUE)
     tab <- fit$summary["x", ]
     expect_equal(tab[["Mean"]], exp(m0 + s0^2 / 2), tolerance = 1e-6)

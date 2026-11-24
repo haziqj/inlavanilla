@@ -425,11 +425,11 @@
 #'   `"one"` work too. See the section on the VB correction. The correction
 #'   enters the log marginal likelihood, and the skew-normal means are checked
 #'   against it (see [summary.inla_vanilla()]).
-#' @param marginals The marginal of each parameter: `"skewnormal"` (the
+#' @param marginals The marginal of each parameter: `"skewnorm"` (the
 #'   default) fits a skew-normal to a scan of the log-posterior; `"gaussian"`
 #'   uses the Gaussian marginal of the Laplace approximation, centred at the
-#'   VB mean unless `vb = "off"`, with no scans. Abbreviations such as `"skew"`
-#'   and `"gauss"` work too.
+#'   VB mean unless `vb = "off"`, with no scans. `"skewnormal"` is the same as
+#'   `"skewnorm"`, and abbreviations such as `"skew"` and `"gauss"` work too.
 #' @param width How each skew-normal scan accounts for the changing volume of
 #'   the other parameters, the width term
 #'   \eqn{\gamma_j(t) = -\frac12 \log|H_{-j}|}{gamma_j(t) = -1/2 log|H_-j|}
@@ -592,7 +592,7 @@ inla_vanilla <- function(
   hess = NULL,
   ...,
   vb = c("onestep", "full", "off"),
-  marginals = c("skewnormal", "gaussian"),
+  marginals = c("skewnorm", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
   transform = TRUE,
@@ -619,7 +619,7 @@ inla_vanilla <- function(
     }
   }
   vb <- check_vb(vb)
-  marginals <- check_choice(marginals, c("skewnormal", "gaussian"), "marginals")
+  marginals <- check_marginals(marginals)
   width <- check_choice(width, c("trace", "cmp", "tk"), "width")
   check_flag(tk_fallback, "tk_fallback")
   check_flag(transform, "transform")
@@ -971,7 +971,7 @@ vanilla_fit <- function(
   # Gaussian's own, N(mean_vb_j, Sigma_jj), a skew-normal with shape 0.
   t0 <- elapsed()
   t_starts[["marginals"]] <- t0
-  if (marginals == "skewnormal") {
+  if (marginals == "skewnorm") {
     start_marginals <- function(step) {
       progress_close(prog)
       if (step == "shared") {
@@ -1087,7 +1087,7 @@ vanilla_fit <- function(
   # The diagnostics, in the names and order of INLAvaan's diagnostics() where
   # it has the quantity. Checks that did not run are NA: the VB columns with
   # vb = "off", the scan columns with Gaussian marginals.
-  skew <- marginals == "skewnormal"
+  skew <- marginals == "skewnorm"
   na <- rep(NA_real_, m)
   diagnostics <- list(
     optim = list(
@@ -1367,6 +1367,19 @@ check_vb <- function(vb) {
     return("off")
   }
   check_choice(vb, c("onestep", "full", "off"), "vb")
+}
+
+# The marginals: "skewnorm" or "gaussian", with "skewnormal" (in any case) a
+# permanent alias of "skewnorm"
+check_marginals <- function(marginals) {
+  if (
+    is.character(marginals) &&
+      length(marginals) == 1L &&
+      identical(tolower(marginals), "skewnormal")
+  ) {
+    return("skewnorm")
+  }
+  check_choice(marginals, c("skewnorm", "gaussian"), "marginals")
 }
 
 # One of `choices` (lower case), or an unambiguous abbreviation of one in any

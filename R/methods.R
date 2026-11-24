@@ -659,7 +659,7 @@ plot.inla_vanilla <- function(
         "There are no scans to plot: the marginals are Gaussian
          ({.code marginals = \"gaussian\"}).",
         "i" = "Use {.code type = \"marg_pdf\"}, or fit with
-               {.code marginals = \"skewnormal\"}."
+               {.code marginals = \"skewnorm\"}."
       ))
     }
     plot_scans(x, idx, log = type == "sn_fit_log", ...)

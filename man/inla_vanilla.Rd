@@ -11,7 +11,7 @@ inla_vanilla(
   hess = NULL,
   ...,
   vb = c("onestep", "full", "off"),
-  marginals = c("skewnormal", "gaussian"),
+  marginals = c("skewnorm", "gaussian"),
   width = c("trace", "cmp", "tk"),
   tk_fallback = FALSE,
   transform = TRUE,
@@ -58,11 +58,11 @@ step from the mode, \code{"full"} iterates to the VB solution, and \code{"off"} 
 enters the log marginal likelihood, and the skew-normal means are checked
 against it (see \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}).}
 
-\item{marginals}{The marginal of each parameter: \code{"skewnormal"} (the
+\item{marginals}{The marginal of each parameter: \code{"skewnorm"} (the
 default) fits a skew-normal to a scan of the log-posterior; \code{"gaussian"}
 uses the Gaussian marginal of the Laplace approximation, centred at the
-VB mean unless \code{vb = "off"}, with no scans. Abbreviations such as \code{"skew"}
-and \code{"gauss"} work too.}
+VB mean unless \code{vb = "off"}, with no scans. \code{"skewnormal"} is the same as
+\code{"skewnorm"}, and abbreviations such as \code{"skew"} and \code{"gauss"} work too.}
 
 \item{width}{How each skew-normal scan accounts for the changing volume of
 the other parameters, the width term

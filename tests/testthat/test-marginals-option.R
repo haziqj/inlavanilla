@@ -45,16 +45,19 @@ scrub_output <- function(x) {
 }
 
 test_that("marginals takes one of two values, or an abbreviation", {
-  expect_identical(fit_sn_vb$marginals, "skewnormal")
+  expect_identical(fit_sn_vb$marginals, "skewnorm")
   expect_identical(fit_g_vb$marginals, "gaussian")
   # Unambiguous abbreviations, in any case, as with match.arg()
-  choices <- c("skewnormal", "gaussian")
-  for (ok in c("skew", "s", "SKEW", "Skewnormal")) {
-    expect_identical(check_choice(ok, choices, "marginals"), "skewnormal")
+  # and "skewnormal", the name before 26.11.24, kept as an alias
+  for (ok in c("skew", "s", "SKEW", "skewnorm", "Skewnormal", "skewnormal")) {
+    expect_identical(check_marginals(ok), "skewnorm")
   }
   for (ok in c("gaus", "gauss", "g", "Gaussian")) {
-    expect_identical(check_choice(ok, choices, "marginals"), "gaussian")
+    expect_identical(check_marginals(ok), "gaussian")
   }
+  fit <- inla_vanilla(lp_reg, init_reg, marginals = "skewnormal", silent = TRUE)
+  expect_identical(fit$marginals, "skewnorm")
+  expect_identical(fit$summary, fit_sn_vb$summary)
   fit <- inla_vanilla(lp_reg, init_reg, marginals = "gauss", silent = TRUE)
   expect_identical(fit$marginals, "gaussian")
   expect_identical(fit$summary, fit_g_vb$summary)
@@ -70,7 +73,7 @@ test_that("marginals takes one of two values, or an abbreviation", {
   )) {
     expect_error(
       inla_vanilla(lp_reg, init_reg, marginals = bad, silent = TRUE),
-      "`marginals` must be one of \"skewnormal\" or \"gaussian\"",
+      "`marginals` must be one of \"skewnorm\" or \"gaussian\"",
       class = "inlavanilla_error"
     )
   }
@@ -79,7 +82,7 @@ test_that("marginals takes one of two values, or an abbreviation", {
     inla_vanilla(
       lp_reg,
       init_reg,
-      marginals = c("gaussian", "skewnormal"),
+      marginals = c("gaussian", "skewnorm"),
       silent = TRUE
     ),
     class = "inlavanilla_error"
@@ -95,7 +98,7 @@ test_that("a data argument named like marginals reaches logpost", {
   lp <- function(theta, marg) dnorm(theta[[1]], marg, 1, log = TRUE)
   fit <- inla_vanilla(lp, c(a = 0), marg = 3, silent = TRUE)
   expect_equal(fit$mode[["a"]], 3, tolerance = 1e-6)
-  expect_identical(fit$marginals, "skewnormal")
+  expect_identical(fit$marginals, "skewnorm")
 })
 
 test_that("the choice of marginals leaves the other stages unchanged", {
