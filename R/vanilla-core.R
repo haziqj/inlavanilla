@@ -7,8 +7,12 @@
 # diagnostics of each stage. `lp`, `gr` and `hess` are the log-posterior, its
 # gradient and its Hessian as functions of the parameter vector alone (any
 # data already bound), with `gr` and `hess` NULL when there are none, and
-# `init` the named start. The other arguments are those of inla_vanilla(),
-# and two that only INLAvaan passes, as it knows its models:
+# `init` the named start. Where `lp` fails (NA, NaN, -Inf, or a value at or
+# below -1e39), `gr` must return a value that is not finite: the VB
+# correction and the ridge bend call `gr` alone at some points, and take a
+# value that is not finite as the sign of a failed point. The other arguments
+# are those of inla_vanilla(), and two that only INLAvaan passes, as it knows
+# its models:
 # * `hess_mode`, a function that gives the Hessian of `lp` at the mode, as
 #   `hess` does, but is called there alone, once or, after a restart of the
 #   mode search, twice: never by nlminb(), the VB correction or the scans. It
