@@ -481,11 +481,14 @@ test_that("an ill-conditioned Hessian warns, whatever the units", {
     diagnostics(fit)[["hess_cond_cor"]],
     fit$diagnostics$optim$hess_cond_cor
   )
-  # The two parameters have the same SD, so the raw number is the same
+  # The two parameters have the same SD, so the raw number is the same, to
+  # the accuracy of the smallest eigenvalue at a condition number of 2e10:
+  # about 2e10 times the machine epsilon, 4e-6 relative, which differs
+  # between the BLAS of each platform.
   expect_equal(
     fit$diagnostics$optim$hess_cond,
     fit$diagnostics$optim$hess_cond_cor,
-    tolerance = 1e-6
+    tolerance = 1e-4
   )
   expect_identical(
     diagnostics(fit)[["hess_cond"]],
