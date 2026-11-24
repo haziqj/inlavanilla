@@ -50,10 +50,12 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #' Diagnostics of an INLAvanilla fit
 #'
 #' @description
-#' The checks of each stage of the approximation, as numbers: a summary of
-#' the whole fit, or a table with one row per parameter. They are the checks
-#' of INLAvaan's `diagnostics()`, under the same names and in the same order,
-#' followed by inlavanilla's own. The fit-time warning and the flags of
+#' The checks of each stage of the approximation, as numbers: a summary of the
+#' whole fit, or a table with one row per parameter. They are the checks of
+#' INLAvaan's `diagnostics()`, in the same order and under the same names, two
+#' of them under the names INLAvaan will use from its version 0.4.0
+#' (`hess_cond_cor`, and `unscanned_mass` for its `scan_end_mass`), followed by
+#' inlavanilla's own. The fit-time warning and the flags of
 #' [summary.inla_vanilla()] are computed from the same numbers, and
 #' [summary.inla_vanilla()] explains each check and the level at which it is
 #' flagged.

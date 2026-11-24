@@ -27,10 +27,12 @@ For \code{type = "global"}, a named numeric vector of class
 INLAvaan's formats.
 }
 \description{
-The checks of each stage of the approximation, as numbers: a summary of
-the whole fit, or a table with one row per parameter. They are the checks
-of INLAvaan's \code{diagnostics()}, under the same names and in the same order,
-followed by inlavanilla's own. The fit-time warning and the flags of
+The checks of each stage of the approximation, as numbers: a summary of the
+whole fit, or a table with one row per parameter. They are the checks of
+INLAvaan's \code{diagnostics()}, in the same order and under the same names, two
+of them under the names INLAvaan will use from its version 0.4.0
+(\code{hess_cond_cor}, and \code{unscanned_mass} for its \code{scan_end_mass}), followed by
+inlavanilla's own. The fit-time warning and the flags of
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} are computed from the same numbers, and
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} explains each check and the level at which it is
 flagged.

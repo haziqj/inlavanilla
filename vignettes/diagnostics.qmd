@@ -57,29 +57,30 @@ can still do badly.
 | Gradient | `grad_gap` | above 0.1 | the same | inlavanilla |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
 | VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
-| Hessian | `hess_cond_cor` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan |
+| Hessian | `hess_cond_cor` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan, renamed |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
-| Unscanned mass | `unscanned_mass` | above 0.05 | the same | INLAvaan |
+| Unscanned mass | `unscanned_mass` | above 0.05 | the same | INLAvaan, renamed |
 | Tails | `tails` | heavy | the same | inlavanilla |
 | Ridge bend | `ridge_bend` | above 0.25 nats | no | inlavanilla |
 | Mean gap | `mean_gap` | above 0.1 SDs | no | inlavanilla |
 
 Most of these are the checks of INLAvaan's `diagnostics()`, under the same
-names. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics,
-and the gap between the skew-normal and VB means as an internal check; the
-mode shift, the Hessian condition number and the unscanned mass come from
-INLAvaan's `diagnostics()`, not from the paper. The levels of those five
-checks are INLAvaan's, and the fit-time warning uses its words. The VB
-settling, VB gain and tails checks are inlavanilla's own, and so are the ridge bend and mean gap
-checks, which only `summary()` flags. Every level is a package default, chosen so
-that a healthy fit stays silent, and not a calibrated cut-off: a tripped
-check is a prompt to look again, and silence is not a certificate of
-accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB
-shift and NMAD track the loss of accuracy, and the paper reports a
-calibration of the expected error against them in its Supplementary
-Material.
-
+names. Two have new names, which INLAvaan will use from its version 0.4.0:
+`hess_cond_cor` is INLAvaan's `hess_cond` taken on the correlation scale, free
+of units (`hess_cond` is now the raw one, as in INLAvaan), and `unscanned_mass`
+is its `scan_end_mass`. Jamil and Rue (2026) use the VB shift and NMAD as fit
+diagnostics, and the gap between the skew-normal and VB means as an internal
+check; the mode shift, the Hessian condition number and the unscanned mass come
+from INLAvaan's `diagnostics()`, not from the paper. The levels of those five
+checks are INLAvaan's, and the fit-time warning uses its words. The VB settling,
+VB gain and tails checks are inlavanilla's own, and so are the ridge bend and
+mean gap checks, which only `summary()` flags. Every level is a package default,
+chosen so that a healthy fit stays silent, and not a calibrated cut-off: a
+tripped check is a prompt to look again, and silence is not a certificate of
+accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB shift
+and NMAD track the loss of accuracy, and the paper reports a calibration of the
+expected error against them in its Supplementary Material.
 ## A healthy fit
 
 Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:

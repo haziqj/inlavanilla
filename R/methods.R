@@ -69,12 +69,14 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' with the decimal points lined up.
 #'
 #' Most of the checks are those of INLAvaan's `diagnostics()`, and
-#' [diagnostics()] returns them under the same names. Jamil and Rue (2026) use
-#' the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
-#' gap between the skew-normal and VB means as an internal check (Section
-#' 5.1). The mode shift, the Hessian condition number and the unscanned mass
-#' come from INLAvaan's `diagnostics()`, not from the paper. `grad_gap`,
-#' `vb_step_sigma`, `tails` and `ridge_bend` are inlavanilla's own.
+#' [diagnostics()] returns them under the same names, two of them under the
+#' names INLAvaan will use from its version 0.4.0 (`hess_cond_cor`, and
+#' `unscanned_mass` for its `scan_end_mass`). Jamil and Rue (2026) use the VB
+#' shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the gap between
+#' the skew-normal and VB means as an internal check (Section 5.1). The mode
+#' shift, the Hessian condition number and the unscanned mass come from
+#' INLAvaan's `diagnostics()`, not from the paper. `grad_gap`, `vb_step_sigma`,
+#' `tails` and `ridge_bend` are inlavanilla's own.
 #'
 #' A posterior SD here is the Laplace SD at the mode,
 #' \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's

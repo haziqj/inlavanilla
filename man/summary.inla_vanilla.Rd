@@ -44,12 +44,14 @@ marginals give each one to three significant figures of its posterior SD,
 with the decimal points lined up.
 
 Most of the checks are those of INLAvaan's \code{diagnostics()}, and
-\code{\link[=diagnostics]{diagnostics()}} returns them under the same names. Jamil and Rue (2026) use
-the VB shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the
-gap between the skew-normal and VB means as an internal check (Section
-5.1). The mode shift, the Hessian condition number and the unscanned mass
-come from INLAvaan's \code{diagnostics()}, not from the paper. \code{grad_gap},
-\code{vb_step_sigma}, \code{tails} and \code{ridge_bend} are inlavanilla's own.
+\code{\link[=diagnostics]{diagnostics()}} returns them under the same names, two of them under the
+names INLAvaan will use from its version 0.4.0 (\code{hess_cond_cor}, and
+\code{unscanned_mass} for its \code{scan_end_mass}). Jamil and Rue (2026) use the VB
+shift and NMAD as fit diagnostics (Sections 3.1 and 4.4), and the gap between
+the skew-normal and VB means as an internal check (Section 5.1). The mode
+shift, the Hessian condition number and the unscanned mass come from
+INLAvaan's \code{diagnostics()}, not from the paper. \code{grad_gap}, \code{vb_step_sigma},
+\code{tails} and \code{ridge_bend} are inlavanilla's own.
 
 A posterior SD here is the Laplace SD at the mode,
 \eqn{\sqrt{\Sigma_{jj}}}{sqrt(Sigma_jj)}, as in INLAvaan's
