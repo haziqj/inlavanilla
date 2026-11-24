@@ -113,10 +113,14 @@ test_that("vb, the old name of vb_correction, still works, with a warning", {
   )) {
     expect_identical(fit_model(mod2, vb = pair[[1]])$vb_correction, pair[[2]])
   }
-  expect_error(
+  err <- expect_error(
     fit_model(mod2, vb = "none"),
     "`vb` must be one of",
     class = "inlavanilla_error"
+  )
+  expect_match(
+    cli::ansi_strip(conditionMessage(err)),
+    "`vb` is now `vb_correction`, which takes \"onestep\""
   )
   expect_error(
     fit_model(mod2, vb = "off", vb_correction = "none"),

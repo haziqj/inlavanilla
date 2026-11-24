@@ -140,10 +140,15 @@ test_that("width, the old name of marginal_scan, still works, with a warning", {
     fit <- inla_vanilla(lp_nm, init_nm, gr_nm, width = pair[[1]], silent = TRUE)
     expect_identical(fit$marginal_scan, pair[[2]])
   }
-  expect_error(
+  err <- expect_error(
     inla_vanilla(lp_nm, init_nm, width = "laplace", silent = TRUE),
     "`width` must be one of",
     class = "inlavanilla_error"
+  )
+  # A new value under the old name gets a pointer to the new name
+  expect_match(
+    cli::ansi_strip(conditionMessage(err)),
+    "`width` is now `marginal_scan`, which takes \"linear\""
   )
   expect_error(
     inla_vanilla(

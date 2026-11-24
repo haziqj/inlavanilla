@@ -961,7 +961,13 @@ check_init <- function(init, show = TRUE) {
 
 # The scan from `width`, its name before 26.11.24, with its old values
 old_width <- function(width) {
-  width <- check_choice(width, c("trace", "cmp", "tk"), "width")
+  width <- check_old_choice(
+    width,
+    c("trace", "cmp", "tk"),
+    "width",
+    "marginal_scan",
+    c("linear", "exact", "laplace", "plain")
+  )
   c(trace = "linear", cmp = "exact", tk = "laplace")[[width]]
 }
 
@@ -973,6 +979,28 @@ old_vb <- function(vb) {
   if (isFALSE(vb)) {
     return("none")
   }
-  vb <- check_choice(vb, c("onestep", "full", "off"), "vb")
+  vb <- check_old_choice(
+    vb,
+    c("onestep", "full", "off"),
+    "vb",
+    "vb_correction",
+    c("onestep", "full", "none")
+  )
   if (vb == "off") "none" else vb
+}
+
+# check_choice() for an argument renamed in 26.11.24, whose error also names
+# the new argument and its values, since a new value given under the old name
+# is the likely mistake
+check_old_choice <- function(x, choices, arg, new_arg, new_choices) {
+  tryCatch(
+    check_choice(x, choices, arg),
+    inlavanilla_error = function(e) {
+      abort(c(
+        "{.arg {arg}} must be one of {.or {.val {choices}}}.",
+        "i" = "{.arg {arg}} is now {.arg {new_arg}}, which takes
+               {.or {.val {new_choices}}}."
+      ))
+    }
+  )
 }
