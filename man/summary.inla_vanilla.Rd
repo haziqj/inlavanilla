@@ -65,12 +65,13 @@ parameter. It is flagged above 0.1, whatever the return code of
 one. With the VB check below, it is what makes the fit converged.
 \item \strong{Gradient.} \code{grad_gap}, how far a supplied \code{grad} is from \code{logpost} at
 the mode: the larger of the difference in slope per conditional posterior
-SD and half the relative difference in curvature, so about how far it
-moves the mode in SDs and the relative error it makes in an SD. It is
-flagged above 0.1, costs no calls, and is \code{NA} without \code{grad}. With \code{hess},
-the curvature is that of \code{hess}. A wrong gradient mostly harms the log
-marginal likelihood and the covariance, since the scans use \code{logpost}
-itself.
+SD and half the relative difference in curvature, so about how far it moves
+the mode in SDs and the relative error it makes in an SD. It is flagged
+above 0.1, and is \code{NA} without \code{grad}. It costs no calls without \code{hess},
+and about 6m to 8m \code{logpost} calls with it (see "Gradients and Hessians" in
+\code{\link[=inla_vanilla]{inla_vanilla()}}). With \code{hess}, the curvature is that of \code{hess}. A wrong
+gradient mostly harms the log marginal likelihood and the covariance, since
+the scans use \code{logpost} itself.
 \item \strong{Hessian.} \code{hess_cond_cor}, the condition number of the Hessian at the
 mode with each parameter in posterior-SD units (the eigenvalue ratio of
 the posterior correlation matrix). It is flagged above \eqn{10^8}: some

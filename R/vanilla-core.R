@@ -160,7 +160,8 @@ vanilla_core <- function(
   }
 
   # One call of each function, to fail at once with a clear message. Anything
-  # more waits for the mode, where it costs nothing (grad_gap())
+  # more waits for the mode (grad_gap()), where it costs no calls without
+  # `hess`, and the step search of fd_scales() with it.
   t_first <- elapsed()
   lp_init <- with_context(
     "evaluating logpost at init",
