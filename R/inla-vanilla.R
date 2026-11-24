@@ -712,7 +712,6 @@ inla_vanilla <- function(
         verbose = verbose,
         silent = silent
       )
-      t_after <- elapsed()
       # One warning for every check that looks off, before the fit is built
       # so that fit$warnings records it
       warn_diagnostics(
@@ -726,11 +725,13 @@ inla_vanilla <- function(
         has_grad = core$has_grad
       )
       # The checks of the arguments count with the start of the fit, and the
-      # warning with its diagnostics
+      # warning with the diagnostics, so that the segments still add up
       t_end <- elapsed()
       timing <- core$timing
       timing[["init"]] <- timing[["init"]] + (t_core - t_start)
-      timing[["diagnostics"]] <- timing[["diagnostics"]] + (t_end - t_after)
+      timing[["diagnostics"]] <- timing[["diagnostics"]] +
+        (t_end - t_core) -
+        timing[["total"]]
       timing[["total"]] <- t_end - t_start
       if (prog$detail) {
         report_end(
