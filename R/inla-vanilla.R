@@ -505,18 +505,16 @@
 #'   * `version`: the version of inlavanilla that made the fit, the string in
 #'     `DESCRIPTION` (for example `"26.11.23"`, a date as in R-INLA).
 #'     `print()` and `summary()` show it in their headers.
-#'   * `diagnostics`: the checks of each stage, which [diagnostics()]
-#'     returns under INLAvaan's names and [summary.inla_vanilla()] explains.
-#'     `optim` holds the return code, message and iterations of
-#'     [stats::nlminb()] (the iterations of both runs if it was restarted,
-#'     the code and message of the run that was kept), the gradient of minus
-#'     the log-posterior at the mode (`grad`), the whitened gradient there
-#'     (`grad_mode`), and the condition number of the Hessian, on the raw
-#'     scale (`hess_cond`) and in posterior-SD units (`hess_cond_cor`). `vb`
-#'     holds
-#'     the iterations of the VB correction, whether it stopped at the first
-#'     step (`one_pass`), whether it fell back to
-#'     [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
+#'   * `diagnostics`: the checks of each stage, which [diagnostics()] returns
+#'     under INLAvaan's names and [summary.inla_vanilla()] explains. `optim`
+#'     holds the return code, message and iterations of [stats::nlminb()] (the
+#'     iterations of both runs if it was restarted, the code and message of the
+#'     run that was kept), the gradient of minus the log-posterior at the mode
+#'     (`grad`), the whitened gradient there (`grad_mode`), and the condition
+#'     number of the Hessian, on the raw scale (`hess_cond`) and in posterior-SD
+#'     units (`hess_cond_cor`). `vb` holds the iterations of the VB correction,
+#'     whether it stopped at the first step (`one_pass`), whether it fell back
+#'     to [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
 #'     the shift (`kld_global`); it is `NULL` when `vb_correction = "none"`.
 #'     `marginals` is a data frame with a row per parameter: `mode_shift_sigma`,
 #'     `kld`, `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,

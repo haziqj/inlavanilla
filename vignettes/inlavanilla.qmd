@@ -272,10 +272,11 @@ catches most slips in hand-derived gradients.
 
 The VB correction and the skew-normal marginals are optional, and independent
 of each other. `vb_correction = "none"` skips the VB correction, and
-`marginals = "gaussian"` skips the scans and keeps the Gaussian marginals.
-With both, the fit is the Laplace approximation alone. The default correction,
-`vb_correction = "onestep"`, takes one Newton step from the mode. `vb_correction = "full"` iterates
-to the VB solution, at a higher cost and to much the same answer.
+`marginals = "gaussian"` skips the scans and keeps the Gaussian marginals. With
+both, the fit is the Laplace approximation alone. The default correction,
+`vb_correction = "onestep"`, takes one Newton step from the mode.
+`vb_correction = "full"` iterates to the VB solution, at a higher cost and to
+much the same answer.
 
 ```{r}
 #| label: cheaper

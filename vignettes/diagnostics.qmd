@@ -143,56 +143,56 @@ where a mere change of units can make it large; inlavanilla allows posterior
 SDs from $10^{-6}$ to $10^4$, so the check uses `hess_cond_cor`.
 
 The VB correction recentres the Gaussian at the shift that minimises its
-Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026, Section
-3.1). `vb_shift_sigma` is how far it moved each mean from the mode, in
-posterior SDs. `vb_shift` is the same shift on the scale of `logpost`, and
-`kld`, half the square of `vb_shift_sigma`, is the Kullback-Leibler divergence
-of each shifted marginal from the unshifted one. A shift of a few tenths is
-normal for a skewed posterior; a shift above 1 SD means that the posterior is
-far from the Laplace Gaussian. With `vb_correction = "full"`, when the fixed-point iteration hands over to
-the optimiser, `fit$diagnostics$vb` records it, and `summary()` and the
-verbose output report it, but, as in INLAvaan, it is not flagged: it is a
-route of the solver, not a sign of a poor approximation.
+Kullback-Leibler divergence from the posterior (Jamil & Rue, 2026, Section 3.1).
+`vb_shift_sigma` is how far it moved each mean from the mode, in posterior SDs.
+`vb_shift` is the same shift on the scale of `logpost`, and `kld`, half the
+square of `vb_shift_sigma`, is the Kullback-Leibler divergence of each shifted
+marginal from the unshifted one. A shift of a few tenths is normal for a skewed
+posterior; a shift above 1 SD means that the posterior is far from the Laplace
+Gaussian. With `vb_correction = "full"`, when the fixed-point iteration hands
+over to the optimiser, `fit$diagnostics$vb` records it, and `summary()` and the
+verbose output report it, but, as in INLAvaan, it is not flagged: it is a route
+of the solver, not a sign of a poor approximation.
 
 Where the solver lands is checked as the mode is. `vb_step_sigma` is the step
-still to go at the VB mean, in posterior SDs: the fixed-point step there,
-which is the Newton step of the condition the VB mean solves. Above 0.1, the
-level of the mode check, the correction has not settled and the fit has not
-converged. The VB mean is then off, and with it the VB term of the log
-marginal likelihood and the expansions of `loo()` and `waic()`. The
-skew-normal marginals do not depend on it, since they are scanned around the
-mode, and `vb_correction = "none"` leaves it out. Gaussian marginals
-(`marginals = "gaussian"`) are centred on it, and `vb_correction = "none"` centres them
-at the mode instead. Without a gradient, the usual cause is not the solver
-but the VB mean itself: from `logpost` values alone it is exact only for a
-log-posterior of degree four, and on a strongly skewed posterior it can be
+still to go at the VB mean, in posterior SDs: the fixed-point step there, which
+is the Newton step of the condition the VB mean solves. Above 0.1, the level of
+the mode check, the correction has not settled and the fit has not converged.
+The VB mean is then off, and with it the VB term of the log marginal likelihood
+and the expansions of `loo()` and `waic()`. The skew-normal marginals do not
+depend on it, since they are scanned around the mode, and
+`vb_correction = "none"` leaves it out. Gaussian marginals
+(`marginals = "gaussian"`) are centred on it, and `vb_correction = "none"`
+centres them at the mode instead. Without a gradient, the usual cause is not the
+solver but the VB mean itself: from `logpost` values alone it is exact only for
+a log-posterior of degree four, and on a strongly skewed posterior it can be
 about 0.1 SDs out. Supplying `grad` is the fix.
 
-The default correction, `vb_correction = "onestep"`, takes a single step from the mode, so
-there is no step still to go and `vb_step_sigma` is `NA`. The check applies when
-that step has to iterate: if it is over 2.5 posterior SDs or a node fails, the
-iteration carries on with capped steps, within the calls that the mode and
-Hessian took. Running out of them shows up here as a correction that did not
-settle, and `vb_correction = "full"` is then the thing to try.
+The default correction, `vb_correction = "onestep"`, takes a single step from
+the mode, so there is no step still to go and `vb_step_sigma` is `NA`. The check
+applies when that step has to iterate: if it is over 2.5 posterior SDs or a node
+fails, the iteration carries on with capped steps, within the calls that the
+mode and Hessian took. Running out of them shows up here as a correction that
+did not settle, and `vb_correction = "full"` is then the thing to try.
 
 One step rests on a single premise: that the expected log-posterior is a
-parabola with the Laplace curvature. That premise can be tested.
-`vb_gain_ratio` in `diagnostics(fit)` is the rise in the expected log-posterior
-that the step delivered, over the rise the parabola promised,
-$\tfrac12\delta^\top H\delta$. It costs $4m + 2$ calls of `logpost`. Near 1 the
-premise holds, and below 0.5 the fit warns. A low ratio means that the step went
-too far, or that the posterior is far from Gaussian around the mode. It cannot
-see a long tail far from the mode, where the parabola still holds near the
-peak: there only the mean gap, below, shows the trouble. The check says how far
-to trust the step, not what to do about it, as `vb_correction = "full"` is better on some
-of these posteriors and worse on others.
+parabola with the Laplace curvature. That premise can be tested. `vb_gain_ratio`
+in `diagnostics(fit)` is the rise in the expected log-posterior that the step
+delivered, over the rise the parabola promised, $\tfrac12\delta^\top H\delta$.
+It costs $4m + 2$ calls of `logpost`. Near 1 the premise holds, and below 0.5
+the fit warns. A low ratio means that the step went too far, or that the
+posterior is far from Gaussian around the mode. It cannot see a long tail far
+from the mode, where the parabola still holds near the peak: there only the mean
+gap, below, shows the trouble. The check says how far to trust the step, not
+what to do about it, as `vb_correction = "full"` is better on some of these
+posteriors and worse on others.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood with
 care. Its VB term, $\tfrac12\delta^\top H\delta$, is a leading-order term, and a
 large first step can overstate it. On the random effects model of the article
-[Diagnostic tests without a gold standard](diagnostic-tests.html), the
-default gives a log marginal likelihood 1.2 nats too high, and `vb_correction = "full"` one
-0.3 nats too low.
+[Diagnostic tests without a gold standard](diagnostic-tests.html), the default
+gives a log marginal likelihood 1.2 nats too high, and `vb_correction = "full"`
+one 0.3 nats too low.
 
 With a gradient the fallback takes one more step of its own. If it lands
 short of settled, it is run once more from where it landed, much as the mode

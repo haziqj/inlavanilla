@@ -154,8 +154,8 @@ cohesive attribute are rare, at 1 to 2%.
 
 The fit takes about 30 seconds, most of it in the 59,000 or so calls of
 `logpost` that 63 parameters need without a gradient. It uses
-`vb_correction = "full"`, the iterative VB solver, because on this posterior the default
-one-step correction is less accurate, and its fit warns about it.
+`vb_correction = "full"`, the iterative VB solver, because on this posterior
+the default one-step correction is less accurate, and its fit warns about it.
 
 ## Checking against Stan
 

@@ -160,18 +160,16 @@ part.
 \item \code{version}: the version of inlavanilla that made the fit, the string in
 \code{DESCRIPTION} (for example \code{"26.11.23"}, a date as in R-INLA).
 \code{print()} and \code{summary()} show it in their headers.
-\item \code{diagnostics}: the checks of each stage, which \code{\link[=diagnostics]{diagnostics()}}
-returns under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} explains.
-\code{optim} holds the return code, message and iterations of
-\code{\link[stats:nlminb]{stats::nlminb()}} (the iterations of both runs if it was restarted,
-the code and message of the run that was kept), the gradient of minus
-the log-posterior at the mode (\code{grad}), the whitened gradient there
-(\code{grad_mode}), and the condition number of the Hessian, on the raw
-scale (\code{hess_cond}) and in posterior-SD units (\code{hess_cond_cor}). \code{vb}
-holds
-the iterations of the VB correction, whether it stopped at the first
-step (\code{one_pass}), whether it fell back to
-\code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
+\item \code{diagnostics}: the checks of each stage, which \code{\link[=diagnostics]{diagnostics()}} returns
+under INLAvaan's names and \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} explains. \code{optim}
+holds the return code, message and iterations of \code{\link[stats:nlminb]{stats::nlminb()}} (the
+iterations of both runs if it was restarted, the code and message of the
+run that was kept), the gradient of minus the log-posterior at the mode
+(\code{grad}), the whitened gradient there (\code{grad_mode}), and the condition
+number of the Hessian, on the raw scale (\code{hess_cond}) and in posterior-SD
+units (\code{hess_cond_cor}). \code{vb} holds the iterations of the VB correction,
+whether it stopped at the first step (\code{one_pass}), whether it fell back
+to \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb_correction = "none"}.
 \code{marginals} is a data frame with a row per parameter: \code{mode_shift_sigma},
 \code{kld}, \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
