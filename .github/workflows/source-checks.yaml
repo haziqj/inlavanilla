@@ -1,0 +1,26 @@
+# Fast checks of the source tree, without installing R: the code is formatted
+# with air (settings in air.toml).
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+name: source-checks
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install air
+        uses: posit-dev/setup-air@v1
+
+      - name: Check formatting
+        run: air format . --check
