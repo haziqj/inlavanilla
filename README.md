@@ -32,10 +32,10 @@ model-specific:
     log-posterior;
 4.  **Gaussian copula draws** for any function of the parameters.
 
-Stages 2 and 3 are optional and independent: `vb = "off"` skips the VB
-correction, and `marginals = "gaussian"` keeps the Gaussian marginals
-instead of scanning for skew-normal ones. With both, you get the Laplace
-approximation alone.
+Stages 2 and 3 are optional and independent: `vb_correction = "none"`
+skips the VB correction, and `marginals = "gaussian"` keeps the Gaussian
+marginals instead of scanning for skew-normal ones. With both, you get
+the Laplace approximation alone.
 
 Give `loo()` or `waic()` the log-likelihood as one term per observation,
 and they estimate the model’s predictive accuracy from the fit alone,
@@ -80,13 +80,13 @@ logpost <- function(theta) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0))
-#> ✔ Found the posterior mode in 6 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.17σ [13ms]
-#> ✔ Fitted 1 skew-normal marginal [18ms]
+#> ✔ Found the posterior mode in 6 iterations [3ms]
+#> ✔ VB mean correction, max shift 0.17σ [12ms]
+#> ✔ Fitted 1 skew-normal marginal [20ms]
 fit
-#> ── INLAvanilla v26.11.23 ────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (40ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (62ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
