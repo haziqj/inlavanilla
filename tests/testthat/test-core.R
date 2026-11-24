@@ -312,6 +312,30 @@ test_that("gaussian_marginals holds the VB shift through the fallback", {
   expect_identical(core$sn["c", "xi"], core$mode[["c"]])
 })
 
+test_that("verbose output shows Gaussian marginals with a dash and no flag", {
+  for (gr in list(gr_gm, NULL)) {
+    for (scan in c("linear", "exact", "laplace", "plain")) {
+      msgs <- cli::ansi_strip(capture_messages(
+        core <- vanilla_core(
+          lp_gm,
+          gr,
+          init_gm,
+          gaussian_marginals = "c",
+          marginal_scan = scan,
+          tk_fallback = TRUE,
+          verbose = TRUE
+        )
+      ))
+      text <- paste(msgs, collapse = "")
+      expect_match(text, "Gaussian marginals, not scanned, for c")
+      row_c <- grep("^\\s*c\\s", strsplit(text, "\n")[[1]], value = TRUE)
+      expect_length(row_c, 1L)
+      expect_match(row_c, "^\\s*c(\\s+-)+\\s*$")
+      expect_no_match(text, "NA!|heavy!|TK fallback")
+    }
+  }
+})
+
 test_that("gaussian_marginals must index or name parameters", {
   for (bad in list("d", 4, 0, 1.5, TRUE)) {
     expect_error(

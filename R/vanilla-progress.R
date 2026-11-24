@@ -538,7 +538,9 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
 }
 
 # The skew-normal marginals: one aligned line per parameter, with the values
-# that summary() flags marked, at its levels.
+# that summary() flags marked, at its levels. A parameter with NA in `method`
+# (the `gaussian_marginals` of vanilla_core()) has a Gaussian marginal and no
+# scan, and shows a dash.
 report_marginals <- function(
   p,
   sn,
@@ -547,23 +549,28 @@ report_marginals <- function(
   marginal_scan = "linear"
 ) {
   rn <- rownames(sn)
+  gauss <- if (is.null(method)) logical(length(rn)) else is.na(method)
+  tails <- sn[, "tails"]
   cols <- list(
     Shape = formatC(sn[, "alpha"], digits = 2, format = "f"),
     NMAD = formatC(sn[, "nmad"], digits = 2, format = "g"),
     `Ridge bend` = formatC(sn[, "ridge_bend"], digits = 2, format = "g"),
-    Tails = ifelse(sn[, "tails"] == 1, "ok", "heavy"),
+    Tails = ifelse(is.na(tails), "NA", ifelse(tails == 1, "ok", "heavy")),
     Unscanned = formatC(sn[, "unscanned_mass"], digits = 2, format = "g"),
     gamma1 = formatC(sn[, "gamma1"], digits = 2, format = "g")
   )
+  cols <- lapply(cols, function(v) replace(v, gauss, "-"))
+  flagged <- function(x, level) !gauss & check_ran(x) & off_level(x, level)
   none <- logical(length(rn))
   flags <- list(
     Shape = none,
-    NMAD = off_level(sn[, "nmad"], warn_levels$nmad),
-    `Ridge bend` = off_level(sn[, "ridge_bend"], summary_levels$ridge_bend),
-    Tails = !sn[, "tails"] %in% 1,
-    Unscanned = off_level(sn[, "unscanned_mass"], warn_levels$unscanned_mass),
+    NMAD = flagged(sn[, "nmad"], warn_levels$nmad),
+    `Ridge bend` = flagged(sn[, "ridge_bend"], summary_levels$ridge_bend),
+    Tails = !gauss & check_ran(tails) & !tails %in% 1,
+    Unscanned = flagged(sn[, "unscanned_mass"], warn_levels$unscanned_mass),
     gamma1 = none
   )
+  fallback <- !gauss & !is.null(method) & method != marginal_scan
   rw <- max(nchar(rn))
   widths <- vapply(
     names(cols),
@@ -620,12 +627,18 @@ report_marginals <- function(
       if (marginal_scan != "linear") {
         grey("Scans by marginal_scan = \"", marginal_scan, "\"")
       },
-      if (any(method != marginal_scan)) {
+      if (any(gauss)) {
+        grey(
+          "Gaussian marginals, not scanned, for ",
+          paste(rn[gauss], collapse = ", ")
+        )
+      },
+      if (any(fallback)) {
         grey(
           "TK fallback (ridge bend > ",
           summary_levels$ridge_bend,
           ") for ",
-          paste(rn[method != marginal_scan], collapse = ", ")
+          paste(rn[fallback], collapse = ", ")
         )
       },
       grey(format_calls(calls[[1]], calls[[2]], calls[[3]]))
