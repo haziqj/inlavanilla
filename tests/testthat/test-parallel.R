@@ -285,8 +285,7 @@ test_that("the Taylor terms use the workers, and count every call", {
   expect_identical(tp$calls, ref$calls)
   m <- length(init_reg)
   expect_identical(tp$calls, m * m + m + 1L)
-  expect_identical(tp$l0, ref$l0)
-  expect_identical(tp$lpd_2, ref$lpd_2)
+  expect_identical(tp$terms, ref$terms)
 })
 
 test_that("the points of the Taylor terms are the ones the differences need", {
@@ -309,7 +308,7 @@ test_that("a loglik that differs on a worker runs serially", {
   }
   tp <- on_forks(taylor_pointwise(fit, ll_nan))
   expect_identical(tp$workers, 1L)
-  expect_identical(tp$l0, taylor_pointwise(fit, ll_reg)$l0)
+  expect_identical(tp$terms, taylor_pointwise(fit, ll_reg)$terms)
 })
 
 test_that("an unusable loglik on a worker gets the usual error", {
@@ -446,7 +445,7 @@ test_that("loo() and waic() use the cores of the fit", {
   fit <- fit_reg(cores = 2)
   tp <- taylor_pointwise(fit, ll_reg)
   expect_identical(tp$workers, 2L)
-  expect_identical(tp$lpd_2, ref$lpd_2)
+  expect_identical(tp$terms, ref$terms)
   expect_identical(future::nbrOfWorkers(), 1L)
 })
 

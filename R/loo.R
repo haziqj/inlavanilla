@@ -285,12 +285,13 @@ waic_x_inla_vanilla <- function(
   waic.inla_vanilla(x, loglik, ..., hessian = hessian)
 }
 
-# The per-unit Taylor terms at the fit's Gaussian N(theta, Omega). Finite
-# differences run in whitened coordinates u, with theta + L u and
-# L L' = Omega, so they give the whitened score L' s_u and Hessian
-# L' H_u L directly. Every formula below is invariant to the choice of L, and
-# L is cov_root(Omega), as in the fit, so that the differences do not depend
-# on the order of the parameters either.
+# The per-unit Taylor terms at the fit's Gaussian N(theta, Omega), from
+# finite differences of `loglik`. They run in whitened coordinates u, with
+# theta + L u and L L' = Omega, so they give the whitened score L' s_u and
+# Hessian L' H_u L directly, which taylor_terms() (R/vanilla-taylor.R) turns
+# into the terms. Every term is invariant to the choice of L, and L is
+# cov_root(Omega), as in the fit, so that the differences do not depend on
+# the order of the parameters either.
 # Steps of h = 0.01 posterior SDs: in these units the terms of an expansion
 # shrink with the amount of data, so truncation error is negligible, and
 # rounding error is about 1e-12 |l_u|. With hessian = "diagonal" only the
@@ -462,84 +463,46 @@ taylor_pointwise <- function(fit, loglik, h = 0.01, hessian = "full") {
   fp <- vals[, 2L * seq_len(m), drop = FALSE]
   fm <- vals[, 2L * seq_len(m) + 1L, drop = FALSE]
   S <- (fp - fm) / (2 * h)
-  # The diagonal of each unit's whitened Hessian, a row per unit. Its sum is
-  # the trace of Omega H_u.
+  # The diagonal of each unit's whitened Hessian, a row per unit
   D <- (fp - 2 * l0 + fm) / h^2
-  trace <- rowSums(D)
-  quad1 <- rowSums(S^2)
-  if (!full) {
-    progress_close(prog)
-    return(list(
-      n = n,
-      units = units,
-      l0 = unname(l0),
-      quad1 = quad1,
-      trace = trace,
-      log_cpo_1 = unname(l0) - 0.5 * quad1,
-      lpd_1 = unname(l0) + 0.5 * quad1,
-      hessian = hessian,
-      theta = theta,
-      calls = calls,
-      workers = setup$jobs,
-      loglik_warnings = seen
-    ))
-  }
-  H <- array(0, c(m, m, n))
-  for (i in seq_len(m)) {
-    H[i, i, ] <- D[, i]
-  }
-  if (m > 1L) {
-    k <- 2L * m + 1L
-    for (i in seq_len(m - 1L)) {
-      for (j in (i + 1L):m) {
-        hij <- (vals[, k + 1L] +
-          vals[, k + 2L] -
-          fp[, i] -
-          fm[, i] -
-          fp[, j] -
-          fm[, j] +
-          2 * l0) /
-          (2 * h^2)
-        H[i, j, ] <- hij
-        H[j, i, ] <- hij
-        k <- k + 2L
+  H <- NULL
+  if (full) {
+    H <- array(0, c(m, m, n))
+    for (i in seq_len(m)) {
+      H[i, i, ] <- D[, i]
+    }
+    if (m > 1L) {
+      k <- 2L * m + 1L
+      for (i in seq_len(m - 1L)) {
+        for (j in (i + 1L):m) {
+          hij <- (vals[, k + 1L] +
+            vals[, k + 2L] -
+            fp[, i] -
+            fm[, i] -
+            fp[, j] -
+            fm[, j] +
+            2 * l0) /
+            (2 * h^2)
+          H[i, j, ] <- hij
+          H[j, i, ] <- hij
+          k <- k + 2L
+        }
       }
     }
   }
   progress_close(prog)
 
-  # quad1 is s' Omega s in whitened coordinates
-  log_cpo_2 <- lpd_2 <- k_max <- k_min <- ssq <- rep(NA_real_, n)
-  for (u in seq_len(n)) {
-    eg <- eigen(H[,, u], symmetric = TRUE)
-    lam <- eg$values # eigenvalues of L' H_u L, so k = -lam
-    proj2 <- drop(crossprod(eg$vectors, S[u, ]))^2
-    k_max[u] <- max(-lam, 0)
-    k_min[u] <- min(-lam)
-    ssq[u] <- sum(lam^2)
-    if (all(1 + lam > 0)) {
-      log_cpo_2[u] <- l0[u] -
-        0.5 * sum(proj2 / (1 + lam)) +
-        0.5 * sum(log1p(lam))
-    }
-    if (all(1 - lam > 0)) {
-      lpd_2[u] <- l0[u] + 0.5 * sum(proj2 / (1 - lam)) - 0.5 * sum(log1p(-lam))
-    }
+  # The derivatives are in whitened coordinates, where the covariance is the
+  # identity
+  terms <- taylor_terms(l0, S, H, diag(m), root = diag(m))
+  if (!full) {
+    # The total leverage from the diagonal alone: -tr(Omega H_u)
+    terms$k_sum <- -rowSums(D)
   }
-
   list(
     n = n,
     units = units,
-    l0 = unname(l0),
-    quad1 = quad1,
-    ssq = ssq,
-    trace = trace,
-    log_cpo_1 = unname(l0) - 0.5 * quad1,
-    lpd_1 = unname(l0) + 0.5 * quad1,
-    log_cpo_2 = log_cpo_2,
-    lpd_2 = lpd_2,
-    k_max = k_max,
-    k_min = k_min,
+    terms = terms,
     hessian = hessian,
     theta = theta,
     calls = calls,
@@ -621,26 +584,16 @@ unit_labels <- function(tp, which) {
   if (is.null(tp$units)) as.character(which) else tp$units[which]
 }
 
-loo_se <- function(v) {
-  sqrt(length(v) * stats::var(v))
-}
-
-# Assemble the LOO from the Taylor terms. A missing second-order log CPO
-# means the unit's case-deletion integral really diverges, so a first-order
-# stand-in for that unit alone would be wrong by an unbounded amount, and
-# dropping it would score the model on fewer units: every estimate falls to
-# first order instead. A missing second-order lpd is an artefact of the
-# quadratic, so p_loo uses that unit's first-order term (as INLAvaan does).
+# The LOO from the Taylor terms (taylor_loo()), with a warning when it falls
+# to first order, as an object of the loo package's shape.
 loo_from_taylor <- function(tp, silent = FALSE) {
   if (identical(tp$hessian, "diagonal")) {
     return(trace_from_taylor(tp, "loo", silent))
   }
-  cpo_ok <- !is.na(tp$log_cpo_2)
-  lpd_ok <- !is.na(tp$lpd_2)
-  second <- all(cpo_ok)
+  res <- taylor_loo(tp$terms)
   warnings <- tp$loglik_warnings
-  bad <- unit_labels(tp, which(!cpo_ok))
-  if (!second) {
+  bad <- unit_labels(tp, res$first_order)
+  if (res$order == 1L) {
     n_bad <- length(bad)
     msg <- c(
       "Using the first-order LOO for all units.",
@@ -655,31 +608,13 @@ loo_from_taylor <- function(tp, silent = FALSE) {
       warn(msg)
     }
   }
-  log_cpo <- if (second) tp$log_cpo_2 else tp$log_cpo_1
-  # lpd_1 - log_cpo_1 = s' Omega s
-  p_u <- if (second) {
-    ifelse(lpd_ok, tp$lpd_2 - tp$log_cpo_2, tp$quad1)
-  } else {
-    tp$quad1
-  }
-  est <- rbind(
-    elpd_loo = c(sum(log_cpo), loo_se(log_cpo)),
-    p_loo = c(sum(p_u), loo_se(p_u)),
-    looic = c(-2 * sum(log_cpo), 2 * loo_se(log_cpo))
-  )
-  colnames(est) <- c("Estimate", "SE")
-  pointwise <- cbind(
-    elpd_loo = log_cpo,
-    p_loo = p_u,
-    looic = -2 * log_cpo,
-    k = tp$k_max
-  )
+  pointwise <- res$pointwise
   rownames(pointwise) <- tp$units
   structure(
     list(
-      estimates = est,
+      estimates = res$estimates,
       pointwise = pointwise,
-      order = if (second) 2L else 1L,
+      order = res$order,
       hessian = "full",
       first_order_units = bad,
       theta = tp$theta,
@@ -690,23 +625,13 @@ loo_from_taylor <- function(tp, silent = FALSE) {
   )
 }
 
-# The LOO and the WAIC from the scores and the trace alone. To first order
-# in the leverages, log |I + Omega H_u| is tr(Omega H_u) and the quadratic
-# form is s' Omega s, so
-#   log CPO_u = l_u - s' Omega s / 2 + tr(Omega H_u) / 2,
-#   lpd_u     = l_u + s' Omega s / 2 + tr(Omega H_u) / 2,
-# and p_u = s' Omega s for both criteria, which then agree unit by unit.
-# Summed over the units the trace is minus the effective number of parameters
-# of the likelihood, tr(-Omega sum_u H_u), so this is the first-order total
-# less half of it. What is left out is of second order in the leverages, so
-# the sum of a unit's leverages, -tr(Omega H_u), is reported as its k, and a
-# unit at 1 or more is warned about.
+# The LOO or the WAIC from the scores and the total leverages alone
+# (taylor_trace()), with a warning for the units whose leverages add up to 1
+# or more.
 trace_from_taylor <- function(tp, what, silent = FALSE) {
-  k_sum <- -tp$trace
-  elpd_u <- tp$log_cpo_1 + 0.5 * tp$trace
-  p_u <- tp$quad1
+  res <- taylor_trace(tp$terms, what)
   warnings <- tp$loglik_warnings
-  bad <- unit_labels(tp, which(k_sum >= 1))
+  bad <- unit_labels(tp, res$over)
   if (length(bad) > 0L) {
     n_bad <- length(bad)
     msg <- c(
@@ -721,26 +646,11 @@ trace_from_taylor <- function(tp, what, silent = FALSE) {
       warn(msg)
     }
   }
-  names_est <- if (what == "loo") {
-    c("elpd_loo", "p_loo", "looic")
-  } else {
-    c("elpd_waic", "p_waic", "waic")
-  }
-  est <- rbind(
-    c(sum(elpd_u), loo_se(elpd_u)),
-    c(sum(p_u), loo_se(p_u)),
-    c(-2 * sum(elpd_u), 2 * loo_se(elpd_u))
-  )
-  dimnames(est) <- list(names_est, c("Estimate", "SE"))
-  pointwise <- cbind(elpd_u, p_u, -2 * elpd_u)
-  colnames(pointwise) <- names_est
-  if (what == "loo") {
-    pointwise <- cbind(pointwise, k = k_sum)
-  }
+  pointwise <- res$pointwise
   rownames(pointwise) <- tp$units
   structure(
     list(
-      estimates = est,
+      estimates = res$estimates,
       pointwise = pointwise,
       order = 1L,
       hessian = "diagonal",
@@ -758,18 +668,16 @@ trace_from_taylor <- function(tp, what, silent = FALSE) {
   )
 }
 
-# Assemble the WAIC from the same terms. It reads no case-deletion term, so
-# only the lpd must exist; where it does not, every estimate falls to first
-# order, where elpd_waic equals the first-order LOO exactly.
+# The WAIC from the Taylor terms (taylor_waic()), with a warning when it falls
+# to first order.
 waic_from_taylor <- function(tp, silent = FALSE) {
   if (identical(tp$hessian, "diagonal")) {
     return(trace_from_taylor(tp, "waic", silent))
   }
-  lpd_ok <- !is.na(tp$lpd_2)
-  second <- all(lpd_ok)
+  res <- taylor_waic(tp$terms)
   warnings <- tp$loglik_warnings
-  bad <- unit_labels(tp, which(!lpd_ok))
-  if (!second) {
+  bad <- unit_labels(tp, res$first_order)
+  if (res$order == 1L) {
     msg <- c(
       "Using the first-order WAIC for all units.",
       "i" = "{length(bad)} unit{?s} {?has/have} a leverage k of -1 or less:
@@ -780,22 +688,13 @@ waic_from_taylor <- function(tp, silent = FALSE) {
       warn(msg)
     }
   }
-  lpd <- if (second) tp$lpd_2 else tp$lpd_1
-  p_w <- if (second) tp$quad1 + 0.5 * tp$ssq else tp$quad1
-  elpd_u <- lpd - p_w
-  est <- rbind(
-    elpd_waic = c(sum(elpd_u), loo_se(elpd_u)),
-    p_waic = c(sum(p_w), loo_se(p_w)),
-    waic = c(-2 * sum(elpd_u), 2 * loo_se(elpd_u))
-  )
-  colnames(est) <- c("Estimate", "SE")
-  pointwise <- cbind(elpd_waic = elpd_u, p_waic = p_w, waic = -2 * elpd_u)
+  pointwise <- res$pointwise
   rownames(pointwise) <- tp$units
   structure(
     list(
-      estimates = est,
+      estimates = res$estimates,
       pointwise = pointwise,
-      order = if (second) 2L else 1L,
+      order = res$order,
       hessian = "full",
       first_order_units = bad,
       theta = tp$theta,

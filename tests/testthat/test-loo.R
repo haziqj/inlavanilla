@@ -184,19 +184,88 @@ test_that("the expansion is at the VB mean, or at the mode without VB", {
 
 # (c) Fallback, layout, interface, output -----------------------------------
 
+test_that("taylor_terms() gives the closed forms, for any root of Omega", {
+  set.seed(3)
+  m <- 3
+  n <- 4
+  B <- matrix(rnorm(m * m), m)
+  Omega <- (crossprod(B) + diag(m)) / 20
+  l <- rnorm(n, -2)
+  s <- matrix(rnorm(n * m), n, m)
+  H <- array(0, c(m, m, n))
+  for (u in seq_len(n)) {
+    C <- matrix(rnorm(m * m), m) / 4
+    H[,, u] <- -crossprod(C)
+  }
+  # A unit with a leverage over 1: no second-order log CPO
+  H[,, 4] <- -2 * solve(Omega)
+  terms <- taylor_terms(l, s, H, Omega)
+  terms_chol <- taylor_terms(l, s, H, Omega, root = t(chol(Omega)))
+  expect_equal(terms_chol, terms, tolerance = 1e-10)
+  expect_identical(
+    names(terms),
+    c(
+      "l_star",
+      "quad",
+      "log_cpo_1",
+      "lpd_1",
+      "log_cpo_2",
+      "lpd_2",
+      "k_max",
+      "k_min",
+      "k_sum",
+      "k_ssq"
+    )
+  )
+  # Units 1 to 3 have leverages below 1, so every term exists
+  expect_true(all(terms$k_max[1:3] < 1 & terms$k_min[1:3] > -1))
+  for (u in 1:3) {
+    su <- s[u, ]
+    Hu <- H[,, u]
+    OH <- Omega %*% Hu
+    expect_equal(terms$quad[u], sum(su * (Omega %*% su)))
+    expect_equal(
+      terms$log_cpo_2[u],
+      l[u] -
+        0.5 * sum(su * solve(solve(Omega) + Hu, su)) +
+        0.5 * determinant(diag(m) + OH)$modulus[[1]]
+    )
+    expect_equal(
+      terms$lpd_2[u],
+      l[u] +
+        0.5 * sum(su * solve(solve(Omega) - Hu, su)) -
+        0.5 * determinant(diag(m) - OH)$modulus[[1]]
+    )
+    k <- Re(eigen(-OH, only.values = TRUE)$values)
+    expect_equal(terms$k_max[u], max(k, 0))
+    expect_equal(terms$k_min[u], min(k))
+    expect_equal(terms$k_sum[u], -sum(diag(OH)))
+    expect_equal(terms$k_ssq[u], sum(diag(OH %*% OH)))
+  }
+  expect_true(is.na(terms$log_cpo_2[4]))
+  expect_equal(terms$k_max[4], 2)
+  # Without Hessians, the first order alone
+  first <- taylor_terms(l, s, NULL, Omega)
+  expect_identical(first[, 1:4], terms[, 1:4])
+  expect_true(all(is.na(first$log_cpo_2)))
+})
+
 test_that("a unit with no second-order term sends every estimate to first order", {
   tp <- list(
     n = 3L,
     units = c("u1", "u2", "u3"),
-    l0 = c(-1, -2, -3),
-    quad1 = c(0.1, 0.2, 0.3),
-    ssq = c(0.01, 0.02, 0.03),
-    log_cpo_1 = c(-1.05, -2.1, -3.15),
-    lpd_1 = c(-0.95, -1.9, -2.85),
-    log_cpo_2 = c(-1.06, NA, -3.16),
-    lpd_2 = c(-0.94, -1.89, NA),
-    k_max = c(0.2, 1.3, 0.1),
-    k_min = c(0, 0, -1.2),
+    terms = data.frame(
+      l_star = c(-1, -2, -3),
+      quad = c(0.1, 0.2, 0.3),
+      log_cpo_1 = c(-1.05, -2.1, -3.15),
+      lpd_1 = c(-0.95, -1.9, -2.85),
+      log_cpo_2 = c(-1.06, NA, -3.16),
+      lpd_2 = c(-0.94, -1.89, NA),
+      k_max = c(0.2, 1.3, 0.1),
+      k_min = c(0, 0, -1.2),
+      k_sum = c(0.2, 1.3, -1.1),
+      k_ssq = c(0.01, 0.02, 0.03)
+    ),
     theta = c(a = 0),
     calls = 3L
   )
@@ -207,8 +276,8 @@ test_that("a unit with no second-order term sends every estimate to first order"
   )
   expect_identical(res$order, 1L)
   expect_identical(res$first_order_units, "u2")
-  expect_equal(unname(res$pointwise[, "elpd_loo"]), tp$log_cpo_1)
-  expect_equal(unname(res$pointwise[, "p_loo"]), tp$quad1)
+  expect_equal(unname(res$pointwise[, "elpd_loo"]), tp$terms$log_cpo_1)
+  expect_equal(unname(res$pointwise[, "p_loo"]), tp$terms$quad)
   expect_match(res$warnings, "first-order LOO")
 
   expect_warning(
@@ -219,11 +288,11 @@ test_that("a unit with no second-order term sends every estimate to first order"
   expect_identical(res$order, 1L)
   expect_identical(res$first_order_units, "u3")
   # At first order the WAIC equals the first-order LOO
-  expect_equal(unname(res$pointwise[, "elpd_waic"]), tp$log_cpo_1)
+  expect_equal(unname(res$pointwise[, "elpd_waic"]), tp$terms$log_cpo_1)
 
   # A missing lpd alone keeps the LOO at second order; p_loo takes the
   # unit's first-order term
-  tp$log_cpo_2[2] <- -2.11
+  tp$terms$log_cpo_2[2] <- -2.11
   expect_no_warning(res <- loo_from_taylor(tp))
   expect_identical(res$order, 2L)
   expect_equal(
@@ -232,7 +301,7 @@ test_that("a unit with no second-order term sends every estimate to first order"
   )
 
   # Silent: no warning, but recorded
-  tp$log_cpo_2[2] <- NA
+  tp$terms$log_cpo_2[2] <- NA
   expect_no_warning(res <- loo_from_taylor(tp, silent = TRUE))
   expect_match(res$warnings, "first-order LOO")
 })
@@ -491,11 +560,18 @@ test_that("leverages that add up to 1 or more are warned about", {
   tp <- list(
     n = 3L,
     units = c("u1", "u2", "u3"),
-    l0 = c(-1, -2, -3),
-    quad1 = c(0.1, 0.2, 0.3),
-    trace = c(-0.2, -1.3, -0.1),
-    log_cpo_1 = c(-1.05, -2.1, -3.15),
-    lpd_1 = c(-0.95, -1.9, -2.85),
+    terms = data.frame(
+      l_star = c(-1, -2, -3),
+      quad = c(0.1, 0.2, 0.3),
+      log_cpo_1 = c(-1.05, -2.1, -3.15),
+      lpd_1 = c(-0.95, -1.9, -2.85),
+      log_cpo_2 = NA_real_,
+      lpd_2 = NA_real_,
+      k_max = NA_real_,
+      k_min = NA_real_,
+      k_sum = c(0.2, 1.3, 0.1),
+      k_ssq = NA_real_
+    ),
     hessian = "diagonal",
     theta = c(a = 0),
     calls = 3L
@@ -508,9 +584,9 @@ test_that("leverages that add up to 1 or more are warned about", {
   expect_identical(res$trace_units, "u2")
   expect_equal(
     unname(res$pointwise[, "elpd_loo"]),
-    tp$log_cpo_1 + 0.5 * tp$trace
+    tp$terms$log_cpo_1 - 0.5 * tp$terms$k_sum
   )
-  expect_equal(unname(res$pointwise[, "k"]), -tp$trace)
+  expect_equal(unname(res$pointwise[, "k"]), tp$terms$k_sum)
   expect_match(res$warnings, "trace may not stand in")
   expect_warning(
     waic_from_taylor(tp),
