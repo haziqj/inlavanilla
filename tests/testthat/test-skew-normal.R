@@ -541,13 +541,12 @@ test_that("qsnorm_fast recycles to the longest argument, as qsnorm does", {
 test_that("qsnorm_fast is within its documented envelope of the true quantile", {
   # R/vanilla-qsnorm-fast.R documents qsnorm_fast() as a starting value whose
   # error, in units of omega, is at most 7e-3 for p in [0.01, 0.99] and 0.085
-  # down to a tail probability of 1e-15, outside a narrow window of |alpha|
-  # near 2.18 deep in the lighter tail. Errors here are relative to
-  # max(1, |q|). Observed: max 0.044 overall (alpha = +-1.5, p = 1e-3 or
-  # 1 - 1e-3), from the Lambert W tail branch, and max 5.0e-3 for p in
-  # [0.01, 0.99], from the Taylor branch. (On a finer grid of alpha the
-  # absolute error peaks at 0.085, at |alpha| = 1.06 and a tail probability of
-  # 1.5e-3.)
+  # down to a tail probability of 1e-15, outside a narrow window of |alpha| near
+  # 2.18 deep in the lighter tail. Errors here are relative to max(1, |q|).
+  # Observed: max 0.044 overall (alpha = +-1.5, p = 1e-3 or 1 - 1e-3), from the
+  # Lambert W tail branch, and max 5.0e-3 for p in [0.01, 0.99], from the Taylor
+  # branch. (On a finer grid of alpha the absolute error peaks at 0.085, at
+  # |alpha| = 1.06 and a tail probability of 1.5e-3.)
   err <- NULL
   for (a in alpha_wide) {
     q_ref <- sn_quantile_ref(p_wide, a)

@@ -88,11 +88,11 @@ log_sn_light_tail <- function(h, a) {
 
 # Skew-normal distribution function F(q) = Phi(z) - 2 T(z, alpha), with
 # z = (q - xi) / omega. The upper tail is computed by reflection,
-# 1 - F(z; alpha) = F(-z; -alpha), so a small tail probability never comes
-# out as the difference of two numbers close to one. It is 0 and 1 at -Inf
-# and Inf, and NA for a non-positive or missing scale. As in pnorm(), the
-# arguments are recycled to the longest, a zero-length argument gives a
-# zero-length result, and the result keeps the names and dim of q.
+# 1 - F(z; alpha) = F(-z; -alpha), so a small tail probability never comes out
+# as the difference of two numbers close to one. It is 0 and 1 at -Inf and Inf,
+# and NA for a non-positive or missing scale. As in pnorm(), the arguments are
+# recycled to the longest, a zero-length argument gives a zero-length result,
+# and the result keeps the names and dim of q.
 psnorm <- function(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE) {
   lens <- c(length(q), length(xi), length(omega), length(alpha))
   if (min(lens) == 0L) {
@@ -119,9 +119,9 @@ psnorm <- function(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE) {
   keep_shape(out, shape)
 }
 
-# Skew-normal quantiles, solved to near machine precision. Each probability
-# is turned into the log of its smaller tail, and qsn_std_logtail() solves for
-# the standardised quantile. As in qnorm(), the arguments are recycled to the
+# Skew-normal quantiles, solved to near machine precision. Each probability is
+# turned into the log of its smaller tail, and qsn_std_logtail() solves for the
+# standardised quantile. As in qnorm(), the arguments are recycled to the
 # longest, a zero-length argument gives a zero-length result, and the result
 # keeps the names and dim of p.
 qsnorm <- function(p, xi = 0, omega = 1, alpha = 0) {
@@ -162,12 +162,12 @@ keep_shape <- function(out, x) {
 # Standardised skew-normal quantile from the log of a tail probability: solves
 # log F(q) = logp, or log(1 - F(q)) = logp where `upper` is TRUE, for
 # SN(0, 1, alpha). Newton's method on the log scale, from qsnorm_fast(). The
-# skew-normal is log-concave, so log F and log(1 - F) are concave and
-# monotone, and Newton's method converges monotonically from any start. Steps
-# are capped at one unit as a safeguard. Working on the log of the smaller
-# tail keeps far-tail quantiles accurate. Deep in the light tail (beyond
-# |q alpha| = 4), where psnorm() loses relative accuracy to cancellation, the
-# log of the tail comes from log_sn_light_tail() instead.
+# skew-normal is log-concave, so log F and log(1 - F) are concave and monotone,
+# and Newton's method converges monotonically from any start. Steps are capped
+# at one unit as a safeguard. Working on the log of the smaller tail keeps
+# far-tail quantiles accurate. Deep in the light tail (beyond |q alpha| = 4),
+# where psnorm() loses relative accuracy to cancellation, the log of the tail
+# comes from log_sn_light_tail() instead.
 qsn_std_logtail <- function(logp, alpha, upper) {
   n <- length(logp)
   alpha <- rep_len(alpha, n)
@@ -175,12 +175,12 @@ qsn_std_logtail <- function(logp, alpha, upper) {
   p <- exp(logp)
   q <- .qsn_std_fast(ifelse(upper, 1 - p, p), alpha)
   # Below a tail probability of exp(-27), about 1.9e-12, and wherever
-  # qsnorm_fast() is not finite, as in the heavier tail below a tail
-  # probability of about 1.7e-16, start instead from the Gaussian tail
-  # behaviour: on the heavy side the density is about 2 phi(q), on the light
-  # side it decays like phi(q sqrt(1 + alpha^2)). For |alpha| up to 30 this
-  # start is within about 0.6 of the root, but in most cases further from it
-  # than qsnorm_fast(). Newton's method below converges from either.
+  # qsnorm_fast() is not finite, as in the heavier tail below a tail probability
+  # of about 1.7e-16, start instead from the Gaussian tail behaviour: on the
+  # heavy side the density is about 2 phi(q), on the light side it decays like
+  # phi(q sqrt(1 + alpha^2)). For |alpha| up to 30 this start is within about
+  # 0.6 of the root, but in most cases further from it than qsnorm_fast().
+  # Newton's method below converges from either.
   far <- logp < -27 | !is.finite(q)
   if (any(far)) {
     heavy <- (alpha >= 0) == upper
@@ -213,8 +213,8 @@ qsn_std_logtail <- function(logp, alpha, upper) {
     f <- dsnorm(qi, 0, 1, ai)
     # d/dq log F = f / F and d/dq log(1 - F) = -f / (1 - F)
     step <- (log_tail - logp[active]) * exp(log_tail) / ifelse(up, -f, f)
-    # A tail that underflows means q is far out: step back towards the centre
-    # (q - step moves up for a lower tail, down for an upper one).
+    # A tail that underflows means q is far out. Step back towards the centre:
+    # q - step moves up for a lower tail and down for an upper one.
     bad <- !is.finite(step)
     step[bad] <- ifelse(up[bad], 1, -1)
     step <- pmax(pmin(step, 1), -1)
