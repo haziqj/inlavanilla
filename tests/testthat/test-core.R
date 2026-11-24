@@ -190,6 +190,20 @@ test_that("a wrong hess_mode is caught at the mode", {
   expect_match(w, "not symmetric at the mode", all = FALSE)
 })
 
+test_that("the VB budget leaves out the calls that check grad against hess", {
+  ctrl <- check_control(list())
+  fns <- wrap_fns(lp_core, gr_core, he_core, init_core)
+  lap <- laplace_fit(fns$lp, fns$gr, init_core, ctrl, he = fns$he)
+  # With a supplied Hessian the step search runs only for grad_gap, and its
+  # calls are not part of the mode and Hessian stage
+  expect_gt(lap$gap_calls, 0L)
+  expect_identical(lap$gap_calls, lap$hessian$step_calls)
+  # With differences it sets their steps, so it counts
+  fns <- wrap_fns(lp_core, gr_core, NULL, init_core)
+  lap <- laplace_fit(fns$lp, fns$gr, init_core, ctrl)
+  expect_identical(lap$gap_calls, 0L)
+})
+
 test_that("verbose output says where the Hessian at the mode came from", {
   msgs <- cli::ansi_strip(capture_messages(
     vanilla_core(

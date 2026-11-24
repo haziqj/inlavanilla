@@ -291,7 +291,7 @@ vanilla_core <- function(
         lap$A,
         ctrl,
         method = vb_correction,
-        budget = st$n_lp + st$n_gr + st$n_he,
+        budget = st$n_lp + st$n_gr + st$n_he - lap$gap_calls,
         fixed = gm
       )
     )

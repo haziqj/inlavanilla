@@ -11,7 +11,9 @@
 # precision (R'R = H), the covariance Sigma, its square root A = cov_root()
 # (A A' = Sigma), the optimiser output, the gradient of the log-posterior at
 # the mode with the checks built on it, the condition number of the Hessian
-# in posterior-SD units, and the Laplace log marginal likelihood. For verbose
+# in posterior-SD units, and the Laplace log marginal likelihood. `gap_calls`
+# counts the logpost calls, summed over a restart, taken with a supplied
+# Hessian only to check the gradient (grad_gap). For verbose
 # output it also says how the Hessian was taken (`hessian`) and whether
 # nlminb() was restarted (`restart`, NULL when it was not). After a restart
 # the iterations and evaluations of `opt` are the totals over both runs.
@@ -41,6 +43,7 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL, he_mode = NULL) {
     "grad"
   }
   cur <- laplace_at(lp, gr, opt$par, -opt$objective, names(init), at_mode, by)
+  gap_calls <- cur$hessian$gap_calls
 
   # nlminb() works on the raw parameters, and its convergence tests assume
   # they are on a unit scale. Far from that (posterior SDs of 1e4, or 1e-6)
@@ -80,6 +83,7 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL, he_mode = NULL) {
         at_mode,
         by
       )
+      gap_calls <- gap_calls + cur$hessian$gap_calls
     }
     opt$iterations <- iterations
     opt$evaluations <- evaluations
@@ -120,6 +124,7 @@ laplace_fit <- function(lp, gr, init, ctrl, he = NULL, he_mode = NULL) {
       restart = restart,
       hess_cond = cond(cur$Sigma),
       hess_cond_cor = cond(stats::cov2cor(cur$Sigma)),
+      gap_calls = gap_calls,
       # log pi(y) ~ log pi(y, mode) - log N(mode | mode, Sigma), with
       # log det(Sigma) = -2 sum(log(diag(R)))
       logml = cur$lp_max + (m / 2) * log(2 * pi) - sum(log(diag(cur$R)))
@@ -143,15 +148,17 @@ grad_sign_hint <- function(H, scales) {
 
 # Hessian, its Cholesky factor, the covariance and the whitened gradient at
 # `mode`. With `he` the Hessian is the user's (`by` says from which of its
-# functions), checked against the gradient by hess_discrepancy(). Otherwise finite-difference steps are set per
-# coordinate from fd_scales(), so they suit each parameter's own scale:
-# central differences of the gradient at 1e-4 of that scale, or, without a
-# gradient, second differences of the log-posterior at a hundredth of it. R
-# is NULL when the Hessian is not positive definite. fd_scales() runs with
-# `he` too, since its differences of `logpost` give `grad_gap`, which compares
-# a user gradient, and the diagonal of the Hessian, with `logpost` there: NA
-# without a gradient. `hessian` records the method and its calls, those of
-# fd_scales() counted apart.
+# functions), checked against the gradient by hess_discrepancy(). Otherwise
+# finite-difference steps are set per coordinate from fd_scales(), so they suit
+# each parameter's own scale: central differences of the gradient at 1e-4 of
+# that scale, or, without a gradient, second differences of the log-posterior at
+# a hundredth of it. R is NULL when the Hessian is not positive definite.
+# fd_scales() runs with `he` too, since its differences of `logpost` give
+# `grad_gap`, which compares a user gradient, and the diagonal of the Hessian,
+# with `logpost` there: NA without a gradient. `hessian` records the method and
+# its calls, those of fd_scales() counted apart. `gap_calls` counts the calls of
+# fd_scales() taken only for `grad_gap`, those with a supplied Hessian whose
+# diagonal gives the scales.
 laplace_at <- function(
   lp,
   gr,
@@ -180,12 +187,16 @@ laplace_at <- function(
     # The curvature scales, which only rescale a restart of nlminb(), from
     # the Hessian's own diagonal where it allows
     d <- diag(H)
-    scales <- if (all(is.finite(d) & d > 0)) {
+    from_diag <- all(is.finite(d) & d > 0)
+    scales <- if (from_diag) {
       structure(1 / sqrt(d), ok = rep(TRUE, m))
     } else {
       fds
     }
   }
+  # The logpost calls of fd_scales() taken only for grad_gap, which the VB
+  # budget leaves out: all of them when the scales come from the Hessian
+  gap_calls <- if (!is.null(he) && from_diag) attr(fds, "calls") else 0L
   # A Hessian is symmetric, so an asymmetry relative to the curvatures, the
   # largest |H_ij - H_ji| / sqrt(H_ii H_jj), means an error: in the gradient
   # whose Jacobian it is, or in a supplied Hessian, which is also checked
@@ -221,7 +232,8 @@ laplace_at <- function(
         2 * m
       },
       step_calls = attr(fds, "calls"),
-      check_calls = 0L
+      check_calls = 0L,
+      gap_calls = gap_calls
     )
   )
   if (is.null(R)) {
