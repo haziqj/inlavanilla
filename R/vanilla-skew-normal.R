@@ -279,7 +279,9 @@ sn_mode <- function(xi, omega, alpha) {
 mills_ratio <- function(u) {
   logphi <- stats::dnorm(u, log = TRUE)
   logPhi <- stats::pnorm(u, log.p = TRUE)
-  # Floor logPhi, so that it is never -Inf (exp(-745) is about 5e-324)
+  # Floor logPhi at -745, so that it is never -Inf (exp(-745) is about 5e-324).
+  # The floor also binds where logPhi is finite, below u of about -38.5, and
+  # there it makes the ratio wrong: mills_ratio(-40) gives 5e-25, not 40.
   logPhi <- pmax(logPhi, -745)
   exp(logphi - logPhi)
 }
