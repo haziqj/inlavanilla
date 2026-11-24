@@ -41,7 +41,9 @@ jobs:
             echo "::error::R/vanilla-*.R define a generic or register a method"
             status=1
           fi
-          if grep -nE '\\?"inlavanilla\\?"' R/vanilla-*.R; then
+          # Outside comments, and not as the prefix of a condition class
+          # (inlavanilla_error)
+          if grep -nE '^[^#]*inlavanilla([^_]|$)' R/vanilla-*.R; then
             echo "::error::R/vanilla-*.R name the package inlavanilla"
             status=1
           fi

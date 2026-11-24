@@ -24,8 +24,10 @@ test_that("the engine files hold no roxygen, generic or package name", {
       )),
       label = basename(f)
     )
+    # The name in code, quoted or not, but not in comments or as the prefix
+    # of a condition class (inlavanilla_error)
     expect_false(
-      any(grepl("\\\\?\"inlavanilla\\\\?\"", lines)),
+      any(grepl("^[^#]*inlavanilla([^_]|$)", lines)),
       label = basename(f)
     )
   }
