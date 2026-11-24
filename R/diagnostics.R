@@ -248,12 +248,26 @@ inlavaan_diagnostics <- function() {
 diagnostics.inla_vanilla <- function(object, type = c("global", "param"), ...) {
   type <- check_choice(type, c("global", "param"), "type")
   dg <- diagnostics_internal(
-    object$diagnostics$optim,
+    fit_optim(object),
     object$diagnostics$vb,
     object$diagnostics$marginals,
     pars = object$mean_vb
   )
   dg[[type]]
+}
+
+# The diagnostics of the mode search of a fit. A fit saved before 26.11.24
+# has one condition number, the scale-free one, under the name `hess_cond`:
+# it becomes `hess_cond_cor`, and `hess_cond` is the raw one of the
+# covariance, as in newer fits.
+fit_optim <- function(object) {
+  optim <- object$diagnostics$optim
+  if (!is.null(optim) && is.null(optim$hess_cond_cor)) {
+    optim$hess_cond_cor <- optim$hess_cond
+    ev <- eigen(object$cov, symmetric = TRUE, only.values = TRUE)$values
+    optim$hess_cond <- if (min(ev) > 0) max(ev) / min(ev) else Inf
+  }
+  optim
 }
 
 # Printed as INLAvaan prints its diagnostics: counts as integers, the

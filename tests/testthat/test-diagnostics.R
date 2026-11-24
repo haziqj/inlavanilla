@@ -491,6 +491,20 @@ test_that("an ill-conditioned Hessian warns, whatever the units", {
     diagnostics(fit)[["hess_cond"]],
     fit$diagnostics$optim$hess_cond
   )
+  # A fit saved before 26.11.24 had the scale-free number alone, as
+  # hess_cond. diagnostics() takes the raw one from the covariance
+  old <- fit
+  old$diagnostics$optim$hess_cond <- old$diagnostics$optim$hess_cond_cor
+  old$diagnostics$optim$hess_cond_cor <- NULL
+  expect_identical(
+    diagnostics(old)[["hess_cond_cor"]],
+    fit$diagnostics$optim$hess_cond_cor
+  )
+  expect_equal(
+    diagnostics(old)[["hess_cond"]],
+    fit$diagnostics$optim$hess_cond,
+    tolerance = 1e-6
+  )
   fit <- inla_vanilla(lp, c(a = 0, b = 0), grad = gr, tau = 1, silent = TRUE)
   expect_equal(fit$diagnostics$optim$hess_cond_cor, 201, tolerance = 1e-4)
 

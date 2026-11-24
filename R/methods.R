@@ -8,7 +8,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
   )
   cli::cat_line()
   dg <- diagnostics_internal(
-    x$diagnostics$optim,
+    fit_optim(x),
     x$diagnostics$vb,
     x$diagnostics$marginals
   )
@@ -251,7 +251,7 @@ summary.inla_vanilla <- function(
       logml = object$logml,
       logml_laplace = object$logml_laplace,
       diagnostics = object$diagnostics$marginals,
-      optim = object$diagnostics$optim,
+      optim = fit_optim(object),
       vb = object$diagnostics$vb,
       vb_method = vb_setting(object),
       version = object$version,
