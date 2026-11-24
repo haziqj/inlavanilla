@@ -91,15 +91,15 @@ fit <- inla_vanilla(logpost, c(mu = 0, log_sigma = 0), silent = TRUE)
 # The whole fit
 timing(fit)
 #> total 
-#>  11ms 
+#>  10ms 
 
 # Every stage
 timing(fit, what = "all")
 #>        init     laplace          vb   marginals diagnostics       total 
-#>         1ms         1ms         1ms         6ms         2ms        11ms 
+#>         0ms         2ms         0ms         6ms         2ms        10ms 
 
 # Some stages
 timing(fit, what = c("vb", "marginals"))
 #>        vb marginals 
-#>       1ms       6ms 
+#>       0ms       6ms 
 ```

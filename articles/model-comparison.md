@@ -247,7 +247,7 @@ time_loo <- system.time(loo(fit_nb, loglik_nb))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  4.564  0.005
+#>  4.673  0.006
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1444

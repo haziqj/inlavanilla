@@ -750,7 +750,7 @@ logpost <- function(theta) {
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 #> ✔ Found the posterior mode in 10 iterations [2ms]
-#> ✔ VB mean correction, max shift 0.25σ [1ms]
+#> ✔ VB mean correction, max shift 0.25σ [2ms]
 #> ✔ Fitted 2 skew-normal marginals [7ms]
 fit
 #> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
@@ -794,7 +794,7 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Hessian condition number 1, in SD units (warning > 1e+08)
 #>   Laplace log marginal likelihood -66.41
 #>   63 logpost calls
-#> ✔ VB mean correction, max shift 0.25σ [1ms]
+#> ✔ VB mean correction, max shift 0.25σ [2ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25
 #>   One step, accepted (guard > 2.5σ)
 #>   Gain ratio 0.94 (warning < 0.5)

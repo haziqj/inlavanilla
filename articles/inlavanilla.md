@@ -77,13 +77,13 @@ parameters alone. `theta` arrives as a named vector, so
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init)
-#> ✔ Found the posterior mode in 10 iterations [8ms]
-#> ✔ VB mean correction, max shift 0.48σ [15ms]
-#> ✔ Fitted 3 skew-normal marginals [11ms]
+#> ✔ Found the posterior mode in 10 iterations [9ms]
+#> ✔ VB mean correction, max shift 0.48σ [16ms]
+#> ✔ Fitted 3 skew-normal marginals [12ms]
 fit
 #> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.60 · Converged in 10 iterations (43ms)
+#> Log marginal likelihood: -11.60 · Converged in 10 iterations (45ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -112,9 +112,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla v26.11.24 summary ────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.595 · Converged in 10 iterations (43ms)
+#> Log marginal likelihood: -11.595 · Converged in 10 iterations (45ms)
 #> Laplace -11.709 + VB term 0.11
-#> 233 logpost calls: mode 10ms, VB 16ms, marginals 12ms
+#> 233 logpost calls: mode 11ms, VB 17ms, marginals 12ms
 #> 
 #> ── Posterior marginals ──
 #> 

@@ -227,7 +227,7 @@ init <- c(
 )
 fit <- inla_vanilla(logpost, init)
 #> ✔ Found the posterior mode in 34 iterations [1.9s]
-#> ✔ VB mean correction, max shift 0.39σ [948ms]
+#> ✔ VB mean correction, max shift 0.39σ [967ms]
 #> ✔ Fitted 54 skew-normal marginals [2.4s]
 ```
 
