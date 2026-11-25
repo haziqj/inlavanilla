@@ -376,19 +376,22 @@ problem_text <- function(check, dg, env, advice, n = 3L) {
 # is far from Gaussian there. `worst` is the parameter that the one step moves
 # furthest. It is a warning of its own, raised by vanilla_core() on every
 # flagged fit, whether or not the solve that followed converged, with no
-# numbers: those are in the diagnostics.
+# numbers: those are in the diagnostics. Its class lets a caller catch it.
 warn_vb_check <- function(worst) {
-  warn(c(
-    paste0(
-      "VB one-step check flagged that the posterior is far from Gaussian ",
-      "along the mean correction, most of all in {.code {worst}}."
+  warn(
+    c(
+      paste0(
+        "VB one-step check flagged that the posterior is far from Gaussian ",
+        "along the mean correction, most of all in {.code {worst}}."
+      ),
+      "i" = "Treat posterior means, mloglik, looic and waic with care.",
+      "i" = paste0(
+        "This reflects the model, the data, or the prior, not a numerical ",
+        "failure. If these numbers matter, compare with MCMC."
+      )
     ),
-    "i" = "Treat posterior means, mloglik, looic and waic with care.",
-    "i" = paste0(
-      "This reflects the model, the data, or the prior, not a numerical ",
-      "failure. If these numbers matter, compare with MCMC."
-    )
-  ))
+    class = "inlavanilla_vb_check_warning"
+  )
 }
 
 # The wording a caller gives diagnostic_problems() and problem_text(): cli

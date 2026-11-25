@@ -536,6 +536,7 @@ test_that("a flagged step warns once, in the agreed words", {
     NA
   )
   expect_identical(sum(is_check), 1L)
+  expect_s3_class(seen[[which(is_check)]], "inlavanilla_vb_check_warning")
   expect_s3_class(seen[[which(is_check)]], "inlavanilla_warning")
   expect_false(inherits(
     seen[[which(is_check)]],
