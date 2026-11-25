@@ -209,6 +209,7 @@ test_that("a commit that cannot be downloaded skips the release check", {
 })
 
 test_that("inside inlavanilla, nothing is checked", {
+  local_github_actions()
   root <- local_host(desc = upstream_desc("26.11.24"))
   expect_snapshot(out <- vanilla_status(path = root))
   expect_identical(out$status, rep("skip", 8))
@@ -218,17 +219,11 @@ test_that("on GitHub Actions, failures and warnings are annotations", {
   gh <- local_vendor()
   root <- copied_host("v26.11.24", gh)
   write_text(file.path(root, "R", "vanilla-a.R"), paste0(engine_a, "# mine\n"))
-  old <- Sys.getenv("GITHUB_ACTIONS", unset = NA)
-  Sys.setenv(GITHUB_ACTIONS = "true")
-  on.exit(
-    if (is.na(old)) {
-      Sys.unsetenv("GITHUB_ACTIONS")
-    } else {
-      Sys.setenv(GITHUB_ACTIONS = old)
-    },
-    add = TRUE
-  )
-  out <- utils::capture.output(quiet(vanilla_status(path = root)))
+  printed <- function(root) {
+    utils::capture.output(quiet(vanilla_status(path = root)))
+  }
+  local_github_actions("true")
+  out <- printed(root)
   expect_match(
     out,
     "^::error::1 engine file does not match the lock:%0A",
@@ -240,6 +235,12 @@ test_that("on GitHub Actions, failures and warnings are annotations", {
     all = FALSE
   )
   expect_length(out, 2L)
+  # Elsewhere there are none, and a copy that passes every check has none
+  local_github_actions()
+  expect_identical(printed(root), character())
+  root <- copied_host("v26.11.24-1", gh)
+  local_github_actions("true")
+  expect_identical(printed(root), character())
 })
 
 test_that("an installed inlavanilla older than the copy is pointed out", {

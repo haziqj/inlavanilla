@@ -194,7 +194,7 @@ fake_github <- function(
 }
 
 # Replaces the network, the date and the installed version in the test that
-# calls it.
+# calls it, and hides GitHub Actions from it (see local_github_actions()).
 local_vendor <- function(
   gh = fake_github(envir = envir),
   installed = "26.11.24-1",
@@ -208,7 +208,26 @@ local_vendor <- function(
     .package = "inlavanilla",
     .env = envir
   )
+  local_github_actions(NA, envir = envir)
   invisible(gh)
+}
+
+# Sets the environment variable GITHUB_ACTIONS to `value`, or unsets it when
+# `value` is NA, until the test whose frame is `envir` ends. When it is
+# "true", vanilla_status() also prints its failures and warnings as
+# annotations, which would change the snapshots of its output on CI.
+local_github_actions <- function(value = NA, envir = parent.frame()) {
+  old <- Sys.getenv("GITHUB_ACTIONS", unset = NA)
+  set <- function(v) {
+    if (is.na(v)) {
+      Sys.unsetenv("GITHUB_ACTIONS")
+    } else {
+      Sys.setenv(GITHUB_ACTIONS = v)
+    }
+  }
+  set(value)
+  defer_in(set(old), envir)
+  invisible(old)
 }
 
 ## ----- Host packages ---------------------------------------------------------
