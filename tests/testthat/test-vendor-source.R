@@ -214,12 +214,19 @@ test_that("a clone gives the tags and the same snapshot as GitHub", {
 test_that("GitHub serves the releases of inlavanilla", {
   skip_on_cran()
   skip_if_offline("github.com")
+  # skip_if_offline() checks only that the name resolves, so a proxy or a
+  # firewall that blocks GitHub skips here.
   tags <- vendor_github_tags()
+  skip_if(is.null(tags), "GitHub cannot be reached")
   expect_identical(
     tags[["v26.11.24"]],
     "88056cfa545cee5a601af4485bbc2a3a5443e0fc"
   )
-  snap <- vendor_snapshot(tags[["v26.11.24"]], "v26.11.24")
+  snap <- tryCatch(
+    vendor_snapshot(tags[["v26.11.24"]], "v26.11.24"),
+    inlavanilla_source_error = function(e) NULL
+  )
+  skip_if(is.null(snap), "GitHub's archive of v26.11.24 cannot be reached")
   on.exit(unlink(snap$stage, recursive = TRUE), add = TRUE)
   expect_length(snap$files, 13L)
   expect_identical(
