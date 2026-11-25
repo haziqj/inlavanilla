@@ -380,6 +380,33 @@ test_that("R in Depends is raised, or left alone with an item to do", {
   expect_match(plan$text, "Depends: R (>= 4.1.0), methods\n", fixed = TRUE)
 })
 
+test_that("package names are escaped in the patterns that find entries", {
+  expect_identical(
+    vendor_regex_escape(c("R.utils", "a+b", "x[1]", "a\\b", "c{2}|d")),
+    c("R\\.utils", "a\\+b", "x\\[1\\]", "a\\\\b", "c\\{2\\}\\|d")
+  )
+  for (name in c("R.utils", "a+b", "x[1]", "a\\b")) {
+    pattern <- paste0("^", vendor_regex_escape(name), "$")
+    expect_true(grepl(pattern, name), label = name)
+    expect_true(grepl(pattern, name, perl = TRUE), label = name)
+  }
+  expect_false(grepl(
+    paste0("^", vendor_regex_escape("R.utils"), "$"),
+    "RXutils"
+  ))
+  # An entry whose name only matches the unescaped pattern is not taken
+  desc <- sub(
+    "License: GPL (>= 3)\n",
+    "License: GPL (>= 3)\nImports:\n    cliX,\n    stats\n",
+    host_desc_minimal,
+    fixed = TRUE
+  )
+  d <- vendor_desc_read(write_text(tempfile(), desc))
+  rows <- which(startsWith(d$lines, "    "))
+  expect_identical(vendor_entry_row(d$lines, rows, "stats"), rows[2])
+  expect_identical(vendor_entry_row(d$lines, rows, "cl.X"), rows[2])
+})
+
 test_that("cli in Suggests only is added to Imports, and left in Suggests", {
   desc <- sub(
     "License: GPL (>= 3)\n",

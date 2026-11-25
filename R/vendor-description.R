@@ -234,8 +234,11 @@ vendor_entry_row <- function(lines, rows, name) {
   if (length(hit) > 0L) hit[1L] else rows[length(rows)]
 }
 
+# A name with the characters that regular expressions treat as special
+# escaped. PCRE is needed: in a bracket expression of TRE, "[." would start a
+# collating element.
 vendor_regex_escape <- function(x) {
-  gsub("([.|()^${}+*?\\[\\]\\\\])", "\\\\\\1", x)
+  gsub("([][.|()^${}+*?\\\\])", "\\\\\\1", x, perl = TRUE)
 }
 
 # Replaces the entry of `pkg` in `field` by `entry`, on its own line. NULL
