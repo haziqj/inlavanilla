@@ -372,9 +372,9 @@ gr <- function(theta) {
 ``` r
 
 core <- vanilla_core(lp, gr, init = c(b0 = 0, b1 = 0))
-#> ✔ Found the posterior mode in 8 iterations [11ms]
-#> ✔ VB mean correction, max shift 0.25σ [15ms]
-#> ✔ Fitted 2 skew-normal marginals [9ms]
+#> ✔ Found the posterior mode in 8 iterations [9ms]
+#> ✔ VB mean correction, max shift 0.25σ [11ms]
+#> ✔ Fitted 2 skew-normal marginals [8ms]
 ```
 
 ### What it returns
@@ -396,8 +396,8 @@ str(core, max.level = 1, give.attr = FALSE)
 #>  $ restart      : NULL
 #>  $ diagnostics  :List of 3
 #>  $ scan         :List of 4
-#>  $ timing       : Named num [1:6] 0.001 0.013 0.016 0.009 0.001 ...
-#>  $ counts       : Named int [1:3] 75 32 0
+#>  $ timing       : Named num [1:6] 0 0.011 0.011 0.008 0.001 ...
+#>  $ counts       : Named int [1:3] 65 37 0
 #>  $ vb_correction: chr "onestep"
 #>  $ marginals    : chr "skewnorm"
 #>  $ marginal_scan: chr "linear"
@@ -554,13 +554,24 @@ dg <- diagnostics_internal(
   pars = core$mean_vb
 )
 check_flags(dg, gaussian = FALSE)
-#>       grad_gap           mode        vb_step        vb_gain      hess_cond 
+#>       grad_gap           mode        vb_step       vb_check      hess_cond 
 #>          FALSE          FALSE          FALSE          FALSE          FALSE 
 #>             vb           nmad unscanned_mass          tails     ridge_bend 
 #>          FALSE          FALSE          FALSE          FALSE          FALSE 
 #>       mean_gap 
 #>          FALSE
 ```
+
+One check has a warning of its own, which the core raises and you do not
+word: the check of a one-step VB correction (`vb_check` in
+`check_flags()`, and `vb_lhat`, `vb_j0`, `vb_j1` and `vb_solve` in the
+global table). When it fails, the core solves the VB equation, with its
+sweeps capped by the calls of the mode and Hessian stage, and warns that
+the posterior is far from Gaussian along the mean correction, with the
+class `inlavanilla_vb_check_warning` and the name of the parameter the
+one step moved furthest, which is also in
+`core$diagnostics$vb$check_worst`. `diagnostic_problems()` has no bullet
+for it.
 
 `diagnostic_problems(dg, gaussian, has_grad, advice)` gives the bullets
 of a warning, one per flagged check, worded by you. `advice` is a list
@@ -570,13 +581,12 @@ arguments:
 ``` r
 
 advice_entries
-#> [1] "grad_gap"   "no_grad"    "vb_full"    "vb_none"    "mode_limit"
-#> [6] "mode_retry" "funnel"
+#> [1] "grad_gap"   "no_grad"    "vb_none"    "mode_limit" "mode_retry"
+#> [6] "funnel"
 poisson_advice <- list(
   grad_gap = "the gradient of the Poisson model does not match its
     log-posterior",
   no_grad = "",
-  vb_full = "{.code fit_poisson(vb_correction = \"full\")}",
   vb_none = "{.code fit_poisson(vb_correction = \"none\")}",
   mode_limit = "Raise {.code mode_maxit} in {.arg control}.",
   mode_retry = "Check the data: a rate of zero has no finite log.",
@@ -585,7 +595,7 @@ poisson_advice <- list(
 diagnostic_problems(dg, FALSE, core$has_grad, poisson_advice)
 #> character(0)
 #> attr(,"envir")
-#> <environment: 0x62e1d90da4f8>
+#> <environment: 0x5f8a174b55d8>
 ```
 
 A healthy fit has no problems. When there are some, raise them with

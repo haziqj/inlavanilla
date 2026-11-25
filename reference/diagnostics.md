@@ -123,11 +123,27 @@ and then inlavanilla's own:
 - `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
   should be close to 0.
 
-- `vb_gain_ratio`: how much of the promised rise in the expected
-  log-posterior a one-step correction delivered: the rise under the
-  Gaussian, over the \\\frac12 \delta^\top H \delta\\ that the step
-  assumes. Near 1 is healthy, and it is flagged below 0.5. `NA` when the
-  correction iterated, or the step was too small to check.
+- `vb_lhat`, `vb_j0`, `vb_j1`: the check of a one-step correction, from
+  a second sweep at the step. One step is the first iterate of a
+  fixed-point map, and holds only where that map is a contraction.
+  `vb_lhat` is the size of the residual of the VB equation at the step
+  over its size at the mode, which is the contraction ratio of the map
+  over the step. `vb_j0` and `vb_j1` are the slope of the map along the
+  step, at the mode and at the step. The check passes when `vb_lhat` is
+  below 1 and both slopes lie between -1 and 1. A value that is not
+  finite fails it. They are the same quantities with and without a
+  gradient: a sweep is 2m + 1 gradients with one, and a Stein pass on
+  values of `logpost` without one, when the slopes come from differences
+  of `logpost`. `NA` with `vb_correction = "full"`, and when the step
+  was below `vb_tol` in every parameter, which is too small to check.
+
+- `vb_solve`: 1 if that check failed, 0 if it passed, `NA` if it did not
+  run. After a failed check the fit solves the VB equation on the same
+  sweeps, capped at the calls that the mode and Hessian took over 2m + 1
+  (see "The VB correction" in
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)),
+  and raises a warning of its own: the posterior is far from Gaussian
+  along the mean correction, whether or not the solve converged.
 
 - `mean_gap_max`: the largest absolute `mean_gap`.
 
@@ -193,7 +209,10 @@ and then inlavanilla's own:
   unless that step was 0.1 or more (a `vb_tol` above 0.1), when it is
   taken afresh. It should be close to 0 (`Inf` where the step is not
   finite). It is `NA` after a one-step correction, which has no step
-  still to go.
+  still to go. When the check of a one-step correction failed
+  (`vb_solve`), it is the step still to go where the solve stopped, at
+  its convergence or at its cap on the sweeps. That value is recorded
+  and not flagged, since the cap is not a setting.
 
 - `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
   [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)
@@ -254,8 +273,10 @@ diagnostics(fit)
 #>             0.0340             0.0170             0.0077             0.0039 
 #> unscanned_mass_max       grad_gap_max        vb_fallback        vb_step_max 
 #>           6.58e-04                 NA                  0                 NA 
-#>      vb_gain_ratio       mean_gap_max     ridge_bend_max      n_heavy_tails 
-#>             0.9405             0.0028             0.1324                  0 
+#>            vb_lhat              vb_j0              vb_j1           vb_solve 
+#>             0.0322            -0.0332             0.0335                  0 
+#>       mean_gap_max     ridge_bend_max      n_heavy_tails 
+#>             0.0028             0.1324                  0 
 
 # One row per parameter
 diagnostics(fit, type = "param")

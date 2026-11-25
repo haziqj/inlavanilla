@@ -47,6 +47,9 @@ vanilla_control(
   `vb_correction = "full"`, if two steps in a row are cut, or it has not
   converged after `vb_maxit` steps,
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) takes over.
+  They also limit the solve that follows a failed check of a one-step
+  correction, and a first step below `vb_tol` in every parameter is not
+  checked.
 
 - n_grid:
 

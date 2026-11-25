@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -465,9 +465,9 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">core</span> <span class="op">&lt;-</span> <span class="fu">vanilla_core</span><span class="op">(</span><span class="va">lp</span>, <span class="va">gr</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b1 <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 8 iterations [11ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.25σ [15ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 2 skew-normal marginals [9ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 8 iterations [9ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.25σ [11ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 2 skew-normal marginals [8ms]</span></span></code></pre></div>
 </div>
 </section><section class="level3"><h3 id="what-it-returns">What it returns<a class="anchor" aria-label="anchor" href="#what-it-returns"></a>
 </h3>
@@ -487,8 +487,8 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span><span class="co">#&gt;  $ restart      : NULL</span></span>
 <span><span class="co">#&gt;  $ diagnostics  :List of 3</span></span>
 <span><span class="co">#&gt;  $ scan         :List of 4</span></span>
-<span><span class="co">#&gt;  $ timing       : Named num [1:6] 0.001 0.013 0.016 0.009 0.001 ...</span></span>
-<span><span class="co">#&gt;  $ counts       : Named int [1:3] 75 32 0</span></span>
+<span><span class="co">#&gt;  $ timing       : Named num [1:6] 0 0.011 0.011 0.008 0.001 ...</span></span>
+<span><span class="co">#&gt;  $ counts       : Named int [1:3] 65 37 0</span></span>
 <span><span class="co">#&gt;  $ vb_correction: chr "onestep"</span></span>
 <span><span class="co">#&gt;  $ marginals    : chr "skewnorm"</span></span>
 <span><span class="co">#&gt;  $ marginal_scan: chr "linear"</span></span>
@@ -652,24 +652,24 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span>  pars <span class="op">=</span> <span class="va">core</span><span class="op">$</span><span class="va">mean_vb</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu">check_flags</span><span class="op">(</span><span class="va">dg</span>, gaussian <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt;       grad_gap           mode        vb_step        vb_gain      hess_cond </span></span>
+<span><span class="co">#&gt;       grad_gap           mode        vb_step       vb_check      hess_cond </span></span>
 <span><span class="co">#&gt;          FALSE          FALSE          FALSE          FALSE          FALSE </span></span>
 <span><span class="co">#&gt;             vb           nmad unscanned_mass          tails     ridge_bend </span></span>
 <span><span class="co">#&gt;          FALSE          FALSE          FALSE          FALSE          FALSE </span></span>
 <span><span class="co">#&gt;       mean_gap </span></span>
 <span><span class="co">#&gt;          FALSE</span></span></code></pre></div>
 </div>
+<p>One check has a warning of its own, which the core raises and you do not word: the check of a one-step VB correction (<code>vb_check</code> in <code>check_flags()</code>, and <code>vb_lhat</code>, <code>vb_j0</code>, <code>vb_j1</code> and <code>vb_solve</code> in the global table). When it fails, the core solves the VB equation, with its sweeps capped by the calls of the mode and Hessian stage, and warns that the posterior is far from Gaussian along the mean correction, with the class <code>inlavanilla_vb_check_warning</code> and the name of the parameter the one step moved furthest, which is also in <code>core$diagnostics$vb$check_worst</code>. <code>diagnostic_problems()</code> has no bullet for it.</p>
 <p><code>diagnostic_problems(dg, gaussian, has_grad, advice)</code> gives the bullets of a warning, one per flagged check, worded by you. <code>advice</code> is a list with the entries of <code>advice_entries</code>, cli templates that name your own arguments:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">advice_entries</span></span>
-<span><span class="co">#&gt; [1] "grad_gap"   "no_grad"    "vb_full"    "vb_none"    "mode_limit"</span></span>
-<span><span class="co">#&gt; [6] "mode_retry" "funnel"</span></span>
+<span><span class="co">#&gt; [1] "grad_gap"   "no_grad"    "vb_none"    "mode_limit" "mode_retry"</span></span>
+<span><span class="co">#&gt; [6] "funnel"</span></span>
 <span><span class="va">poisson_advice</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  grad_gap <span class="op">=</span> <span class="st">"the gradient of the Poisson model does not match its</span></span>
 <span><span class="st">    log-posterior"</span>,</span>
 <span>  no_grad <span class="op">=</span> <span class="st">""</span>,</span>
-<span>  vb_full <span class="op">=</span> <span class="st">"{.code fit_poisson(vb_correction = \"full\")}"</span>,</span>
 <span>  vb_none <span class="op">=</span> <span class="st">"{.code fit_poisson(vb_correction = \"none\")}"</span>,</span>
 <span>  mode_limit <span class="op">=</span> <span class="st">"Raise {.code mode_maxit} in {.arg control}."</span>,</span>
 <span>  mode_retry <span class="op">=</span> <span class="st">"Check the data: a rate of zero has no finite log."</span>,</span>
@@ -678,7 +678,7 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span><span class="fu">diagnostic_problems</span><span class="op">(</span><span class="va">dg</span>, <span class="cn">FALSE</span>, <span class="va">core</span><span class="op">$</span><span class="va">has_grad</span>, <span class="va">poisson_advice</span><span class="op">)</span></span>
 <span><span class="co">#&gt; character(0)</span></span>
 <span><span class="co">#&gt; attr(,"envir")</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x62e1d90da4f8&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;environment: 0x5f8a174b55d8&gt;</span></span></code></pre></div>
 </div>
 <p>A healthy fit has no problems. When there are some, raise them with <code>warn(c(header, problems), class = ..., .envir = attr(problems, "envir"))</code>, as the example below does. inlavanilla’s own wording is <code>inlavanilla_advice</code> in its file <code>R/diagnostics.R</code>.</p>
 </section><section class="level3"><h3 id="draws-and-the-skew-normal-functions">Draws and the skew-normal functions<a class="anchor" aria-label="anchor" href="#draws-and-the-skew-normal-functions"></a>

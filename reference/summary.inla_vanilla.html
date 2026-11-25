@@ -27,7 +27,7 @@ parameters as init does."><meta property="og:image" content="https://haziqj.ml/i
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -178,7 +178,14 @@ approximation. Where the solver lands is checked, as the mode is:
 SDs (the fixed-point step there, which is the Newton step of the VB
 stationarity condition; see <code><a href="diagnostics.html">diagnostics()</a></code>). It is flagged above 0.1,
 the level of the mode check, as a correction that did not settle. That
-check is inlavanilla's own.</p></li>
+check is inlavanilla's own. So is the check of a one-step correction
+(<code>vb_lhat</code>, <code>vb_j0</code> and <code>vb_j1</code> in <code><a href="diagnostics.html">diagnostics()</a></code>): a
+second sweep at the step tests that the map the step iterates is a
+contraction. Where it is not, the posterior is far from Gaussian along
+the step, the VB equation is solved instead, and the check is flagged
+here and by a warning of its own, with the parameter the one step moved
+furthest. The line also gives the step still to go where the solve
+stopped, which is not flagged.</p></li>
 <li><p><strong>Skew-normal fits.</strong> <code>nmad</code>, the largest gap between the fitted and
 the scanned density, relative to its peak (Jamil &amp; Rue, 2026, Section
 4.4), flagged above 0.1. <code>alpha</code> is the shape of the fitted skew-normal
@@ -252,10 +259,13 @@ of <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">sta
 that the computation reached its solution: both the mode check and the VB
 check pass, so no further step at the mode or at the VB mean would move
 a parameter by more than 0.1 posterior SDs. It says nothing of how well
-the approximation fits the posterior, which the other checks judge.
-Without a gradient a strongly skewed posterior can read "Not converged:
-VB did not settle": the VB mean from <code>logpost</code> values alone is then
-approximate, and supplying <code>grad</code> is the fix.
+the approximation fits the posterior, which the other checks judge. A
+flagged one-step check is one of those: the solve that follows it stops
+at a cap on its sweeps, and where it stops does not count against
+convergence.
+With <code>vb_correction = "full"</code> and no gradient a strongly skewed posterior
+can read "Not converged: VB did not settle": the VB mean from <code>logpost</code>
+values alone is then approximate, and supplying <code>grad</code> is the fix.
 Printing the fit ends with a line for its warnings and one counting the
 checks flagged here, each shown only when there are any.
 <code><a href="../articles/diagnostics.html">vignette("diagnostics", package = "inlavanilla")</a></code> explains every check

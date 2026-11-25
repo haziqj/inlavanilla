@@ -34,7 +34,7 @@ converged fit can still do badly.
 | Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
 | Gradient | `grad_gap` | above 0.1 | the same | inlavanilla |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
-| VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
+| VB one step | `vb_lhat`, `vb_j0`, `vb_j1` (in `diagnostics(fit)`) | 1 or more in size | a warning of its own | inlavanilla |
 | Hessian | `hess_cond_cor` (in `diagnostics(fit)`) | above \\10^8\\ | the same | INLAvaan, renamed |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
@@ -54,16 +54,16 @@ the skew-normal and VB means as an internal check; the mode shift, the
 Hessian condition number and the unscanned mass come from INLAvaan’s
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
 not from the paper. The levels of those five checks are INLAvaan’s, and
-the fit-time warning uses its words. The VB settling, VB gain and tails
-checks are inlavanilla’s own, and so are the ridge bend and mean gap
-checks, which only [`summary()`](https://rdrr.io/r/base/summary.html)
-flags. Every level is a package default, chosen so that a healthy fit
-stays silent, and not a calibrated cut-off: a tripped check is a prompt
-to look again, and silence is not a certificate of accuracy. In the
-simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD
-track the loss of accuracy, and the paper reports a calibration of the
-expected error against them in its Supplementary Material. \## A healthy
-fit
+the fit-time warning uses its words. The VB settling, VB one-step and
+tails checks are inlavanilla’s own, and so are the ridge bend and mean
+gap checks, which only
+[`summary()`](https://rdrr.io/r/base/summary.html) flags. Every level is
+a package default, chosen so that a healthy fit stays silent, and not a
+calibrated cut-off: a tripped check is a prompt to look again, and
+silence is not a certificate of accuracy. In the simulations of Jamil
+and Rue (2026, Section 4.4), the VB shift and NMAD track the loss of
+accuracy, and the paper reports a calibration of the expected error
+against them in its Supplementary Material. \## A healthy fit
 
 Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:
 
@@ -80,11 +80,11 @@ logpost_pois <- function(theta) {
 }
 fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), silent = TRUE)
 summary(fit_pois)
-#> ── INLAvanilla v26.11.25 summary ────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25-1 summary ──────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (21ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (17ms)
 #> Laplace -12.362 + VB term 0.0085
-#> 68 logpost calls: mode 7ms, VB 1ms, marginals 6ms
+#> 72 logpost calls: mode 6ms, VB 1ms, marginals 6ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -99,7 +99,7 @@ summary(fit_pois)
 #> 1 log_rate     -0.13  0.0066    0.00038           0   0.00053
 #> 
 #> ✔ Mode found in 7 iterations (Newton step 9.8e-08σ).
-#> ✔ VB correction in one step: max shift 0.13σ, gain ratio 0.991.
+#> ✔ VB correction in one step: max shift 0.13σ.
 #> ✔ Skew-normal fits: max NMAD 0.0066, unscanned mass 0.00038, ridge bend 0,
 #>   mean gap 0.00053σ.
 ```
@@ -183,24 +183,60 @@ Supplying `grad` is the fix.
 
 The default correction, `vb_correction = "onestep"`, takes a single step
 from the mode, so there is no step still to go and `vb_step_sigma` is
-`NA`. The check applies when that step has to iterate: if it is over 2.5
-posterior SDs or a node fails, the iteration carries on with capped
-steps, within the calls that the mode and Hessian took. Running out of
-them shows up here as a correction that did not settle, and
-`vb_correction = "full"` is then the thing to try.
+`NA`.
 
-One step rests on a single premise: that the expected log-posterior is a
-parabola with the Laplace curvature. That premise can be tested.
-`vb_gain_ratio` in `diagnostics(fit)` is the rise in the expected
-log-posterior that the step delivered, over the rise the parabola
-promised, \\\tfrac12\delta^\top H\delta\\. It costs \\4m + 2\\ calls of
-`logpost`. Near 1 the premise holds, and below 0.5 the fit warns. A low
-ratio means that the step went too far, or that the posterior is far
-from Gaussian around the mode. It cannot see a long tail far from the
-mode, where the parabola still holds near the peak: there only the mean
-gap, below, shows the trouble. The check says how far to trust the step,
-not what to do about it, as `vb_correction = "full"` is better on some
-of these posteriors and worse on others.
+One step rests on a premise that can be tested. It is the first iterate
+of the map \\\phi\\ whose fixed point is the VB mean, and the first
+iterate is close to the fixed point only where \\\phi\\ is a
+contraction. The fit takes a second sweep at the step \\d_1\\, and reads
+three numbers off the two sweeps, in the coordinates where the Laplace
+Gaussian is standard:
+
+- `vb_lhat`, the size of the residual of the VB equation at the step
+  over its size at the mode. This is the contraction ratio of \\\phi\\
+  over the step, \\\lVert \phi(d_1) - \phi(0) \rVert / \lVert d_1
+  \rVert\\.
+- `vb_j0` and `vb_j1`, the slope of \\\phi\\ along the step, at the mode
+  and at the step. Two points alone would miss a map that is steep near
+  the mode and flat beyond.
+
+The check passes when `vb_lhat` is below 1 and both slopes lie between
+\\-1\\ and 1, and the one step is then the correction, unchanged. The
+level 1 is not tuned: it is where the map stops being a contraction, and
+where the step stops reducing the residual. On the log of a gamma
+variable with shape \\a\\, whose posterior grows more skewed as \\a\\
+falls, `vb_j0` reaches \\-1\\ at \\a = 0.633\\.
+
+When the check fails, the posterior is far from Gaussian along the step,
+and one step is not an approximation of the VB mean. The fit then solves
+the VB equation on the same sweeps, from the mode, by Broyden’s method,
+and stops when the step still to go is below `vb_tol` or at its cap on
+the sweeps. It raises a warning of its own, which names the parameter
+the one step moved furthest, and `vb_solve` in `diagnostics(fit)` is 1.
+The warning is about the posterior, not the solver, so it comes whether
+or not the solve converged: no Gaussian mean is sure to be close to the
+posterior mean there, and the posterior means, the log marginal
+likelihood, [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md)
+and [`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) all need
+care. `vb_step_sigma` then holds the step still to go where the solve
+stopped. It is a record and not a flag, since the cap is not a setting.
+
+All of this is the same with and without a gradient, and so are the
+diagnostics. Only the sweep differs. With `grad` a sweep is \\2m + 1\\
+gradients, the centre and \\\pm\sqrt3\\ along each axis, and the slopes
+come from the same gradients through Stein’s identity, at no further
+cost. Without `grad` a sweep is one pass of Stein’s identity on \\(m +
+1)(m + 2)\\ values of `logpost`, and each slope takes \\4m\\ more, as
+differences of `logpost` along the step.
+
+The cap on the sweeps is the number of calls that the mode and Hessian
+took, divided by \\2m + 1\\, with the two sweeps of the check among
+them. With `grad` the correction therefore never costs more than the
+mode and Hessian did. Without `grad` the same number of sweeps is
+allowed and each costs more, so a fit that fails the check can spend up
+to \\(m + 1)(m + 2) / (2m + 1)\\ times the calls of its mode and Hessian
+on the correction, about \\m / 2\\ times. That is the price of fitting
+without a gradient.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood
 with care. Its VB term, \\\tfrac12\delta^\top H\delta\\, is a
@@ -245,8 +281,8 @@ logpost_mix <- function(theta) {
   log(0.7 * dnorm(theta[[1]], 0, 1) + 0.3 * dnorm(theta[[1]], 3, 1))
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
-#> ✔ Found the posterior mode in 4 iterations [5ms]
-#> ✔ VB mean correction, max shift 0.19σ [14ms]
+#> ✔ Found the posterior mode in 4 iterations [3ms]
+#> ✔ VB mean correction, max shift 0.19σ [11ms]
 #> ✔ Fitted 1 skew-normal marginal [6ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
@@ -282,8 +318,10 @@ diagnostics(fit_mix)
 #>             0.0174             0.0174             0.1963             0.1963 
 #> unscanned_mass_max       grad_gap_max        vb_fallback        vb_step_max 
 #>           9.13e-02                 NA                  0                 NA 
-#>      vb_gain_ratio       mean_gap_max     ridge_bend_max      n_heavy_tails 
-#>             2.0805             0.9681             0.0000                  1
+#>            vb_lhat              vb_j0              vb_j1           vb_solve 
+#>             0.4618             0.3993             0.5226                  0 
+#>       mean_gap_max     ridge_bend_max      n_heavy_tails 
+#>             0.9681             0.0000                  1
 diagnostics(fit_mix, type = "param")
 #>   names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift
 #> 1 theta    0        0        0                0 0.0174    0.191
@@ -524,8 +562,8 @@ fit <- withCallingHandlers(
   }
 )
 #> ✔ Found the posterior mode in 4 iterations [1ms]
-#> ✔ VB mean correction, max shift 0.19σ [1ms]
-#> ✔ Fitted 1 skew-normal marginal [4ms]
+#> ✔ VB mean correction, max shift 0.19σ [0ms]
+#> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Check this fit.
 ```
 

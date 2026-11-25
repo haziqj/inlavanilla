@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -142,11 +142,11 @@
 <td>inlavanilla</td>
 </tr>
 <tr class="even">
-<td>VB gain</td>
+<td>VB one step</td>
 <td>
-<code>vb_gain_ratio</code> (in <code>diagnostics(fit)</code>)</td>
-<td>below 0.5</td>
-<td>the same</td>
+<code>vb_lhat</code>, <code>vb_j0</code>, <code>vb_j1</code> (in <code>diagnostics(fit)</code>)</td>
+<td>1 or more in size</td>
+<td>a warning of its own</td>
 <td>inlavanilla</td>
 </tr>
 <tr class="odd">
@@ -202,7 +202,7 @@
 </tr>
 </tbody>
 </table>
-<p>Most of these are the checks of INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, under the same names. Two have new names, which INLAvaan will use from its version 0.4.0: <code>hess_cond_cor</code> is INLAvaan’s <code>hess_cond</code> taken on the correlation scale, free of units (<code>hess_cond</code> is now the raw one, as in INLAvaan), and <code>unscanned_mass</code> is its <code>scan_end_mass</code>. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics, and the gap between the skew-normal and VB means as an internal check; the mode shift, the Hessian condition number and the unscanned mass come from INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, not from the paper. The levels of those five checks are INLAvaan’s, and the fit-time warning uses its words. The VB settling, VB gain and tails checks are inlavanilla’s own, and so are the ridge bend and mean gap checks, which only <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags. Every level is a package default, chosen so that a healthy fit stays silent, and not a calibrated cut-off: a tripped check is a prompt to look again, and silence is not a certificate of accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD track the loss of accuracy, and the paper reports a calibration of the expected error against them in its Supplementary Material. ## A healthy fit</p>
+<p>Most of these are the checks of INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, under the same names. Two have new names, which INLAvaan will use from its version 0.4.0: <code>hess_cond_cor</code> is INLAvaan’s <code>hess_cond</code> taken on the correlation scale, free of units (<code>hess_cond</code> is now the raw one, as in INLAvaan), and <code>unscanned_mass</code> is its <code>scan_end_mass</code>. Jamil and Rue (2026) use the VB shift and NMAD as fit diagnostics, and the gap between the skew-normal and VB means as an internal check; the mode shift, the Hessian condition number and the unscanned mass come from INLAvaan’s <code><a href="../reference/diagnostics.html">diagnostics()</a></code>, not from the paper. The levels of those five checks are INLAvaan’s, and the fit-time warning uses its words. The VB settling, VB one-step and tails checks are inlavanilla’s own, and so are the ridge bend and mean gap checks, which only <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> flags. Every level is a package default, chosen so that a healthy fit stays silent, and not a calibrated cut-off: a tripped check is a prompt to look again, and silence is not a certificate of accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB shift and NMAD track the loss of accuracy, and the paper reports a calibration of the expected error against them in its Supplementary Material. ## A healthy fit</p>
 <p>Poisson counts with a Gamma(2, 1) prior on the rate, on the log scale:</p>
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
@@ -217,11 +217,11 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>log_rate <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.25 summary ────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.25-1 summary ──────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (21ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (17ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0085</span></span>
-<span><span class="co">#&gt; 68 logpost calls: mode 7ms, VB 1ms, marginals 6ms</span></span>
+<span><span class="co">#&gt; 72 logpost calls: mode 6ms, VB 1ms, marginals 6ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -236,7 +236,7 @@
 <span><span class="co">#&gt; 1 log_rate     -0.13  0.0066    0.00038           0   0.00053</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 7 iterations (Newton step 9.8e-08σ).</span></span>
-<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.13σ, gain ratio 0.991.</span></span>
+<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.13σ.</span></span>
 <span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.0066, unscanned mass 0.00038, ridge bend 0,</span></span>
 <span><span class="co">#&gt;   mean gap 0.00053σ.</span></span></code></pre></div>
 </div>
@@ -248,8 +248,18 @@
 <p><code>hess_cond_cor</code> is the condition number of the Hessian at the mode, with each parameter in posterior-SD units: the ratio of the largest to the smallest eigenvalue of the posterior correlation matrix. Above <span class="math inline">\(10^8\)</span> some combination of the parameters is weakly identified. <code>hess_cond</code> is the condition number on the raw scale of the parameters, as INLAvaan defines it, where a mere change of units can make it large; inlavanilla allows posterior SDs from <span class="math inline">\(10^{-6}\)</span> to <span class="math inline">\(10^4\)</span>, so the check uses <code>hess_cond_cor</code>.</p>
 <p>The VB correction recentres the Gaussian at the shift that minimises its Kullback-Leibler divergence from the posterior (Jamil &amp; Rue, 2026, Section 3.1). <code>vb_shift_sigma</code> is how far it moved each mean from the mode, in posterior SDs. <code>vb_shift</code> is the same shift on the scale of <code>logpost</code>, and <code>kld</code>, half the square of <code>vb_shift_sigma</code>, is the Kullback-Leibler divergence of each shifted marginal from the unshifted one. A shift of a few tenths is normal for a skewed posterior; a shift above 1 SD means that the posterior is far from the Laplace Gaussian. With <code>vb_correction = "full"</code>, when the fixed-point iteration hands over to the optimiser, <code>fit$diagnostics$vb</code> records it, and <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and the verbose output report it, but, as in INLAvaan, it is not flagged: it is a route of the solver, not a sign of a poor approximation.</p>
 <p>Where the solver lands is checked as the mode is. <code>vb_step_sigma</code> is the step still to go at the VB mean, in posterior SDs: the fixed-point step there, which is the Newton step of the condition the VB mean solves. Above 0.1, the level of the mode check, the correction has not settled and the fit has not converged. The VB mean is then off, and with it the VB term of the log marginal likelihood and the expansions of <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code>. The skew-normal marginals do not depend on it, since they are scanned around the mode, and <code>vb_correction = "none"</code> leaves it out. Gaussian marginals (<code>marginals = "gaussian"</code>) are centred on it, and <code>vb_correction = "none"</code> centres them at the mode instead. Without a gradient, the usual cause is not the solver but the VB mean itself: from <code>logpost</code> values alone it is exact only for a log-posterior of degree four, and on a strongly skewed posterior it can be about 0.1 SDs out. Supplying <code>grad</code> is the fix.</p>
-<p>The default correction, <code>vb_correction = "onestep"</code>, takes a single step from the mode, so there is no step still to go and <code>vb_step_sigma</code> is <code>NA</code>. The check applies when that step has to iterate: if it is over 2.5 posterior SDs or a node fails, the iteration carries on with capped steps, within the calls that the mode and Hessian took. Running out of them shows up here as a correction that did not settle, and <code>vb_correction = "full"</code> is then the thing to try.</p>
-<p>One step rests on a single premise: that the expected log-posterior is a parabola with the Laplace curvature. That premise can be tested. <code>vb_gain_ratio</code> in <code>diagnostics(fit)</code> is the rise in the expected log-posterior that the step delivered, over the rise the parabola promised, <span class="math inline">\(\tfrac12\delta^\top H\delta\)</span>. It costs <span class="math inline">\(4m + 2\)</span> calls of <code>logpost</code>. Near 1 the premise holds, and below 0.5 the fit warns. A low ratio means that the step went too far, or that the posterior is far from Gaussian around the mode. It cannot see a long tail far from the mode, where the parabola still holds near the peak: there only the mean gap, below, shows the trouble. The check says how far to trust the step, not what to do about it, as <code>vb_correction = "full"</code> is better on some of these posteriors and worse on others.</p>
+<p>The default correction, <code>vb_correction = "onestep"</code>, takes a single step from the mode, so there is no step still to go and <code>vb_step_sigma</code> is <code>NA</code>.</p>
+<p>One step rests on a premise that can be tested. It is the first iterate of the map <span class="math inline">\(\phi\)</span> whose fixed point is the VB mean, and the first iterate is close to the fixed point only where <span class="math inline">\(\phi\)</span> is a contraction. The fit takes a second sweep at the step <span class="math inline">\(d_1\)</span>, and reads three numbers off the two sweeps, in the coordinates where the Laplace Gaussian is standard:</p>
+<ul>
+<li>
+<code>vb_lhat</code>, the size of the residual of the VB equation at the step over its size at the mode. This is the contraction ratio of <span class="math inline">\(\phi\)</span> over the step, <span class="math inline">\(\lVert \phi(d_1) - \phi(0) \rVert / \lVert d_1 \rVert\)</span>.</li>
+<li>
+<code>vb_j0</code> and <code>vb_j1</code>, the slope of <span class="math inline">\(\phi\)</span> along the step, at the mode and at the step. Two points alone would miss a map that is steep near the mode and flat beyond.</li>
+</ul>
+<p>The check passes when <code>vb_lhat</code> is below 1 and both slopes lie between <span class="math inline">\(-1\)</span> and 1, and the one step is then the correction, unchanged. The level 1 is not tuned: it is where the map stops being a contraction, and where the step stops reducing the residual. On the log of a gamma variable with shape <span class="math inline">\(a\)</span>, whose posterior grows more skewed as <span class="math inline">\(a\)</span> falls, <code>vb_j0</code> reaches <span class="math inline">\(-1\)</span> at <span class="math inline">\(a = 0.633\)</span>.</p>
+<p>When the check fails, the posterior is far from Gaussian along the step, and one step is not an approximation of the VB mean. The fit then solves the VB equation on the same sweeps, from the mode, by Broyden’s method, and stops when the step still to go is below <code>vb_tol</code> or at its cap on the sweeps. It raises a warning of its own, which names the parameter the one step moved furthest, and <code>vb_solve</code> in <code>diagnostics(fit)</code> is 1. The warning is about the posterior, not the solver, so it comes whether or not the solve converged: no Gaussian mean is sure to be close to the posterior mean there, and the posterior means, the log marginal likelihood, <code><a href="../reference/loo.html">loo()</a></code> and <code><a href="../reference/loo.html">waic()</a></code> all need care. <code>vb_step_sigma</code> then holds the step still to go where the solve stopped. It is a record and not a flag, since the cap is not a setting.</p>
+<p>All of this is the same with and without a gradient, and so are the diagnostics. Only the sweep differs. With <code>grad</code> a sweep is <span class="math inline">\(2m + 1\)</span> gradients, the centre and <span class="math inline">\(\pm\sqrt3\)</span> along each axis, and the slopes come from the same gradients through Stein’s identity, at no further cost. Without <code>grad</code> a sweep is one pass of Stein’s identity on <span class="math inline">\((m + 1)(m + 2)\)</span> values of <code>logpost</code>, and each slope takes <span class="math inline">\(4m\)</span> more, as differences of <code>logpost</code> along the step.</p>
+<p>The cap on the sweeps is the number of calls that the mode and Hessian took, divided by <span class="math inline">\(2m + 1\)</span>, with the two sweeps of the check among them. With <code>grad</code> the correction therefore never costs more than the mode and Hessian did. Without <code>grad</code> the same number of sweeps is allowed and each costs more, so a fit that fails the check can spend up to <span class="math inline">\((m + 1)(m + 2) / (2m + 1)\)</span> times the calls of its mode and Hessian on the correction, about <span class="math inline">\(m / 2\)</span> times. That is the price of fitting without a gradient.</p>
 <p>A shift above 1 SD is also a reason to treat the log marginal likelihood with care. Its VB term, <span class="math inline">\(\tfrac12\delta^\top H\delta\)</span>, is a leading-order term, and a large first step can overstate it. On the random effects model of the article <a href="diagnostic-tests.html">Diagnostic tests without a gold standard</a>, the default gives a log marginal likelihood 1.2 nats too high, and <code>vb_correction = "full"</code> one 0.3 nats too low.</p>
 <p>With a gradient the fallback takes one more step of its own. If it lands short of settled, it is run once more from where it landed, much as the mode search reruns its optimiser when the gradient at the mode is not yet small. This can happen when the optimiser starts where a node fails: the lowest node around the mode sits on a boundary of the support, say, so its first value is a failure, and it then reports convergence too early. The rerun costs nothing when the first run settles, and one more run of the optimiser when it does not. It is not a check, so <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> does not mention it, but <code>verbose = TRUE</code> reports it: “Fell back to nlminb, as …, rerun once from where it landed”. Without a gradient no rerun is made, since its optimiser is steered by the same estimate of the expected gradient and cannot settle any closer.</p>
 <p>The skew-normal mean and the VB mean both estimate the posterior mean, by different routes. Both recover the leading, <span class="math inline">\(O(n^{-1})\)</span> shift from the mode to the mean, so they agree to <span class="math inline">\(O(n^{-2})\)</span> (Jamil &amp; Rue, 2026, Proposition 3.4). <code>mean_gap</code> is their gap in posterior SDs. A gap signals that the higher-order terms of that expansion about the mode matter, or numerical error (Section 5.1), and a gap above 0.1 is flagged.</p>
@@ -262,8 +272,8 @@
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.7</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [5ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [14ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [3ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [11ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [6ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>
@@ -291,8 +301,10 @@
 <span><span class="co">#&gt;             0.0174             0.0174             0.1963             0.1963 </span></span>
 <span><span class="co">#&gt; unscanned_mass_max       grad_gap_max        vb_fallback        vb_step_max </span></span>
 <span><span class="co">#&gt;           9.13e-02                 NA                  0                 NA </span></span>
-<span><span class="co">#&gt;      vb_gain_ratio       mean_gap_max     ridge_bend_max      n_heavy_tails </span></span>
-<span><span class="co">#&gt;             2.0805             0.9681             0.0000                  1</span></span>
+<span><span class="co">#&gt;            vb_lhat              vb_j0              vb_j1           vb_solve </span></span>
+<span><span class="co">#&gt;             0.4618             0.3993             0.5226                  0 </span></span>
+<span><span class="co">#&gt;       mean_gap_max     ridge_bend_max      n_heavy_tails </span></span>
+<span><span class="co">#&gt;             0.9681             0.0000                  1</span></span>
 <span><span class="fu"><a href="../reference/diagnostics.html">diagnostics</a></span><span class="op">(</span><span class="va">fit_mix</span>, type <span class="op">=</span> <span class="st">"param"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   names grad grad_abs grad_rel mode_shift_sigma    kld vb_shift</span></span>
 <span><span class="co">#&gt; 1 theta    0        0        0                0 0.0174    0.191</span></span>
@@ -444,8 +456,8 @@
 <span>  <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [1ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [1ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [4ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [0ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [3ms]</span></span>
 <span><span class="co">#&gt; Check this fit.</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="checks-on-a-supplied-gradient">Checks on a supplied gradient<a class="anchor" aria-label="anchor" href="#checks-on-a-supplied-gradient"></a>

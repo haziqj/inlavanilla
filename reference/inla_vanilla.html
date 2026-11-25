@@ -69,7 +69,7 @@ the VB correction."><meta property="og:image" content="https://haziqj.ml/inlavan
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -342,7 +342,10 @@ run that was kept), the gradient of minus the log-posterior at the mode
 number of the Hessian, on the raw scale (<code>hess_cond</code>) and in posterior-SD
 units (<code>hess_cond_cor</code>). <code>vb</code> holds the iterations of the VB correction,
 whether it stopped at the first step (<code>one_pass</code>), whether it fell back
-to <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> (<code>fallback</code>), and the Kullback-Leibler divergence of
+to <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> (<code>fallback</code>), the check of a one-step
+correction (its three numbers in <code>check</code>, whether it
+failed and the VB equation was solved in <code>solve</code>, and the parameter its
+warning names in <code>check_worst</code>), and the Kullback-Leibler divergence of
 the shift (<code>kld_global</code>); it is <code>NULL</code> when <code>vb_correction = "none"</code>.
 <code>marginals</code> is a data frame with a row per parameter: <code>mode_shift_sigma</code>,
 <code>kld</code>, <code>vb_shift</code>, <code>vb_shift_sigma</code>, <code>nmad</code>, <code>alpha</code>, <code>unscanned_mass</code>,
@@ -512,17 +515,18 @@ mode, and <code>NA</code> for <code>"plain"</code>). The ridge bend of a paramet
 of <code>logpost</code>, and the number of calls grows with the square of the number
 of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
 marginals about m(<code>n_grid</code> + 2m + 6), with 2(m - 1) more for each parameter
-whose ridge bend is above 0.1. The VB correction takes (m + 1)(m + 2)
-calls, or that many per sweep with <code>vb_correction = "full"</code>: it needs no
-derivatives, because Stein's identity gives the expected gradient from values
-of <code>logpost</code> alone. With <code>vb_correction = "full"</code>, the VB mean is then exact
+whose ridge bend is above 0.1. The VB correction takes 2(m + 1)(m + 2) + 8m
+calls, or (m + 1)(m + 2) per sweep with <code>vb_correction = "full"</code>: it needs
+no derivatives, because Stein's identity gives the expected gradient from
+values of <code>logpost</code> alone. With <code>vb_correction = "full"</code>, the VB mean is then
+exact
 when the log-posterior is a polynomial of degree four in whitened
 coordinates, and up to degree six with <code>grad</code>. On test models it was about
 0.01 posterior SDs from exact VB (0.003 with <code>grad</code>), and up to 0.1 on a
 strongly skewed posterior (0.03 with <code>grad</code>), against a VB error of 0.01 to
 0.2 SDs from the posterior mean itself. On the most skewed posteriors the VB
-correction may then not settle, and the fit says it has not converged (see
-<code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>); <code>grad</code> is the remedy.</p>
+correction of <code>vb_correction = "full"</code> may then not settle, and the fit says
+it has not converged (see <code><a href="summary.inla_vanilla.html">summary.inla_vanilla()</a></code>); <code>grad</code> is the remedy.</p>
 <p>With <code>grad</code>, every stage is more accurate. The fit is also faster when a
 gradient call costs about as much as a <code>logpost</code> call, as a hand-written
 gradient usually does, since it then makes far fewer calls in all. A
@@ -583,16 +587,40 @@ the symmetric square root of the covariance, taken on the correlation scale.
 Without one, it is one pass of Stein's identity on the rule of
 <code>vb_correction = "full"</code>. Most of the movement is in that step, and exact VB
 is itself an approximation to the posterior mean with an error of the same
-order. If the first step is over 2.5 posterior SDs, or a node fails, the
-iteration carries on with capped steps, within the number of calls that the
-mode and Hessian took. <code><a href="diagnostics.html">diagnostics()</a></code> then has <code>vb_step_sigma</code>, the step
-still to go, which is <code>NA</code> after a single step. After a single step the fit
-checks that it delivered what it promised: <code>vb_gain_ratio</code> in <code><a href="diagnostics.html">diagnostics()</a></code>
-is the rise in the expected log-posterior over the rise the step assumed, and
-a ratio below 0.5 raises a warning. A large first step can also overstate the
-VB term of the log marginal likelihood, so after a shift above 1 posterior
-SD, which is flagged, compare models with care: <code>vb_correction = "full"</code> may
-be closer.</p>
+order.</p>
+<p>One step is the first iterate of a fixed-point map, and it approximates the
+solution only where that map is a contraction. The fit checks this, with a
+second sweep at the step. The step must reduce the residual of the VB
+equation (<code>vb_lhat</code> in <code><a href="diagnostics.html">diagnostics()</a></code>, the ratio of the residual at the step
+to the one at the mode, below 1), and the slope of the map along the step
+must lie between -1 and 1 at the mode and at the step (<code>vb_j0</code> and <code>vb_j1</code>).
+When the check passes, the one step is the correction. When it fails, the
+posterior is far from Gaussian along the step, and the fit solves the VB
+equation instead, on the same sweeps and from the mode, by Broyden's method.
+It then raises a warning that names the parameter the one step moved
+furthest. The warning comes whether or not the solve converged, since it is
+about the posterior and not the solver: treat the posterior means, the log
+marginal likelihood, <code><a href="loo.html">loo()</a></code> and <code><a href="loo.html">waic()</a></code> of such a fit with care, and
+compare with MCMC if they matter. <code>vb_solve</code> in <code><a href="diagnostics.html">diagnostics()</a></code> says whether
+the solve ran, and <code>vb_step_sigma</code> is then the step still to go where it
+stopped, which is recorded and not flagged. If <code>logpost</code> or <code>grad</code> is not
+finite at a node around the mode there is no step to check, and the
+optimiser of <code>vb_correction = "full"</code> takes over.</p>
+<p>The check, the solve, the warning and the diagnostics are the same with and
+without a gradient. Only the sweep differs. With a gradient it is 2m + 1
+gradients, so the correction of a fit that passes takes 4m + 2 gradient
+calls. Without one it is a Stein pass of (m + 1)(m + 2) values of <code>logpost</code>,
+and the two slopes take 4m values each. The sweeps of a correction, the two
+of the check among them, are capped at the number of calls that the mode
+and Hessian took, divided by 2m + 1. With a gradient the correction
+therefore costs no more than the mode and Hessian did. Without one the cap
+is the same number of sweeps, each of which costs more: a fit that fails the
+check can then spend up to (m + 1)(m + 2) / (2m + 1) times the calls of its
+mode and Hessian, about m / 2 times, on the correction. That is the price of
+a fit without a gradient, and <code>grad</code> is the remedy.</p>
+<p>A large first step can also overstate the VB term of the log marginal
+likelihood, so after a shift above 1 posterior SD, which is flagged, compare
+models with care: <code>vb_correction = "full"</code> may be closer.</p>
 <p><code>vb_correction = "full"</code> iterates to the solution, on a degree-5 rule with at
 most (m + 1)(m + 2) + 1 nodes, and hands over to <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> if it does
 not converge.</p>
@@ -743,13 +771,13 @@ Association</em>, <em>81</em>(393), 82–86.
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The parameter named log_sigma is reported as sigma</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[3ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[2ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.25σ</span> <span style="color: #555555;">[1ms]</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[5ms]</span></span>
 <span class="r-in"><span><span class="va">fit</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> v26.11.25 <span style="color: #D7875F;">──────────────────────</span> <span style="color: #555555;">Skew-normal + one-step VB</span> <span style="color: #D7875F;">──</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">──</span> <span style="font-weight: bold;">INLAvanilla</span> v26.11.25-1 <span style="color: #D7875F;">────────────────────</span> <span style="color: #555555;">Skew-normal + one-step VB</span> <span style="color: #D7875F;">──</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (14ms)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Log marginal likelihood: </span><span style="color: #D7875F;">-66.38</span> · Converged in 10 iterations (11ms)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          <span style="font-weight: bold;"> Mean</span>  <span style="font-weight: bold;">   SD</span>  <span style="font-weight: bold;"> 2.5%</span>  <span style="font-weight: bold;">  50%</span>  <span style="font-weight: bold;">97.5%</span>  <span style="font-weight: bold;"> Mode</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #555555;">1</span> mu     5.159  <span style="color: #555555;">0.</span>327  4.517  5.159  5.800  5.159</span>
@@ -779,8 +807,8 @@ Association</em>, <em>81</em>(393), 82–86.
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Found the posterior mode in <span style="color: #D7875F;">10</span> iterations <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">nlminb: relative convergence (4), after 10 iterations (14 function and 26</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">gradient evaluations)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">8.8e-08σ (warning &gt; 0.1σ)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">(warning &gt; 0.1σ)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Hessian by second differences of logpost: 6 calls, and 12 more to set the</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">steps</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Posterior correlation matrix: largest correlation -0.0042 (mu,</span></span>
@@ -790,19 +818,20 @@ Association</em>, <em>81</em>(393), 82–86.
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">63 logpost calls</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> VB mean correction, max shift <span style="color: #D7875F;">0.25σ</span> <span style="color: #555555;">[1ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Fixed-point steps, largest over the parameters (σ): 0.25</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">One step, accepted (guard &gt; 2.5σ)</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Gain ratio 0.94 (warning &lt; 0.5)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">One-step check: contraction ratio 0.032, slope along the step -0.031 at</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">the mode and 0.029 at the step (passes below 1 in size)</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">One step, accepted</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">Largest shift 0.25σ, for log_sigma (warning &gt; 1σ)</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">KL term 0.031, giving a log marginal likelihood of -66.38</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">16 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[7ms]</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">28 logpost calls</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Fitted <span style="color: #D7875F;">2</span> skew-normal marginals <span style="color: #555555;">[9ms]</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">           Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">mu       </span>  <span style="color: #555555;">-0.25</span>  <span style="color: #555555;">4.2e-05</span>  <span style="color: #555555;">      0.13</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;">  6.4e-05</span>  <span style="color: #555555;">-0.00014</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">log_sigma</span>  <span style="color: #555555;"> 1.32</span>  <span style="color: #555555;"> 0.0076</span>  <span style="color: #555555;">   3.6e-06</span>  <span style="color: #555555;">   ok</span>  <span style="color: #555555;">  0.00057</span>  <span style="color: #555555;">    0.13</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #BBBB00;">!</span><span style="color: #555555;"> marks what summary() flags: NMAD &gt; 0.1, ridge bend &gt; 0.25, heavy tails,</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     <span style="color: #555555;">unscanned mass &gt; 0.05</span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   <span style="color: #555555;">68 logpost calls</span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 147 logpost calls in 32ms</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #D7875F;">ℹ</span> Done: 159 logpost calls in 26ms</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Nothing printed, as in a simulation; any warnings are kept in the fit</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">inla_vanilla</span><span class="op">(</span><span class="va">logpost</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>mu <span class="op">=</span> <span class="fl">0</span>, log_sigma <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>

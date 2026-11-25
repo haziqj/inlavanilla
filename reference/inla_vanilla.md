@@ -270,9 +270,12 @@ is a list holding, among other things:
   VB correction, whether it stopped at the first step (`one_pass`),
   whether it fell back to
   [`stats::nlminb()`](https://rdrr.io/r/stats/nlminb.html) (`fallback`),
-  and the Kullback-Leibler divergence of the shift (`kld_global`); it is
-  `NULL` when `vb_correction = "none"`. `marginals` is a data frame with
-  a row per parameter: `mode_shift_sigma`, `kld`, `vb_shift`,
+  the check of a one-step correction (its three numbers in `check`,
+  whether it failed and the VB equation was solved in `solve`, and the
+  parameter its warning names in `check_worst`), and the
+  Kullback-Leibler divergence of the shift (`kld_global`); it is `NULL`
+  when `vb_correction = "none"`. `marginals` is a data frame with a row
+  per parameter: `mode_shift_sigma`, `kld`, `vb_shift`,
   `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`, `vb_step_sigma`,
   `grad_gap`, `mean_gap`, `gamma1`, `tails` and `ridge_bend`, with `NA`
   for the checks the fit did not run, and `marginal_scan`, the scan of
@@ -469,7 +472,7 @@ of `logpost`, and the number of calls grows with the square of the
 number of parameters m. The mode and Hessian take about m^2 + 6m calls,
 and the marginals about m(`n_grid` + 2m + 6), with 2(m - 1) more for
 each parameter whose ridge bend is above 0.1. The VB correction takes
-(m + 1)(m + 2) calls, or that many per sweep with
+2(m + 1)(m + 2) + 8m calls, or (m + 1)(m + 2) per sweep with
 `vb_correction = "full"`: it needs no derivatives, because Stein's
 identity gives the expected gradient from values of `logpost` alone.
 With `vb_correction = "full"`, the VB mean is then exact when the
@@ -478,8 +481,8 @@ and up to degree six with `grad`. On test models it was about 0.01
 posterior SDs from exact VB (0.003 with `grad`), and up to 0.1 on a
 strongly skewed posterior (0.03 with `grad`), against a VB error of 0.01
 to 0.2 SDs from the posterior mean itself. On the most skewed posteriors
-the VB correction may then not settle, and the fit says it has not
-converged (see
+the VB correction of `vb_correction = "full"` may then not settle, and
+the fit says it has not converged (see
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md));
 `grad` is the remedy.
 
@@ -550,19 +553,49 @@ symmetric square root of the covariance, taken on the correlation scale.
 Without one, it is one pass of Stein's identity on the rule of
 `vb_correction = "full"`. Most of the movement is in that step, and
 exact VB is itself an approximation to the posterior mean with an error
-of the same order. If the first step is over 2.5 posterior SDs, or a
-node fails, the iteration carries on with capped steps, within the
-number of calls that the mode and Hessian took.
+of the same order.
+
+One step is the first iterate of a fixed-point map, and it approximates
+the solution only where that map is a contraction. The fit checks this,
+with a second sweep at the step. The step must reduce the residual of
+the VB equation (`vb_lhat` in
+[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md),
+the ratio of the residual at the step to the one at the mode, below 1),
+and the slope of the map along the step must lie between -1 and 1 at the
+mode and at the step (`vb_j0` and `vb_j1`). When the check passes, the
+one step is the correction. When it fails, the posterior is far from
+Gaussian along the step, and the fit solves the VB equation instead, on
+the same sweeps and from the mode, by Broyden's method. It then raises a
+warning that names the parameter the one step moved furthest. The
+warning comes whether or not the solve converged, since it is about the
+posterior and not the solver: treat the posterior means, the log
+marginal likelihood,
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) and
+[`waic()`](https://haziqj.ml/inlavanilla/reference/loo.md) of such a fit
+with care, and compare with MCMC if they matter. `vb_solve` in
 [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
-then has `vb_step_sigma`, the step still to go, which is `NA` after a
-single step. After a single step the fit checks that it delivered what
-it promised: `vb_gain_ratio` in
-[`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
-is the rise in the expected log-posterior over the rise the step
-assumed, and a ratio below 0.5 raises a warning. A large first step can
-also overstate the VB term of the log marginal likelihood, so after a
-shift above 1 posterior SD, which is flagged, compare models with care:
-`vb_correction = "full"` may be closer.
+says whether the solve ran, and `vb_step_sigma` is then the step still
+to go where it stopped, which is recorded and not flagged. If `logpost`
+or `grad` is not finite at a node around the mode there is no step to
+check, and the optimiser of `vb_correction = "full"` takes over.
+
+The check, the solve, the warning and the diagnostics are the same with
+and without a gradient. Only the sweep differs. With a gradient it is
+2m + 1 gradients, so the correction of a fit that passes takes 4m + 2
+gradient calls. Without one it is a Stein pass of (m + 1)(m + 2) values
+of `logpost`, and the two slopes take 4m values each. The sweeps of a
+correction, the two of the check among them, are capped at the number of
+calls that the mode and Hessian took, divided by 2m + 1. With a gradient
+the correction therefore costs no more than the mode and Hessian did.
+Without one the cap is the same number of sweeps, each of which costs
+more: a fit that fails the check can then spend up to (m + 1)(m + 2) /
+(2m + 1) times the calls of its mode and Hessian, about m / 2 times, on
+the correction. That is the price of a fit without a gradient, and
+`grad` is the remedy.
+
+A large first step can also overstate the VB term of the log marginal
+likelihood, so after a shift above 1 posterior SD, which is flagged,
+compare models with care: `vb_correction = "full"` may be closer.
 
 `vb_correction = "full"` iterates to the solution, on a degree-5 rule
 with at most (m + 1)(m + 2) + 1 nodes, and hands over to
@@ -749,13 +782,13 @@ logpost <- function(theta) {
 
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
-#> ✔ Found the posterior mode in 10 iterations [3ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
-#> ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (14ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (11ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -785,8 +818,8 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ✔ Found the posterior mode in 10 iterations [1ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
-#>     8.8e-08σ (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
+#>     (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -796,19 +829,20 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   63 logpost calls
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
 #>   Fixed-point steps, largest over the parameters (σ): 0.25
-#>   One step, accepted (guard > 2.5σ)
-#>   Gain ratio 0.94 (warning < 0.5)
+#>   One-step check: contraction ratio 0.032, slope along the step -0.031 at
+#>     the mode and 0.029 at the step (passes below 1 in size)
+#>   One step, accepted
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
-#>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#>   28 logpost calls
+#> ✔ Fitted 2 skew-normal marginals [9ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 32ms
+#> ℹ Done: 159 logpost calls in 26ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)

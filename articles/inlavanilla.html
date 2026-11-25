@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -140,13 +140,13 @@
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">init</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b_wt <span class="op">=</span> <span class="fl">0</span>, b_hp <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [9ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.48σ [15ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [12ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 10 iterations [7ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.48σ [12ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 3 skew-normal marginals [10ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.60 · Converged in 10 iterations (46ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.60 · Converged in 10 iterations (36ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           Mean     SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008</span></span>
@@ -158,11 +158,11 @@
 <div class="cell" data-layout-align="center">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.25 summary ────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.25-1 summary ──────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -11.595 · Converged in 10 iterations (46ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -11.595 · Converged in 10 iterations (36ms)</span></span>
 <span><span class="co">#&gt; Laplace -11.709 + VB term 0.11</span></span>
-<span><span class="co">#&gt; 233 logpost calls: mode 12ms, VB 16ms, marginals 13ms</span></span>
+<span><span class="co">#&gt; 257 logpost calls: mode 9ms, VB 12ms, marginals 10ms</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Posterior marginals ──</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -180,7 +180,7 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ✔ Mode found in 10 iterations (Newton step 1.4e-07σ).</span></span>
 <span><span class="co">#&gt; ✔ Hessian condition number 4.4, in SD units.</span></span>
-<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.48σ, gain ratio 0.878.</span></span>
+<span><span class="co">#&gt; ✔ VB correction in one step: max shift 0.48σ.</span></span>
 <span><span class="co">#&gt; ✔ Skew-normal fits: max NMAD 0.017, unscanned mass 0.0022, ridge bend 0.14,</span></span>
 <span><span class="co">#&gt;   mean gap 0.054σ.</span></span></code></pre></div>
 </div>
@@ -300,11 +300,11 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span>, grad <span class="op">=</span> <span class="va">grad</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_g</span><span class="op">$</span><span class="va">summary</span> <span class="op">-</span> <span class="va">fit</span><span class="op">$</span><span class="va">summary</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.0009988707</span></span>
+<span><span class="co">#&gt; [1] 0.000998865</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>finite_differences <span class="op">=</span> <span class="va">fit</span><span class="op">$</span><span class="va">counts</span>, gradient <span class="op">=</span> <span class="va">fit_g</span><span class="op">$</span><span class="va">counts</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                    logpost grad hess</span></span>
-<span><span class="co">#&gt; finite_differences     233    0    0</span></span>
-<span><span class="co">#&gt; gradient               110   44    0</span></span></code></pre></div>
+<span><span class="co">#&gt; finite_differences     257    0    0</span></span>
+<span><span class="co">#&gt; gradient                96   51    0</span></span></code></pre></div>
 </div>
 <p>The two fits agree to several decimal places, and the gradient version calls <code>logpost</code> less often. <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code> compares a supplied gradient with <code>logpost</code> at the mode, at no extra cost, and warns if they disagree, which catches most slips in hand-derived gradients.</p>
 </section><section class="level2"><h2 id="cheaper-approximations">Cheaper approximations<a class="anchor" aria-label="anchor" href="#cheaper-approximations"></a>
@@ -331,10 +331,10 @@
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                           calls  logml  Mean  2.5% 97.5%</span></span>
-<span><span class="co">#&gt; Skew-normal + one-step VB   233 -11.60 -5.12 -8.00 -2.72</span></span>
+<span><span class="co">#&gt; Skew-normal + one-step VB   257 -11.60 -5.12 -8.00 -2.72</span></span>
 <span><span class="co">#&gt; Skew-normal + full VB       261 -11.62 -5.12 -8.00 -2.72</span></span>
 <span><span class="co">#&gt; Skew-normal                 205 -11.71 -5.12 -8.00 -2.72</span></span>
-<span><span class="co">#&gt; Laplace + one-step VB       124 -11.60 -5.10 -7.56 -2.64</span></span>
+<span><span class="co">#&gt; Laplace + one-step VB       148 -11.60 -5.10 -7.56 -2.64</span></span>
 <span><span class="co">#&gt; Laplace                      96 -11.71 -4.51 -6.97 -2.05</span></span></code></pre></div>
 </div>
 <p>Without the VB correction the skew-normal marginals are the same, because they are scanned around the mode, but the log marginal likelihood is the Laplace one. The VB correction moves the Gaussian’s centre most of the way to the posterior mean, but a Gaussian cannot follow the long tail. With a gradient the default correction costs about one numerical Hessian. Without one it takes the expected gradient from values of <code>logpost</code> alone, and still costs less than finding the mode. As the number of parameters grows, the marginals become the slowest stage.</p>
@@ -428,9 +428,9 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_p</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>logit_p <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">fit_p</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -23.17 · Converged in 4 iterations (13ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -23.17 · Converged in 4 iterations (11ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;        Mean      SD    2.5%     50%   97.5%    Mode</span></span>
 <span><span class="co">#&gt; 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063</span></span>

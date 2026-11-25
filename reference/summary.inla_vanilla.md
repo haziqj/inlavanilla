@@ -120,7 +120,15 @@ diagnostics, with the level at which each is flagged where it is, are:
   stationarity condition; see
   [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)).
   It is flagged above 0.1, the level of the mode check, as a correction
-  that did not settle. That check is inlavanilla's own.
+  that did not settle. That check is inlavanilla's own. So is the check
+  of a one-step correction (`vb_lhat`, `vb_j0` and `vb_j1` in
+  [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)):
+  a second sweep at the step tests that the map the step iterates is a
+  contraction. Where it is not, the posterior is far from Gaussian along
+  the step, the VB equation is solved instead, and the check is flagged
+  here and by a warning of its own, with the parameter the one step
+  moved furthest. The line also gives the step still to go where the
+  solve stopped, which is not flagged.
 
 - **Skew-normal fits.** `nmad`, the largest gap between the fitted and
   the scanned density, relative to its peak (Jamil & Rue, 2026, Section
@@ -206,12 +214,14 @@ the whole fit took. Converged means that the computation reached its
 solution: both the mode check and the VB check pass, so no further step
 at the mode or at the VB mean would move a parameter by more than 0.1
 posterior SDs. It says nothing of how well the approximation fits the
-posterior, which the other checks judge. Without a gradient a strongly
-skewed posterior can read "Not converged: VB did not settle": the VB
-mean from `logpost` values alone is then approximate, and supplying
-`grad` is the fix. Printing the fit ends with a line for its warnings
-and one counting the checks flagged here, each shown only when there are
-any.
+posterior, which the other checks judge. A flagged one-step check is one
+of those: the solve that follows it stops at a cap on its sweeps, and
+where it stops does not count against convergence. With
+`vb_correction = "full"` and no gradient a strongly skewed posterior can
+read "Not converged: VB did not settle": the VB mean from `logpost`
+values alone is then approximate, and supplying `grad` is the fix.
+Printing the fit ends with a line for its warnings and one counting the
+checks flagged here, each shown only when there are any.
 [`vignette("diagnostics", package = "inlavanilla")`](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
 explains every check with examples.
 

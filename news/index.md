@@ -1,5 +1,56 @@
 # Changelog
 
+## inlavanilla (development version)
+
+- The default VB correction (`vb_correction = "onestep"`) now checks its
+  one step, and solves the VB equation where the check fails. A second
+  sweep at the step tests that the fixed-point map the step iterates is
+  a contraction there: the step must reduce the residual of the VB
+  equation (`vb_lhat` below 1), and the slope of the map along the step
+  must lie between -1 and 1 at the mode and at the step (`vb_j0`,
+  `vb_j1`). A fit that passes keeps its one step, to the last bit. A fit
+  that fails solves the VB equation on the same sweeps by Broyden’s
+  method, from the mode, and raises a new warning, of class
+  `inlavanilla_vb_check_warning`, that the posterior is far from
+  Gaussian along the mean correction, naming the parameter the one step
+  moved furthest. The warning comes whether or not the solve converged.
+
+- The check, the solve, the warning and the diagnostics are the same
+  with and without a gradient. With a gradient a sweep is 2m + 1
+  gradients, and a fit that passes takes 4m + 2 gradient calls for its
+  VB stage, where it took 2m + 1 gradient and 4m + 2 `logpost` calls.
+  Without one a sweep is a Stein pass of (m + 1)(m + 2) values of
+  `logpost` and each slope takes 4m more, so a fit that passes takes
+  2(m + 1)(m + 2) + 8m calls, where it took (m + 1)(m + 2) + 4m + 2. The
+  sweeps are capped at the calls of the mode and Hessian over 2m + 1,
+  the two of the check among them. With a gradient the VB stage then
+  costs no more than the mode and Hessian. Without one, a fit that fails
+  the check can spend up to (m + 1)(m + 2) / (2m + 1) times the calls of
+  its mode and Hessian, about m / 2 times.
+
+- This takes the place of the gain ratio and of the iteration with
+  capped steps after a first step over 2.5 posterior SDs, which are
+  gone. A fit whose first step was over 2.5 SDs, or whose check fails,
+  has a different VB mean and log marginal likelihood.
+  `vb_correction = "full"` is unchanged.
+
+- [`diagnostics()`](https://haziqj.ml/inlavanilla/reference/diagnostics.md)
+  has four new global entries: `vb_lhat`, `vb_j0` and `vb_j1`, the
+  numbers of that check, and `vb_solve`, 1 if it failed and the solve
+  ran. `vb_gain_ratio` is removed, with its warning. After a solve,
+  `vb_step_sigma` is the step still to go where the solve stopped, which
+  is recorded and not flagged, and the fit still prints as converged.
+  [`summary()`](https://rdrr.io/r/base/summary.html) has a line for a
+  flagged check, and [`print()`](https://rdrr.io/r/base/print.html)
+  counts it.
+
+- For packages that copy the engine: `vanilla_core()` raises the new
+  warning itself, `check_flags()` has the new flag `vb_check` and no
+  `vb_gain`, and `core$diagnostics$vb` has the new entries `solve`,
+  `check` and `check_worst` and no `gain_ratio`. `vb_correct()` returns
+  the same. The `advice` of `diagnostic_problems()` no longer needs
+  `vb_full`.
+
 ## inlavanilla 26.11.25
 
 - This release replaces 26.11.24-1, which was withdrawn. Its changes are
