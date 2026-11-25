@@ -13,7 +13,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24-1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,6 +39,7 @@
     <li><a class="dropdown-item" href="../articles/latents.html">Latent variables</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
+    <li><a class="dropdown-item" href="../articles/engine.html">Using the engine in your own package</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul></li>
@@ -54,12 +55,16 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.24-1/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="26.11.24-1" id="inlavanilla-261124-1">inlavanilla 26.11.24-1<a class="anchor" aria-label="anchor" href="#inlavanilla-261124-1"></a></h2>
-<ul><li><p>This version changes only the skew-normal functions of the engine. They are internal in inlavanilla, but INLAvaan, which copies the engine, exports some of them. No fit changes: on the tests, vignettes and articles, every summary, marginal, VB mean, covariance, log marginal likelihood and LOO estimate is the same to the last digit as in 26.11.24.</p></li>
+<h2 class="pkg-version" data-toc-text="26.11.25" id="inlavanilla-261125">inlavanilla 26.11.25<a class="anchor" aria-label="anchor" href="#inlavanilla-261125"></a></h2>
+<ul><li><p>This release replaces 26.11.24-1, which was withdrawn. Its changes are listed here.</p></li>
+<li><p>New <code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> copies the engine of inlavanilla, the files <code>R/vanilla-*.R</code> behind <code><a href="../reference/inla_vanilla.html">inla_vanilla()</a></code>, into another package, so that the package can call <code>vanilla_core()</code> without depending on inlavanilla. It takes the files from a release on GitHub (by default that of the installed version) or from a local clone, writes the lock <code>inst/inlavanilla.lock</code> with the MD5 hash of each file, and adds to the package’s <code>DESCRIPTION</code> what the engine needs: its copyright holders, <code>cli</code>, <code>stats</code> and <code>utils</code> in <code>Imports</code>, <code>future</code> and <code>parallelly</code> in <code>Suggests</code>, and <code>R (&gt;= 4.1.0)</code>. It removes nothing, stops when a copy was edited by hand, and ends with a list of what is still to do. Run with a newer release, it updates the copy.</p></li>
+<li><p>New <code><a href="../reference/vanilla_status.html">vanilla_status()</a></code> checks a copy: the files match the lock and the lock matches its release, no name clashes, the <code>DESCRIPTION</code> and the license suit the engine, and whether a newer release changes a copied file. <code><a href="../reference/use_vanilla_test.html">use_vanilla_test()</a></code> and <code><a href="../reference/use_vanilla_ci.html">use_vanilla_ci()</a></code> add a test and a GitHub Actions workflow that check the copy.</p></li>
+<li><p>The new vignette <code><a href="../articles/engine.html">vignette("engine")</a></code> shows how to copy and update the engine, and documents <code>vanilla_core()</code> and the functions around it. These functions change only with a NEWS bullet that says so.</p></li>
+<li><p>The skew-normal functions of the engine change. They are internal in inlavanilla, but INLAvaan, which copies the engine, exports some of them. No fit changes: on the tests, vignettes and articles, every summary, marginal, VB mean, covariance, log marginal likelihood and LOO estimate is the same to the last digit as in 26.11.24.</p></li>
 <li><p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> with no probabilities, <code>probs = numeric(0)</code>, now works when a parameter is reported on the natural scale. Before, it stopped with an error, because <code>qsnorm()</code> returned <code>NA</code> for an empty <code>probs</code> (see below). With <code>transform = FALSE</code> it already worked.</p></li>
 <li>
 <p>Internal changes, for INLAvaan and other packages that copy the engine:</p>

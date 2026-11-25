@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24-1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,6 +63,7 @@
     <li><a class="dropdown-item" href="../articles/latents.html">Latent variables</a></li>
     <li><a class="dropdown-item" href="../articles/rcpp.html">Speeding up with Rcpp</a></li>
     <li><a class="dropdown-item" href="../articles/rtmb.html">Gradients and Hessians with RTMB</a></li>
+    <li><a class="dropdown-item" href="../articles/engine.html">Using the engine in your own package</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../articles/index.html">More articles...</a></li>
   </ul>
@@ -87,7 +88,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.24-1/vignettes/diagnostics.qmd" class="external-link"><code>vignettes/diagnostics.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/diagnostics.qmd" class="external-link"><code>vignettes/diagnostics.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -216,7 +217,7 @@
 <span><span class="op">}</span></span>
 <span><span class="va">fit_pois</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_pois</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>log_rate <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>, silent <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_pois</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.24-1 summary ──────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.25 summary ────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Log marginal likelihood: -12.354 · Converged in 7 iterations (14ms)</span></span>
 <span><span class="co">#&gt; Laplace -12.362 + VB term 0.0085</span></span>
@@ -261,8 +262,8 @@
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.7</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span> <span class="op">+</span> <span class="fl">0.3</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">dnorm</a></span><span class="op">(</span><span class="va">theta</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="va">fit_mix</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost_mix</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>theta <span class="op">=</span> <span class="op">-</span><span class="fl">0.2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [3ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [9ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 4 iterations [4ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.19σ [11ms]</span></span>
 <span><span class="co">#&gt; ✔ Fitted 1 skew-normal marginal [6ms]</span></span>
 <span><span class="co">#&gt; Warning: Fit diagnostics flagged 3 potential issues:</span></span>
 <span><span class="co">#&gt; ✖ The fitted marginal deviates from the scanned posterior (NMAD &gt; 0.1) for</span></span>

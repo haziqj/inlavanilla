@@ -49,9 +49,9 @@ logpost <- function(theta) {
 }
 fit <- inla_vanilla(logpost, init = c(log_rate = 0), silent = TRUE)
 fit
-#> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.35 · Converged in 7 iterations (13ms)
+#> Log marginal likelihood: -12.35 · Converged in 7 iterations (14ms)
 #> 
 #>          Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 rate  1.875  0.485  1.048  1.834  2.940  1.758
@@ -182,9 +182,9 @@ logpost_bvn <- function(theta) {
 init <- c(mu1 = 5, mu2 = 3, log_sigma1 = 0, log_sigma2 = 0, atanh_rho = 0)
 fit_bvn <- inla_vanilla(logpost_bvn, init, silent = TRUE)
 fit_bvn
-#> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -39.67 · Converged in 33 iterations (38ms)
+#> Log marginal likelihood: -39.67 · Converged in 33 iterations (41ms)
 #> 
 #>             Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 mu1     5.0058  0.0493  4.9091  5.0058  5.1024  5.0058
@@ -331,9 +331,9 @@ fit_off <- inla_vanilla(
   silent = TRUE
 )
 fit_off
-#> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.35 · Converged in 7 iterations (4ms)
+#> Log marginal likelihood: -12.35 · Converged in 7 iterations (5ms)
 #> 
 #>              Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 log_rate  0.595  0.263  0.047  0.607  1.078  0.631

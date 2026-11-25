@@ -1,13 +1,46 @@
 # Changelog
 
-## inlavanilla 26.11.24-1
+## inlavanilla 26.11.25
 
-- This version changes only the skew-normal functions of the engine.
-  They are internal in inlavanilla, but INLAvaan, which copies the
-  engine, exports some of them. No fit changes: on the tests, vignettes
-  and articles, every summary, marginal, VB mean, covariance, log
-  marginal likelihood and LOO estimate is the same to the last digit as
-  in 26.11.24.
+- This release replaces 26.11.24-1, which was withdrawn. Its changes are
+  listed here.
+
+- New
+  [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+  copies the engine of inlavanilla, the files `R/vanilla-*.R` behind
+  [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
+  into another package, so that the package can call `vanilla_core()`
+  without depending on inlavanilla. It takes the files from a release on
+  GitHub (by default that of the installed version) or from a local
+  clone, writes the lock `inst/inlavanilla.lock` with the MD5 hash of
+  each file, and adds to the package’s `DESCRIPTION` what the engine
+  needs: its copyright holders, `cli`, `stats` and `utils` in `Imports`,
+  `future` and `parallelly` in `Suggests`, and `R (>= 4.1.0)`. It
+  removes nothing, stops when a copy was edited by hand, and ends with a
+  list of what is still to do. Run with a newer release, it updates the
+  copy.
+
+- New
+  [`vanilla_status()`](https://haziqj.ml/inlavanilla/reference/vanilla_status.md)
+  checks a copy: the files match the lock and the lock matches its
+  release, no name clashes, the `DESCRIPTION` and the license suit the
+  engine, and whether a newer release changes a copied file.
+  [`use_vanilla_test()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_test.md)
+  and
+  [`use_vanilla_ci()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_ci.md)
+  add a test and a GitHub Actions workflow that check the copy.
+
+- The new vignette
+  [`vignette("engine")`](https://haziqj.ml/inlavanilla/articles/engine.md)
+  shows how to copy and update the engine, and documents
+  `vanilla_core()` and the functions around it. These functions change
+  only with a NEWS bullet that says so.
+
+- The skew-normal functions of the engine change. They are internal in
+  inlavanilla, but INLAvaan, which copies the engine, exports some of
+  them. No fit changes: on the tests, vignettes and articles, every
+  summary, marginal, VB mean, covariance, log marginal likelihood and
+  LOO estimate is the same to the last digit as in 26.11.24.
 
 - [`summary()`](https://rdrr.io/r/base/summary.html) with no
   probabilities, `probs = numeric(0)`, now works when a parameter is

@@ -1,0 +1,809 @@
+# Using the engine in your own package
+
+This vignette is for the authors of other R packages. It shows how to
+copy the engine of inlavanilla into your package with
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md),
+how to keep the copy in step with the releases of inlavanilla, and how
+to call the engine from your own code. Users of
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)
+do not need any of it.
+
+## The engine
+
+The method of inlavanilla lives in the files `R/vanilla-*.R`, the
+engine. In this release there are 13 of them:
+
+| File | Holds |
+|----|----|
+| `vanilla-core.R` | `vanilla_core()`, which runs the stages of a fit |
+| `vanilla-laplace.R` | the posterior mode and the Laplace approximation |
+| `vanilla-vb.R` | the variational Bayes correction of the mean |
+| `vanilla-marginals.R` | the scans and the skew-normal marginals |
+| `vanilla-diagnostics.R` | the diagnostics of each stage, and the text of the warning |
+| `vanilla-sampling.R` | draws from the Gaussian copula of the marginals |
+| `vanilla-taylor.R` | LOO and WAIC by a Taylor expansion of the log-likelihood |
+| `vanilla-skew-normal.R` | the density, distribution and quantile functions of the skew-normal |
+| `vanilla-qsnorm-fast.R` | a fast approximation of skew-normal quantiles (Apache License 2.0, Thomas Luu) |
+| `vanilla-control.R` | [`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md) and the checks of `control` |
+| `vanilla-parallel.R` | the optional parallel scans |
+| `vanilla-progress.R` | the progress lines |
+| `vanilla-utils.R` | finite differences, errors and warnings, and the checks of arguments |
+
+The method is that of INLAvaan (Jamil & Rue, 2026a, 2026b), with no
+latent field and nothing specific to a model. Everything that users of
+inlavanilla see, such as
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
+its methods and its help pages, is in the other files of `R/`. The
+engine is internal code only: it exports nothing, has no roxygen and no
+S3 methods, and does not name the package it is in.
+
+Why copy the engine, and not import it? inlavanilla is not on CRAN, and
+the engine is not exported, so a package on CRAN cannot import it. A
+copy makes your package self-contained: it runs without inlavanilla, and
+takes a new release of the engine only when you choose. INLAvaan holds
+engine files in this way.
+
+## Copying the engine
+
+Run
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+from the root of your package:
+
+``` r
+
+inlavanilla::use_vanilla(release = "v26.11.24")
+```
+
+    ── Copying the engine of inlavanilla into mypkg ──
+
+    ℹ Release v26.11.24, commit 88056cf, from GitHub.
+    ✔ Copied 13 engine files to 'R/'.
+    ✔ Wrote the lock 'inst/inlavanilla.lock'.
+    ✔ Added the engine's copyright holders to Authors@R in 'DESCRIPTION', with
+      the role "cph": Haziq Jamil and Thomas Luu.
+    ✔ Added cli (>= 3.6.0), stats and utils to Imports in 'DESCRIPTION'.
+    ✔ Added future and parallelly to Suggests in 'DESCRIPTION'.
+    ✔ Raised R in Depends to `(>= 4.1.0)`, from `(>= 3.5)`.
+    ✔ No engine object has the name of another object in 'R/' or of an import
+      in 'NAMESPACE'.
+    ℹ v26.11.24-1, a newer release, exists:
+      `inlavanilla::use_vanilla("v26.11.24-1")` updates to it.
+
+    ── Still to do ──
+
+    ☐ Write the function that calls `vanilla_core()` with your model's
+      log-posterior and turns the list it returns into your results.
+      `vignette("engine", package = "inlavanilla")` shows how, and so does
+      <https://haziqj.ml/inlavanilla/articles/engine.html>.
+    ☐ Run `devtools::document()`.
+    ☐ Run your tests and R CMD check: `devtools::check()`.
+    ☐ Add a NEWS bullet that names the release, such as "Uses the engine of
+      inlavanilla v26.11.24."
+
+    ── Optional ──
+
+    • `inlavanilla::use_vanilla_test()` writes a test that fails when an engine
+      file differs from the lock.
+    • `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
+      `vanilla_status()` on every push.
+
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+copies the engine files of a release byte for byte into `R/`, and lists
+them in the lock `inst/inlavanilla.lock`. It also adds to `DESCRIPTION`
+what the engine needs, where it is missing: the copyright holders of the
+engine in `Authors@R`, with the role `"cph"`; `cli (>= 3.6.0)`, `stats`
+and `utils` in `Imports`; `future` and `parallelly` in `Suggests`; and
+`R (>= 4.1.0)` in `Depends`. It edits only the lines of those fields,
+and never removes anything. A copyright holder who is already in
+`Authors@R` is not added again, and an entry without the role `"cph"` is
+left as it is, with an item in the list of what is still to do.
+
+By default the release is that of the inlavanilla installed on your
+computer, or, when that version is not a release, the newest release
+before it. Give `release` to copy another one. The files come from the
+release on GitHub, which needs the internet but not git. To copy without
+the internet, give `clone`, the path of a local clone of inlavanilla,
+which needs git.
+
+Some rules keep the copy safe to update:
+
+- Never edit an engine file. The next update would undo the edit, so
+  [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+  stops, and changes nothing, when a copy differs from the lock. Report
+  a problem with the engine at
+  <https://github.com/haziqj/inlavanilla/issues> instead.
+- The names `R/vanilla-*.R` are kept for the engine. Give your own files
+  other names.
+- Leave the engine files out of your code formatter and linter, such as
+  air, styler or lintr, so that they stay byte for byte.
+- Do not list inlavanilla in your `DESCRIPTION`: your package does not
+  need it.
+
+## The lock
+
+The lock records where the copy came from:
+
+    Upstream: https://github.com/haziqj/inlavanilla
+    Release: v26.11.24
+    Commit: 88056cfa545cee5a601af4485bbc2a3a5443e0fc
+    Version: 26.11.24
+    Synced: 2026-11-25
+    Hash: md5 of the text with LF line endings
+
+    File: R/vanilla-control.R
+    MD5: 58d754b181b188bfda7d5f09d88bd0c3
+
+    File: R/vanilla-core.R
+    MD5: aa682883cae63b63b2f41b94c94f019d
+
+and so on for each engine file.
+
+| Field         | Holds                                     |
+|---------------|-------------------------------------------|
+| `Upstream`    | the repository of inlavanilla             |
+| `Release`     | the release copied, a tag on GitHub       |
+| `Commit`      | the commit of that tag                    |
+| `Version`     | the version of inlavanilla at that commit |
+| `Synced`      | the day of the copy                       |
+| `Hash`        | how the hashes are taken                  |
+| `File`, `MD5` | each engine file, and its hash            |
+
+The hash is the MD5 of the text with its carriage returns removed, so
+that a checkout with Windows line endings matches. The lock is installed
+with your package, so you can read it at run time, for example to say
+which release of the engine a fit used:
+
+``` r
+
+read.dcf(system.file("inlavanilla.lock", package = "mypkg"))[1, "Release"]
+```
+
+## Checking the copy
+
+[`vanilla_status()`](https://haziqj.ml/inlavanilla/reference/vanilla_status.md)
+checks the copy, with one line per check:
+
+``` r
+
+inlavanilla::vanilla_status()
+```
+
+    ── Engine copy in mypkg ──
+
+    ℹ inlavanilla v26.11.24, commit 88056cf: 13 files, copied on 2026-11-25.
+    ✔ The lock 'inst/inlavanilla.lock' is well formed.
+    ✔ The 13 engine files match the lock.
+    ✔ No engine object has the name of another object in 'R/' or of an import
+      in 'NAMESPACE'.
+    ✔ 'DESCRIPTION' has the engine's dependencies and `R (>= 4.1.0)`.
+    ✔ Authors@R names the engine's copyright holders: Haziq Jamil and Thomas
+      Luu.
+    ✔ The license, "GPL (>= 3)", allows the engine's license, "GPL (>= 3)".
+    ✔ The lock matches release v26.11.24 on GitHub.
+    ! A newer release changes copied files: v26.11.24-1 changes
+      'R/vanilla-qsnorm-fast.R' and 'R/vanilla-skew-normal.R'.
+      Changes:
+      <https://github.com/haziqj/inlavanilla/compare/v26.11.24...v26.11.24-1>
+    → Update with `inlavanilla::use_vanilla(release = "v26.11.24-1")`, then run
+      your tests.
+
+The checks:
+
+- **Lock**: the lock exists and can be read.
+- **Copies**: each engine file has the hash in the lock, and every file
+  `R/vanilla-*.R` is in the lock.
+- **Names**: no object of the engine has the name of another object in
+  `R/`, or of a name that `NAMESPACE` imports. R keeps one of the two
+  with no warning, so a clash breaks the engine or your own code
+  silently.
+- **Dependencies** and **authors**: `DESCRIPTION` has what
+  [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+  adds.
+- **License**: your license allows code under GPL version 3 or later
+  (see “Licensing” below).
+- **Release**: the lock matches its release on GitHub.
+- **Update**: whether a newer release changes a copied file. A newer
+  release is reported, and is not a failure.
+
+The last two checks need GitHub, or a clone given as `clone`. Without
+either, they are skipped with a note, and the others still run. In
+continuous integration, `vanilla_status(error = TRUE)` stops with an
+error when a check fails. A skipped check, or a line marked with `!`, is
+never an error.
+
+Two optional helpers put these checks where they run by themselves.
+[`use_vanilla_test()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_test.md)
+writes the test file `tests/testthat/test-vanilla-engine.R`, which fails
+when an engine file differs from the lock. It uses base R and testthat
+only, so your package does not need inlavanilla to run it. It reads the
+source files in `R/`, so it runs under `devtools::test()` and skips
+under R CMD check.
+[`use_vanilla_ci()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_ci.md)
+writes the GitHub Actions workflow
+`.github/workflows/vanilla-status.yaml`, which runs the checks on every
+push:
+
+``` yaml
+      - name: Install inlavanilla
+        shell: Rscript {0}
+        run: |
+          install.packages("remotes")
+          remotes::install_github("haziqj/inlavanilla@*release")
+
+      - name: Check the engine copy
+        shell: Rscript {0}
+        run: inlavanilla::vanilla_status(error = TRUE)
+```
+
+## Updating
+
+When
+[`vanilla_status()`](https://haziqj.ml/inlavanilla/reference/vanilla_status.md)
+reports a newer release, update the copy with
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+and that release:
+
+``` r
+
+inlavanilla::use_vanilla(release = "v26.11.24-1")
+```
+
+    ── Updating the engine of inlavanilla in mypkg ──
+
+    ℹ Release v26.11.24-1, commit 0d3daa7, from GitHub. The lock was at
+      v26.11.24.
+    ✔ Copied 13 engine files to 'R/': 2 changed, 11 unchanged.
+      Changed: 'R/vanilla-qsnorm-fast.R' and 'R/vanilla-skew-normal.R'.
+    ✔ Updated the lock 'inst/inlavanilla.lock'.
+    ✔ 'DESCRIPTION' already has what the engine needs.
+    ✔ No engine object has the name of another object in 'R/' or of an import
+      in 'NAMESPACE'.
+
+    ── Still to do ──
+
+    ☐ Read what changed since v26.11.24: the NEWS of inlavanilla at
+      <https://github.com/haziqj/inlavanilla/blob/v26.11.24-1/NEWS.md>, and the
+      engine's code at
+      <https://github.com/haziqj/inlavanilla/compare/v26.11.24...v26.11.24-1>.
+    ☐ Run your tests and R CMD check: `devtools::check()`.
+    ☐ Add a NEWS bullet that names the release, such as "Uses the engine of
+      inlavanilla v26.11.24-1."
+
+Read the NEWS of the release and the changes to the engine, run your
+tests and R CMD check, add a NEWS bullet that names the release, and
+commit the engine files, the lock and `DESCRIPTION` together.
+
+The interface of the engine is the 25 objects that the next section
+documents: `vanilla_core()`,
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md),
+`check_control()`, `diagnostics_internal()`, `diagnostic_problems()`,
+`advice_entries`, `check_flags()`, `param_flags()`, `warn_levels`,
+`summary_levels`, `sn_draws()`, `dsnorm()`, `psnorm()`, `qsnorm()`,
+`sn_moments()`, `sn_mode()`, `sn_score_map()`, `taylor_terms()`,
+`taylor_loo()`, `taylor_waic()`, `taylor_trace()`, `cov_root()`,
+`abort()`, `warn()` and `warning_text()`, the names in `interface`
+below. They change only with a NEWS bullet of inlavanilla that says so.
+Everything else in the engine may change in any release.
+
+## The interface
+
+After
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md),
+the functions of the engine are internal functions of your package, and
+your code calls them by name. In this vignette we take inlavanilla’s
+own:
+
+``` r
+
+# After use_vanilla() these are internal functions of your package. Here we
+# take inlavanilla's own.
+interface <- c(
+  "vanilla_core", "vanilla_control", "check_control",
+  "diagnostics_internal", "diagnostic_problems", "advice_entries",
+  "check_flags", "param_flags", "warn_levels", "summary_levels",
+  "sn_draws", "dsnorm", "psnorm", "qsnorm", "sn_moments", "sn_mode",
+  "sn_score_map", "taylor_terms", "taylor_loo", "taylor_waic",
+  "taylor_trace", "cov_root", "abort", "warn", "warning_text"
+)
+for (f in interface) {
+  assign(f, utils::getFromNamespace(f, "inlavanilla"))
+}
+```
+
+### `vanilla_core()`
+
+``` r
+
+vanilla_core(
+  lp, gr = NULL, init, hess = NULL, hess_mode = NULL,
+  gaussian_marginals = NULL,
+  vb_correction = c("onestep", "full", "none"),
+  marginals = c("skewnorm", "gaussian"),
+  marginal_scan = c("linear", "exact", "laplace", "plain"),
+  tk_fallback = FALSE, cores = NULL, control = list(),
+  verbose = FALSE, silent = FALSE
+)
+```
+
+| Argument | Meaning |
+|----|----|
+| `lp` | the log-posterior, a function of the parameter vector alone |
+| `gr` | its gradient, or `NULL` |
+| `init` | the starting values, a named numeric vector |
+| `hess` | its Hessian, or `NULL`; needs `gr` |
+| `hess_mode` | a Hessian called at the mode only (see “The two hooks”) |
+| `gaussian_marginals` | parameters whose marginal is taken as Gaussian (see “The two hooks”) |
+| `vb_correction`, `marginals`, `marginal_scan`, `tk_fallback`, `cores`, `control`, `verbose`, `silent` | as in [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md) |
+
+What the core expects of your functions:
+
+- `theta` arrives as a numeric vector named as `init`, in its order.
+  Names mean nothing to the core: a prefix such as `log_` is only a
+  name, and any transform is yours.
+- `lp` returns the log of the joint density of the data and the
+  parameters, with any Jacobian. Keep the normalising constants, since
+  they enter the log marginal likelihood `logml`. Return `-Inf` where
+  the model cannot be evaluated. `NA`, `NaN` and any value at or below
+  -1e39 count as failures too.
+- `gr` is the gradient of `lp`, not of minus `lp`. Where `lp` fails,
+  `gr` must not return a finite value: the VB correction and the ridge
+  bend call `gr` alone at some points.
+- `hess` may return a matrix, a sparse `Matrix`, or a number when there
+  is one parameter.
+- There are no dots: bind the data in closures, as below.
+
+Fit a Poisson regression to eight points:
+
+``` r
+
+x <- c(-1.75, -1.25, -0.75, -0.25, 0.25, 0.75, 1.25, 1.75)
+y <- c(1, 0, 2, 1, 3, 4, 2, 6)
+lp <- function(theta) {
+  eta <- theta[["b0"]] + theta[["b1"]] * x
+  sum(stats::dpois(y, exp(eta), log = TRUE)) +
+    sum(stats::dnorm(theta, 0, 10, log = TRUE))
+}
+gr <- function(theta) {
+  r <- y - exp(theta[["b0"]] + theta[["b1"]] * x)
+  c(sum(r), sum(r * x)) - theta / 100
+}
+```
+
+``` r
+
+core <- vanilla_core(lp, gr, init = c(b0 = 0, b1 = 0))
+#> ✔ Found the posterior mode in 8 iterations [8ms]
+#> ✔ VB mean correction, max shift 0.25σ [10ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
+```
+
+### What it returns
+
+`vanilla_core()` returns a plain list:
+
+``` r
+
+str(core, max.level = 1, give.attr = FALSE)
+#> List of 21
+#>  $ mode         : Named num [1:2] 0.655 0.578
+#>  $ mean_vb      : Named num [1:2] 0.586 0.6
+#>  $ cov          : num [1:2, 1:2] 0.0777 -0.0359 -0.0359 0.0516
+#>  $ sn           : num [1:2, 1:9] 0.853 0.435 0.394 0.276 -1.615 ...
+#>  $ logml        : num -19.4
+#>  $ logml_laplace: num -19.4
+#>  $ lp_max       : num -18.3
+#>  $ opt          :List of 6
+#>  $ restart      : NULL
+#>  $ diagnostics  :List of 3
+#>  $ scan         :List of 4
+#>  $ timing       : Named num [1:6] 0.001 0.01 0.011 0.006 0.001 ...
+#>  $ counts       : Named int [1:3] 75 32 0
+#>  $ vb_correction: chr "onestep"
+#>  $ marginals    : chr "skewnorm"
+#>  $ marginal_scan: chr "linear"
+#>  $ tk_fallback  : logi FALSE
+#>  $ fallback     : chr(0) 
+#>  $ cores        : NULL
+#>  $ workers      : int 1
+#>  $ has_grad     : logi TRUE
+```
+
+| Field | Holds |
+|----|----|
+| `mode` | the posterior mode |
+| `mean_vb` | the mean after the VB correction (the mode without it) |
+| `cov` | the covariance of the Laplace approximation |
+| `sn` | the marginals, a row per parameter (below) |
+| `logml`, `logml_laplace` | the log marginal likelihood, and its Laplace part |
+| `lp_max` | the log-posterior at the mode |
+| `opt`, `restart` | the result of [`nlminb()`](https://rdrr.io/r/stats/nlminb.html), and of its restart, if any |
+| `diagnostics` | the diagnostics of each stage: `optim`, `vb` and `marginals` |
+| `scan` | the scans of the marginals, `NULL` for Gaussian marginals |
+| `timing`, `counts` | the time of each stage, and the calls of `lp`, `gr` and `hess` |
+| `vb_correction`, `marginals`, `marginal_scan`, `tk_fallback` | the settings used |
+| `fallback` | the parameters rescanned by `tk_fallback` |
+| `cores`, `workers` | the setting of `cores`, and the workers used |
+| `has_grad` | whether `gr` was given |
+
+The columns of `sn` are the location `xi`, scale `omega` and shape
+`alpha` of each skew-normal, and the scan diagnostics `gamma1`, `nmad`,
+`tails`, `ridge_bend`, `logC` and `unscanned_mass`, which
+[`vignette("diagnostics", package = "inlavanilla")`](https://haziqj.ml/inlavanilla/articles/diagnostics.md)
+explains:
+
+``` r
+
+round(core$sn, 3)
+#>       xi omega  alpha gamma1  nmad tails ridge_bend  logC unscanned_mass
+#> b0 0.853 0.394 -1.615 -0.069 0.010     1      0.040 0.941          0.001
+#> b1 0.435 0.276  1.084  0.000 0.015     1      0.146 0.909          0.000
+```
+
+### What it prints and signals
+
+The core prints a line as each stage ends, as messages. `silent = TRUE`
+prints nothing, and `verbose = TRUE` adds the details of each stage. Its
+errors and warnings have the classes `inlavanilla_error` and
+`inlavanilla_warning`, and `warning_text(w)` gives the text of a warning
+without colours or line breaks. The engine raises them with
+`abort(message, class = NULL, parent = NULL, call = NULL, .envir = parent.frame())`
+and `warn(message, class = NULL, .envir = parent.frame())`, which you
+can use for your own conditions too: `message` is a cli template,
+wrapped to the width of the output, `class` adds your classes before the
+engine’s, and `parent`, an error that caused this one, has its message
+appended. The core installs no condition handler: catch what you need,
+as here, where the warnings of a fit are recorded and not shown:
+
+``` r
+
+seen <- character()
+core2 <- withCallingHandlers(
+  vanilla_core(lp, gr, init = c(b0 = 0, b1 = 0), silent = TRUE),
+  warning = function(w) {
+    seen <<- unique(c(seen, warning_text(w)))
+    tryInvokeRestart("muffleWarning")
+  }
+)
+seen
+#> character(0)
+```
+
+Some messages of the engine still name inlavanilla’s interface: they
+call the log-posterior `logpost` and the gradient `grad`, two errors are
+reported as coming from
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
+and the note on parallel workers points to
+[`?inla_vanilla`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md).
+A later release will word them for any package.
+
+The parallel scans load your package on each worker, by the name that
+[`utils::packageName()`](https://rdrr.io/r/utils/packageName.html)
+gives, so the package must be installed: under `devtools::load_all()`,
+use `cores = 1`.
+
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
+builds the list for the argument `control`, with the defaults of
+inlavanilla. `check_control(control)` checks a plain list, from
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
+or written by hand: an entry without a name, or with a name that
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
+does not have, is an error, and the result is the list completed with
+the defaults. `vanilla_core()` calls it on its `control`, so call it
+yourself only to check a `control` before the fit starts. To offer
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
+to your users, document and export it from a file of your own, as
+inlavanilla’s `R/control.R` does.
+
+### The two hooks
+
+Two arguments of `vanilla_core()` are not in
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
+for packages that know more about their models:
+
+- `hess_mode`, a function that gives the Hessian at the mode only. It is
+  called once, or twice after a restart of the mode search, and never by
+  [`nlminb()`](https://rdrr.io/r/stats/nlminb.html), the VB correction
+  or the scans. It needs `gr`, and is checked against the differences of
+  `gr` and for symmetry.
+- `gaussian_marginals`, the names or indices of parameters whose
+  marginal may be taken as Gaussian: the log-posterior is quadratic
+  along each of their axes, and those axes are nearly separate from the
+  other parameters, as with saturated intercepts, but not random
+  effects. They get no scan, their VB shift is held at zero, and their
+  marginal is N(mode, \\\Sigma\_{jj}\\), with `NA` in the scan columns.
+
+``` r
+
+set.seed(2)
+z <- stats::rnorm(40, 3, 1.5)
+lp_normal <- function(theta) {
+  sigma <- exp(theta[["log_sigma"]])
+  sum(stats::dnorm(z, theta[["mu"]], sigma, log = TRUE)) +
+    stats::dnorm(theta[["mu"]], 0, 10, log = TRUE) +
+    stats::dexp(sigma, log = TRUE) +
+    theta[["log_sigma"]]
+}
+core_normal <- vanilla_core(
+  lp_normal,
+  init = c(mu = 0, log_sigma = 0),
+  gaussian_marginals = "mu",
+  silent = TRUE
+)
+round(core_normal$sn, 3)
+#>              xi omega alpha gamma1  nmad tails ridge_bend logC
+#> mu        3.144 0.258 0.000     NA    NA    NA         NA   NA
+#> log_sigma 0.426 0.143 1.237   0.11 0.007     1          0 0.94
+#>           unscanned_mass
+#> mu                    NA
+#> log_sigma              0
+```
+
+### Diagnostics and the warning
+
+`diagnostics_internal()` turns the diagnostics of the stages into a
+global and a per-parameter table, `check_flags()` and `param_flags()`
+say which checks are off, at the levels in `warn_levels` and
+`summary_levels`:
+
+``` r
+
+dg <- diagnostics_internal(
+  core$diagnostics$optim,
+  core$diagnostics$vb,
+  core$diagnostics$marginals,
+  pars = core$mean_vb
+)
+check_flags(dg, gaussian = FALSE)
+#>       grad_gap           mode        vb_step        vb_gain      hess_cond 
+#>          FALSE          FALSE          FALSE          FALSE          FALSE 
+#>             vb           nmad unscanned_mass          tails     ridge_bend 
+#>          FALSE          FALSE          FALSE          FALSE          FALSE 
+#>       mean_gap 
+#>          FALSE
+```
+
+`diagnostic_problems(dg, gaussian, has_grad, advice)` gives the bullets
+of a warning, one per flagged check, worded by you. `advice` is a list
+with the entries of `advice_entries`, cli templates that name your own
+arguments:
+
+``` r
+
+advice_entries
+#> [1] "grad_gap"   "no_grad"    "vb_full"    "vb_none"    "mode_limit"
+#> [6] "mode_retry" "funnel"
+poisson_advice <- list(
+  grad_gap = "the gradient of the Poisson model does not match its
+    log-posterior",
+  no_grad = "",
+  vb_full = "{.code fit_poisson(vb_correction = \"full\")}",
+  vb_none = "{.code fit_poisson(vb_correction = \"none\")}",
+  mode_limit = "Raise {.code mode_maxit} in {.arg control}.",
+  mode_retry = "Check the data: a rate of zero has no finite log.",
+  funnel = "Check that the data are counts."
+)
+diagnostic_problems(dg, FALSE, core$has_grad, poisson_advice)
+#> character(0)
+#> attr(,"envir")
+#> <environment: 0x6470761bbf70>
+```
+
+A healthy fit has no problems. When there are some, raise them with
+`warn(c(header, problems), class = ..., .envir = attr(problems, "envir"))`,
+as the example below does. inlavanilla’s own wording is
+`inlavanilla_advice` in its file `R/diagnostics.R`.
+
+### Draws and the skew-normal functions
+
+`sn_draws(sn, cov, nsamp, corr = stats::cov2cor(cov))` draws from the
+Gaussian copula of the marginals:
+
+``` r
+
+set.seed(1)
+draws <- sn_draws(core$sn, core$cov, nsamp = 4000)
+round(colMeans(draws), 3)
+#>    b0    b1 
+#> 0.585 0.595
+```
+
+| Function | Gives |
+|----|----|
+| `dsnorm(x, xi, omega, alpha, logC = 0, log = FALSE)` | the density |
+| `psnorm(q, xi = 0, omega = 1, alpha = 0, lower_tail = TRUE)` | the distribution function |
+| `qsnorm(p, xi = 0, omega = 1, alpha = 0)` | the quantile function |
+| `sn_moments(xi, omega, alpha)` | the mean and SD, as a list |
+| `sn_mode(xi, omega, alpha)` | the mode |
+| `sn_score_map(xi, omega, alpha, zmax = 7, n_knots = 141L)` | a function from normal scores to quantiles, for draws: a spline through `n_knots` knots from `-zmax` to `zmax`, linear beyond |
+
+### LOO and WAIC
+
+`taylor_terms()` gives the terms of LOO and WAIC by a second-order
+Taylor expansion of each unit’s log-likelihood around the posterior
+(Alhyari et al., 2026). Your code supplies, at `mean_vb` and for each
+unit, the log-likelihood, the score and the Hessian, by whatever route
+it has: `taylor_terms(l, s, H = NULL, Omega, root = cov_root(Omega))`,
+where `s` is the matrix of scores with a row per unit, `H` the array of
+Hessians, and `root` any matrix \\A\\ with \\A A^\top = \Omega\\, by
+default `cov_root(Omega)`, which gives the same terms whichever root is
+taken. With derivatives already in whitened coordinates, give
+`Omega = root = diag(m)`.
+
+Then `taylor_loo(terms)` and `taylor_waic(terms)` give the estimates.
+Where a unit has no second-order term (for the LOO, a leverage of 1 or
+more), each falls back to the first order for every unit by itself: its
+`order` is then 1, and `first_order` lists the units that sent it there.
+
+`taylor_trace(terms, what)`, with `what` either `"loo"` or `"waic"`, is
+a cheaper estimate for when only the diagonal of each unit’s Hessian is
+known. It uses the scores and each unit’s total leverage \\k_u =
+-\operatorname{tr}(\Omega H_u)\\ alone, so call `taylor_terms()` with
+`H = NULL` and then set `terms$k_sum` to \\k_u\\: with the derivatives
+in whitened coordinates, `terms$k_sum <- -rowSums(D)`, where `D` holds
+the diagonal of each unit’s Hessian, a row per unit. Its `over` lists
+the units whose leverages add up to 1 or more, for which the estimate
+may be poor. inlavanilla’s
+[`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes this
+route for `hessian = "diagonal"`.
+
+``` r
+
+theta <- core$mean_vb
+mu <- exp(theta[["b0"]] + theta[["b1"]] * x)
+X <- cbind(1, x)
+l <- stats::dpois(y, mu, log = TRUE)
+s <- (y - mu) * X
+H <- array(0, c(2, 2, length(y)))
+for (u in seq_along(y)) {
+  H[, , u] <- -mu[u] * tcrossprod(X[u, ])
+}
+terms <- taylor_terms(l, s, H, Omega = core$cov)
+taylor_loo(terms)$estimates
+#>           Estimate        SE
+#> elpd_loo -13.56621 1.3465305
+#> p_loo      1.20383 0.2902777
+#> looic     27.13242 2.6930610
+taylor_waic(terms)$estimates
+#>             Estimate        SE
+#> elpd_waic -13.457814 1.3039788
+#> p_waic      1.095435 0.2404797
+#> waic       26.915629 2.6079575
+```
+
+## A small example
+
+`fit_poisson()` is a complete adapter: it builds the log-posterior from
+the data, calls `vanilla_core()`, raises its own warning, and turns the
+result into a summary.
+
+``` r
+
+# grad_scale scales the gradient of b1, only to show a wrong gradient below
+fit_poisson <- function(y, x, vb_correction = "onestep", silent = FALSE,
+                        grad_scale = 1) {
+  logpost <- function(theta) {
+    eta <- theta[["b0"]] + theta[["b1"]] * x
+    sum(stats::dpois(y, exp(eta), log = TRUE)) +
+      sum(stats::dnorm(theta, 0, 10, log = TRUE))
+  }
+  grad <- function(theta) {
+    r <- y - exp(theta[["b0"]] + theta[["b1"]] * x)
+    c(sum(r), grad_scale * sum(r * x)) - theta / 100
+  }
+  core <- vanilla_core(
+    logpost,
+    grad,
+    init = c(b0 = 0, b1 = 0),
+    vb_correction = vb_correction,
+    silent = silent
+  )
+  dg <- diagnostics_internal(
+    core$diagnostics$optim,
+    core$diagnostics$vb,
+    core$diagnostics$marginals,
+    pars = core$mean_vb
+  )
+  problems <- diagnostic_problems(
+    dg,
+    gaussian = core$marginals == "gaussian",
+    has_grad = core$has_grad,
+    advice = poisson_advice
+  )
+  if (length(problems) > 0) {
+    warn(
+      c("The Poisson fit may be inaccurate:", problems),
+      class = "mypkg_diagnostics_warning",
+      .envir = attr(problems, "envir")
+    )
+  }
+  sn <- core$sn
+  mom <- sn_moments(sn[, "xi"], sn[, "omega"], sn[, "alpha"])
+  summary <- data.frame(
+    mean = mom$mean,
+    sd = mom$sd,
+    lower = qsnorm(0.025, sn[, "xi"], sn[, "omega"], sn[, "alpha"]),
+    upper = qsnorm(0.975, sn[, "xi"], sn[, "omega"], sn[, "alpha"]),
+    row.names = rownames(sn)
+  )
+  structure(list(summary = summary, core = core), class = "poisson_fit")
+}
+
+print.poisson_fit <- function(x, ...) {
+  print(x$summary, digits = 3)
+  invisible(x)
+}
+```
+
+``` r
+
+fit_poisson(y, x, silent = TRUE)
+#>     mean    sd   lower upper
+#> b0 0.586 0.289 -0.0292  1.11
+#> b1 0.597 0.224  0.1752  1.05
+```
+
+Here, on purpose, the gradient of `b1` is 30% too large. The fit still
+runs, and the adapter’s warning names the problem in its own words:
+
+``` r
+
+fit_poisson(y, x, silent = TRUE, grad_scale = 1.3)
+#> Warning: `grad` does not look like the gradient of `logpost`.
+#> ✖ Its Jacobian at the mode is not symmetric (relative asymmetry 0.15), as
+#>   the Hessian of a function must be.
+#> ℹ A wrong gradient gives a wrong mode and wrong marginals.
+#> Warning: The Poisson fit may be inaccurate:
+#> ✖ the gradient of the Poisson model does not match its log-posterior at the
+#>   mode (gap > 0.1) for `b1` (0.15).
+#> ℹ A wrong gradient gives a wrong log marginal likelihood, and can move the
+#>   mode and the covariance.
+#>     mean    sd    lower upper
+#> b0 0.597 0.286 -0.00869  1.12
+#> b1 0.602 0.224  0.18616  1.07
+```
+
+The first warning comes from the engine, and names inlavanilla’s `grad`
+and `logpost`, as said above. The second is the adapter’s own.
+
+inlavanilla’s
+[`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md),
+in its file `R/inla-vanilla.R`, is the full reference adapter: it checks
+the arguments, sets up the condition handlers, reads the transforms from
+the names of the parameters, and builds the fit.
+
+## Licensing
+
+The engine is under the GNU General Public License, version 3 or later,
+so a package that holds it must be distributed under GPL-3 or
+`GPL (>= 3)` too (see the [GNU GPL
+FAQ](https://www.gnu.org/licenses/gpl-faq.html)). Keep the headers of
+the engine files. `vanilla-qsnorm-fast.R` is Thomas Luu’s code under the
+Apache License 2.0, which GPL version 3 allows. The `"cph"` entries that
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+adds to `Authors@R` name the copyright holders of the engine, so that
+the ownership of all the code of your package is clear, as CRAN’s policy
+asks.
+
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+and
+[`vanilla_status()`](https://haziqj.ml/inlavanilla/reference/vanilla_status.md)
+warn when the `License` of your package does not allow the engine’s. If
+your package cannot be under the GPL, ask at
+<https://github.com/haziqj/inlavanilla/issues>.
+
+## References
+
+Alhyari, M., Jamil, H., Montcho, H., & Rue, H. (2026). *Deterministic
+leave-one-cluster-out cross-validation for multilevel Bayesian
+structural equation models* (arXiv:2609.00670 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2609.00670>
+
+Jamil, H., & Rue, H. (2026a). *Approximate Bayesian inference for
+structural equation models using integrated nested Laplace
+approximations* (arXiv:2603.25690 \[stat.ME\]). arXiv.
+<https://doi.org/10.48550/arXiv.2603.25690>
+
+Jamil, H., & Rue, H. (2026b). *Implementation and workflows for
+INLA-based approximate Bayesian structural equation modelling*
+(arXiv:2604.00671 \[stat.CO\]). arXiv.
+<https://doi.org/10.48550/arXiv.2604.00671>

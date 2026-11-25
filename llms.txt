@@ -71,13 +71,13 @@ logpost <- function(theta) {
 }
 
 fit <- inla_vanilla(logpost, init = c(logit_p = 0))
-#> ✔ Found the posterior mode in 6 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.17σ [14ms]
-#> ✔ Fitted 1 skew-normal marginal [20ms]
+#> ✔ Found the posterior mode in 6 iterations [3ms]
+#> ✔ VB mean correction, max shift 0.17σ [32ms]
+#> ✔ Fitted 1 skew-normal marginal [4ms]
 fit
-#> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -3.05 · Converged in 6 iterations (63ms)
+#> Log marginal likelihood: -3.05 · Converged in 6 iterations (67ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.1819  0.0804  0.0549  0.1723  0.3632  0.1510
@@ -165,8 +165,16 @@ INLA-based approximate Bayesian structural equation modelling*
   : Summarise an INLAvanilla fit
 - [`timing()`](https://haziqj.ml/inlavanilla/reference/timing.md) : Time
   taken by each stage of an INLAvanilla fit
+- [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+  : Copy the engine of inlavanilla into a package
+- [`use_vanilla_ci()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_ci.md)
+  : Check the engine copy on GitHub Actions
+- [`use_vanilla_test()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_test.md)
+  : Add a test that checks the engine copy
 - [`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
   : Tuning of an INLAvanilla fit
+- [`vanilla_status()`](https://haziqj.ml/inlavanilla/reference/vanilla_status.md)
+  : Check a copy of the engine of inlavanilla
 
 # Articles
 
@@ -238,3 +246,8 @@ INLA-based approximate Bayesian structural equation modelling*
   The structural equation model of the Rcpp article written for RTMB,
   which differentiates R code automatically to give the gradient and the
   Hessian, and compared with R and C++ for speed and accuracy.
+
+### For package developers
+
+- [Using the engine in your own
+  package](https://haziqj.ml/inlavanilla/articles/engine.md):

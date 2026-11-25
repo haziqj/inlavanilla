@@ -68,3 +68,8 @@
   The structural equation model of the Rcpp article written for RTMB,
   which differentiates R code automatically to give the gradient and the
   Hessian, and compared with R and C++ for speed and accuracy.
+
+### For package developers
+
+- [Using the engine in your own
+  package](https://haziqj.ml/inlavanilla/articles/engine.md):

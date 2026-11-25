@@ -749,13 +749,13 @@ logpost <- function(theta) {
 
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
-#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [4ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
-#> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (10ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (12ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159

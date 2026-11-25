@@ -7,6 +7,7 @@ articles:
   articles/correlation: correlation.html
   articles/diagnostic-tests: diagnostic-tests.html
   diagnostics: diagnostics.html
+  engine: engine.html
   inlavanilla: inlavanilla.html
   articles/latents: latents.html
   model-comparison: model-comparison.html
@@ -14,7 +15,7 @@ articles:
   natural-scale: natural-scale.html
   articles/rcpp: rcpp.html
   articles/rtmb: rtmb.html
-last_built: 2026-11-25T00:18Z
+last_built: 2026-11-25T02:37Z
 urls:
   reference: https://haziqj.ml/inlavanilla/reference
   article: https://haziqj.ml/inlavanilla/articles
