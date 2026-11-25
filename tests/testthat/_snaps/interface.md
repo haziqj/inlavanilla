@@ -121,11 +121,11 @@
         <n> logpost and <n> grad calls
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
-        One step, accepted (guard > 2.5 SD)
-        Gain ratio # (warning < #)
+        One-step check: contraction ratio #, slope along the step # at the mode and # at the step (passes below 1 in size)
+        One step, accepted
         Largest shift # SD, for intercept (warning > 1 SD)
         KL term #, giving a log marginal likelihood of #
-        <n> logpost and <n> grad calls
+        <n> grad calls
       v Fitted 2 skew-normal marginals [<time>]
                    Shape NMAD Ridge bend Tails Unscanned gamma1
         intercept # # # ok # #
