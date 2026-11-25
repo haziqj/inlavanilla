@@ -1,3 +1,26 @@
+# inlavanilla (development version)
+
+* New `use_vanilla()` copies the engine of inlavanilla, the files
+  `R/vanilla-*.R` behind `inla_vanilla()`, into another package, so that the
+  package can call `vanilla_core()` without depending on inlavanilla. It takes
+  the files from a release on GitHub (by default that of the installed
+  version) or from a local clone, writes the lock `inst/inlavanilla.lock` with
+  the MD5 hash of each file, and adds to the package's `DESCRIPTION` what the
+  engine needs: its copyright holders, `cli`, `stats` and `utils` in
+  `Imports`, `future` and `parallelly` in `Suggests`, and `R (>= 4.1.0)`. It
+  removes nothing, stops when a copy was edited by hand, and ends with a list
+  of what is still to do. Run with a newer release, it updates the copy.
+
+* New `vanilla_status()` checks a copy: the files match the lock and the lock
+  matches its release, no name clashes, the `DESCRIPTION` and the license suit
+  the engine, and whether a newer release changes a copied file.
+  `use_vanilla_test()` and `use_vanilla_ci()` add a test and a GitHub Actions
+  workflow that check the copy.
+
+* The new vignette `vignette("engine")` shows how to copy and update the
+  engine, and documents `vanilla_core()` and the functions around it. These
+  functions change only with a NEWS bullet that says so.
+
 # inlavanilla 26.11.24-1
 
 * This version changes only the skew-normal functions of the engine. They are
