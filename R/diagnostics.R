@@ -286,6 +286,7 @@ print.inla_vanilla_diagnostics <- function(x, ...) {
     "iterations",
     "vb_applied",
     "vb_fallback",
+    "vb_solve",
     "n_heavy_tails"
   )
   sci_names <- c(

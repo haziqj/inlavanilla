@@ -585,6 +585,10 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "vb_fallback",
       "vb_step_max",
       "vb_gain_ratio",
+      "vb_lhat",
+      "vb_j0",
+      "vb_j1",
+      "vb_solve",
       "mean_gap_max",
       "ridge_bend_max",
       "n_heavy_tails"
