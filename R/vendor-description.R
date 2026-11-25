@@ -100,7 +100,7 @@ vendor_field_value <- function(lines, f) {
 ## ----- Dependencies ----------------------------------------------------------
 
 # The entries of a dependency field: name, operator, version and the text of
-# each entry
+# each entry.
 vendor_parse_deps <- function(value) {
   if (is.null(value) || is.na(value)) {
     value <- ""
@@ -217,7 +217,7 @@ vendor_add_dep <- function(d, field, pkg, entry, after) {
 }
 
 # Whether a field has one entry per line: nothing after the colon, and no
-# line with more than one comma
+# line with more than one comma.
 vendor_one_per_line <- function(lines, f) {
   if (f$end <= f$start) {
     return(FALSE)
@@ -332,7 +332,7 @@ vendor_orcid <- function(p) {
 }
 
 # The same person: the ORCIDs match, or the given and family names match,
-# ignoring case and surrounding spaces
+# ignoring case and surrounding spaces.
 vendor_same_person <- function(a, b) {
   oa <- vendor_orcid(a)
   ob <- vendor_orcid(b)
@@ -351,7 +351,7 @@ vendor_same_person <- function(a, b) {
 }
 
 # The persons whose roles include "cph", from the text of an Authors@R field,
-# or NULL when it cannot be read
+# or NULL when it cannot be read.
 vendor_holders <- function(text) {
   persons <- vendor_read_persons(text)
   if (is.null(persons)) {
@@ -366,7 +366,7 @@ vendor_holders <- function(text) {
 }
 
 # Where each holder stands in `persons`: "listed" with the role "cph",
-# "no_cph" when listed without it, or "absent"
+# "no_cph" when listed without it, or "absent".
 vendor_holder_state <- function(holders, persons) {
   vapply(
     seq_along(holders),
@@ -1273,7 +1273,7 @@ vendor_license_allows <- function(spec, v) {
 }
 
 # The Name and Abbrev of R's license database, with the GNU licenses as a
-# fallback when the database cannot be read
+# fallback when the database cannot be read.
 vendor_license_db <- function() {
   path <- file.path(R.home("share"), "licenses", "license.db")
   db <- tryCatch(

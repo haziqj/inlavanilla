@@ -34,6 +34,12 @@ persons_of <- function(text) {
 
 hv <- intToUtf8(229L)
 
+# The Authors@R line of host_desc_minimal
+ann_line <- paste0(
+  "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", ",
+  "role = c(\"aut\", \"cre\"))"
+)
+
 inlavaan_like <- paste0(
   "Type: Package\n",
   "Package: INLAvaan\n",
@@ -158,7 +164,7 @@ test_that("a minimal DESCRIPTION gains every field, with CRLF kept", {
 
 test_that("a single person over several lines is wrapped in c()", {
   desc <- sub(
-    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+    paste0(ann_line, "\n"),
     paste0(
       "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\",\n",
       "    role = c(\"aut\", \"cre\"))\n"
@@ -183,7 +189,7 @@ test_that("a single person over several lines is wrapped in c()", {
   )
   # Arguments aligned under the opening parenthesis move left with it
   desc <- sub(
-    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+    paste0(ann_line, "\n"),
     paste0(
       "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\",\n",
       "                  role = c(\"aut\", \"cre\"))\n"
@@ -220,7 +226,7 @@ test_that("a comment in Authors@R does not take the comma that is added", {
   ann <- "person(\"Ann\", \"B\", role = c(\"aut\", \"cre\"))"
   with_authors <- function(field) {
     sub(
-      "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+      paste0(ann_line, "\n"),
       field,
       host_desc_minimal,
       fixed = TRUE
@@ -235,8 +241,8 @@ test_that("a comment in Authors@R does not take the comma that is added", {
     expect_length(persons, 3L)
     expect_identical(format(persons[1]), format(persons_of(desc)))
   }
-  # A comment after the last person, and the closing parenthesis on its own
-  # line
+  # A comment after the last person, and the closing parenthesis on a line
+  # of its own.
   check(
     paste0("Authors@R: c(\n    ", ann, " # the maintainer\n  )\n"),
     paste0(
@@ -347,7 +353,10 @@ test_that("an entry goes last in an unsorted field and on a wrapped line", {
   plan <- plan_for(desc)
   expect_match(
     plan$text,
-    "Imports:\n    cli (>= 3.6.0),\n    stats,\n    utils\nSuggests:\n    future,\n    parallelly\n",
+    paste0(
+      "Imports:\n    cli (>= 3.6.0),\n    stats,\n    utils\n",
+      "Suggests:\n    future,\n    parallelly\n"
+    ),
     fixed = TRUE
   )
   expect_match(plan$text, "Depends:\n    R (>= 4.1.0)\nImports:", fixed = TRUE)
@@ -432,7 +441,7 @@ test_that("cli in Suggests only is added to Imports, and left in Suggests", {
 
 test_that("a rights holder already listed is not added again", {
   desc <- sub(
-    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+    paste0(ann_line, "\n"),
     paste0(
       "Authors@R: c(\n",
       "    person(\"Haziq\", \"Jamil\", role = c(\"aut\", \"cre\")),\n",
@@ -468,7 +477,7 @@ test_that("an Authors@R that is not plain person() calls is not evaluated", {
     "authors"
   )) {
     desc <- sub(
-      "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))",
+      ann_line,
       paste("Authors@R:", value),
       host_desc_minimal,
       fixed = TRUE
@@ -533,7 +542,7 @@ test_that("an ORCID that is not valid is read without a warning", {
   expect_no_warning(persons <- vendor_read_persons(text))
   expect_identical(vendor_person_name(persons), "First Last")
   desc <- sub(
-    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))",
+    ann_line,
     paste("Authors@R:", text),
     host_desc_minimal,
     fixed = TRUE
@@ -811,7 +820,10 @@ test_that("the dependency and authors checks of vanilla_status() work", {
   expect_identical(row$status, "fail")
   expect_identical(
     row$msgs[[1]]$plain,
-    "Authors@R does not name Haziq Jamil and Thomas Luu, who hold rights in the engine."
+    paste(
+      "Authors@R does not name Haziq Jamil and Thomas Luu, who hold rights in",
+      "the engine."
+    )
   )
   desc <- paste0(minimal_expected, "Collate: 'hello.R'\n")
   root <- local_host(desc = desc)

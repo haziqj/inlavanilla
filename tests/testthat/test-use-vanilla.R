@@ -1,5 +1,5 @@
 # use_vanilla(), use_vanilla_test() and use_vanilla_ci() on host packages, with
-# a fake GitHub
+# a fake GitHub.
 
 quiet <- function(expr) suppressMessages(expr)
 

@@ -35,7 +35,7 @@ vendor_archive_url <- function(commit) {
 }
 
 # The tags of inlavanilla on GitHub, named by tag, with the commit each names,
-# or NULL when GitHub cannot be reached
+# or NULL when GitHub cannot be reached.
 vendor_github_tags <- function() {
   tmp <- tempfile("inlavanilla-refs-")
   on.exit(unlink(tmp))
@@ -87,9 +87,9 @@ vendor_parse_refs <- function(bytes) {
 
 # The DESCRIPTION and the engine files of a commit of inlavanilla, in a
 # temporary folder: list(dir, files, desc, stage). `files` are the engine files
-# as "R/vanilla-x.R", in radix order; `desc` the fields of the DESCRIPTION;
-# `stage` the folder to delete afterwards. Stops with the class
-# inlavanilla_source_error.
+# as "R/vanilla-x.R", in radix order. `desc` holds the fields of the
+# DESCRIPTION, and `stage` is the folder to delete afterwards. Stops with the
+# class inlavanilla_source_error.
 vendor_snapshot <- function(commit, release, clone = NULL) {
   stage <- tempfile("inlavanilla-snapshot-")
   dir.create(stage)
@@ -243,7 +243,7 @@ vendor_clone_tags <- function(clone) {
 }
 
 # The DESCRIPTION and R/ of a commit of a clone, as a tar archive with the
-# layout of GitHub's archive
+# layout of GitHub's archive.
 vendor_clone_archive <- function(clone, commit, dest) {
   vendor_git(
     clone,
@@ -431,7 +431,7 @@ vendor_resolve_release <- function(
 }
 
 # How a release of a clone stands on GitHub: "same", "moved" (another commit),
-# "missing" (no such tag) or "offline"
+# "missing" (no such tag) or "offline".
 vendor_github_state <- function(release, commit, github) {
   if (is.null(github)) {
     return("offline")

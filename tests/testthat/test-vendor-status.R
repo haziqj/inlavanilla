@@ -301,7 +301,10 @@ test_that("the DESCRIPTION rows name use_vanilla() only for what it fixes", {
         "Change `R (> 4.0)` in Depends to `R (>= 4.1.0)` by hand:",
         "`use_vanilla()` does not change it."
       ),
-      "Add the engine files to Collate by hand: `use_vanilla()` does not change it."
+      paste(
+        "Add the engine files to Collate by hand: `use_vanilla()` does not",
+        "change it."
+      )
     )
   )
   # After that fix, only the fixes by hand are left
@@ -393,7 +396,10 @@ test_that("a lock of another upstream skips the network checks in one line", {
   )
   expect_match(
     text,
-    "Skipped 2 checks: the lock does not copy from <https://github.com/haziqj/inlavanilla>.",
+    paste(
+      "Skipped 2 checks: the lock does not copy from",
+      "<https://github.com/haziqj/inlavanilla>."
+    ),
     fixed = TRUE
   )
 })

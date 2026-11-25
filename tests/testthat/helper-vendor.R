@@ -194,7 +194,7 @@ fake_github <- function(
 }
 
 # Replaces the network, the date and the installed version in the test that
-# calls it
+# calls it.
 local_vendor <- function(
   gh = fake_github(envir = envir),
   installed = "26.11.24-1",
@@ -248,7 +248,7 @@ minimal_expected <- paste0(
 )
 
 # A host package in a temporary folder whose path has a space, removed when
-# the test ends
+# the test ends.
 local_host <- function(
   desc = host_desc_minimal,
   files = list(),
@@ -271,7 +271,7 @@ local_host <- function(
 }
 
 # The messages of `expr`, as one string with the lines joined by spaces, so
-# that a pattern can match across the wrapping
+# that a pattern can match across the wrapping.
 messages_of <- function(expr) {
   text <- character()
   withCallingHandlers(

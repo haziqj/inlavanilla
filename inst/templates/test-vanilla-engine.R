@@ -22,7 +22,7 @@ test_that("the engine files match inst/inlavanilla.lock", {
     listed <- if (has("File")) unname(records[, "File"]) else character()
     md5 <- if (has("MD5")) unname(records[, "MD5"]) else character()
     # The MD5 of the text with carriage returns removed, so that a checkout
-    # with Windows line endings passes
+    # with Windows line endings passes.
     md5_lf <- function(path) {
       bytes <- readBin(path, "raw", n = file.size(path))
       tmp <- tempfile()

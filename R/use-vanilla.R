@@ -631,8 +631,8 @@ use_vanilla <- function(
       optional,
       list(vendor_msg(
         "*",
-        "{.run inlavanilla::use_vanilla_ci()} adds a GitHub Actions workflow that
-       runs {.fn vanilla_status} on every push."
+        "{.run inlavanilla::use_vanilla_ci()} adds a GitHub Actions workflow
+         that runs {.fn vanilla_status} on every push."
       ))
     )
   }

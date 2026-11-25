@@ -160,16 +160,16 @@ vendor_namespace <- function(root) {
 # `name` (the object, or the package or file the item is about), `files` and
 # `names` (list columns), `pkg`, `count`, and `text`, the item as plain text.
 # The kinds:
-# * duplicate (fail): an engine object is bound in another file of R/;
-# * import_from (fail): NAMESPACE imports an engine name with importFrom();
+# * duplicate (fail): an engine object is bound in another file of R/.
+# * import_from (fail): NAMESPACE imports an engine name with importFrom().
 # * import_all (warn): a whole-package import() brings engine names, which
-#   the package's own code then does not see;
+#   the package's own code then does not see.
 # * import_unchecked (note): such an import of a package that is not
-#   installed here, which cannot be checked;
-# * export_pattern (warn): an exportPattern() exports engine objects;
-# * export (note): export() of an engine object;
-# * parse (warn): a file of R/ that does not parse;
-# * namespace (warn): a NAMESPACE that cannot be read;
+#   installed here, which cannot be checked.
+# * export_pattern (warn): an exportPattern() exports engine objects.
+# * export (note): export() of an engine object.
+# * parse (warn): a file of R/ that does not parse.
+# * namespace (warn): a NAMESPACE that cannot be read.
 # * missing (warn, with a snapshot of the release only): names that the
 #   copies use and that only an engine file of the release that is not copied
 #   binds. all.names() over-counts, so this is not a failure.
@@ -364,7 +364,7 @@ vendor_names_frame <- function(items) {
 }
 
 # One item of the names check as the text of a cli bullet (see vendor_inline()),
-# or as plain text
+# or as plain text.
 vendor_names_item <- function(item, plain = FALSE) {
   name <- item$name
   files <- vendor_and(item$files[[1L]])

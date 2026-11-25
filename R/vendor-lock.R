@@ -27,7 +27,7 @@ vendor_tag_pattern <- "^v[0-9]+([.-][0-9]+)*$"
 vendor_first_release <- "v26.11.24"
 
 # Roxygen tags that would change NAMESPACE, or the collation order through
-# @include, if a copied file held them
+# @include, if a copied file held them.
 vendor_roxygen_ns <- paste0(
   "^\\s*#'.*@",
   "(export|import|useDynLib|rawNamespace|S3method|include)"
@@ -317,7 +317,7 @@ vendor_tag_version <- function(tag) {
 }
 
 # The tags among `tags` (a named vector of commits) that are releases with the
-# engine files: version tags at or above vendor_first_release, oldest first
+# engine files: version tags at or above vendor_first_release, oldest first.
 vendor_release_tags <- function(tags) {
   tags <- tags[grepl(vendor_tag_pattern, names(tags))]
   if (length(tags) == 0L) {

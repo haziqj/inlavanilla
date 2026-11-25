@@ -42,7 +42,7 @@ vendor_defer <- function(expr, envir) {
 }
 
 # A message: its bullet type ("v", "x", "!", "i", " ", ">", "_" or "*"), and
-# its text formatted for cli_bullets() and as plain text
+# its text formatted for cli_bullets() and as plain text.
 vendor_msg <- function(type, template, .envir = parent.frame()) {
   list(
     type = type,
@@ -88,7 +88,7 @@ vendor_and <- function(x) {
 }
 
 # The engine's license, with non-breaking spaces where the output can show
-# them, so that it does not break across lines
+# them, so that it does not break across lines.
 vendor_gpl3 <- function() {
   if (cli::is_utf8_output()) "GPL\u00a0(>=\u00a03)" else "GPL (>= 3)"
 }

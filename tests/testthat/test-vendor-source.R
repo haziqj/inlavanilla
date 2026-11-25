@@ -1,11 +1,11 @@
 # Releases on GitHub and in a clone: the ref list, the release to copy, and
-# snapshots of a commit
+# snapshots of a commit.
 
 test_that("the ref list gives the tags and their commits", {
   gh <- fake_github()
   tags <- vendor_parse_refs(gh$refs)
-  # The annotated first tag is peeled to its commit; branches and the
-  # capabilities after the NUL are not tags
+  # The annotated first tag is peeled to its commit. Branches and the
+  # capabilities after the NUL are not tags.
   expect_identical(tags, gh$commits)
   # The ref list as GitHub sends it, with its real line lengths
   live <- c(

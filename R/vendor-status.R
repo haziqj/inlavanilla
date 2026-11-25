@@ -158,7 +158,7 @@ vanilla_status <- function(path = ".", clone = NULL, error = FALSE) {
   }
 
   # Fetch first: the tags, a snapshot of the lock's commit, and one of the
-  # newest release
+  # newest release.
   src <- NULL
   snap <- NULL
   snap_failed <- FALSE
@@ -377,7 +377,7 @@ vendor_status_print <- function(
 }
 
 # The annotations on GitHub Actions, the error of `error = TRUE`, and the data
-# frame
+# frame.
 vendor_status_end <- function(rows, error) {
   frame <- vendor_status_frame(rows)
   if (identical(Sys.getenv("GITHUB_ACTIONS"), "true")) {
