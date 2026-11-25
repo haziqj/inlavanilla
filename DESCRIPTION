@@ -33,6 +33,7 @@ Imports:
     graphics,
     grDevices,
     stats,
+    tools,
     utils
 Suggests:
     future,
