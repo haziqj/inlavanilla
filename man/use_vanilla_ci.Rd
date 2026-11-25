@@ -25,7 +25,7 @@ from GitHub and runs \code{vanilla_status(error = TRUE)}, which fails the run
 when a check fails. A newer release of inlavanilla is reported in the log,
 and does not fail the run.
 
-It also adds \verb{^\\\\.github$} to \code{.Rbuildignore} where that line is missing,
+It also adds \verb{^\\.github$} to \code{.Rbuildignore} where that line is missing,
 so that R CMD build leaves the folder out.
 
 It is optional: \code{\link[=use_vanilla]{use_vanilla()}} does not add it, and offers it at the end of

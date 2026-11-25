@@ -732,7 +732,7 @@ use_vanilla_test <- function(path = ".", overwrite = FALSE) {
 #' when a check fails. A newer release of inlavanilla is reported in the log,
 #' and does not fail the run.
 #'
-#' It also adds `^\\.github$` to `.Rbuildignore` where that line is missing,
+#' It also adds `^\.github$` to `.Rbuildignore` where that line is missing,
 #' so that R CMD build leaves the folder out.
 #'
 #' It is optional: [use_vanilla()] does not add it, and offers it at the end of
