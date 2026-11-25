@@ -284,7 +284,12 @@ vanilla_status <- function(path = ".", clone = NULL, error = FALSE) {
     rows$update <- update$row
   }
 
-  vendor_status_print(rows, header, offline = known && is.null(src))
+  vendor_status_print(
+    rows,
+    header,
+    offline = known && is.null(src),
+    foreign = !known
+  )
   vendor_status_end(rows, error)
 }
 
@@ -332,22 +337,34 @@ vendor_status_frame <- function(rows) {
 }
 
 # Prints the header and the rows. A skipped row prints its note on an i line,
-# and the two network rows skipped offline print one line together.
-vendor_status_print <- function(rows, header, offline = FALSE) {
+# and the two network rows, skipped offline or for a lock of another upstream
+# (`foreign`), print one line together.
+vendor_status_print <- function(
+  rows,
+  header,
+  offline = FALSE,
+  foreign = FALSE
+) {
   vendor_say(header)
+  together <- offline || foreign
   for (check in vendor_status_checks) {
     row <- rows[[check]]
     if (row$status != "skip") {
       vendor_say(row$msgs)
     } else if (
-      !(offline && check %in% c("release", "update")) &&
+      !(together && check %in% c("release", "update")) &&
         nzchar(row$msgs[[1L]]$cli)
     ) {
       row$msgs[[1L]]$type <- "i"
       vendor_say(row$msgs)
     }
   }
-  if (offline) {
+  if (foreign) {
+    vendor_say(list(vendor_msg(
+      "i",
+      "Skipped 2 checks: the lock does not copy from {.url {vendor_upstream}}."
+    )))
+  } else if (offline) {
     vendor_say(c(
       list(vendor_msg(
         "i",

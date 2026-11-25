@@ -370,3 +370,30 @@ test_that("the authors row names use_vanilla() only when it can add them", {
     )
   )
 })
+
+test_that("a lock of another upstream skips the network checks in one line", {
+  gh <- local_vendor()
+  root <- copied_host("v26.11.24", gh)
+  lock_path <- file.path(root, "inst", "inlavanilla.lock")
+  write_text(
+    lock_path,
+    sub(
+      "https://github.com/haziqj/inlavanilla",
+      "https://github.com/someone/fork",
+      read_text(lock_path),
+      fixed = TRUE
+    )
+  )
+  text <- messages_of(out <- vanilla_status(path = root))
+  expect_identical(out$status[[1]], "warn")
+  expect_identical(out$status[7:8], c("skip", "skip"))
+  expect_identical(
+    lengths(regmatches(text, gregexpr("Skipped", text, fixed = TRUE))),
+    1L
+  )
+  expect_match(
+    text,
+    "Skipped 2 checks: the lock does not copy from <https://github.com/haziqj/inlavanilla>.",
+    fixed = TRUE
+  )
+})
