@@ -534,7 +534,8 @@ test_that("each numeric control entry is checked", {
     n_grid = list(6, "21", NA_real_, Inf),
     log_threshold = list(0, NA_real_),
     vb_maxit = list(0, "a"),
-    vb_tol = list(-1, Inf)
+    vb_tol = list(-1, Inf),
+    vb_budget = list(-1, NA_real_, "2", c(1, 2))
   )
   messages <- c(
     mode_maxit = "`mode_maxit` must be a single number of at least 1",
@@ -543,7 +544,8 @@ test_that("each numeric control entry is checked", {
     n_grid = "`n_grid` must be a single number of at least 7",
     log_threshold = "`log_threshold` must be a single negative number",
     vb_maxit = "`vb_maxit` must be a single number of at least 1",
-    vb_tol = "`vb_tol` must be a single positive number"
+    vb_tol = "`vb_tol` must be a single positive number",
+    vb_budget = "`vb_budget` must be a single number of at least 0"
   )
   for (entry in names(bad_values)) {
     for (bad in bad_values[[entry]]) {
@@ -577,6 +579,7 @@ test_that("vanilla_control() builds the control list, and checks a plain one", {
       "mode_tol",
       "vb_maxit",
       "vb_tol",
+      "vb_budget",
       "n_grid",
       "log_threshold",
       "nlminb"

@@ -218,6 +218,8 @@ what the mode and Hessian did. Without `grad` the same number of sweeps is
 allowed and each costs more, so a fit that fails the check can spend up to
 $2(m + 1)(m + 2) / (2m + 1)$ times the calls of its mode and Hessian on the
 correction, about $m$ times. That is the price of fitting without a gradient.
+The factor of two is `vb_budget` in `vanilla_control()`: a larger value, or
+`Inf`, lets the solve run further.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood with
 care. Its VB term, $\tfrac12\delta^\top H\delta$, is a leading-order term, and a

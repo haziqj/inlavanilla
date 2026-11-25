@@ -129,8 +129,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   parameter, which is too small to check.
 #' * `vb_solve`: 1 if that check failed, 0 if it passed, `NA` if it did not
 #'   run. After a failed check the fit solves the VB equation on the same
-#'   sweeps, capped at twice the calls that the mode and Hessian took over
-#'   2m + 1
+#'   sweeps, capped at `vb_budget` (2) times the calls that the mode and
+#'   Hessian took over 2m + 1
 #'   (see "The VB correction" in [inla_vanilla()]), and raises a warning of
 #'   its own: the posterior is far from Gaussian along the mean correction,
 #'   whether or not the solve converged.

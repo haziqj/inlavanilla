@@ -10,6 +10,10 @@
   is unchanged, to the last bit. A fit that fails it, and whose solve stopped
   at the old cap, has a different VB mean and log marginal likelihood.
 
+* `vanilla_control()` has the new entry `vb_budget`, that factor of two.
+  `vb_budget = 1` is the old cap, and `vb_budget = Inf` lets the solve run
+  until it converges or reaches `vb_maxit` iterations.
+
 # inlavanilla 26.11.25-1
 
 * The default VB correction (`vb_correction = "onestep"`) now checks its one

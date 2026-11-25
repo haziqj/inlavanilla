@@ -499,7 +499,8 @@ Hessian did. Without one the cap is the same number of sweeps, each of which
 costs more: a fit that fails the check can then spend up to
 2(m + 1)(m + 2) / (2m + 1) times the calls of its mode and Hessian, about m
 times, on the correction. That is the price of a fit without a gradient, and
-\code{grad} is the remedy.
+\code{grad} is the remedy. The factor of two is \code{vb_budget} in
+\code{\link[=vanilla_control]{vanilla_control()}}, and \code{Inf} there removes the cap.
 
 A large first step can also overstate the VB term of the log marginal
 likelihood, so after a shift above 1 posterior SD, which is flagged, compare

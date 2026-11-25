@@ -637,6 +637,12 @@ test_that("the sweeps are capped by twice the calls of the mode and Hessian", {
   expect_identical(vb_max_sweeps(20, 3), 5)
   expect_identical(vb_max_sweeps(3, 3), 0)
   expect_identical(vb_max_sweeps(Inf, 3), Inf)
+  # `vb_budget` is the factor: 1 is the cap of 26.11.25-1, and Inf is no cap
+  expect_identical(vb_max_sweeps(104, 3, 1), 14)
+  expect_identical(vb_max_sweeps(104, 3, 0), 0)
+  expect_identical(vb_max_sweeps(104, 3, Inf), Inf)
+  expect_identical(vanilla_control()$vb_budget, 2)
+  expect_identical(vanilla_control(vb_budget = Inf)$vb_budget, Inf)
   for (grad in c(TRUE, FALSE)) {
     for (mod in list(
       log_gamma_model(0.4),
@@ -677,6 +683,41 @@ test_that("the sweeps are capped by twice the calls of the mode and Hessian", {
       )
     }
   }
+})
+
+test_that("vb_budget sets the cap of a whole fit", {
+  mod <- mixed_gamma_model(c(20, 0.3, 5))
+  m <- length(mod$init)
+  fit_at <- function(b) {
+    fit_model(mod, marginals = "gaussian", control = list(vb_budget = b))
+  }
+  off <- fit_model(mod, vb_correction = "none", marginals = "gaussian")
+  budget <- off$counts[["logpost"]] + off$counts[["grad"]]
+  sweeps <- function(fit) {
+    (fit$counts[["grad"]] - off$counts[["grad"]]) / (2 * m + 1)
+  }
+  # No cap: the solve runs until it converges
+  free <- fit_at(Inf)
+  expect_true(free$diagnostics$vb$solve)
+  expect_gt(sweeps(free), 2)
+  expect_lt(diagnostics(free)[["vb_step_max"]], 1e-3)
+  # The default is 2
+  expect_identical(
+    fit_model(mod, marginals = "gaussian")$mean_vb,
+    fit_at(2)$mean_vb
+  )
+  for (b in c(0, 0.5, 1, 2)) {
+    fit <- fit_at(b)
+    cap <- floor(b * budget / (2 * m + 1))
+    expect_true(fit$diagnostics$vb$solve)
+    expect_lte(sweeps(fit), max(cap, 2))
+    # A cap that the free solve fits in changes nothing
+    if (cap >= sweeps(free)) {
+      expect_identical(fit$mean_vb, free$mean_vb)
+    }
+  }
+  # With no sweep for the solve a flagged fit stays at its mode
+  expect_identical(unname(fit_at(0)$mean_vb), unname(off$mode))
 })
 
 test_that("a whole fit keeps the VB stage within twice the mode and Hessian", {

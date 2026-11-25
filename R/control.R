@@ -14,6 +14,7 @@
 #'   mode_tol = 1e-10,
 #'   vb_maxit = 25L,
 #'   vb_tol = 0.001,
+#'   vb_budget = 2,
 #'   n_grid = 21L,
 #'   log_threshold = -6,
 #'   nlminb = list()
@@ -33,6 +34,16 @@
 #'   steps, [stats::nlminb()] takes over. They also limit the solve that
 #'   follows a failed check of a one-step correction, and a first step below
 #'   `vb_tol` in every parameter is not checked.
+#' @param vb_budget The most that the default VB correction
+#'   (`vb_correction = "onestep"`) may spend when its check fails and it
+#'   solves the VB equation, as a multiple of the calls that the mode and
+#'   Hessian took. The sweeps of the correction, the two of the check among
+#'   them, are capped at `vb_budget` times those calls over 2m + 1. The
+#'   default of 2 lets the solve of most hard fits reach its root. A larger
+#'   value, or `Inf` for no cap, lets it run on until `vb_tol` or `vb_maxit`,
+#'   and 0 leaves a fit that fails the check at its mode. A fit that passes
+#'   the check takes two sweeps whatever the value. See "The VB correction" in
+#'   [inla_vanilla()].
 #' @param n_grid The number of points of each skew-normal scan, spread over
 #'   \eqn{\pm 4} posterior SDs. At least 7.
 #' @param log_threshold Scan points whose log-posterior falls more than this

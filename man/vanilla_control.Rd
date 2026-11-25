@@ -10,6 +10,7 @@ vanilla_control(
   mode_tol = 1e-10,
   vb_maxit = 25L,
   vb_tol = 0.001,
+  vb_budget = 2,
   n_grid = 21L,
   log_threshold = -6,
   nlminb = list()
@@ -32,6 +33,17 @@ if two steps in a row are cut, or it has not converged after \code{vb_maxit}
 steps, \code{\link[stats:nlminb]{stats::nlminb()}} takes over. They also limit the solve that
 follows a failed check of a one-step correction, and a first step below
 \code{vb_tol} in every parameter is not checked.}
+
+\item{vb_budget}{The most that the default VB correction
+(\code{vb_correction = "onestep"}) may spend when its check fails and it
+solves the VB equation, as a multiple of the calls that the mode and
+Hessian took. The sweeps of the correction, the two of the check among
+them, are capped at \code{vb_budget} times those calls over 2m + 1. The
+default of 2 lets the solve of most hard fits reach its root. A larger
+value, or \code{Inf} for no cap, lets it run on until \code{vb_tol} or \code{vb_maxit},
+and 0 leaves a fit that fails the check at its mode. A fit that passes
+the check takes two sweeps whatever the value. See "The VB correction" in
+\code{\link[=inla_vanilla]{inla_vanilla()}}.}
 
 \item{n_grid}{The number of points of each skew-normal scan, spread over
 \eqn{\pm 4} posterior SDs. At least 7.}
