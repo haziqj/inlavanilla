@@ -516,6 +516,15 @@ dg <- diagnostics_internal(
 check_flags(dg, gaussian = FALSE)
 ```
 
+One check has a warning of its own, which the core raises and you do not word:
+the check of a one-step VB correction with a gradient (`vb_check` in
+`check_flags()`, and `vb_lhat`, `vb_j0`, `vb_j1` and `vb_solve` in the global
+table). When it fails, the core solves the VB equation within the calls of the
+mode and Hessian stage, and warns that the posterior is far from Gaussian along
+the mean correction, with the class `inlavanilla_vb_check_warning` and the name
+of the parameter the one step moved furthest, which is also in
+`core$diagnostics$vb$check_worst`. `diagnostic_problems()` has no bullet for it.
+
 `diagnostic_problems(dg, gaussian, has_grad, advice)` gives the bullets of a
 warning, one per flagged check, worded by you. `advice` is a list with the
 entries of `advice_entries`, cli templates that name your own arguments:

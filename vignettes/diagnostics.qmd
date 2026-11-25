@@ -56,7 +56,8 @@ can still do badly.
 | Mode | `mode_shift_sigma` | above 0.1 SDs | the same | INLAvaan |
 | Gradient | `grad_gap` | above 0.1 | the same | inlavanilla |
 | VB settled | `vb_step_sigma` | above 0.1 SDs | the same | inlavanilla |
-| VB gain | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
+| VB one step, with `grad` | `vb_lhat`, `vb_j0`, `vb_j1` (in `diagnostics(fit)`) | 1 or more in size | a warning of its own | inlavanilla |
+| VB gain, without `grad` | `vb_gain_ratio` (in `diagnostics(fit)`) | below 0.5 | the same | inlavanilla |
 | Hessian | `hess_cond_cor` (in `diagnostics(fit)`) | above $10^8$ | the same | INLAvaan, renamed |
 | VB correction | `vb_shift_sigma` | above 1 SD | the same | INLAvaan |
 | Skew-normal fit | `nmad` | above 0.1 | the same | INLAvaan |
@@ -74,8 +75,8 @@ diagnostics, and the gap between the skew-normal and VB means as an internal
 check; the mode shift, the Hessian condition number and the unscanned mass come
 from INLAvaan's `diagnostics()`, not from the paper. The levels of those five
 checks are INLAvaan's, and the fit-time warning uses its words. The VB settling,
-VB gain and tails checks are inlavanilla's own, and so are the ridge bend and
-mean gap checks, which only `summary()` flags. Every level is a package default,
+VB one-step, VB gain and tails checks are inlavanilla's own, and so are the
+ridge bend and mean gap checks, which only `summary()` flags. Every level is a package default,
 chosen so that a healthy fit stays silent, and not a calibrated cut-off: a
 tripped check is a prompt to look again, and silence is not a certificate of
 accuracy. In the simulations of Jamil and Rue (2026, Section 4.4), the VB shift
@@ -170,23 +171,52 @@ a log-posterior of degree four, and on a strongly skewed posterior it can be
 about 0.1 SDs out. Supplying `grad` is the fix.
 
 The default correction, `vb_correction = "onestep"`, takes a single step from
-the mode, so there is no step still to go and `vb_step_sigma` is `NA`. The check
-applies when that step has to iterate: if it is over 2.5 posterior SDs or a node
-fails, the iteration carries on with capped steps, within the calls that the
-mode and Hessian took. Running out of them shows up here as a correction that
-did not settle, and `vb_correction = "full"` is then the thing to try.
+the mode, so there is no step still to go and `vb_step_sigma` is `NA`.
 
-One step rests on a single premise: that the expected log-posterior is a
-parabola with the Laplace curvature. That premise can be tested. `vb_gain_ratio`
-in `diagnostics(fit)` is the rise in the expected log-posterior that the step
-delivered, over the rise the parabola promised, $\tfrac12\delta^\top H\delta$.
-It costs $4m + 2$ calls of `logpost`. Near 1 the premise holds, and below 0.5
-the fit warns. A low ratio means that the step went too far, or that the
-posterior is far from Gaussian around the mode. It cannot see a long tail far
+One step rests on a premise that can be tested. It is the first iterate of the
+map $\phi$ whose fixed point is the VB mean, and the first iterate is close to
+the fixed point only where $\phi$ is a contraction. With a gradient, the fit
+takes a second sweep of gradients at the step $d_1$, the same $2m + 1$ nodes
+moved there, and reads three numbers off the two sweeps, in the coordinates
+where the Laplace Gaussian is standard:
+
+- `vb_lhat`, the size of the residual of the VB equation at the step over its
+  size at the mode. This is the contraction ratio of $\phi$ over the step,
+  $\lVert \phi(d_1) - \phi(0) \rVert / \lVert d_1 \rVert$.
+- `vb_j0` and `vb_j1`, the slope of $\phi$ along the step, at the mode and at
+  the step. They come from the gradients of each sweep through Stein's
+  identity, at no further cost. Two points alone would miss a map that is steep
+  near the mode and flat beyond.
+
+The check passes when `vb_lhat` is below 1 and both slopes lie between $-1$ and
+1, and the one step is then the correction, unchanged. The level 1 is not tuned:
+it is where the map stops being a contraction, and where the step stops
+reducing the residual. On the log of a gamma variable with shape $a$, whose
+posterior grows more skewed as $a$ falls, `vb_j0` reaches $-1$ at $a = 0.633$.
+
+When the check fails, the posterior is far from Gaussian along the step, and one
+step is not an approximation of the VB mean. The fit then solves the VB equation
+on the same nodes, from the mode, by Broyden's method, and stops when the step
+still to go is below `vb_tol` or when one more sweep would take the VB stage
+past the calls that the mode and Hessian took. It raises a warning of its own,
+which names the parameter the one step moved furthest, and `vb_solve` in
+`diagnostics(fit)` is 1. The warning is about the posterior, not the solver, so
+it comes whether or not the solve converged: no Gaussian mean is sure to be
+close to the posterior mean there, and the posterior means, the log marginal
+likelihood, `loo()` and `waic()` all need care. `vb_step_sigma` then holds the
+step still to go where the solve stopped. It is a record and not a flag, since
+the budget is not a setting.
+
+Without a gradient there is no second sweep. A first step over 2.5 posterior
+SDs, or a failed node, carries on with capped steps, within the calls that the
+mode and Hessian took, and running out of them shows up as a correction that did
+not settle. A single step is checked by its gain: `vb_gain_ratio` in
+`diagnostics(fit)` is the rise in the expected log-posterior that the step
+delivered, over the rise $\tfrac12\delta^\top H\delta$ that a parabola with
+the Laplace curvature promises. It costs $4m + 2$ calls of `logpost`. Near 1
+the premise holds, and below 0.5 the fit warns. It cannot see a long tail far
 from the mode, where the parabola still holds near the peak: there only the mean
-gap, below, shows the trouble. The check says how far to trust the step, not
-what to do about it, as `vb_correction = "full"` is better on some of these
-posteriors and worse on others.
+gap, below, shows the trouble.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood with
 care. Its VB term, $\tfrac12\delta^\top H\delta$, is a leading-order term, and a
