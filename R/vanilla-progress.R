@@ -493,7 +493,8 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
           )
         }
       )
-    } else if (isTRUE(vbc$one_pass) && is.na(vbc$gain_ratio)) {
+    } else if (isTRUE(vbc$one_pass) && !is.null(h$sweeps)) {
+      # With a gradient, a step below vb_tol has no second sweep
       grey("One step, accepted (too small to check)")
     } else if (isTRUE(vbc$one_pass)) {
       c(
