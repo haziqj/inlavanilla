@@ -389,7 +389,9 @@ test_that("psnorm gives a zero-length result for any zero-length argument", {
   expect_identical(psnorm(numeric(0), 0, 1, 2, lower_tail = FALSE), numeric(0))
   expect_identical(psnorm(c(0.1, 0.2), 0, 1, numeric(0)), numeric(0))
   q0 <- matrix(numeric(0), 0, 2)
-  expect_identical(psnorm(q0, 0, 1, 2), stats::pnorm(q0))
+  # The 0 x 2 shape is kept on every R version. Base R 4.1 drops it for a
+  # zero-length pnorm(), so compare with the matrix itself.
+  expect_identical(psnorm(q0, 0, 1, 2), q0)
 })
 
 test_that("psnorm keeps the names and dim of q, as dsnorm does", {
@@ -637,7 +639,9 @@ test_that("qsnorm gives a zero-length result for any zero-length argument", {
   expect_identical(qsnorm(0.3, 0, 1, numeric(0)), numeric(0))
   expect_identical(qsnorm(c(0.1, 0.2), 0, 1, numeric(0)), numeric(0))
   p0 <- matrix(numeric(0), 0, 2)
-  expect_identical(qsnorm(p0, 0, 1, 2), stats::qnorm(p0))
+  # The 0 x 2 shape is kept on every R version. Base R 4.1 drops it for a
+  # zero-length qnorm(), so compare with the matrix itself.
+  expect_identical(qsnorm(p0, 0, 1, 2), p0)
 })
 
 test_that("qsnorm keeps the names and dim of p", {
