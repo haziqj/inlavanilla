@@ -281,7 +281,12 @@ vendor_read_persons <- function(text) {
   }
   env <- new.env(parent = baseenv())
   env$person <- utils::person
-  out <- tryCatch(eval(expr[[1L]], env), error = function(e) NULL)
+  # person() warns of an ORCID that is not valid, such as the placeholder of
+  # usethis's template. The persons are only read here, so that is not shown.
+  out <- tryCatch(
+    suppressWarnings(eval(expr[[1L]], env)),
+    error = function(e) NULL
+  )
   if (inherits(out, "person")) out else NULL
 }
 

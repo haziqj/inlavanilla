@@ -525,6 +525,24 @@ test_that("a DESCRIPTION in latin1 is edited and written back in latin1", {
   )
 })
 
+test_that("an ORCID that is not valid is read without a warning", {
+  text <- paste0(
+    "person(\"First\", \"Last\", , \"first.last@example.com\", ",
+    "role = c(\"aut\", \"cre\"), comment = c(ORCID = \"YOUR-ORCID-ID\"))"
+  )
+  expect_no_warning(persons <- vendor_read_persons(text))
+  expect_identical(vendor_person_name(persons), "First Last")
+  desc <- sub(
+    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))",
+    paste("Authors@R:", text),
+    host_desc_minimal,
+    fixed = TRUE
+  )
+  expect_no_warning(plan <- plan_for(desc))
+  expect_true(plan$safe)
+  expect_length(persons_of(plan$text), 3L)
+})
+
 test_that("a holder with a non-ASCII name is written in ASCII", {
   holders <- vendor_holders(paste0(
     "c(person(\"H",
