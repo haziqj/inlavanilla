@@ -13,7 +13,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,9 +54,24 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.24/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="26.11.24-1" id="inlavanilla-261124-1">inlavanilla 26.11.24-1<a class="anchor" aria-label="anchor" href="#inlavanilla-261124-1"></a></h2>
+<ul><li><p>This version changes only the skew-normal functions of the engine. They are internal in inlavanilla, but INLAvaan, which copies the engine, exports some of them. No fit changes: on the tests, vignettes and articles, every summary, marginal, VB mean, covariance, log marginal likelihood and LOO estimate is the same to the last digit as in 26.11.24.</p></li>
+<li><p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> with no probabilities, <code>probs = numeric(0)</code>, now works when a parameter is reported on the natural scale. Before, it stopped with an error, because <code>qsnorm()</code> returned <code>NA</code> for an empty <code>probs</code> (see below). With <code>transform = FALSE</code> it already worked.</p></li>
+<li>
+<p>Internal changes, for INLAvaan and other packages that copy the engine:</p>
+<ul><li>
+<code>psnorm()</code> and <code>qsnorm()</code> return a zero-length result when any argument has length zero, as <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">pnorm()</a></code> and <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">qnorm()</a></code> do. Before, they returned <code>NA</code>. The result now keeps the names and dimensions of <code>q</code> or <code>p</code>, as the result of <code>dsnorm()</code> keeps those of <code>x</code>.</li>
+<li>
+<code>qsnorm_fast()</code> recycles its arguments to the length of the longest, as <code>qsnorm()</code> does. Before, an <code>alpha</code> longer than <code>p</code> gave <code>NA</code> or an error.</li>
+<li>
+<code>fit_skew_normal()</code> stops with an error when <code>temp</code> is not a single finite positive number, or <code>threshold_log_drop</code> is not a single finite negative number. The error comes from <code>abort()</code> in <code>R/vanilla-utils.R</code>, so <code>R/vanilla-skew-normal.R</code> can no longer be copied without that file.</li>
+<li>The comments of the skew-normal functions are true in any package that copies them, and give the measured error of <code>qsnorm_fast()</code>. For <code>|alpha|</code> up to 30 it is at most 0.085 in units of <code>omega</code> down to a tail probability of 1e-15, except in a narrow window of <code>alpha</code> deep in the lighter tail.</li>
+</ul></li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="26.11.24" id="inlavanilla-261124">inlavanilla 26.11.24<a class="anchor" aria-label="anchor" href="#inlavanilla-261124"></a></h2>
 <ul><li><p>This version renames arguments and diagnostics so that inlavanilla and INLAvaan, which takes its engine from inlavanilla from its version 0.4.0, use one name for one thing. The old names of arguments still work, with a warning. A fit gives the same numbers as in 26.11.23, except where a bullet below says otherwise: on the tests, vignettes and articles, every summary, marginal, VB mean, covariance, log marginal likelihood and LOO estimate is the same to the last digit, and only the fits with <code>hess</code> make more <code>logpost</code> calls.</p></li>

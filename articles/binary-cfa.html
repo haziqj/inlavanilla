@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.24-1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,7 +87,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.24/vignettes/articles/binary-cfa.qmd" class="external-link"><code>vignettes/articles/binary-cfa.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/articles/binary-cfa.qmd" class="external-link"><code>vignettes/articles/binary-cfa.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -181,13 +181,13 @@ p(y_i) = \int \prod_j P(y_{ij} \mid \eta) \, \phi(\eta) \, d\eta
 <span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">6</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"tau"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/inla_vanilla.html">inla_vanilla</a></span><span class="op">(</span><span class="va">logpost</span>, <span class="va">init</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [189ms]</span></span>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 35 iterations [142ms]</span></span>
 <span><span class="co">#&gt; ✔ VB mean correction, max shift 0.17σ [54ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [140ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 12 skew-normal marginals [120ms]</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──</span></span>
+<span><span class="co">#&gt; ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (403ms)</span></span>
+<span><span class="co">#&gt; Log marginal likelihood: -1683.00 · Converged in 35 iterations (333ms)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;                Mean      SD     2.5%      50%    97.5%     Mode</span></span>
 <span><span class="co">#&gt;  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842</span></span>

@@ -15,16 +15,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/haziqj/inlavanilla/blob/v26.11.24/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
 
 Jamil H (2026). *inlavanilla: INLA-Style Skew-Normal Marginals for Any
-Log-Posterior*. R package version 26.11.24,
+Log-Posterior*. R package version 26.11.24-1,
 <https://haziqj.ml/inlavanilla/>.
 
     @Manual{,
       title = {inlavanilla: INLA-Style Skew-Normal Marginals for Any Log-Posterior},
       author = {Haziq Jamil},
       year = {2026},
-      note = {R package version 26.11.24},
+      note = {R package version 26.11.24-1},
       url = {https://haziqj.ml/inlavanilla/},
     }

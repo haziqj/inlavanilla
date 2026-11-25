@@ -751,11 +751,11 @@ logpost <- function(theta) {
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [8ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 fit
-#> ── INLAvanilla v26.11.24 ────────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (16ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (11ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -785,8 +785,8 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
-#>     8.8e-08σ (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
+#>     (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -801,14 +801,14 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [8ms]
+#> ✔ Fitted 2 skew-normal marginals [6ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 33ms
+#> ℹ Done: 147 logpost calls in 24ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)
