@@ -296,3 +296,51 @@
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
 
+# use_vanilla_test() writes the test file once
+
+    Code
+      path <- use_vanilla_test(path = root)
+    Message
+      v Wrote 'tests/testthat/test-vanilla-engine.R'.
+    Code
+      use_vanilla_test(path = root)
+    Message
+      v 'tests/testthat/test-vanilla-engine.R' is up to date.
+
+---
+
+    Code
+      use_vanilla_test(path = root)
+    Message
+      ! 'tests/testthat/test-vanilla-engine.R' differs from the file this version of
+        inlavanilla writes, so it was left alone. Give `overwrite = TRUE` to replace
+        it.
+
+# use_vanilla_ci() writes the workflow and .Rbuildignore
+
+    Code
+      path <- use_vanilla_ci(path = root)
+    Message
+      v Wrote '.github/workflows/vanilla-status.yaml'.
+      v Added `^\.github$` to '.Rbuildignore'.
+      ! There is no lock yet: the workflow fails until `use_vanilla()` has copied the
+        engine.
+    Code
+      use_vanilla_ci(path = root)
+    Message
+      v '.github/workflows/vanilla-status.yaml' is up to date.
+      ! There is no lock yet: the workflow fails until `use_vanilla()` has copied the
+        engine.
+
+---
+
+    Code
+      use_vanilla_ci(path = root)
+    Message
+      ! '.github/workflows/vanilla-status.yaml' differs from the file this version of
+        inlavanilla writes, so it was left alone. Give `overwrite = TRUE` to replace
+        it.
+      v Added `^\.github$` to '.Rbuildignore'.
+      ! There is no lock yet: the workflow fails until `use_vanilla()` has copied the
+        engine.
+

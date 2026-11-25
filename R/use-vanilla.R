@@ -642,3 +642,176 @@ use_vanilla <- function(
   attr(out, "open") <- vapply(open, `[[`, "", "plain")
   invisible(out)
 }
+
+#' Add a test that checks the engine copy
+#'
+#' @description
+#' Writes the test file `tests/testthat/test-vanilla-engine.R` in the package
+#' whose root is `path`. The test fails when an engine file differs from the
+#' lock `inst/inlavanilla.lock`, when a file in the lock is missing, or when a
+#' file `R/vanilla-*.R` is not in the lock, so that `devtools::test()` catches
+#' an edit to a copy. It uses base R and testthat only: the package does not
+#' need inlavanilla to run it.
+#'
+#' The test reads the source files in `R/`, which an installed package does not
+#' hold. So it runs with `devtools::test()` from the source tree, and skips
+#' under R CMD check.
+#'
+#' It is optional: [use_vanilla()] does not add it, and offers it at the end of
+#' its list. The package must already use testthat, as
+#' `usethis::use_testthat()` sets up.
+#'
+#' @param path The root of the package, or a folder inside it. By default the
+#'   working directory.
+#' @param overwrite If `TRUE`, replace a test file of that name that differs
+#'   from the one this version of inlavanilla writes. By default such a file is
+#'   left alone, with a message.
+#'
+#' @returns Invisibly, the path of the test file.
+#'
+#' @seealso [vanilla_status()], which also checks the lock against its release,
+#'   the names and `DESCRIPTION`.
+#'
+#' @examples
+#' \dontrun{
+#' # From the root of a package that holds a copy of the engine
+#' use_vanilla_test()
+#' }
+#' @export
+use_vanilla_test <- function(path = ".", overwrite = FALSE) {
+  check_flag(overwrite, "overwrite")
+  root <- vendor_root(path)
+  desc <- vendor_desc(root)
+  pkg <- vendor_package(root, desc)
+  vendor_start()
+  if (!dir.exists(file.path(root, "tests", "testthat"))) {
+    abort(
+      c(
+        "{pkg} has no testthat tests ({.file tests/testthat/}).",
+        i = "Set them up with {.code usethis::use_testthat(3)}, then run
+             {.fn use_vanilla_test} again."
+      ),
+      class = "inlavanilla_vendor_error"
+    )
+  }
+  if (!file.exists(file.path(root, vendor_lock_file))) {
+    abort(
+      "There is no lock {.file inst/inlavanilla.lock}: copy the engine with
+       {.fn use_vanilla} first.",
+      class = "inlavanilla_vendor_error"
+    )
+  }
+  dest <- vendor_template(
+    root,
+    "test-vanilla-engine.R",
+    vendor_test_file,
+    overwrite
+  )
+  invisible(dest)
+}
+
+#' Check the engine copy on GitHub Actions
+#'
+#' @description
+#' Writes the GitHub Actions workflow `.github/workflows/vanilla-status.yaml`
+#' in the package whose root is `path`. On every push to `main` or `master`,
+#' and on every pull request, it installs the latest release of inlavanilla
+#' from GitHub and runs `vanilla_status(error = TRUE)`, which fails the run
+#' when a check fails. A newer release of inlavanilla is reported in the log,
+#' and does not fail the run.
+#'
+#' It also adds `^\\.github$` to `.Rbuildignore` where that line is missing,
+#' so that R CMD build leaves the folder out.
+#'
+#' It is optional: [use_vanilla()] does not add it, and offers it at the end of
+#' its list.
+#'
+#' @param path The root of the package, or a folder inside it. By default the
+#'   working directory.
+#' @param overwrite If `TRUE`, replace a workflow file of that name that
+#'   differs from the one this version of inlavanilla writes. By default such
+#'   a file is left alone, with a message.
+#'
+#' @returns Invisibly, the path of the workflow file.
+#'
+#' @seealso [vanilla_status()] for the checks.
+#'
+#' @examples
+#' \dontrun{
+#' use_vanilla_ci()
+#' }
+#' @export
+use_vanilla_ci <- function(path = ".", overwrite = FALSE) {
+  check_flag(overwrite, "overwrite")
+  root <- vendor_root(path)
+  desc <- vendor_desc(root)
+  vendor_package(root, desc)
+  vendor_start()
+  dest <- vendor_template(
+    root,
+    "vanilla-status.yaml",
+    vendor_ci_file,
+    overwrite
+  )
+  ignore <- file.path(root, ".Rbuildignore")
+  line <- "^\\.github$"
+  lines <- if (file.exists(ignore)) {
+    readLines(ignore, warn = FALSE)
+  } else {
+    character()
+  }
+  if (!line %in% lines) {
+    if (file.exists(ignore)) {
+      d <- vendor_desc_read(ignore)
+      d$lines <- c(d$lines, line)
+      d$final_nl <- TRUE
+    } else {
+      d <- list(lines = line, eol = "\n", final_nl = TRUE)
+    }
+    vendor_desc_write(d, ignore)
+    vendor_say(list(vendor_msg(
+      "v",
+      "Added {.code {line}} to {.file .Rbuildignore}."
+    )))
+  }
+  if (!file.exists(file.path(root, vendor_lock_file))) {
+    vendor_say(list(vendor_msg(
+      "!",
+      "There is no lock yet: the workflow fails until {.fn use_vanilla} has
+       copied the engine."
+    )))
+  }
+  invisible(dest)
+}
+
+# Writes a template of inst/templates to `target` in the package, unless a file
+# that differs is there and `overwrite` is FALSE. Returns the path.
+vendor_template <- function(root, template, target, overwrite) {
+  src <- system.file(
+    "templates",
+    template,
+    package = "inlavanilla",
+    mustWork = TRUE
+  )
+  bytes <- readBin(src, "raw", n = file.size(src))
+  dest <- file.path(root, target)
+  shown <- gsub("\\", "/", target, fixed = TRUE)
+  if (!file.exists(dest)) {
+    dir.create(dirname(dest), showWarnings = FALSE, recursive = TRUE)
+    writeBin(bytes, dest)
+    vendor_say(list(vendor_msg("v", "Wrote {.file {shown}}.")))
+  } else if (identical(readBin(dest, "raw", n = file.size(dest)), bytes)) {
+    vendor_say(list(vendor_msg("v", "{.file {shown}} is up to date.")))
+  } else if (overwrite) {
+    writeBin(bytes, dest)
+    vendor_say(list(vendor_msg("v", "Replaced {.file {shown}}.")))
+  } else {
+    vendor_say(list(vendor_msg(
+      "!",
+      "{.file {shown}} differs from the file this version of inlavanilla
+       writes, so it was left alone. Give {.code overwrite = TRUE} to replace
+       it."
+    )))
+  }
+  dest
+}

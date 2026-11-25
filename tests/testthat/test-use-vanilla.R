@@ -243,3 +243,99 @@ test_that("the clone route copies the release from the clone", {
     class = "inlavanilla_vendor_error"
   )
 })
+
+test_that("use_vanilla_test() writes the test file once", {
+  local_vendor()
+  root <- local_host()
+  expect_error(
+    quiet(use_vanilla_test(path = root)),
+    "has no testthat tests",
+    class = "inlavanilla_vendor_error"
+  )
+  dir.create(file.path(root, "tests", "testthat"), recursive = TRUE)
+  expect_error(
+    quiet(use_vanilla_test(path = root)),
+    "There is no lock",
+    class = "inlavanilla_vendor_error"
+  )
+  quiet(use_vanilla(path = root))
+  expect_snapshot({
+    path <- use_vanilla_test(path = root)
+    use_vanilla_test(path = root)
+  })
+  template <- system.file(
+    "templates",
+    "test-vanilla-engine.R",
+    package = "inlavanilla"
+  )
+  expect_identical(read_text(path), read_text(template))
+  write_text(path, "# mine\n")
+  expect_snapshot(use_vanilla_test(path = root))
+  expect_identical(read_text(path), "# mine\n")
+  quiet(use_vanilla_test(path = root, overwrite = TRUE))
+  expect_identical(read_text(path), read_text(template))
+})
+
+test_that("the written test passes on good copies and fails on bad ones", {
+  local_vendor()
+  root <- local_host()
+  dir.create(file.path(root, "tests", "testthat"), recursive = TRUE)
+  quiet(use_vanilla(path = root))
+  path <- quiet(use_vanilla_test(path = root))
+  run <- function(file = path) {
+    res <- as.data.frame(testthat::test_file(file, reporter = "silent"))
+    c(
+      failed = sum(res$failed),
+      skipped = sum(res$skipped),
+      passed = sum(res$nb) - sum(res$failed)
+    )
+  }
+  good <- run()
+  expect_identical(good[["failed"]], 0L)
+  expect_identical(good[["skipped"]], 0L)
+  write_text(file.path(root, "R", "vanilla-a.R"), paste0(engine_a, "# mine\n"))
+  expect_gt(run()[["failed"]], 0L)
+  write_text(file.path(root, "R", "vanilla-a.R"), engine_a)
+  write_text(file.path(root, "R", "vanilla-x.R"), "x <- 1\n")
+  expect_gt(run()[["failed"]], 0L)
+  unlink(file.path(root, "R", "vanilla-x.R"))
+  unlink(file.path(root, "inst", "inlavanilla.lock"))
+  expect_gt(run()[["failed"]], 0L)
+  # As R CMD check runs it, with no source tree two levels up
+  alone <- tempfile()
+  dir.create(file.path(alone, "tests", "testthat"), recursive = TRUE)
+  on.exit(unlink(alone, recursive = TRUE), add = TRUE)
+  file.copy(path, file.path(alone, "tests", "testthat"))
+  skipped <- run(file.path(alone, "tests", "testthat", basename(path)))
+  expect_identical(skipped[["failed"]], 0L)
+  expect_identical(skipped[["skipped"]], 1L)
+})
+
+test_that("use_vanilla_ci() writes the workflow and .Rbuildignore", {
+  root <- local_host()
+  expect_snapshot({
+    path <- use_vanilla_ci(path = root)
+    use_vanilla_ci(path = root)
+  })
+  template <- system.file(
+    "templates",
+    "vanilla-status.yaml",
+    package = "inlavanilla"
+  )
+  expect_identical(read_text(path), read_text(template))
+  expect_identical(read_text(file.path(root, ".Rbuildignore")), "^\\.github$\n")
+  write_text(file.path(root, ".Rbuildignore"), "^README\\.Rmd$")
+  write_text(path, "on: push\n")
+  expect_snapshot(use_vanilla_ci(path = root))
+  expect_identical(read_text(path), "on: push\n")
+  expect_identical(
+    read_text(file.path(root, ".Rbuildignore")),
+    "^README\\.Rmd$\n^\\.github$\n"
+  )
+  quiet(use_vanilla_ci(path = root, overwrite = TRUE))
+  expect_identical(read_text(path), read_text(template))
+  expect_identical(
+    read_text(file.path(root, ".Rbuildignore")),
+    "^README\\.Rmd$\n^\\.github$\n"
+  )
+})
