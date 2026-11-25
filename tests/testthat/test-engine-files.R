@@ -61,3 +61,9 @@ test_that("the engine files use nothing defined in the other files", {
     )
   }
 })
+
+test_that("the vendoring code reuses no engine name", {
+  dir <- engine_dir()
+  items <- vendor_check_names(dirname(dir))
+  expect_identical(items$name[items$kind == "duplicate"], character())
+})
