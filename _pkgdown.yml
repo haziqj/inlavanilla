@@ -47,6 +47,10 @@ articles:
   - articles/latents
   - articles/rcpp
   - articles/rtmb
+- title: For package developers
+  navbar: ~
+  contents:
+  - engine
 
 redirects:
 - ["articles/tmb.html", "articles/rtmb.html"]
