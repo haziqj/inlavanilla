@@ -454,7 +454,48 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
   n_cut <- sum(h$cut)
   lines <- c(
     lines,
-    if (isTRUE(vbc$one_pass)) {
+    if (!is.na(vbc$solve)) {
+      # The checked one step: the three numbers of the check, and the solve
+      # that followed when it failed
+      chk <- vapply(vbc$check, fmt_num, "")
+      c(
+        paste0(
+          grey(
+            "One-step check: contraction ratio ",
+            chk[["lhat"]],
+            ", slope along the step ",
+            chk[["j0"]],
+            " at the mode and ",
+            chk[["j1"]],
+            " at the step"
+          ),
+          if (vbc$solve) flag() else "",
+          grey(" (passes below 1 in size)")
+        ),
+        if (!vbc$solve) {
+          grey("One step, accepted")
+        } else {
+          grey(
+            "Solved the VB equation from the mode by Broyden's method: ",
+            plural(vbc$iterations, "iteration"),
+            " in ",
+            plural(h$sweeps, "sweep"),
+            if (isTRUE(h$settled)) {
+              ", converged"
+            } else {
+              paste0(
+                ", stopped at the budget of the mode and Hessian stage ",
+                "with ",
+                with_sd(max(vbc$step_sigma)),
+                " still to go"
+              )
+            }
+          )
+        }
+      )
+    } else if (isTRUE(vbc$one_pass) && is.na(vbc$gain_ratio)) {
+      grey("One step, accepted (too small to check)")
+    } else if (isTRUE(vbc$one_pass)) {
       c(
         grey("One step, accepted (guard > ", with_sd(vb_onestep_guard), ")"),
         if (!is.na(vbc$gain_ratio)) {

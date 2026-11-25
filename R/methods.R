@@ -436,7 +436,29 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         )
       )
     }
-    if (!flags[["vb"]] && !flags[["vb_step"]] && !flags[["vb_gain"]]) {
+    if (flags[["vb_check"]]) {
+      # The check of the one step failed, and the VB equation was solved
+      # instead. Where the solve stopped is reported, not judged.
+      env$vbc_worst <- x$vb$check_worst
+      env$vbc_shift <- with_sd(glob[["vb_shift_max"]])
+      env$vbc_togo <- with_sd(glob[["vb_step_max"]])
+      cat_status(
+        "warn",
+        paste0(
+          "VB one-step check flagged, most of all in {.code {vbc_worst}}: ",
+          "the posterior is far from Gaussian along the mean correction. ",
+          "The VB equation was solved in {x$vb$iterations} iteration{?s}: ",
+          "max shift {vbc_shift}, {vbc_togo} still to go."
+        ),
+        .envir = env
+      )
+    }
+    if (
+      !flags[["vb"]] &&
+        !flags[["vb_step"]] &&
+        !flags[["vb_gain"]] &&
+        !flags[["vb_check"]]
+    ) {
       max_shift <- with_sd(glob[["vb_shift_max"]])
       gain <- if (is.na(glob[["vb_gain_ratio"]])) {
         ""
