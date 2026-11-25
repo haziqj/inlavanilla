@@ -92,6 +92,12 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     hess_cond <- NA_real_
   }
 
+  # A fit made before the check of the one step has no such entries
+  vb_check <- c(lhat = NA_real_, j0 = NA_real_, j1 = NA_real_)
+  if (vb_applied && !is.null(vb$check)) {
+    vb_check <- vb$check
+  }
+
   global <- c(
     npar = m,
     converged = as.numeric(optim$convergence == 0L),
@@ -116,6 +122,14 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     vb_step_max = max_na(d$vb_step_sigma),
     vb_gain_ratio = if (vb_applied && !is.null(vb$gain_ratio)) {
       vb$gain_ratio
+    } else {
+      NA_real_
+    },
+    vb_lhat = vb_check[["lhat"]],
+    vb_j0 = vb_check[["j0"]],
+    vb_j1 = vb_check[["j1"]],
+    vb_solve = if (vb_applied && !is.null(vb$solve)) {
+      as.numeric(vb$solve)
     } else {
       NA_real_
     },
@@ -355,6 +369,26 @@ problem_text <- function(check, dg, env, advice, n = 3L) {
       ": the posterior is far from Gaussian there, and either mean may be off."
     )
   )
+}
+
+# The warning of a flagged one step (vb_checked_onestep()): the check found
+# that the fixed-point map does not contract along the step, so the posterior
+# is far from Gaussian there. `worst` is the parameter that the one step moves
+# furthest. It is a warning of its own, raised by vanilla_core() on every
+# flagged fit, whether or not the solve that followed converged, with no
+# numbers: those are in the diagnostics.
+warn_vb_check <- function(worst) {
+  warn(c(
+    paste0(
+      "VB one-step check flagged that the posterior is far from Gaussian ",
+      "along the mean correction, most of all in {.code {worst}}."
+    ),
+    "i" = "Treat posterior means, mloglik, looic and waic with care.",
+    "i" = paste0(
+      "This reflects the model, the data, or the prior, not a numerical ",
+      "failure. If these numbers matter, compare with MCMC."
+    )
+  ))
 }
 
 # The wording a caller gives diagnostic_problems() and problem_text(): cli
