@@ -43,7 +43,7 @@ Suggests:
     parallelly,
     quarto,
     RTMB,
-    testthat (>= 3.0.0)
+    testthat (>= 3.1.7)
 VignetteBuilder:
     quarto
 Config/Needs/website: haziqj/INLAvaan, edmdata, lavaan, lme4, Rcpp, RcppEigen, RTMB
