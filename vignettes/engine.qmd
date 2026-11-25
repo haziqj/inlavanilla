@@ -517,10 +517,10 @@ check_flags(dg, gaussian = FALSE)
 ```
 
 One check has a warning of its own, which the core raises and you do not word:
-the check of a one-step VB correction with a gradient (`vb_check` in
+the check of a one-step VB correction (`vb_check` in
 `check_flags()`, and `vb_lhat`, `vb_j0`, `vb_j1` and `vb_solve` in the global
-table). When it fails, the core solves the VB equation within the calls of the
-mode and Hessian stage, and warns that the posterior is far from Gaussian along
+table). When it fails, the core solves the VB equation, with its sweeps capped
+by the calls of the mode and Hessian stage, and warns that the posterior is far from Gaussian along
 the mean correction, with the class `inlavanilla_vb_check_warning` and the name
 of the parameter the one step moved furthest, which is also in
 `core$diagnostics$vb$check_worst`. `diagnostic_problems()` has no bullet for it.
@@ -536,7 +536,6 @@ poisson_advice <- list(
   grad_gap = "the gradient of the Poisson model does not match its
     log-posterior",
   no_grad = "",
-  vb_full = "{.code fit_poisson(vb_correction = \"full\")}",
   vb_none = "{.code fit_poisson(vb_correction = \"none\")}",
   mode_limit = "Raise {.code mode_maxit} in {.arg control}.",
   mode_retry = "Check the data: a rate of zero has no finite log.",
