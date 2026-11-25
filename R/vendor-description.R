@@ -973,40 +973,77 @@ vendor_change_msgs <- function(changes) {
 ## ----- The checks of vanilla_status() ----------------------------------------
 
 # What the DESCRIPTION lacks of what the engine needs, from vendor_desc():
-# list(fail, warn), each a list of vendor_msg() details
-vendor_check_deps <- function(desc, copies) {
+# list(fail, warn), each a list of vendor_msg() details. `plan` is what
+# use_vanilla() would change, from vendor_plan_description(), or NULL. Each
+# fail item says whether that plan fixes it (`fixed`), and holds the short
+# text of the item for the line of use_vanilla() (`short`, a list of a cli and
+# a plain text) and the line of a fix by hand (`manual`).
+vendor_check_deps <- function(desc, copies, plan = NULL) {
   fail <- list()
   warn <- list()
-  add_fail <- function(template, .envir = parent.frame()) {
-    fail[[length(fail) + 1L]] <<- vendor_msg(" ", template, .envir)
+  changes <- if (is.null(plan)) list() else plan$changes
+  add_fail <- function(
+    template,
+    short,
+    manual,
+    fixed,
+    .envir = parent.frame()
+  ) {
+    item <- vendor_msg(" ", template, .envir)
+    item$fixed <- fixed
+    item$short <- list(
+      cli = cli::format_inline(vendor_squash(short), .envir = .envir),
+      plain = vendor_plain(short, .envir)
+    )
+    item$manual <- vendor_msg(">", manual, .envir)
+    fail[[length(fail) + 1L]] <<- item
   }
   depends <- vendor_parse_deps(desc[["Depends"]])
   imports <- vendor_parse_deps(desc[["Imports"]])
   suggests <- vendor_parse_deps(desc[["Suggests"]])
   r_min <- vendor_needs$r
   k <- match("R", depends$name)
-  if (
-    is.na(k) || !isTRUE(vendor_dep_ok(depends$op[k], depends$version[k], r_min))
-  ) {
-    if (is.na(k)) {
-      add_fail("{.code R (>= {r_min})} in {.field Depends}")
-    } else {
-      has <- depends$entry[k]
-      add_fail(
-        "{.code R (>= {r_min})} in {.field Depends}: it has {.code {has}}"
-      )
-    }
+  r_short <- "{.code R (>= {r_min})} in {.field Depends}"
+  if (is.na(k)) {
+    add_fail(
+      r_short,
+      r_short,
+      "Add {.code R (>= {r_min})} to {.field Depends} by hand.",
+      vendor_plan_fixes(changes, "R")
+    )
+  } else if (!isTRUE(vendor_dep_ok(depends$op[k], depends$version[k], r_min))) {
+    has <- depends$entry[k]
+    add_fail(
+      "{.code R (>= {r_min})} in {.field Depends}: it has {.code {has}}",
+      r_short,
+      "Change {.code {has}} in {.field Depends} to {.code R (>= {r_min})} by
+       hand: {.fn use_vanilla} does not change it.",
+      vendor_plan_fixes(changes, "R")
+    )
   }
   both <- rbind(depends, imports)
   for (pkg in names(vendor_needs$imports)) {
     min <- vendor_needs$imports[[pkg]]
     entry <- vendor_dep_text(pkg, min)
+    short <- "{.pkg {entry}} in {.field Imports}"
     k <- match(pkg, both$name)
     if (is.na(k)) {
-      add_fail("{.pkg {entry}} in {.field Imports}")
+      add_fail(
+        short,
+        short,
+        "Add {.pkg {entry}} to {.field Imports} by hand.",
+        vendor_plan_fixes(changes, pkg)
+      )
     } else if (!isTRUE(vendor_dep_ok(both$op[k], both$version[k], min))) {
       has <- both$entry[k]
-      add_fail("{.pkg {entry}} in {.field Imports}: it has {.code {has}}")
+      field <- if (k <= nrow(depends)) "Depends" else "Imports"
+      add_fail(
+        "{.pkg {entry}} in {.field Imports}: it has {.code {has}}",
+        short,
+        "Change {.code {has}} in {.field {field}} to {.code {entry}} by hand:
+         {.fn use_vanilla} does not change it.",
+        vendor_plan_fixes(changes, pkg)
+      )
     }
     if (pkg %in% suggests$name && pkg %in% both$name) {
       warn[[length(warn) + 1L]] <- vendor_msg(
@@ -1017,15 +1054,46 @@ vendor_check_deps <- function(desc, copies) {
   }
   for (pkg in vendor_needs$suggests) {
     if (!pkg %in% c(both$name, suggests$name)) {
-      add_fail("{.pkg {pkg}} in {.field Suggests}")
+      short <- "{.pkg {pkg}} in {.field Suggests}"
+      add_fail(
+        short,
+        short,
+        "Add {.pkg {pkg}} to {.field Suggests} by hand.",
+        vendor_plan_fixes(changes, pkg)
+      )
     }
   }
   lacks <- vendor_collate_lacks(desc, copies)
   if (length(lacks) > 0L) {
     lacks <- vendor_and(lacks)
-    add_fail("the engine files in {.field Collate}: it lacks {.file {lacks}}")
+    add_fail(
+      "the engine files in {.field Collate}: it lacks {.file {lacks}}",
+      "the engine files in {.field Collate}",
+      "Add the engine files to {.field Collate} by hand: {.fn use_vanilla}
+       does not change it.",
+      FALSE
+    )
   }
   list(fail = fail, warn = warn)
+}
+
+# Whether the changes that use_vanilla() would make add or raise `name`, R or
+# a package.
+vendor_plan_fixes <- function(changes, name) {
+  any(vapply(
+    changes,
+    function(ch) {
+      switch(
+        ch$kind,
+        r_add = ,
+        r_raise = identical(name, "R"),
+        raise = identical(ch$pkg, name),
+        add = identical(vendor_parse_deps(ch$entry)$name, name),
+        FALSE
+      )
+    },
+    NA
+  ))
 }
 
 # The engine files that a Collate field lacks: none when there is no Collate
@@ -1124,15 +1192,39 @@ vendor_license_msgs <- function(license, pkg = NULL) {
   )
 }
 
-# The dependency row of vanilla_status()
-vendor_deps_row <- function(desc, copies, release) {
-  check <- vendor_check_deps(desc, copies)
+# The dependency row of vanilla_status(). Its fixes say which items
+# use_vanilla() adds, as `plan` shows, and which must be made by hand.
+vendor_deps_row <- function(desc, copies, release, plan = NULL) {
+  check <- vendor_check_deps(desc, copies, plan)
   r_min <- vendor_needs$r
   warns <- lapply(check$warn, function(m) {
     m$type <- "!"
     m
   })
   if (length(check$fail) > 0L) {
+    fixed <- vapply(check$fail, `[[`, NA, "fixed")
+    items <- lapply(check$fail, `[`, c("type", "cli", "plain"))
+    command <- "{.code inlavanilla::use_vanilla(release = \"{release}\")}"
+    fixes <- list()
+    if (all(fixed)) {
+      fixes <- list(vendor_msg(
+        ">",
+        paste(command, "adds them, and copies nothing new.")
+      ))
+    } else if (any(fixed)) {
+      template <- paste(command, "adds {what}, and copies nothing new.")
+      shorts <- lapply(check$fail[fixed], `[[`, "short")
+      env <- new.env(parent = environment())
+      env$what <- vendor_and(vapply(shorts, `[[`, "", "cli"))
+      line_cli <- vendor_inline(template, env)
+      env$what <- vendor_and(vapply(shorts, `[[`, "", "plain"))
+      fixes <- list(list(
+        type = ">",
+        cli = line_cli,
+        plain = vendor_plain(template, env)
+      ))
+    }
+    fixes <- c(fixes, lapply(check$fail[!fixed], `[[`, "manual"))
     return(list(
       status = "fail",
       msgs = c(
@@ -1140,12 +1232,8 @@ vendor_deps_row <- function(desc, copies, release) {
           "x",
           "{.file DESCRIPTION} lacks some of what the engine needs:"
         )),
-        check$fail,
-        list(vendor_msg(
-          ">",
-          "{.code inlavanilla::use_vanilla(release = \"{release}\")} adds them,
-         and copies nothing new."
-        )),
+        items,
+        fixes,
         warns
       )
     ))
@@ -1163,12 +1251,21 @@ vendor_deps_row <- function(desc, copies, release) {
   )
 }
 
-# The authors row of vanilla_status(): the rights holders of the installed
-# inlavanilla against Authors@R
-vendor_authors_row <- function(desc, release) {
-  holders <- vendor_holders(
-    utils::packageDescription("inlavanilla")[["Authors@R"]]
-  )
+# The rights holders of the engine, from the Authors@R of the inlavanilla
+# installed here, or NULL when it cannot be read.
+vendor_installed_holders <- function() {
+  vendor_holders(utils::packageDescription("inlavanilla")[["Authors@R"]])
+}
+
+# The authors row of vanilla_status(): the rights holders against Authors@R.
+# Its fix names use_vanilla() only when `plan`, what use_vanilla() would
+# change, adds them.
+vendor_authors_row <- function(
+  desc,
+  release,
+  plan = NULL,
+  holders = vendor_installed_holders()
+) {
   if (is.null(holders) || length(holders) == 0L) {
     return(vendor_row(
       "skip",
@@ -1206,17 +1303,28 @@ vendor_authors_row <- function(desc, release) {
   if (any(state == "absent")) {
     status <- "fail"
     absent <- vendor_and(vendor_names_of(holders[state == "absent"]))
+    adds <- !is.null(plan) &&
+      any(vapply(plan$changes, `[[`, "", "kind") == "authors")
+    fix <- if (adds) {
+      vendor_msg(
+        ">",
+        "{.code inlavanilla::use_vanilla(release = \"{release}\")} adds the
+         copyright holders, and copies nothing new."
+      )
+    } else {
+      vendor_msg(
+        ">",
+        "Add {absent} to {.field Authors@R} by hand, with the role {.val cph}:
+         {.fn use_vanilla} cannot edit this {.field Authors@R} safely."
+      )
+    }
     msgs <- list(
       vendor_msg(
         "x",
         "{.field Authors@R} does not name {absent}, who hold{?s/} rights in the
          engine."
       ),
-      vendor_msg(
-        ">",
-        "{.code inlavanilla::use_vanilla(release = \"{release}\")} adds the
-         copyright holders, and copies nothing new."
-      )
+      fix
     )
   }
   if (any(state == "no_cph")) {

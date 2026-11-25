@@ -269,3 +269,104 @@ test_that("the clone route checks the release in the clone", {
     "Could not reach GitHub to check that v26.11.24"
   )
 })
+
+test_that("the DESCRIPTION rows name use_vanilla() only for what it fixes", {
+  gh <- local_vendor()
+  root <- copied_host("v26.11.24", gh)
+  desc_path <- file.path(root, "DESCRIPTION")
+  desc <- read_text(desc_path)
+  desc <- sub("Depends: R (>= 4.1.0)", "Depends: R (> 4.0)", desc, fixed = TRUE)
+  desc <- sub("Suggests: future, ", "Suggests: ", desc, fixed = TRUE)
+  write_text(desc_path, paste0(desc, "Collate: 'hello.R'\n"))
+  row <- function() {
+    out <- quiet(vanilla_status(path = root))
+    out[out$check == "dependencies", ]
+  }
+  dep <- row()
+  expect_identical(dep$status, "fail")
+  expect_identical(
+    strsplit(dep$details, "\n")[[1]],
+    c(
+      "`R (>= 4.1.0)` in Depends: it has `R (> 4.0)`",
+      "future in Suggests",
+      paste(
+        "the engine files in Collate: it lacks 'R/vanilla-a.R',",
+        "'R/vanilla-b.R' and 'R/vanilla-c.R'"
+      ),
+      paste(
+        "`inlavanilla::use_vanilla(release = \"v26.11.24\")` adds future in",
+        "Suggests, and copies nothing new."
+      ),
+      paste(
+        "Change `R (> 4.0)` in Depends to `R (>= 4.1.0)` by hand:",
+        "`use_vanilla()` does not change it."
+      ),
+      "Add the engine files to Collate by hand: `use_vanilla()` does not change it."
+    )
+  )
+  # After that fix, only the fixes by hand are left
+  quiet(use_vanilla(release = "v26.11.24", path = root))
+  dep <- row()
+  expect_identical(dep$status, "fail")
+  details <- strsplit(dep$details, "\n")[[1]]
+  expect_length(details, 4L)
+  expect_false(any(grepl("use_vanilla(release", details, fixed = TRUE)))
+  # When use_vanilla() fixes every item, it says so in one line
+  write_text(desc_path, host_desc_minimal)
+  dep <- row()
+  expect_identical(
+    strsplit(dep$details, "\n")[[1]][7],
+    paste(
+      "`inlavanilla::use_vanilla(release = \"v26.11.24\")` adds them, and",
+      "copies nothing new."
+    )
+  )
+})
+
+test_that("the authors row names use_vanilla() only when it can add them", {
+  gh <- local_vendor()
+  root <- copied_host("v26.11.24", gh)
+  desc <- sub(
+    "Encoding: UTF-8\n",
+    paste0(
+      "Depends: R (>= 4.1.0)\n",
+      "Imports: cli (>= 3.6.0), stats, utils\n",
+      "Suggests: future, parallelly\n",
+      "Encoding: UTF-8\n"
+    ),
+    host_desc_minimal,
+    fixed = TRUE
+  )
+  write_text(file.path(root, "DESCRIPTION"), desc)
+  authors_row <- function() {
+    out <- quiet(vanilla_status(path = root))
+    out[out$check == "authors", ]
+  }
+  row <- authors_row()
+  expect_identical(row$status, "fail")
+  expect_identical(
+    row$details,
+    paste(
+      "`inlavanilla::use_vanilla(release = \"v26.11.24\")` adds the copyright",
+      "holders, and copies nothing new."
+    )
+  )
+  # An edit of Authors@R that would fail the safety check
+  real_authors <- vendor_plan_authors
+  local_mocked_bindings(
+    vendor_plan_authors = function(d, holders) {
+      out <- real_authors(d, holders)
+      out$d$lines <- sub("\"Ann\"", "\"Anne\"", out$d$lines, fixed = TRUE)
+      out
+    }
+  )
+  row <- authors_row()
+  expect_identical(row$status, "fail")
+  expect_identical(
+    row$details,
+    paste(
+      "Add Haziq Jamil and Thomas Luu to Authors@R by hand, with the role",
+      "\"cph\": `use_vanilla()` cannot edit this Authors@R safely."
+    )
+  )
+})

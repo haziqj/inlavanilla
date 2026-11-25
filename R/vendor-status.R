@@ -221,9 +221,20 @@ vanilla_status <- function(path = ".", clone = NULL, error = FALSE) {
   # The names
   rows$names <- vendor_names_row(vendor_check_names(root, snap))
 
-  # Dependencies and authors
-  rows$dependencies <- vendor_deps_row(desc, vendor_copies(root), release)
-  rows$authors <- vendor_authors_row(desc, release)
+  # Dependencies and authors. What use_vanilla() would change in DESCRIPTION
+  # says which fixes it makes, and which must be made by hand.
+  holders <- vendor_installed_holders()
+  plan <- tryCatch(
+    vendor_plan_description(root, holders),
+    error = function(e) NULL
+  )
+  rows$dependencies <- vendor_deps_row(
+    desc,
+    vendor_copies(root),
+    release,
+    plan
+  )
+  rows$authors <- vendor_authors_row(desc, release, plan, holders)
 
   # The license
   lic <- vendor_license_msgs(desc[["License"]])
