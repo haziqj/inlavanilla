@@ -1,10 +1,3 @@
-# inlavanilla (development version)
-
-* `use_vanilla()` with `clone` copies the engine files with LF line endings,
-  as they are in the release, also when git is set to check out CRLF line
-  endings, as Git for Windows is by default. Such copies were not byte for
-  byte those of the release.
-
 # inlavanilla 26.11.25
 
 * This release replaces 26.11.24-1, which was withdrawn. Its changes are
