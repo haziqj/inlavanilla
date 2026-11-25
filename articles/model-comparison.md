@@ -65,9 +65,9 @@ logpost_pois <- function(theta) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois)
-#> ✔ Found the posterior mode in 29 iterations [14ms]
-#> ✔ VB mean correction, max shift 0.025σ [18ms]
-#> ✔ Fitted 6 skew-normal marginals [26ms]
+#> ✔ Found the posterior mode in 29 iterations [11ms]
+#> ✔ VB mean correction, max shift 0.025σ [14ms]
+#> ✔ Fitted 6 skew-normal marginals [20ms]
 ```
 
 [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the fit
@@ -247,7 +247,7 @@ time_loo <- system.time(loo(fit_nb, loglik_nb))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  5.031  0.004
+#>  4.089  0.003
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1444

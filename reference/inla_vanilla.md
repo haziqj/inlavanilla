@@ -749,13 +749,13 @@ logpost <- function(theta) {
 
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
-#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ Found the posterior mode in 10 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Fitted 2 skew-normal marginals [4ms]
 fit
 #> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (11ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (10ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -782,7 +782,7 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ Found the posterior mode in 10 iterations [1ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
 #>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
@@ -801,14 +801,14 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   16 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 147 logpost calls in 24ms
+#> ℹ Done: 147 logpost calls in 21ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)

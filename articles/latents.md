@@ -96,13 +96,13 @@ fit_growth <- inla_vanilla(
   logpost_growth,
   c(b0 = 24, b1 = 0.5, log_tau = 0, log_sigma = 0)
 )
-#> ✔ Found the posterior mode in 18 iterations [11ms]
-#> ✔ VB mean correction, max shift 0.21σ [13ms]
-#> ✔ Fitted 4 skew-normal marginals [32ms]
+#> ✔ Found the posterior mode in 18 iterations [8ms]
+#> ✔ VB mean correction, max shift 0.21σ [10ms]
+#> ✔ Fitted 4 skew-normal marginals [26ms]
 fit_growth
 #> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -241.09 · Converged in 18 iterations (73ms)
+#> Log marginal likelihood: -241.09 · Converged in 18 iterations (57ms)
 #> 
 #>             Mean      SD     2.5%      50%    97.5%     Mode
 #> 1 b0     24.023   0.430   23.179   24.023   24.866   24.023 
@@ -210,13 +210,13 @@ fit_mix <- inla_vanilla(
     logit_p = 0
   )
 )
-#> ✔ Found the posterior mode in 20 iterations [13ms]
+#> ✔ Found the posterior mode in 20 iterations [12ms]
 #> ✔ VB mean correction, max shift 0.14σ [5ms]
-#> ✔ Fitted 5 skew-normal marginals [22ms]
+#> ✔ Fitted 5 skew-normal marginals [19ms]
 fit_mix
 #> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1050.49 · Converged in 20 iterations (62ms)
+#> Log marginal likelihood: -1050.49 · Converged in 20 iterations (53ms)
 #> 
 #>              Mean      SD     2.5%      50%    97.5%     Mode
 #> 1 mu1     54.649   0.713   53.296   54.633   56.094   54.599 
@@ -334,13 +334,13 @@ logpost_cbpp <- function(theta) {
 
 init <- c(b1 = -1.5, b2 = -2, b3 = -2, b4 = -2, log_tau = log(0.5))
 fit_cbpp <- inla_vanilla(logpost_cbpp, init)
-#> ✔ Found the posterior mode in 15 iterations [128ms]
-#> ✔ VB mean correction, max shift 0.15σ [52ms]
-#> ✔ Fitted 5 skew-normal marginals [142ms]
+#> ✔ Found the posterior mode in 15 iterations [103ms]
+#> ✔ VB mean correction, max shift 0.15σ [43ms]
+#> ✔ Fitted 5 skew-normal marginals [114ms]
 fit_cbpp
 #> ── INLAvanilla v26.11.24-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -104.92 · Converged in 15 iterations (333ms)
+#> Log marginal likelihood: -104.92 · Converged in 15 iterations (269ms)
 #> 
 #>          Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b1   -1.399  0.238  -1.884  -1.393  -0.948  -1.381
@@ -429,9 +429,9 @@ fit_rtmb <- inla_vanilla(
   init,
   grad = function(theta) -as.vector(obj$gr(unname(theta)))
 )
-#> ✔ Found the posterior mode in 16 iterations [34ms]
-#> ✔ VB mean correction, max shift 0.14σ [20ms]
-#> ✔ Fitted 5 skew-normal marginals [154ms]
+#> ✔ Found the posterior mode in 16 iterations [37ms]
+#> ✔ VB mean correction, max shift 0.14σ [16ms]
+#> ✔ Fitted 5 skew-normal marginals [69ms]
 round(rbind(grid = coef(fit_cbpp), RTMB = coef(fit_rtmb)), 3)
 #>          b1     b2     b3     b4   tau
 #> grid -1.399 -2.397 -2.539 -3.011 0.727
