@@ -527,10 +527,9 @@ test_that("a DESCRIPTION in latin1 is edited and written back in latin1", {
     useBytes = TRUE
   )
   writeBin(charToRaw(bad), path)
-  expect_error(
+  expect_vendor_error(
     vendor_plan_description(root, fixture_holders()),
-    "cannot be read in its encoding",
-    class = "inlavanilla_vendor_error"
+    "cannot be read in its encoding"
   )
 })
 

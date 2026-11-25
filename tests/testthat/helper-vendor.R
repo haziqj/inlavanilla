@@ -303,6 +303,23 @@ messages_of <- function(expr) {
   gsub("[[:space:]]+", " ", paste(text, collapse = " "))
 }
 
+# Expects an error of class `class` whose message, with its lines joined by
+# spaces, matches the regular expression `pattern`. cli wraps the message at
+# 80 columns, and where its lines break depends on the length of the
+# temporary paths in it: R CMD check --as-cran runs the tests in a deeper
+# temporary folder than R CMD check.
+expect_vendor_error <- function(
+  object,
+  pattern,
+  class = "inlavanilla_vendor_error"
+) {
+  err <- expect_error(object, class = class)
+  if (inherits(err, "condition")) {
+    expect_match(gsub("[[:space:]]+", " ", conditionMessage(err)), pattern)
+  }
+  invisible(err)
+}
+
 ## ----- Clones under git ------------------------------------------------------
 
 has_git <- function() {

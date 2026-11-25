@@ -95,10 +95,9 @@ test_that("an update copies the changed files and rewrites the lock", {
 test_that("refusals change nothing in the host", {
   refused <- function(root, pattern, ...) {
     before <- folder_state(root)
-    expect_error(
+    expect_vendor_error(
       quiet(use_vanilla(..., path = root)),
-      pattern,
-      class = "inlavanilla_vendor_error"
+      pattern
     )
     expect_identical(folder_state(root), before)
   }
@@ -145,15 +144,13 @@ test_that("a release with roxygen tags or without a locked file is refused", {
   root <- local_host()
   quiet(use_vanilla(release = "v26.11.24", path = root))
   before <- folder_state(root)
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla(release = "v26.11.25", path = root)),
-    "has roxygen tags",
-    class = "inlavanilla_vendor_error"
+    "has roxygen tags"
   )
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla(release = "v26.11.26", path = root)),
-    "v26.11.26 no longer has 'R/vanilla-c.R'",
-    class = "inlavanilla_vendor_error"
+    "v26.11.26 no longer has 'R/vanilla-c.R'"
   )
   expect_identical(folder_state(root), before)
   # Once the copy is deleted, it is dropped from the lock
@@ -172,10 +169,9 @@ test_that("an unlisted copy identical to the release's file is accepted", {
   out <- quiet(use_vanilla(path = root))
   expect_identical(out$state, rep("new", 3))
   root <- local_host(files = list("R/vanilla-a.R" = engine_a))
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla(files = "vanilla-b.R", path = root)),
-    "has the name of an engine file",
-    class = "inlavanilla_vendor_error"
+    "has the name of an engine file"
   )
 })
 
@@ -262,31 +258,27 @@ test_that("the clone route copies the release from the clone", {
   moved <- clone
   moved$commits[["v26.11.24-1"]] <- strrep("0", 40)
   local_vendor(fake_github_for(moved))
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla(release = "v26.11.24-1", clone = clone$dir, path = root)),
-    "in the clone but at 0000000 on GitHub",
-    class = "inlavanilla_vendor_error"
+    "in the clone but at 0000000 on GitHub"
   )
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla(release = "v26.11.30", clone = clone$dir, path = root)),
-    "git fetch --tags",
-    class = "inlavanilla_vendor_error"
+    "git fetch --tags"
   )
 })
 
 test_that("use_vanilla_test() writes the test file once", {
   local_vendor()
   root <- local_host()
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla_test(path = root)),
-    "has no testthat tests",
-    class = "inlavanilla_vendor_error"
+    "has no testthat tests"
   )
   dir.create(file.path(root, "tests", "testthat"), recursive = TRUE)
-  expect_error(
+  expect_vendor_error(
     quiet(use_vanilla_test(path = root)),
-    "There is no lock",
-    class = "inlavanilla_vendor_error"
+    "There is no lock"
   )
   quiet(use_vanilla(path = root))
   expect_snapshot({

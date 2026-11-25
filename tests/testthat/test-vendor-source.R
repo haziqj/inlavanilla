@@ -52,20 +52,17 @@ test_that("the release to copy is resolved from the tags", {
   expect_identical(res$commit, strrep("2", 40))
   expect_true(res$explicit)
   expect_length(res$notes, 0L)
-  expect_error(
+  expect_vendor_error(
     vendor_resolve_release("main", tags, "26.11.24-1", NULL),
-    "is not a release of inlavanilla",
-    class = "inlavanilla_vendor_error"
+    "is not a release of inlavanilla"
   )
-  expect_error(
+  expect_vendor_error(
     vendor_resolve_release("v26.11.23", tags, "26.11.24-1", NULL),
-    "older than v26.11.24, the first release",
-    class = "inlavanilla_vendor_error"
+    "older than v26.11.24, the first release"
   )
-  err <- expect_error(
+  err <- expect_vendor_error(
     vendor_resolve_release("v26.12.01", tags, "26.11.24-1", NULL),
-    "no release",
-    class = "inlavanilla_vendor_error"
+    "no release"
   )
   expect_match(conditionMessage(err), "The newest release is \"v26.11.24-1\"")
   # By default the installed version, when it is a release
@@ -83,17 +80,15 @@ test_that("the release to copy is resolved from the tags", {
       "this copies v26.11.24-1, the newest release before it."
     )
   )
-  expect_error(
+  expect_vendor_error(
     vendor_resolve_release(NULL, tags, "0.1.1.9003", NULL),
-    "installed here, is older than v26.11.24",
-    class = "inlavanilla_vendor_error"
+    "installed here, is older than v26.11.24"
   )
   # Going back: refused by default, allowed when asked
   lock <- list(header = c(Release = "v26.11.24-1"))
-  expect_error(
+  expect_vendor_error(
     vendor_resolve_release(NULL, tags, "26.11.24", lock),
-    "The copy is at v26.11.24-1, newer than v26.11.24",
-    class = "inlavanilla_vendor_error"
+    "The copy is at v26.11.24-1, newer than v26.11.24"
   )
   res <- vendor_resolve_release("v26.11.24", tags, "26.11.24", lock)
   expect_identical(
@@ -101,10 +96,9 @@ test_that("the release to copy is resolved from the tags", {
     "Going back from v26.11.24-1 to v26.11.24."
   )
   # In a clone
-  expect_error(
+  expect_vendor_error(
     vendor_resolve_release("v26.12.01", tags, "26.11.24", NULL, clone = "x"),
-    "git fetch --tags",
-    class = "inlavanilla_vendor_error"
+    "git fetch --tags"
   )
 })
 
@@ -121,7 +115,7 @@ test_that("a snapshot holds the DESCRIPTION and the engine files of a commit", {
   expect_identical(read_text(file.path(snap$dir, "R", "vanilla-a.R")), engine_a)
   # Only the DESCRIPTION and R/vanilla-*.R are extracted
   expect_false(file.exists(file.path(snap$dir, "R", "methods.R")))
-  expect_error(
+  expect_vendor_error(
     vendor_snapshot(fake_sha(7L), "v26.11.25"),
     "Could not download release v26.11.25",
     class = "inlavanilla_source_error"
@@ -146,7 +140,7 @@ test_that("an archive of another commit, or with other members, is refused", {
   other <- make(paste0("inlavanilla-", fake_sha(2L, "c")), fake_release("1"))
   stage <- tempfile(tmpdir = dir)
   dir.create(stage)
-  expect_error(
+  expect_vendor_error(
     vendor_extract(other, sha, stage),
     "is not that commit",
     class = "inlavanilla_source_error"
@@ -164,7 +158,7 @@ test_that("an archive of another commit, or with other members, is refused", {
     paste0("inlavanilla-", fake_sha(3L, "c")),
     list("R/vanilla-a.R" = engine_a)
   )
-  expect_error(
+  expect_vendor_error(
     vendor_extract(no_desc, fake_sha(3L, "c"), stage),
     "has no 'DESCRIPTION'",
     class = "inlavanilla_source_error"
@@ -190,7 +184,7 @@ test_that("a clone gives the tags and the same snapshot as GitHub", {
   not_git <- tempfile()
   dir.create(not_git)
   on.exit(unlink(not_git, recursive = TRUE), add = TRUE)
-  expect_error(
+  expect_vendor_error(
     vendor_clone_tags(not_git),
     "is not a git repository",
     class = "inlavanilla_source_error"
