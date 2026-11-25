@@ -181,6 +181,39 @@ test_that("a single person over several lines is wrapped in c()", {
     format(persons_of(plan$text)[1]),
     format(persons_of(desc))
   )
+  # Arguments aligned under the opening parenthesis move left with it
+  desc <- sub(
+    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+    paste0(
+      "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\",\n",
+      "                  role = c(\"aut\", \"cre\"))\n"
+    ),
+    host_desc_minimal,
+    fixed = TRUE
+  )
+  plan <- plan_for(desc)
+  expect_match(
+    plan$text,
+    paste0(
+      "Authors@R: c(\n",
+      "    person(\"Ann\", \"Example\", email = \"ann@example.org\",\n",
+      "           role = c(\"aut\", \"cre\")),\n",
+      "    person(\"Haziq\", \"Jamil\", role = \"cph\",\n"
+    ),
+    fixed = TRUE
+  )
+  expect_identical(
+    format(persons_of(plan$text)[1]),
+    format(persons_of(desc))
+  )
+  expect_identical(
+    vendor_shift_lines(c("                  b = 2,", ")"), 11L),
+    c("           b = 2,", ")")
+  )
+  expect_identical(
+    vendor_shift_lines(c("  b = 2,", "                  c = 3)"), 11L),
+    c("      b = 2,", "                      c = 3)")
+  )
 })
 
 test_that("a comment in Authors@R does not take the comma that is added", {

@@ -642,12 +642,12 @@ vendor_plan_authors <- function(d, holders) {
     if (grepl("^Authors@R:[[:space:]]*$", first)) {
       lines[f$start] <- "Authors@R: c("
     } else {
-      # The person moves to a line of its own, so its other lines move right
-      # by as much
-      lines[f$start] <- sub("^Authors@R:[[:space:]]*", "    ", first)
+      # The person moves to a line of its own, at column 4
+      prefix <- sub("^(Authors@R:[[:space:]]*).*$", "\\1", first)
+      lines[f$start] <- paste0("    ", substring(first, nchar(prefix) + 1L))
       if (f$end > f$start) {
         rest <- (f$start + 1L):f$end
-        lines[rest] <- paste0("    ", lines[rest])
+        lines[rest] <- vendor_shift_lines(lines[rest], nchar(prefix))
       }
       lines <- append(lines, "Authors@R: c(", after = f$start - 1L)
       f$end <- f$end + 1L
@@ -668,6 +668,23 @@ vendor_plan_authors <- function(d, holders) {
   out$change <- list(kind = "authors", names = vendor_names_of(add))
   out$added <- add
   out
+}
+
+# The other lines of a single person whose first line moves from column `from`
+# to column 4, when it is wrapped in c(). Lines aligned at or beyond `from`,
+# such as arguments under the opening parenthesis, move left with the person.
+# Lines with a hanging indent keep their place relative to the start of the
+# line, which moves 4 columns right. Blank lines and lines that start with a
+# closing parenthesis do not decide which, and a line is never moved left by
+# more than its leading spaces.
+vendor_shift_lines <- function(rest, from) {
+  spaces <- nchar(sub("^( *).*$", "\\1", rest))
+  judge <- nzchar(trimws(rest)) & !grepl("^[[:space:]]*\\)", rest)
+  if (!all(spaces[judge] >= from)) {
+    return(paste0("    ", rest))
+  }
+  drop <- from - 4L
+  ifelse(spaces >= drop, substring(rest, drop + 1L), rest)
 }
 
 # Where the R code of each line ends: the number of characters up to the last
