@@ -98,8 +98,25 @@ should be close to 0.
 \item \code{vb_gain_ratio}: how much of the promised rise in the expected
 log-posterior a one-step correction delivered: the rise under the
 Gaussian, over the \eqn{\frac12 \delta^\top H \delta}{1/2 d' H d} that
-the step assumes. Near 1 is healthy, and it is flagged below 0.5. \code{NA}
-when the correction iterated, or the step was too small to check.
+the step assumes. Near 1 is healthy, and it is flagged below 0.5. It
+checks a one-step correction without a gradient, and is \code{NA} with one,
+when the correction iterated, or when the step was too small to check.
+\item \code{vb_lhat}, \code{vb_j0}, \code{vb_j1}: the check of a one-step correction with a
+gradient, from a second sweep of gradients at the step. One step is the
+first iterate of a fixed-point map, and holds only where that map is a
+contraction. \code{vb_lhat} is the size of the residual of the VB equation
+at the step over its size at the mode, which is the contraction ratio of
+the map over the step. \code{vb_j0} and \code{vb_j1} are the slope of the map
+along the step, at the mode and at the step. The check passes when
+\code{vb_lhat} is below 1 and both slopes lie between -1 and 1. A value that
+is not finite fails it. \code{NA} without a gradient, with
+\code{vb_correction = "full"}, and when the step was below \code{vb_tol} in every
+parameter, which is too small to check.
+\item \code{vb_solve}: 1 if that check failed, 0 if it passed, \code{NA} if it did not
+run. After a failed check the fit solves the VB equation on the same
+nodes, within the calls that the mode and Hessian took, and raises a
+warning of its own: the posterior is far from Gaussian along the mean
+correction, whether or not the solve converged.
 \item \code{mean_gap_max}: the largest absolute \code{mean_gap}.
 \item \code{ridge_bend_max}: the largest \code{ridge_bend}.
 \item \code{n_heavy_tails}: the number of parameters whose \code{tails} is \code{FALSE}.
@@ -151,7 +168,11 @@ optimiser it is taken where the optimiser landed. On the fixed-point
 path it is the last step taken, which bounds the next, unless that step
 was 0.1 or more (a \code{vb_tol} above 0.1), when it is taken afresh. It
 should be close to 0 (\code{Inf} where the step is not finite). It is \code{NA}
-after a one-step correction, which has no step still to go.
+after a one-step correction, which has no step still to go. When the
+check of a one-step correction failed (\code{vb_solve}), it is the step still
+to go where the solve stopped, at its convergence or at its budget of
+calls. That value is recorded and not flagged, since the budget is not a
+setting.
 \item \code{mean_gap}, \code{gamma1}, \code{tails} and \code{ridge_bend}, which
 \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}} describes.
 }

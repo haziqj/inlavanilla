@@ -169,7 +169,11 @@ run that was kept), the gradient of minus the log-posterior at the mode
 number of the Hessian, on the raw scale (\code{hess_cond}) and in posterior-SD
 units (\code{hess_cond_cor}). \code{vb} holds the iterations of the VB correction,
 whether it stopped at the first step (\code{one_pass}), whether it fell back
-to \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), and the Kullback-Leibler divergence of
+to \code{\link[stats:nlminb]{stats::nlminb()}} (\code{fallback}), the gain ratio of a one-step
+correction without a gradient (\code{gain_ratio}), the check of a one-step
+correction with a gradient (its three numbers in \code{check}, whether it
+failed and the VB equation was solved in \code{solve}, and the parameter its
+warning names in \code{check_worst}), and the Kullback-Leibler divergence of
 the shift (\code{kld_global}); it is \code{NULL} when \code{vb_correction = "none"}.
 \code{marginals} is a data frame with a row per parameter: \code{mode_shift_sigma},
 \code{kld}, \code{vb_shift}, \code{vb_shift_sigma}, \code{nmad}, \code{alpha}, \code{unscanned_mass},
@@ -461,16 +465,40 @@ the symmetric square root of the covariance, taken on the correlation scale.
 Without one, it is one pass of Stein's identity on the rule of
 \code{vb_correction = "full"}. Most of the movement is in that step, and exact VB
 is itself an approximation to the posterior mean with an error of the same
-order. If the first step is over 2.5 posterior SDs, or a node fails, the
-iteration carries on with capped steps, within the number of calls that the
-mode and Hessian took. \code{diagnostics()} then has \code{vb_step_sigma}, the step
-still to go, which is \code{NA} after a single step. After a single step the fit
-checks that it delivered what it promised: \code{vb_gain_ratio} in \code{diagnostics()}
-is the rise in the expected log-posterior over the rise the step assumed, and
-a ratio below 0.5 raises a warning. A large first step can also overstate the
-VB term of the log marginal likelihood, so after a shift above 1 posterior
-SD, which is flagged, compare models with care: \code{vb_correction = "full"} may
-be closer.
+order.
+
+One step is the first iterate of a fixed-point map, and it approximates the
+solution only where that map is a contraction. With a gradient the fit
+checks this, with a second sweep of gradients at the step, so that the
+correction takes 4m + 2 gradient calls. The step must reduce the residual of
+the VB equation (\code{vb_lhat} in \code{diagnostics()}, the ratio of the residual at
+the step to the one at the mode, below 1), and the slope of the map along
+the step must lie between -1 and 1 at the mode and at the step (\code{vb_j0} and
+\code{vb_j1}). When the check passes, the one step is the correction. When it
+fails, the posterior is far from Gaussian along the step, and the fit solves
+the VB equation instead, on the same nodes and from the mode, by Broyden's
+method, within the number of calls that the mode and Hessian took. It then
+raises a warning that names the parameter the one step moved furthest. The
+warning comes whether or not the solve converged, since it is about the
+posterior and not the solver: treat the posterior means, the log marginal
+likelihood, \code{\link[=loo]{loo()}} and \code{\link[=waic]{waic()}} of such a fit with care, and compare with
+MCMC if they matter. \code{vb_solve} in \code{diagnostics()} says whether the solve
+ran, and \code{vb_step_sigma} is then the step still to go where it stopped,
+which is recorded and not flagged. If the gradient is not finite at a node
+around the mode there is no step to check, and the optimiser of
+\code{vb_correction = "full"} takes over.
+
+Without a gradient there is no such check. If the first step is over 2.5
+posterior SDs, or a node fails, the iteration carries on with capped steps,
+within the number of calls that the mode and Hessian took. \code{diagnostics()}
+then has \code{vb_step_sigma}, the step still to go, which is \code{NA} after a single
+step. After a single step the fit checks that it delivered what it promised:
+\code{vb_gain_ratio} in \code{diagnostics()} is the rise in the expected log-posterior
+over the rise the step assumed, and a ratio below 0.5 raises a warning.
+
+A large first step can also overstate the VB term of the log marginal
+likelihood, so after a shift above 1 posterior SD, which is flagged, compare
+models with care: \code{vb_correction = "full"} may be closer.
 
 \code{vb_correction = "full"} iterates to the solution, on a degree-5 rule with at
 most (m + 1)(m + 2) + 1 nodes, and hands over to \code{\link[stats:nlminb]{stats::nlminb()}} if it does

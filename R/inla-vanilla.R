@@ -254,16 +254,40 @@
 #' Without one, it is one pass of Stein's identity on the rule of
 #' `vb_correction = "full"`. Most of the movement is in that step, and exact VB
 #' is itself an approximation to the posterior mean with an error of the same
-#' order. If the first step is over 2.5 posterior SDs, or a node fails, the
-#' iteration carries on with capped steps, within the number of calls that the
-#' mode and Hessian took. `diagnostics()` then has `vb_step_sigma`, the step
-#' still to go, which is `NA` after a single step. After a single step the fit
-#' checks that it delivered what it promised: `vb_gain_ratio` in `diagnostics()`
-#' is the rise in the expected log-posterior over the rise the step assumed, and
-#' a ratio below 0.5 raises a warning. A large first step can also overstate the
-#' VB term of the log marginal likelihood, so after a shift above 1 posterior
-#' SD, which is flagged, compare models with care: `vb_correction = "full"` may
-#' be closer.
+#' order.
+#'
+#' One step is the first iterate of a fixed-point map, and it approximates the
+#' solution only where that map is a contraction. With a gradient the fit
+#' checks this, with a second sweep of gradients at the step, so that the
+#' correction takes 4m + 2 gradient calls. The step must reduce the residual of
+#' the VB equation (`vb_lhat` in `diagnostics()`, the ratio of the residual at
+#' the step to the one at the mode, below 1), and the slope of the map along
+#' the step must lie between -1 and 1 at the mode and at the step (`vb_j0` and
+#' `vb_j1`). When the check passes, the one step is the correction. When it
+#' fails, the posterior is far from Gaussian along the step, and the fit solves
+#' the VB equation instead, on the same nodes and from the mode, by Broyden's
+#' method, within the number of calls that the mode and Hessian took. It then
+#' raises a warning that names the parameter the one step moved furthest. The
+#' warning comes whether or not the solve converged, since it is about the
+#' posterior and not the solver: treat the posterior means, the log marginal
+#' likelihood, [loo()] and [waic()] of such a fit with care, and compare with
+#' MCMC if they matter. `vb_solve` in `diagnostics()` says whether the solve
+#' ran, and `vb_step_sigma` is then the step still to go where it stopped,
+#' which is recorded and not flagged. If the gradient is not finite at a node
+#' around the mode there is no step to check, and the optimiser of
+#' `vb_correction = "full"` takes over.
+#'
+#' Without a gradient there is no such check. If the first step is over 2.5
+#' posterior SDs, or a node fails, the iteration carries on with capped steps,
+#' within the number of calls that the mode and Hessian took. `diagnostics()`
+#' then has `vb_step_sigma`, the step still to go, which is `NA` after a single
+#' step. After a single step the fit checks that it delivered what it promised:
+#' `vb_gain_ratio` in `diagnostics()` is the rise in the expected log-posterior
+#' over the rise the step assumed, and a ratio below 0.5 raises a warning.
+#'
+#' A large first step can also overstate the VB term of the log marginal
+#' likelihood, so after a shift above 1 posterior SD, which is flagged, compare
+#' models with care: `vb_correction = "full"` may be closer.
 #'
 #' `vb_correction = "full"` iterates to the solution, on a degree-5 rule with at
 #' most (m + 1)(m + 2) + 1 nodes, and hands over to [stats::nlminb()] if it does
@@ -513,7 +537,11 @@
 #'     number of the Hessian, on the raw scale (`hess_cond`) and in posterior-SD
 #'     units (`hess_cond_cor`). `vb` holds the iterations of the VB correction,
 #'     whether it stopped at the first step (`one_pass`), whether it fell back
-#'     to [stats::nlminb()] (`fallback`), and the Kullback-Leibler divergence of
+#'     to [stats::nlminb()] (`fallback`), the gain ratio of a one-step
+#'     correction without a gradient (`gain_ratio`), the check of a one-step
+#'     correction with a gradient (its three numbers in `check`, whether it
+#'     failed and the VB equation was solved in `solve`, and the parameter its
+#'     warning names in `check_worst`), and the Kullback-Leibler divergence of
 #'     the shift (`kld_global`); it is `NULL` when `vb_correction = "none"`.
 #'     `marginals` is a data frame with a row per parameter: `mode_shift_sigma`,
 #'     `kld`, `vb_shift`, `vb_shift_sigma`, `nmad`, `alpha`, `unscanned_mass`,

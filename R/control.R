@@ -30,7 +30,9 @@
 #'   `vb_correction = "full"` and when a one-step correction has to iterate. A
 #'   step over 1.5 posterior SDs is cut to 1.5. With `vb_correction = "full"`,
 #'   if two steps in a row are cut, or it has not converged after `vb_maxit`
-#'   steps, [stats::nlminb()] takes over.
+#'   steps, [stats::nlminb()] takes over. They also limit the solve that
+#'   follows a failed check of a one-step correction with a gradient, and a
+#'   first step below `vb_tol` in every parameter is not checked.
 #' @param n_grid The number of points of each skew-normal scan, spread over
 #'   \eqn{\pm 4} posterior SDs. At least 7.
 #' @param log_threshold Scan points whose log-posterior falls more than this

@@ -119,7 +119,14 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   SDs (the fixed-point step there, which is the Newton step of the VB
 #'   stationarity condition; see [diagnostics()]). It is flagged above 0.1,
 #'   the level of the mode check, as a correction that did not settle. That
-#'   check is inlavanilla's own.
+#'   check is inlavanilla's own. So is the check of a one-step correction
+#'   with a gradient (`vb_lhat`, `vb_j0` and `vb_j1` in [diagnostics()]): a
+#'   second sweep of gradients tests that the map the step iterates is a
+#'   contraction. Where it is not, the posterior is far from Gaussian along
+#'   the step, the VB equation is solved instead, and the check is flagged
+#'   here and by a warning of its own, with the parameter the one step moved
+#'   furthest. The line also gives the step still to go where the solve
+#'   stopped, which is not flagged.
 #' * **Skew-normal fits.** `nmad`, the largest gap between the fitted and
 #'   the scanned density, relative to its peak (Jamil & Rue, 2026, Section
 #'   4.4), flagged above 0.1. `alpha` is the shape of the fitted skew-normal
@@ -196,7 +203,10 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' that the computation reached its solution: both the mode check and the VB
 #' check pass, so no further step at the mode or at the VB mean would move
 #' a parameter by more than 0.1 posterior SDs. It says nothing of how well
-#' the approximation fits the posterior, which the other checks judge.
+#' the approximation fits the posterior, which the other checks judge. A
+#' flagged one-step check is one of those: the solve that follows it stops
+#' within a budget of calls, and where it stops does not count against
+#' convergence.
 #' Without a gradient a strongly skewed posterior can read "Not converged:
 #' VB did not settle": the VB mean from `logpost` values alone is then
 #' approximate, and supplying `grad` is the fix.
