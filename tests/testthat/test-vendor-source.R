@@ -213,6 +213,8 @@ test_that("a clone gives the tags and the same snapshot as GitHub", {
 
 test_that("GitHub serves the releases of inlavanilla", {
   skip_on_cran()
+  # skip_if_offline() needs curl, which inlavanilla does not suggest
+  skip_if_not_installed("curl")
   skip_if_offline("github.com")
   # skip_if_offline() checks only that the name resolves, so a proxy or a
   # firewall that blocks GitHub skips here.
