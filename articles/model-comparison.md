@@ -65,9 +65,9 @@ logpost_pois <- function(theta) {
 
 init_pois <- setNames(numeric(ncol(X)), colnames(X))
 fit_pois <- inla_vanilla(logpost_pois, init_pois)
-#> ✔ Found the posterior mode in 29 iterations [10ms]
-#> ✔ VB mean correction, max shift 0.025σ [15ms]
-#> ✔ Fitted 6 skew-normal marginals [20ms]
+#> ✔ Found the posterior mode in 29 iterations [16ms]
+#> ✔ VB mean correction, max shift 0.025σ [19ms]
+#> ✔ Fitted 6 skew-normal marginals [24ms]
 ```
 
 [`loo()`](https://haziqj.ml/inlavanilla/reference/loo.md) takes the fit
@@ -85,7 +85,7 @@ loo_pois
 #> looic        485.9  30.0
 #> 
 #> ✔ Second-order expansion for every unit. Largest leverage k = 0.11, for
-#>   unit 39.
+#>   unit 45.
 ```
 
 `p_loo` is the effective number of parameters. Here it is about 21, for
@@ -247,7 +247,7 @@ time_loo <- system.time(loo(fit_nb, loglik_nb))
 
 c(refits = time_refit[["elapsed"]], loo = time_loo[["elapsed"]])
 #> refits    loo 
-#>  3.924  0.003
+#>  4.822  0.005
 c(refits = sum(elpd_refit), loo = loo_nb$estimates["elpd_loo", "Estimate"])
 #>    refits       loo 
 #> -202.6061 -202.1444

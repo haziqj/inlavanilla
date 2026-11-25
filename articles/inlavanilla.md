@@ -77,13 +77,13 @@ parameters alone. `theta` arrives as a named vector, so
 
 init <- c(b0 = 0, b_wt = 0, b_hp = 0)
 fit <- inla_vanilla(logpost, init)
-#> ✔ Found the posterior mode in 10 iterations [6ms]
-#> ✔ VB mean correction, max shift 0.48σ [9ms]
-#> ✔ Fitted 3 skew-normal marginals [7ms]
+#> ✔ Found the posterior mode in 10 iterations [9ms]
+#> ✔ VB mean correction, max shift 0.48σ [17ms]
+#> ✔ Fitted 3 skew-normal marginals [12ms]
 fit
 #> ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.60 · Converged in 10 iterations (28ms)
+#> Log marginal likelihood: -11.60 · Converged in 10 iterations (46ms)
 #> 
 #>           Mean     SD    2.5%     50%   97.5%    Mode
 #> 1 b0    -1.104  0.615  -2.398  -1.072   0.017  -1.008
@@ -112,9 +112,9 @@ each stage:
 summary(fit)
 #> ── INLAvanilla v26.11.25-1 summary ──────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -11.595 · Converged in 10 iterations (28ms)
+#> Log marginal likelihood: -11.595 · Converged in 10 iterations (46ms)
 #> Laplace -11.709 + VB term 0.11
-#> 257 logpost calls: mode 7ms, VB 10ms, marginals 7ms
+#> 257 logpost calls: mode 11ms, VB 17ms, marginals 13ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -295,7 +295,7 @@ grad <- function(theta) {
 }
 fit_g <- inla_vanilla(logpost, init, grad = grad, silent = TRUE)
 max(abs(fit_g$summary - fit$summary))
-#> [1] 0.000998865
+#> [1] 0.0009988707
 rbind(finite_differences = fit$counts, gradient = fit_g$counts)
 #>                    logpost grad hess
 #> finite_differences     257    0    0
@@ -490,7 +490,7 @@ fit_p <- inla_vanilla(logpost_p, c(logit_p = 0), silent = TRUE)
 fit_p
 #> ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -23.17 · Converged in 4 iterations (10ms)
+#> Log marginal likelihood: -23.17 · Converged in 4 iterations (13ms)
 #> 
 #>        Mean      SD    2.5%     50%   97.5%    Mode
 #> 1 p  0.4118  0.0832  0.2550  0.4101  0.5782  0.4063
