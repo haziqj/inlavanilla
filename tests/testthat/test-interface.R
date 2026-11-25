@@ -2451,7 +2451,10 @@ test_that("print() points to the fit's warnings and to flagged checks", {
   out <- capture_output(print(fit))
   expect_match(out, "! 11 checks flagged by `summary()`.", fixed = TRUE)
   expect_identical(n_flag_lines(fit), 11L)
-  expect_match(out, "\\| Converged in")
+  # Nor does it count against convergence
+  fit <- trip$vb_step(trip$vb_check(fit_ok))
+  expect_match(headline(fit), "\\| Converged in")
+  expect_match(headline(trip$vb_step(fit_ok)), "\\| Not converged: VB did")
 
   # A normal mean with an unknown SD from 12 observations: summary() flags
   # the ridge bend of the mean alone (4 / 12 nats), and nothing in the small
