@@ -1161,31 +1161,36 @@ vendor_collate_lacks <- function(desc, files) {
   setdiff(files, file.path("R", collate))
 }
 
-# The license against the engine's, GPL (>= 3): "pass" for GPL-3 or
-# GPL (>= 3), "warn" when it allows GPL (>= 3) only for the package as a
-# whole, or cannot be checked ("file"), and "fail" for anything else
+# The license against the engine's, GPL (>= 3): "pass" when an alternative
+# is GPL version 3 or later only, "warn" when it allows GPL version 3 or later
+# only for the package as a whole (GPL with no version, GPL (>= 2), AGPL
+# version 3, or GPL version 3 with + file LICENSE), "file" for file LICENSE
+# alone, which cannot be checked, and "fail" for anything else. GPL is
+# matched by its abbreviation or its name in R's license database, in each
+# form that R accepts: GPL-3, GPL version 3, GPL (>= 3) and so on.
 vendor_license_grade <- function(license) {
   if (is.null(license) || is.na(license) || !nzchar(trimws(license))) {
     return("fail")
   }
   alts <- trimws(strsplit(license, "|", fixed = TRUE)[[1L]])
-  pass <- c("GPL-3", "GPL(>=3)", "GPL(>=3.0)")
-  weak <- c("GPL", "GPL(>=2)", "GPL(>=2.0)", "AGPL-3", "AGPL(>=3)")
+  file_re <- "[[:space:]]*\\+[[:space:]]*file[[:space:]]+LICEN[CS]E$"
   grades <- vapply(
     alts,
     function(alt) {
-      file <- grepl("\\+[[:space:]]*file[[:space:]]+LICEN[CS]E$", alt)
-      core <- gsub(
-        "[[:space:]]+",
-        "",
-        sub("\\+[[:space:]]*file[[:space:]]+LICEN[CS]E$", "", alt)
-      )
-      if (core %in% pass && !file) {
+      if (grepl("^file[[:space:]]+LICEN[CS]E$", alt)) {
+        return("file")
+      }
+      file <- grepl(file_re, alt)
+      spec <- vendor_license_spec(sub(file_re, "", alt))
+      if (is.null(spec)) {
+        return("fail")
+      }
+      v3 <- vendor_license_allows(spec, "3")
+      v2 <- vendor_license_allows(spec, "2")
+      if (spec$abbrev == "GPL" && v3 && !v2 && !file) {
         "pass"
-      } else if (core %in% c(pass, weak)) {
+      } else if (spec$abbrev %in% c("GPL", "AGPL") && v3) {
         "warn"
-      } else if (grepl("^file[[:space:]]+LICEN[CS]E$", alt)) {
-        "file"
       } else {
         "fail"
       }
@@ -1199,6 +1204,86 @@ vendor_license_grade <- function(license) {
     }
   }
   "fail"
+}
+
+# A license as list(abbrev, op, version), from the forms that R accepts: the
+# abbreviation or name of a license in R's license database, alone, with
+# "-<version>" or " version <version>", or with a version range in
+# parentheses. NULL for any other text.
+vendor_license_spec <- function(text) {
+  text <- gsub("[[:space:]]+", " ", trimws(text))
+  db <- vendor_license_db()
+  abbrev_of <- function(name) {
+    k <- match(name, c(db[, "Abbrev"], db[, "Name"]))
+    if (is.na(k)) NA_character_ else c(db[, "Abbrev"], db[, "Abbrev"])[k]
+  }
+  forms <- list(
+    c("^(.+) ?\\( ?(<=|>=|<|>) ?([0-9.]+) ?\\)$", "range"),
+    c("^(.+) version ([0-9.]+)$", "version"),
+    c("^([^ ]+)-([0-9.]+)$", "version")
+  )
+  for (form in forms) {
+    if (!grepl(form[1L], text)) {
+      next
+    }
+    m <- regmatches(text, regexec(form[1L], text))[[1L]]
+    abbrev <- abbrev_of(trimws(m[2L]))
+    if (is.na(abbrev)) {
+      return(NULL)
+    }
+    if (form[2L] == "range") {
+      return(list(abbrev = abbrev, op = m[3L], version = m[4L]))
+    }
+    return(list(abbrev = abbrev, op = "==", version = m[3L]))
+  }
+  abbrev <- abbrev_of(text)
+  if (is.na(abbrev)) NULL else list(abbrev = abbrev, op = NA, version = NA)
+}
+
+# Whether a license spec allows version `v` of its license, such as "3". The
+# version is compared with as many parts as the spec gives, so that 3 is
+# 3.0.0 in GPL (>= 3.0.0).
+vendor_license_allows <- function(spec, v) {
+  if (is.na(spec$op)) {
+    return(TRUE)
+  }
+  have <- tryCatch(numeric_version(spec$version), error = function(e) NULL)
+  if (is.null(have)) {
+    return(FALSE)
+  }
+  n <- length(unclass(have)[[1L]])
+  v <- numeric_version(paste(c(v, rep("0", n - 1L)), collapse = "."))
+  switch(
+    spec$op,
+    "==" = v == have,
+    ">=" = v >= have,
+    ">" = v > have,
+    "<=" = v <= have,
+    "<" = v < have,
+    FALSE
+  )
+}
+
+# The Name and Abbrev of R's license database, with the GNU licenses as a
+# fallback when the database cannot be read
+vendor_license_db <- function() {
+  path <- file.path(R.home("share"), "licenses", "license.db")
+  db <- tryCatch(
+    read.dcf(path, fields = c("Name", "Abbrev")),
+    error = function(e) NULL,
+    warning = function(w) NULL
+  )
+  if (is.null(db)) {
+    db <- cbind(
+      Name = c(
+        "GNU General Public License",
+        "GNU Affero General Public License",
+        "GNU Lesser General Public License"
+      ),
+      Abbrev = c("GPL", "AGPL", "LGPL")
+    )
+  }
+  db[!is.na(db[, "Abbrev"]) & !is.na(db[, "Name"]), , drop = FALSE]
 }
 
 # The license line of vanilla_status() and use_vanilla(), with its fix

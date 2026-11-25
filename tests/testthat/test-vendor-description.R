@@ -703,7 +703,21 @@ test_that("the license is graded against GPL (>= 3)", {
     "Apache License 2.0" = "fail",
     "LGPL-3" = "fail",
     "GPL-2" = "fail",
-    "CC BY 4.0" = "fail"
+    "CC BY 4.0" = "fail",
+    # Other spellings of GPL version 3 that R accepts
+    "GPL version 3" = "pass",
+    "GNU General Public License version 3" = "pass",
+    "GNU General Public License (>= 3)" = "pass",
+    "GPL (>= 3.0.0)" = "pass",
+    "GPL (> 2)" = "pass",
+    "GPL-3 | file LICENSE" = "pass",
+    "GNU General Public License" = "warn",
+    "GNU Affero General Public License version 3" = "warn",
+    "GPL (<= 3)" = "warn",
+    "GPL (< 3)" = "fail",
+    "GPL version 2" = "fail",
+    "GNU Lesser General Public License (>= 3)" = "fail",
+    "Unknown License version 3" = "fail"
   )
   for (license in names(grades)) {
     expect_identical(
