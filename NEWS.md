@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 26.11.25
 
 * New `use_vanilla()` copies the engine of inlavanilla, the files
   `R/vanilla-*.R` behind `inla_vanilla()`, into another package, so that the
