@@ -156,6 +156,33 @@ test_that("a minimal DESCRIPTION gains every field, with CRLF kept", {
   expect_length(again$open, 0L)
 })
 
+test_that("a single person over several lines is wrapped in c()", {
+  desc <- sub(
+    "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+    paste0(
+      "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\",\n",
+      "    role = c(\"aut\", \"cre\"))\n"
+    ),
+    host_desc_minimal,
+    fixed = TRUE
+  )
+  plan <- plan_for(desc)
+  expect_match(
+    plan$text,
+    paste0(
+      "Authors@R: c(\n",
+      "    person(\"Ann\", \"Example\", email = \"ann@example.org\",\n",
+      "        role = c(\"aut\", \"cre\")),\n",
+      "    person(\"Haziq\", \"Jamil\", role = \"cph\",\n"
+    ),
+    fixed = TRUE
+  )
+  expect_identical(
+    format(persons_of(plan$text)[1]),
+    format(persons_of(desc))
+  )
+})
+
 test_that("an old-style DESCRIPTION is raised in place, authors left to do", {
   plan <- plan_for(old_style)
   expected <- sub("R (>= 3.5.0)", "R (>= 4.1.0)", old_style, fixed = TRUE)

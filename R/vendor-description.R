@@ -627,7 +627,13 @@ vendor_plan_authors <- function(d, holders) {
     if (grepl("^Authors@R:[[:space:]]*$", first)) {
       lines[f$start] <- "Authors@R: c("
     } else {
+      # The person moves to a line of its own, so its other lines move right
+      # by as much
       lines[f$start] <- sub("^Authors@R:[[:space:]]*", "    ", first)
+      if (f$end > f$start) {
+        rest <- (f$start + 1L):f$end
+        lines[rest] <- paste0("    ", lines[rest])
+      }
       lines <- append(lines, "Authors@R: c(", after = f$start - 1L)
       f$end <- f$end + 1L
     }
