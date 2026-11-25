@@ -13,7 +13,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,9 +55,14 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.25-1/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="26.11.25-2" id="inlavanilla-261125-2">inlavanilla 26.11.25-2<a class="anchor" aria-label="anchor" href="#inlavanilla-261125-2"></a></h2>
+<ul><li><p>A fit that fails the one-step check of the default VB correction can now take twice as many sweeps to solve the VB equation: the cap is twice the calls of the mode and Hessian over 2m + 1, where it was those calls over 2m + 1. At the old cap the solve of a hard fit often stopped short of its root. With a gradient the VB stage of such a fit now costs at most twice what the mode and Hessian did, and without one up to 2(m + 1)(m + 2) / (2m + 1) times, about m times. A fit that passes the check is unchanged, to the last bit. A fit that fails it, and whose solve stopped at the old cap, has a different VB mean and log marginal likelihood.</p></li>
+<li><p><code><a href="../reference/vanilla_control.html">vanilla_control()</a></code> has the new entry <code>vb_budget</code>, that factor of two. <code>vb_budget = 1</code> is the old cap, and <code>vb_budget = Inf</code> lets the solve run until it converges or reaches <code>vb_maxit</code> iterations.</p></li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="26.11.25-1" id="inlavanilla-261125-1">inlavanilla 26.11.25-1<a class="anchor" aria-label="anchor" href="#inlavanilla-261125-1"></a></h2>
 <ul><li><p>The default VB correction (<code>vb_correction = "onestep"</code>) now checks its one step, and solves the VB equation where the check fails. A second sweep at the step tests that the fixed-point map the step iterates is a contraction there: the step must reduce the residual of the VB equation (<code>vb_lhat</code> below 1), and the slope of the map along the step must lie between -1 and 1 at the mode and at the step (<code>vb_j0</code>, <code>vb_j1</code>). A fit that passes keeps its one step, to the last bit. A fit that fails solves the VB equation on the same sweeps by Broyden’s method, from the mode, and raises a new warning, of class <code>inlavanilla_vb_check_warning</code>, that the posterior is far from Gaussian along the mean correction, naming the parameter the one step moved furthest. The warning comes whether or not the solve converged.</p></li>

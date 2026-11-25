@@ -123,13 +123,13 @@ init <- c(
   setNames(rep(0, 6), paste0("tau", 1:6))
 )
 fit <- inla_vanilla(logpost, init)
-#> ✔ Found the posterior mode in 35 iterations [191ms]
-#> ✔ VB mean correction, max shift 0.17σ [97ms]
-#> ✔ Fitted 12 skew-normal marginals [138ms]
+#> ✔ Found the posterior mode in 35 iterations [144ms]
+#> ✔ VB mean correction, max shift 0.17σ [94ms]
+#> ✔ Fitted 12 skew-normal marginals [104ms]
 fit
-#> ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25-2 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (447ms)
+#> Log marginal likelihood: -1683.00 · Converged in 35 iterations (360ms)
 #> 
 #>                Mean      SD     2.5%      50%    97.5%     Mode
 #>  1 lambda1   0.3790  0.0708   0.2357   0.3807   0.5128   0.3842

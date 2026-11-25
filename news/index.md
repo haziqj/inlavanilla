@@ -1,5 +1,23 @@
 # Changelog
 
+## inlavanilla 26.11.25-2
+
+- A fit that fails the one-step check of the default VB correction can
+  now take twice as many sweeps to solve the VB equation: the cap is
+  twice the calls of the mode and Hessian over 2m + 1, where it was
+  those calls over 2m + 1. At the old cap the solve of a hard fit often
+  stopped short of its root. With a gradient the VB stage of such a fit
+  now costs at most twice what the mode and Hessian did, and without one
+  up to 2(m + 1)(m + 2) / (2m + 1) times, about m times. A fit that
+  passes the check is unchanged, to the last bit. A fit that fails it,
+  and whose solve stopped at the old cap, has a different VB mean and
+  log marginal likelihood.
+
+- [`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md)
+  has the new entry `vb_budget`, that factor of two. `vb_budget = 1` is
+  the old cap, and `vb_budget = Inf` lets the solve run until it
+  converges or reaches `vb_maxit` iterations.
+
 ## inlavanilla 26.11.25-1
 
 - The default VB correction (`vb_correction = "onestep"`) now checks its

@@ -21,7 +21,7 @@ control = vanilla_control(n_grid = 31)."><meta property="og:image" content="http
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,7 @@ control = vanilla_control(n_grid = 31)."><meta property="og:image" content="http
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Tuning of an INLAvanilla fit</h1>
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.25-1/R/control.R" class="external-link"><code>R/control.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/R/control.R" class="external-link"><code>R/control.R</code></a></small>
       <div class="d-none name"><code>vanilla_control.Rd</code></div>
     </div>
 
@@ -83,6 +83,7 @@ by the same rules: <code>control = list(n_grid = 31)</code> is
 <span>  mode_tol <span class="op">=</span> <span class="fl">1e-10</span>,</span>
 <span>  vb_maxit <span class="op">=</span> <span class="fl">25L</span>,</span>
 <span>  vb_tol <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  vb_budget <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  n_grid <span class="op">=</span> <span class="fl">21L</span>,</span>
 <span>  log_threshold <span class="op">=</span> <span class="op">-</span><span class="fl">6</span>,</span>
 <span>  nlminb <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -114,6 +115,19 @@ if two steps in a row are cut, or it has not converged after <code>vb_maxit</cod
 steps, <code><a href="https://rdrr.io/r/stats/nlminb.html" class="external-link">stats::nlminb()</a></code> takes over. They also limit the solve that
 follows a failed check of a one-step correction, and a first step below
 <code>vb_tol</code> in every parameter is not checked.</p></dd>
+
+
+<dt id="arg-vb-budget">vb_budget<a class="anchor" aria-label="anchor" href="#arg-vb-budget"></a></dt>
+<dd><p>The most that the default VB correction
+(<code>vb_correction = "onestep"</code>) may spend when its check fails and it
+solves the VB equation, as a multiple of the calls that the mode and
+Hessian took. The sweeps of the correction, the two of the check among
+them, are capped at <code>vb_budget</code> times those calls over 2m + 1. The
+default of 2 lets the solve of most hard fits reach its root. A larger
+value, or <code>Inf</code> for no cap, lets it run on until <code>vb_tol</code> or <code>vb_maxit</code>,
+and 0 leaves a fit that fails the check at its mode. A fit that passes
+the check takes two sweeps whatever the value. See "The VB correction" in
+<code><a href="inla_vanilla.html">inla_vanilla()</a></code>.</p></dd>
 
 
 <dt id="arg-n-grid">n_grid<a class="anchor" aria-label="anchor" href="#arg-n-grid"></a></dt>
@@ -189,6 +203,9 @@ of <code><a href="inla_vanilla.html">inla_vanilla()</a></code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $vb_tol</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $vb_budget</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $n_grid</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 21</span>

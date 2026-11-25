@@ -80,11 +80,11 @@ logpost_pois <- function(theta) {
 }
 fit_pois <- inla_vanilla(logpost_pois, c(log_rate = 0), silent = TRUE)
 summary(fit_pois)
-#> ── INLAvanilla v26.11.25-1 summary ──────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25-2 summary ──────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -12.354 · Converged in 7 iterations (20ms)
+#> Log marginal likelihood: -12.354 · Converged in 7 iterations (17ms)
 #> Laplace -12.362 + VB term 0.0085
-#> 72 logpost calls: mode 7ms, VB 2ms, marginals 6ms
+#> 72 logpost calls: mode 6ms, VB 1ms, marginals 6ms
 #> 
 #> ── Posterior marginals ──
 #> 
@@ -229,14 +229,18 @@ cost. Without `grad` a sweep is one pass of Stein’s identity on \\(m +
 1)(m + 2)\\ values of `logpost`, and each slope takes \\4m\\ more, as
 differences of `logpost` along the step.
 
-The cap on the sweeps is the number of calls that the mode and Hessian
-took, divided by \\2m + 1\\, with the two sweeps of the check among
-them. With `grad` the correction therefore never costs more than the
-mode and Hessian did. Without `grad` the same number of sweeps is
-allowed and each costs more, so a fit that fails the check can spend up
-to \\(m + 1)(m + 2) / (2m + 1)\\ times the calls of its mode and Hessian
-on the correction, about \\m / 2\\ times. That is the price of fitting
-without a gradient.
+The cap on the sweeps is twice the number of calls that the mode and
+Hessian took, divided by \\2m + 1\\, with the two sweeps of the check
+among them. A fit that passes the check takes its two sweeps and never
+meets the cap. With `grad` the correction of a fit that fails it
+therefore never costs more than twice what the mode and Hessian did.
+Without `grad` the same number of sweeps is allowed and each costs more,
+so a fit that fails the check can spend up to \\2(m + 1)(m + 2) / (2m +
+1)\\ times the calls of its mode and Hessian on the correction, about
+\\m\\ times. That is the price of fitting without a gradient. The factor
+of two is `vb_budget` in
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md):
+a larger value, or `Inf`, lets the solve run further.
 
 A shift above 1 SD is also a reason to treat the log marginal likelihood
 with care. Its VB term, \\\tfrac12\delta^\top H\delta\\, is a
@@ -282,8 +286,8 @@ logpost_mix <- function(theta) {
 }
 fit_mix <- inla_vanilla(logpost_mix, c(theta = -0.2))
 #> ✔ Found the posterior mode in 4 iterations [4ms]
-#> ✔ VB mean correction, max shift 0.19σ [15ms]
-#> ✔ Fitted 1 skew-normal marginal [7ms]
+#> ✔ VB mean correction, max shift 0.19σ [11ms]
+#> ✔ Fitted 1 skew-normal marginal [6ms]
 #> Warning: Fit diagnostics flagged 3 potential issues:
 #> ✖ The fitted marginal deviates from the scanned posterior (NMAD > 0.1) for
 #>   `theta` (0.20).
@@ -563,7 +567,7 @@ fit <- withCallingHandlers(
 )
 #> ✔ Found the posterior mode in 4 iterations [1ms]
 #> ✔ VB mean correction, max shift 0.19σ [1ms]
-#> ✔ Fitted 1 skew-normal marginal [4ms]
+#> ✔ Fitted 1 skew-normal marginal [3ms]
 #> Check this fit.
 ```
 

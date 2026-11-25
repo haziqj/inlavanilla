@@ -584,14 +584,18 @@ and without a gradient. Only the sweep differs. With a gradient it is
 2m + 1 gradients, so the correction of a fit that passes takes 4m + 2
 gradient calls. Without one it is a Stein pass of (m + 1)(m + 2) values
 of `logpost`, and the two slopes take 4m values each. The sweeps of a
-correction, the two of the check among them, are capped at the number of
-calls that the mode and Hessian took, divided by 2m + 1. With a gradient
-the correction therefore costs no more than the mode and Hessian did.
-Without one the cap is the same number of sweeps, each of which costs
-more: a fit that fails the check can then spend up to (m + 1)(m + 2) /
-(2m + 1) times the calls of its mode and Hessian, about m / 2 times, on
-the correction. That is the price of a fit without a gradient, and
-`grad` is the remedy.
+correction, the two of the check among them, are capped at twice the
+number of calls that the mode and Hessian took, divided by 2m + 1. A fit
+that passes the check takes its two sweeps and never meets the cap. With
+a gradient the correction of a fit that fails it therefore costs no more
+than twice what the mode and Hessian did. Without one the cap is the
+same number of sweeps, each of which costs more: a fit that fails the
+check can then spend up to 2(m + 1)(m + 2) / (2m + 1) times the calls of
+its mode and Hessian, about m times, on the correction. That is the
+price of a fit without a gradient, and `grad` is the remedy. The factor
+of two is `vb_budget` in
+[`vanilla_control()`](https://haziqj.ml/inlavanilla/reference/vanilla_control.md),
+and `Inf` there removes the cap.
 
 A large first step can also overstate the VB term of the log marginal
 likelihood, so after a shift above 1 posterior SD, which is flagged,
@@ -782,13 +786,13 @@ logpost <- function(theta) {
 
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
-#> ✔ Found the posterior mode in 10 iterations [3ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [7ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
-#> ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.25-2 ──────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (15ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (12ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -815,11 +819,11 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [2ms]
+#> ✔ Found the posterior mode in 10 iterations [1ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
-#>   logpost at the mode -65.06, whitened gradient 8.8e-08σ, Newton step
-#>     8.8e-08σ (warning > 0.1σ)
+#>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
+#>     (warning > 0.1σ)
 #>   Hessian by second differences of logpost: 6 calls, and 12 more to set the
 #>     steps
 #>   Posterior correlation matrix: largest correlation -0.0042 (mu,
@@ -835,14 +839,14 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   28 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [12ms]
+#> ✔ Fitted 2 skew-normal marginals [10ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 159 logpost calls in 36ms
+#> ℹ Done: 159 logpost calls in 27ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)
