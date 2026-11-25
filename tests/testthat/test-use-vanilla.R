@@ -369,3 +369,19 @@ test_that("use_vanilla_ci() writes the workflow and .Rbuildignore", {
     "^README\\.Rmd$\n^\\.github$\n"
   )
 })
+
+test_that("a host whose DESCRIPTION is in latin1 is copied and checked", {
+  local_vendor()
+  root <- local_host()
+  text <- sub("Encoding: UTF-8", "Encoding: latin1", host_desc_minimal)
+  text <- sub("\"Ann\"", paste0("\"Ren", intToUtf8(233L), "\""), text)
+  path <- file.path(root, "DESCRIPTION")
+  writeBin(charToRaw(iconv(text, from = "UTF-8", to = "latin1")), path)
+  quiet(use_vanilla(path = root))
+  bytes <- readBin(path, "raw", n = file.size(path))
+  expect_false(validUTF8(rawToChar(bytes)))
+  expect_true(as.raw(233L) %in% bytes)
+  out <- quiet(vanilla_status(path = root))
+  expect_identical(out$status[out$check == "authors"], "pass")
+  expect_identical(out$status[out$check == "dependencies"], "pass")
+})

@@ -460,6 +460,44 @@ test_that("an Authors@R that is not plain person() calls is not evaluated", {
   )
 })
 
+test_that("a DESCRIPTION in latin1 is edited and written back in latin1", {
+  rene <- paste0("\"Ren", intToUtf8(233L), "\"")
+  as_latin1 <- function(text) {
+    text <- sub("Encoding: UTF-8", "Encoding: latin1", text, fixed = TRUE)
+    text <- sub("\"Ann\"", rene, text, fixed = TRUE)
+    charToRaw(iconv(text, from = "UTF-8", to = "latin1"))
+  }
+  root <- local_host()
+  path <- file.path(root, "DESCRIPTION")
+  writeBin(as_latin1(host_desc_minimal), path)
+  plan <- vendor_plan_description(root, fixture_holders())
+  expect_true(plan$safe)
+  expect_identical(plan$d$encoding, "latin1")
+  vendor_desc_write(plan$d, path)
+  expect_identical(
+    readBin(path, "raw", n = file.size(path)),
+    as_latin1(minimal_expected)
+  )
+  persons <- vendor_read_persons(vendor_desc(root)[["Authors@R"]])
+  expect_identical(
+    vendor_person_name(persons[1]),
+    paste0("Ren", intToUtf8(233L), " Example")
+  )
+  # An encoding that cannot be read stops with a clear error
+  bad <- sub(
+    "latin1",
+    "no-such-encoding",
+    rawToChar(as_latin1(host_desc_minimal)),
+    useBytes = TRUE
+  )
+  writeBin(charToRaw(bad), path)
+  expect_error(
+    vendor_plan_description(root, fixture_holders()),
+    "cannot be read in its encoding",
+    class = "inlavanilla_vendor_error"
+  )
+})
+
 test_that("a holder with a non-ASCII name is written in ASCII", {
   holders <- vendor_holders(paste0(
     "c(person(\"H",

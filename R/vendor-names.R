@@ -7,10 +7,17 @@
 ## ----- Names bound by R code -------------------------------------------------
 
 # The names bound at the top level of an R file, and the parse error of a file
-# that does not parse: list(names, error)
+# that does not parse: list(names, error). The file is read in `encoding`, the
+# encoding of its package, and parsed as UTF-8, since parse() ignores an
+# encoding of latin1 in a UTF-8 locale.
 vendor_top_names <- function(path, encoding = "UTF-8") {
   exprs <- tryCatch(
-    parse(path, keep.source = FALSE, encoding = encoding),
+    parse(
+      text = vendor_read_source(path, encoding),
+      keep.source = FALSE,
+      srcfile = path,
+      encoding = "UTF-8"
+    ),
     error = function(e) e
   )
   if (inherits(exprs, "error")) {
@@ -18,6 +25,18 @@ vendor_top_names <- function(path, encoding = "UTF-8") {
   }
   names <- unique(as.character(unlist(lapply(exprs, vendor_bound_names))))
   list(names = names, error = NA_character_)
+}
+
+# The lines of an R file as UTF-8, from the encoding of its package
+vendor_read_source <- function(path, encoding) {
+  lines <- readLines(path, warn = FALSE)
+  if (!toupper(encoding) %in% c("UTF-8", "UTF8")) {
+    lines <- iconv(lines, from = encoding, to = "UTF-8")
+    if (anyNA(lines)) {
+      stop("it cannot be read in its encoding, ", encoding, call. = FALSE)
+    }
+  }
+  lines
 }
 
 # The names that a top-level expression binds: assignments with <-, = or <<-

@@ -6,16 +6,52 @@
 
 ## ----- Reading and writing ---------------------------------------------------
 
-# The lines of a DESCRIPTION, with its line ending and final newline
+# The lines of a DESCRIPTION, with its line ending, its final newline and its
+# encoding. A file that is not valid UTF-8 is read in the encoding of its
+# Encoding field, such as latin1, edited as UTF-8 and written back in its own
+# encoding (`encoding`, NULL for UTF-8).
 vendor_desc_read <- function(path) {
   bytes <- readBin(path, "raw", n = file.size(path))
   eol <- if (any(bytes == as.raw(13L))) "\r\n" else "\n"
   text <- rawToChar(bytes[bytes != as.raw(13L)])
+  encoding <- NULL
   if (validUTF8(text)) {
     Encoding(text) <- "UTF-8"
+  } else {
+    encoding <- vendor_declared_encoding(text)
+    utf8 <- tryCatch(
+      iconv(text, from = encoding, to = "UTF-8"),
+      error = function(e) NA_character_
+    )
+    if (is.na(utf8)) {
+      abort(
+        "{.file {path}} is not valid UTF-8, and cannot be read in its
+         encoding, {.val {encoding}}.",
+        class = "inlavanilla_vendor_error"
+      )
+    }
+    text <- utf8
   }
   lines <- strsplit(text, "\n", fixed = TRUE)[[1L]]
-  list(lines = lines, eol = eol, final_nl = endsWith(text, "\n"))
+  list(
+    lines = lines,
+    eol = eol,
+    final_nl = endsWith(text, "\n"),
+    encoding = encoding
+  )
+}
+
+# The Encoding field of a text that is not valid UTF-8, read byte by byte, or
+# latin1 when there is none, in which any bytes can be read.
+vendor_declared_encoding <- function(text) {
+  lines <- strsplit(text, "\n", fixed = TRUE, useBytes = TRUE)[[1L]]
+  field <- lines[grepl("^Encoding:", lines, useBytes = TRUE)]
+  if (length(field) == 0L) {
+    return("latin1")
+  }
+  value <- sub("^Encoding:[[:space:]]*", "", field[1L], useBytes = TRUE)
+  value <- sub("[[:space:]]*$", "", value, useBytes = TRUE)
+  if (nzchar(value)) value else "latin1"
 }
 
 vendor_desc_text <- function(d) {
@@ -24,7 +60,18 @@ vendor_desc_text <- function(d) {
 }
 
 vendor_desc_write <- function(d, path) {
-  writeBin(charToRaw(vendor_desc_text(d)), path)
+  text <- vendor_desc_text(d)
+  if (!is.null(d$encoding)) {
+    text <- iconv(text, from = "UTF-8", to = d$encoding)
+    if (is.na(text)) {
+      abort(
+        "The new text of {.file {path}} cannot be written in its encoding,
+         {.val {d$encoding}}.",
+        class = "inlavanilla_vendor_error"
+      )
+    }
+  }
+  writeBin(charToRaw(text), path)
 }
 
 # The first and last line of each field. A field starts at a line with a name
@@ -765,11 +812,15 @@ vendor_desc_safe <- function(old, new, changes, added) {
     tmp <- tempfile("DESCRIPTION-")
     on.exit(unlink(tmp))
     vendor_desc_write(d, tmp)
-    tryCatch(
+    m <- tryCatch(
       read.dcf(tmp, keep.white = c("Authors@R", "Description")),
       error = function(e) NULL,
       warning = function(w) NULL
     )
+    if (!is.null(m) && !is.null(d$encoding)) {
+      m[] <- iconv(m, from = d$encoding, to = "UTF-8")
+    }
+    m
   }
   a <- read(old)
   b <- read(new)

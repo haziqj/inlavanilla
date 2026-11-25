@@ -244,6 +244,15 @@ vendor_desc <- function(root) {
     }
   )
   desc <- vendor_chr(dcf[1L, ])
+  # The fields of a DESCRIPTION in another encoding, such as latin1, as UTF-8
+  encoding <- desc[["Encoding"]]
+  if (!is.na(encoding) && !toupper(encoding) %in% c("UTF-8", "UTF8")) {
+    utf8 <- tryCatch(
+      iconv(desc, from = encoding, to = "UTF-8"),
+      error = function(e) desc
+    )
+    desc[!is.na(utf8)] <- utf8[!is.na(utf8)]
+  }
   utf8 <- !is.na(desc) & validUTF8(desc)
   Encoding(desc[utf8]) <- "UTF-8"
   desc
