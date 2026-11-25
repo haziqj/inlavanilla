@@ -1,5 +1,8 @@
 # inlavanilla 26.11.25
 
+* This release replaces 26.11.24-1, which was withdrawn. Its changes are
+  listed here.
+
 * New `use_vanilla()` copies the engine of inlavanilla, the files
   `R/vanilla-*.R` behind `inla_vanilla()`, into another package, so that the
   package can call `vanilla_core()` without depending on inlavanilla. It takes
@@ -21,13 +24,11 @@
   engine, and documents `vanilla_core()` and the functions around it. These
   functions change only with a NEWS bullet that says so.
 
-# inlavanilla 26.11.24-1
-
-* This version changes only the skew-normal functions of the engine. They are
-  internal in inlavanilla, but INLAvaan, which copies the engine, exports some
-  of them. No fit changes: on the tests, vignettes and articles, every
-  summary, marginal, VB mean, covariance, log marginal likelihood and LOO
-  estimate is the same to the last digit as in 26.11.24.
+* The skew-normal functions of the engine change. They are internal in
+  inlavanilla, but INLAvaan, which copies the engine, exports some of them. No
+  fit changes: on the tests, vignettes and articles, every summary, marginal,
+  VB mean, covariance, log marginal likelihood and LOO estimate is the same to
+  the last digit as in 26.11.24.
 
 * `summary()` with no probabilities, `probs = numeric(0)`, now works when a
   parameter is reported on the natural scale. Before, it stopped with an
