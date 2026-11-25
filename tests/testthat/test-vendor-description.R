@@ -264,6 +264,19 @@ test_that("a comment in Authors@R does not take the comma that is added", {
     paste0("Authors@R: ", ann, " # me\n"),
     paste0("Authors@R: c(\n    ", ann, ", # me\n    person(\"Haziq\"")
   )
+  # A line with a comment only, after the closing parenthesis
+  check(
+    paste0("Authors@R: c(\n    ", ann, "\n  )\n  # the end\n"),
+    paste0(
+      "    ",
+      ann,
+      ",\n    person(\"Haziq\", \"Jamil\""
+    )
+  )
+  check(
+    paste0("Authors@R: c(", ann, ")\n  # the end\n"),
+    paste0("Authors@R: c(", ann, ",\n    person(\"Haziq\"")
+  )
   # A # inside a string is not a comment
   sharp <- "person(\"Ann\", \"B\", role = \"aut\", comment = \"C# and R\")"
   check(

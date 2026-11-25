@@ -627,25 +627,28 @@ vendor_plan_authors <- function(d, holders) {
   }
   new <- unlist(new)
   if (form == "c") {
+    # The closing parenthesis of c() is on the last line that has code. Lines
+    # after it hold comments only.
     rows <- f$start:f$end
     ends <- vendor_code_ends(lines[rows])
-    last <- length(rows)
-    code <- substr(lines[f$end], 1L, ends[last])
+    last <- max(which(ends > 0L))
+    close <- rows[last]
+    code <- substr(lines[close], 1L, ends[last])
     if (grepl("^[[:space:]]*\\)$", code)) {
       # The closing parenthesis on a line of its own: a comma after the code
-      # of the last line that has code, before any comment there, and the new
-      # persons just before the closing line.
-      k <- max(which(ends[-last] > 0L))
+      # of the line before it that has code, before any comment there, and
+      # the new persons just before the closing line.
+      k <- max(which(ends[seq_len(last - 1L)] > 0L))
       lines[rows[k]] <- vendor_add_comma(lines[rows[k]], ends[k])
-      lines <- append(lines, new, after = f$end - 1L)
+      lines <- append(lines, new, after = close - 1L)
     } else if (endsWith(code, ")")) {
       # The closing parenthesis on the line of the last person: it moves
       # after the new persons, and a comment on that line stays there.
       n <- nchar(code)
       head <- sub("[[:space:]]*$", "", substr(code, 1L, n - 1L))
-      lines[f$end] <- paste0(head, ",", substring(lines[f$end], n + 1L))
+      lines[close] <- paste0(head, ",", substring(lines[close], n + 1L))
       new[length(new)] <- paste0(new[length(new)], ")")
-      lines <- append(lines, new, after = f$end)
+      lines <- append(lines, new, after = close)
     } else {
       todo(
         "{.field Authors@R} does not end with the closing parenthesis of
