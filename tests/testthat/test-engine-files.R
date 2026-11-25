@@ -67,3 +67,16 @@ test_that("the vendoring code reuses no engine name", {
   items <- vendor_check_names(dirname(dir))
   expect_identical(items$name[items$kind == "duplicate"], character())
 })
+
+test_that("vendor_needs covers the engine's packages", {
+  dir <- engine_dir()
+  used <- unlist(lapply(
+    list.files(dir, "^vanilla-.*[.]R$", full.names = TRUE),
+    function(f) {
+      pd <- utils::getParseData(parse(f, keep.source = TRUE))
+      pd$text[pd$token == "SYMBOL_PACKAGE"]
+    }
+  ))
+  allowed <- c("base", names(vendor_needs$imports), vendor_needs$suggests)
+  expect_identical(setdiff(unique(used), allowed), character())
+})
