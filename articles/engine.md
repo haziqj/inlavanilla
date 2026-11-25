@@ -372,9 +372,9 @@ gr <- function(theta) {
 ``` r
 
 core <- vanilla_core(lp, gr, init = c(b0 = 0, b1 = 0))
-#> ✔ Found the posterior mode in 8 iterations [8ms]
-#> ✔ VB mean correction, max shift 0.25σ [10ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 8 iterations [11ms]
+#> ✔ VB mean correction, max shift 0.25σ [15ms]
+#> ✔ Fitted 2 skew-normal marginals [9ms]
 ```
 
 ### What it returns
@@ -396,7 +396,7 @@ str(core, max.level = 1, give.attr = FALSE)
 #>  $ restart      : NULL
 #>  $ diagnostics  :List of 3
 #>  $ scan         :List of 4
-#>  $ timing       : Named num [1:6] 0.001 0.01 0.011 0.006 0.001 ...
+#>  $ timing       : Named num [1:6] 0.001 0.013 0.016 0.009 0.001 ...
 #>  $ counts       : Named int [1:3] 75 32 0
 #>  $ vb_correction: chr "onestep"
 #>  $ marginals    : chr "skewnorm"
@@ -585,7 +585,7 @@ poisson_advice <- list(
 diagnostic_problems(dg, FALSE, core$has_grad, poisson_advice)
 #> character(0)
 #> attr(,"envir")
-#> <environment: 0x6470761bbf70>
+#> <environment: 0x62e1d90da4f8>
 ```
 
 A healthy fit has no problems. When there are some, raise them with

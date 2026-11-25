@@ -465,9 +465,9 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">core</span> <span class="op">&lt;-</span> <span class="fu">vanilla_core</span><span class="op">(</span><span class="va">lp</span>, <span class="va">gr</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b1 <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 8 iterations [8ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.25σ [10ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 2 skew-normal marginals [6ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 8 iterations [11ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.25σ [15ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 2 skew-normal marginals [9ms]</span></span></code></pre></div>
 </div>
 </section><section class="level3"><h3 id="what-it-returns">What it returns<a class="anchor" aria-label="anchor" href="#what-it-returns"></a>
 </h3>
@@ -487,7 +487,7 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span><span class="co">#&gt;  $ restart      : NULL</span></span>
 <span><span class="co">#&gt;  $ diagnostics  :List of 3</span></span>
 <span><span class="co">#&gt;  $ scan         :List of 4</span></span>
-<span><span class="co">#&gt;  $ timing       : Named num [1:6] 0.001 0.01 0.011 0.006 0.001 ...</span></span>
+<span><span class="co">#&gt;  $ timing       : Named num [1:6] 0.001 0.013 0.016 0.009 0.001 ...</span></span>
 <span><span class="co">#&gt;  $ counts       : Named int [1:3] 75 32 0</span></span>
 <span><span class="co">#&gt;  $ vb_correction: chr "onestep"</span></span>
 <span><span class="co">#&gt;  $ marginals    : chr "skewnorm"</span></span>
@@ -678,7 +678,7 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span><span class="fu">diagnostic_problems</span><span class="op">(</span><span class="va">dg</span>, <span class="cn">FALSE</span>, <span class="va">core</span><span class="op">$</span><span class="va">has_grad</span>, <span class="va">poisson_advice</span><span class="op">)</span></span>
 <span><span class="co">#&gt; character(0)</span></span>
 <span><span class="co">#&gt; attr(,"envir")</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x6470761bbf70&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;environment: 0x62e1d90da4f8&gt;</span></span></code></pre></div>
 </div>
 <p>A healthy fit has no problems. When there are some, raise them with <code>warn(c(header, problems), class = ..., .envir = attr(problems, "envir"))</code>, as the example below does. inlavanilla’s own wording is <code>inlavanilla_advice</code> in its file <code>R/diagnostics.R</code>.</p>
 </section><section class="level3"><h3 id="draws-and-the-skew-normal-functions">Draws and the skew-normal functions<a class="anchor" aria-label="anchor" href="#draws-and-the-skew-normal-functions"></a>

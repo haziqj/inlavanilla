@@ -221,9 +221,9 @@ logprior <- function(theta) sum(dnorm(theta, 0, 5, log = TRUE))
 logpost <- function(theta) sum(loglik(theta)) + logprior(theta)
 
 fit <- inla_vanilla(logpost, c(a = 0, b = 0))
-#> ✔ Found the posterior mode in 9 iterations [1ms]
+#> ✔ Found the posterior mode in 9 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.12σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 loo(fit, loglik)
 #> ── Leave-one-out cross-validation ─────────────────────────────── 9 units ──
 #> 
