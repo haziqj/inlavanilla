@@ -1,3 +1,37 @@
+# inlavanilla (development version)
+
+* With a gradient, the default VB correction (`vb_correction = "onestep"`) now
+  checks its one step, and solves the VB equation where the check fails. A
+  second sweep of 2m + 1 gradients at the step tests that the fixed-point map
+  the step iterates is a contraction there: the step must reduce the residual
+  of the VB equation (`vb_lhat` below 1), and the slope of the map along the
+  step must lie between -1 and 1 at the mode and at the step (`vb_j0`,
+  `vb_j1`). A fit that passes is unchanged, to the last bit, and its VB stage
+  takes 4m + 2 gradient calls where it took 2m + 1 gradient and 4m + 2
+  `logpost` calls. A fit that fails solves the VB equation on the same nodes
+  by Broyden's method, from the mode, within the calls that the mode and
+  Hessian took, and raises a new warning, of class
+  `inlavanilla_vb_check_warning`, that the posterior is far from Gaussian
+  along the mean correction, naming the parameter the one step moved furthest.
+  The warning comes whether or not the solve converged. This takes the place,
+  with a gradient, of the gain ratio and of the iteration with capped steps
+  after a first step over 2.5 posterior SDs, so a fit whose first step was
+  over 2.5 SDs, or whose check fails, has a different VB mean and log marginal
+  likelihood. Without a gradient, and with `vb_correction = "full"`, nothing
+  changes.
+
+* `diagnostics()` has four new global entries: `vb_lhat`, `vb_j0` and `vb_j1`,
+  the numbers of that check, and `vb_solve`, 1 if it failed and the solve ran.
+  `vb_gain_ratio` is now `NA` with a gradient. After a solve, `vb_step_sigma`
+  is the step still to go where the solve stopped, which is recorded and not
+  flagged, and the fit still prints as converged. `summary()` has a line for
+  a flagged check, and `print()` counts it.
+
+* For packages that copy the engine: `vanilla_core()` raises the new warning
+  itself, `check_flags()` has the new flag `vb_check`, and
+  `core$diagnostics$vb` has the new entries `solve`, `check` and
+  `check_worst`. `vb_correct()` returns them too.
+
 # inlavanilla 26.11.25
 
 * This release replaces 26.11.24-1, which was withdrawn. Its changes are
