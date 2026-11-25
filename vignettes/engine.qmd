@@ -284,9 +284,16 @@ Read the NEWS of the release and the changes to the engine, run your tests
 and R CMD check, add a NEWS bullet that names the release, and commit the
 engine files, the lock and `DESCRIPTION` together.
 
-The functions documented below are the interface of the engine. They change
-only with a NEWS bullet of inlavanilla that says so. Everything else in the
-engine may change in any release.
+The interface of the engine is the 25 objects that the next section
+documents: `vanilla_core()`, `vanilla_control()`, `check_control()`,
+`diagnostics_internal()`, `diagnostic_problems()`, `advice_entries`,
+`check_flags()`, `param_flags()`, `warn_levels`, `summary_levels`,
+`sn_draws()`, `dsnorm()`, `psnorm()`, `qsnorm()`, `sn_moments()`, `sn_mode()`,
+`sn_score_map()`, `taylor_terms()`, `taylor_loo()`, `taylor_waic()`,
+`taylor_trace()`, `cov_root()`, `abort()`, `warn()` and `warning_text()`, the
+names in `interface` below. They change only with a NEWS bullet of
+inlavanilla that says so. Everything else in the engine may change in any
+release.
 
 ## The interface
 
@@ -416,8 +423,14 @@ The core prints a line as each stage ends, as messages. `silent = TRUE` prints
 nothing, and `verbose = TRUE` adds the details of each stage. Its errors and
 warnings have the classes `inlavanilla_error` and `inlavanilla_warning`, and
 `warning_text(w)` gives the text of a warning without colours or line breaks.
-The core installs no condition handler: catch what you need, as here, where
-the warnings of a fit are recorded and not shown:
+The engine raises them with
+`abort(message, class = NULL, parent = NULL, call = NULL, .envir = parent.frame())`
+and `warn(message, class = NULL, .envir = parent.frame())`, which you can use
+for your own conditions too: `message` is a cli template, wrapped to the
+width of the output, `class` adds your classes before the engine's, and
+`parent`, an error that caused this one, has its message appended. The core
+installs no condition handler: catch what you need, as here, where the
+warnings of a fit are recorded and not shown:
 
 ```{r}
 #| label: handlers
@@ -439,9 +452,16 @@ as coming from `inla_vanilla()`, and the note on parallel workers points to
 
 The parallel scans load your package on each worker, by the name that
 `utils::packageName()` gives, so the package must be installed: under
-`devtools::load_all()`, use `cores = 1`. To offer `vanilla_control()` to your
-users, document and export it from a file of your own, as inlavanilla's
-`R/control.R` does.
+`devtools::load_all()`, use `cores = 1`.
+
+`vanilla_control()` builds the list for the argument `control`, with the
+defaults of inlavanilla. `check_control(control)` checks a plain list, from
+`vanilla_control()` or written by hand: an entry without a name, or with a
+name that `vanilla_control()` does not have, is an error, and the result is
+the list completed with the defaults. `vanilla_core()` calls it on its
+`control`, so call it yourself only to check a `control` before the fit
+starts. To offer `vanilla_control()` to your users, document and export it
+from a file of your own, as inlavanilla's `R/control.R` does.
 
 ### The two hooks
 
@@ -540,7 +560,7 @@ round(colMeans(draws), 3)
 | `qsnorm(p, xi = 0, omega = 1, alpha = 0)` | the quantile function |
 | `sn_moments(xi, omega, alpha)` | the mean and SD, as a list |
 | `sn_mode(xi, omega, alpha)` | the mode |
-| `sn_score_map(xi, omega, alpha)` | a function from normal scores to quantiles, for draws |
+| `sn_score_map(xi, omega, alpha, zmax = 7, n_knots = 141L)` | a function from normal scores to quantiles, for draws: a spline through `n_knots` knots from `-zmax` to `zmax`, linear beyond |
 
 ### LOO and WAIC
 
@@ -549,11 +569,25 @@ expansion of each unit's log-likelihood around the posterior (Alhyari et al.,
 2026). Your code supplies, at `mean_vb` and for each unit, the
 log-likelihood, the score and the Hessian, by whatever route it has:
 `taylor_terms(l, s, H = NULL, Omega, root = cov_root(Omega))`, where `s` is
-the matrix of scores with a row per unit and `H` the array of Hessians. Then
-`taylor_loo()` and `taylor_waic()` give the estimates, and `taylor_trace()`
-the first-order fallback when a unit's leverage reaches one. With
-derivatives already in whitened coordinates, give
-`Omega = root = diag(m)`.
+the matrix of scores with a row per unit, `H` the array of Hessians, and
+`root` any matrix $A$ with $A A^\top = \Omega$, by default `cov_root(Omega)`,
+which gives the same terms whichever root is taken. With derivatives already
+in whitened coordinates, give `Omega = root = diag(m)`.
+
+Then `taylor_loo(terms)` and `taylor_waic(terms)` give the estimates. Where a
+unit has no second-order term (for the LOO, a leverage of 1 or more), each
+falls back to the first order for every unit by itself: its `order` is then 1,
+and `first_order` lists the units that sent it there.
+
+`taylor_trace(terms, what)`, with `what` either `"loo"` or `"waic"`, is a
+cheaper estimate for when only the diagonal of each unit's Hessian is known.
+It uses the scores and each unit's total leverage
+$k_u = -\operatorname{tr}(\Omega H_u)$ alone, so call `taylor_terms()` with
+`H = NULL` and then set `terms$k_sum` to $k_u$: with the derivatives in
+whitened coordinates, `terms$k_sum <- -rowSums(D)`, where `D` holds the
+diagonal of each unit's Hessian, a row per unit. Its `over` lists the units
+whose leverages add up to 1 or more, for which the estimate may be poor.
+inlavanilla's `loo()` takes this route for `hessian = "diagonal"`.
 
 ```{r}
 #| label: taylor
