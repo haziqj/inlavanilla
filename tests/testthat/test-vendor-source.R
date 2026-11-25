@@ -205,6 +205,24 @@ test_that("a clone gives the tags and the same snapshot as GitHub", {
   expect_identical(vendor_github_state("v26.11.24", "x", NULL), "offline")
 })
 
+test_that("a clone set to check out CRLF gives the files with LF", {
+  skip_if_not(has_git(), "needs git")
+  clone <- local_clone()
+  # core.autocrlf as Git for Windows sets it, and the other two ways to ask
+  # for CRLF that are not in the commit
+  attributes <- file.path(clone$dir, ".git", "crlf-attributes")
+  write_text(attributes, "* text eol=crlf\n")
+  git_run(clone$dir, "config", "core.autocrlf", "true")
+  git_run(clone$dir, "config", "core.eol", "crlf")
+  git_run(clone$dir, "config", "core.attributesFile", attributes)
+  snap <- vendor_snapshot(clone$commits[["v26.11.24"]], "v26.11.24", clone$dir)
+  on.exit(unlink(snap$stage, recursive = TRUE), add = TRUE)
+  release <- fake_releases()[["v26.11.24"]]
+  for (f in c("DESCRIPTION", snap$files)) {
+    expect_identical(read_text(file.path(snap$dir, f)), release[[f]])
+  }
+})
+
 test_that("GitHub serves the releases of inlavanilla", {
   skip_on_cran()
   # skip_if_offline() needs curl, which inlavanilla does not suggest

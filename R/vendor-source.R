@@ -179,7 +179,11 @@ vendor_extract <- function(archive, commit, stage) {
 ## ----- A local clone ---------------------------------------------------------
 
 # Runs git in `dir` and returns its output. A failure stops, or returns NULL
-# with error = FALSE.
+# with error = FALSE. The user's settings that change line endings are
+# overridden, so that `git archive` gives the files of a commit with the LF
+# line endings that GitHub's archive gives: Git for Windows sets core.autocrlf
+# to true, and core.eol or a global attributes file can ask for CRLF. The
+# .gitattributes of the commit still apply, as they do on GitHub.
 vendor_git <- function(dir, args, error = TRUE) {
   error_class <- c("inlavanilla_source_error", "inlavanilla_vendor_error")
   if (!nzchar(Sys.which("git"))) {
@@ -193,9 +197,17 @@ vendor_git <- function(dir, args, error = TRUE) {
   }
   err <- tempfile("git-stderr-")
   on.exit(unlink(err))
+  config <- c(
+    "-c",
+    "core.autocrlf=false",
+    "-c",
+    "core.eol=lf",
+    "-c",
+    "core.attributesFile="
+  )
   out <- suppressWarnings(system2(
     "git",
-    shQuote(c("-C", dir, args)),
+    shQuote(c(config, "-C", dir, args)),
     stdout = TRUE,
     stderr = err
   ))
