@@ -491,13 +491,15 @@ without a gradient. Only the sweep differs. With a gradient it is 2m + 1
 gradients, so the correction of a fit that passes takes 4m + 2 gradient
 calls. Without one it is a Stein pass of (m + 1)(m + 2) values of \code{logpost},
 and the two slopes take 4m values each. The sweeps of a correction, the two
-of the check among them, are capped at the number of calls that the mode
-and Hessian took, divided by 2m + 1. With a gradient the correction
-therefore costs no more than the mode and Hessian did. Without one the cap
-is the same number of sweeps, each of which costs more: a fit that fails the
-check can then spend up to (m + 1)(m + 2) / (2m + 1) times the calls of its
-mode and Hessian, about m / 2 times, on the correction. That is the price of
-a fit without a gradient, and \code{grad} is the remedy.
+of the check among them, are capped at twice the number of calls that the
+mode and Hessian took, divided by 2m + 1. A fit that passes the check takes
+its two sweeps and never meets the cap. With a gradient the correction of a
+fit that fails it therefore costs no more than twice what the mode and
+Hessian did. Without one the cap is the same number of sweeps, each of which
+costs more: a fit that fails the check can then spend up to
+2(m + 1)(m + 2) / (2m + 1) times the calls of its mode and Hessian, about m
+times, on the correction. That is the price of a fit without a gradient, and
+\code{grad} is the remedy.
 
 A large first step can also overstate the VB term of the log marginal
 likelihood, so after a shift above 1 posterior SD, which is flagged, compare

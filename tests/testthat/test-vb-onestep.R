@@ -632,9 +632,10 @@ test_that("the warning names the parameter the one step moves furthest", {
   }
 })
 
-test_that("the sweeps are capped by the calls of the mode and Hessian stage", {
-  expect_identical(vb_max_sweeps(104, 3), 14)
-  expect_identical(vb_max_sweeps(20, 3), 2)
+test_that("the sweeps are capped by twice the calls of the mode and Hessian", {
+  expect_identical(vb_max_sweeps(104, 3), 29)
+  expect_identical(vb_max_sweeps(20, 3), 5)
+  expect_identical(vb_max_sweeps(3, 3), 0)
   expect_identical(vb_max_sweeps(Inf, 3), Inf)
   for (grad in c(TRUE, FALSE)) {
     for (mod in list(
@@ -644,10 +645,10 @@ test_that("the sweeps are capped by the calls of the mode and Hessian stage", {
       m <- length(mod$init)
       togo <- function(out) max(out$vb$step_sigma)
       last <- Inf
-      # The budget is in calls, and the cap is that budget over 2m + 1, on
-      # both routes
+      # The budget is in calls, and the cap is twice that budget over 2m + 1,
+      # on both routes
       for (cap in c(0, 2, 2.9, 3, 4, 6, 10)) {
-        out <- vb_direct(mod, budget = cap * (2 * m + 1), grad = grad)
+        out <- vb_direct(mod, budget = cap * (2 * m + 1) / 2, grad = grad)
         expect_true(out$vb$solve)
         # The two sweeps of the check are always taken
         expect_lte(out$vb$history$sweeps, max(floor(cap), 2))
@@ -664,7 +665,7 @@ test_that("the sweeps are capped by the calls of the mode and Hessian stage", {
       }
       # With no sweep left for the solve the mode stands, and the step still
       # to go is the one step
-      none <- vb_direct(mod, budget = 2.9 * (2 * m + 1), grad = grad)
+      none <- vb_direct(mod, budget = 2.9 * (2 * m + 1) / 2, grad = grad)
       plain <- plain_onestep(mod, none$lap, grad = grad)
       expect_identical(none$vb$history$sweeps, 2L)
       expect_identical(unname(none$vb$shift), numeric(m))
@@ -678,7 +679,7 @@ test_that("the sweeps are capped by the calls of the mode and Hessian stage", {
   }
 })
 
-test_that("a whole fit keeps the VB stage within the mode and Hessian stage", {
+test_that("a whole fit keeps the VB stage within twice the mode and Hessian", {
   mod <- mixed_gamma_model(c(20, 0.3, 5))
   on <- fit_model(mod, marginals = "gaussian")
   off <- fit_model(mod, vb_correction = "none", marginals = "gaussian")
@@ -686,7 +687,7 @@ test_that("a whole fit keeps the VB stage within the mode and Hessian stage", {
   expect_identical(on$counts[["logpost"]], off$counts[["logpost"]])
   expect_lte(
     on$counts[["grad"]] - off$counts[["grad"]],
-    off$counts[["logpost"]] + off$counts[["grad"]]
+    2 * (off$counts[["logpost"]] + off$counts[["grad"]])
   )
 })
 
@@ -706,14 +707,14 @@ test_that("a fit with no gradient at all is checked, solved and capped", {
     with$diagnostics$vb$check[["j0"]],
     tolerance = 0.03
   )
-  # The sweeps are Stein passes, capped by the calls of this fit's own mode
-  # and Hessian stage over 2m + 1. The slopes are not sweeps.
+  # The sweeps are Stein passes, capped by twice the calls of this fit's own
+  # mode and Hessian stage over 2m + 1. The slopes are not sweeps.
   n_nodes <- nrow(vb_nodes(on$cov)$nodes) - 1L
   sweeps <- (on$counts[["logpost"]] - off$counts[["logpost"]] - 8L * m) /
     n_nodes
   expect_identical(sweeps, round(sweeps))
   expect_gt(sweeps, 2)
-  expect_lte(sweeps, floor(off$counts[["logpost"]] / (2 * m + 1)))
+  expect_lte(sweeps, floor(2 * off$counts[["logpost"]] / (2 * m + 1)))
   # Its mean is close to the mean of the solve with a gradient
   sds <- sqrt(diag(with$cov))
   expect_lt(max(abs(on$mean_vb - with$mean_vb) / sds), 0.15)
