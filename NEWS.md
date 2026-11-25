@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 26.11.25-2
 
 * A fit that fails the one-step check of the default VB correction can now
   take twice as many sweeps to solve the VB equation: the cap is twice the
