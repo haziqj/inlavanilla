@@ -29,8 +29,6 @@ warn_levels <- list(
   hess_cond = 1e8,
   # inlavanilla's own: the VB correction settles as the mode search does
   vb_step = 0.1,
-  # inlavanilla's own: flagged below this, the share of the promised gain
-  vb_gain = 0.5,
   # inlavanilla's own: a mode moved by 0.1 SDs, or an SD 10% off
   grad_gap = 0.1
 )
@@ -49,11 +47,6 @@ no_mode_levels <- list(mode_shift = 1, unscanned_mass = 0.9)
 # TRUE where `x` is above `level` or not finite.
 off_level <- function(x, level) {
   !(is.finite(x) & x <= level)
-}
-
-# TRUE where `x` is below `level` or not finite, among the checks that ran.
-below_level <- function(x, level) {
-  check_ran(x) & !(is.finite(x) & x >= level)
 }
 
 # Whether a check ran: NA is a check that did not run, and NaN a value it
@@ -120,11 +113,6 @@ diagnostics_internal <- function(optim, vb, marginals, pars = NULL) {
     grad_gap_max = max_na(grad_gap),
     vb_fallback = if (vb_applied) as.numeric(vb$fallback) else NA_real_,
     vb_step_max = max_na(d$vb_step_sigma),
-    vb_gain_ratio = if (vb_applied && !is.null(vb$gain_ratio)) {
-      vb$gain_ratio
-    } else {
-      NA_real_
-    },
     vb_lhat = vb_check[["lhat"]],
     vb_j0 = vb_check[["j0"]],
     vb_j1 = vb_check[["j1"]],
@@ -275,15 +263,6 @@ problem_text <- function(check, dg, env, advice, n = 3L) {
         "."
       )
     },
-    vb_gain = {
-      env$vb_gain <- fmt_g3(glob[["vb_gain_ratio"]])
-      paste0(
-        "One-step VB delivered {vb_gain} of the rise in the expected ",
-        "log-posterior it promised (warning < ",
-        warn_levels$vb_gain,
-        "), so the Gaussian approximation at the mode may be inaccurate."
-      )
-    },
     vb_step = {
       env$vbs_worst <- p$names[worst_first(p$vb_step_sigma)[1L]]
       env$vbs_step <- fmt_g3(glob[["vb_step_max"]])
@@ -402,8 +381,8 @@ warn_vb_check <- function(worst) {
 # * `no_grad`: the advice for a VB correction that did not settle without a
 #   gradient, such as "supply {.arg grad} if you can" (a caller that always
 #   has a gradient can give "").
-# * `vb_full`, `vb_none`: the code that asks for the full VB correction and
-#   for none, such as {.code vb_correction = "full"}.
+# * `vb_none`: the code that asks for no VB correction, such as
+#   {.code vb_correction = "none"}.
 # * `mode_limit`: how to raise the limits of the mode search, a sentence.
 # * `mode_retry`: what else to try when it stops short, a sentence.
 # * `funnel`: what to do about random effects whose scale can run to zero, a
@@ -411,7 +390,6 @@ warn_vb_check <- function(worst) {
 advice_entries <- c(
   "grad_gap",
   "no_grad",
-  "vb_full",
   "vb_none",
   "mode_limit",
   "mode_retry",
@@ -441,7 +419,6 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE, advice) {
     "grad_gap",
     "mode",
     "vb_step",
-    "vb_gain",
     "nmad",
     "unscanned_mass",
     "tails",
@@ -456,16 +433,6 @@ diagnostic_problems <- function(dg, gaussian, has_grad = TRUE, advice) {
         i = paste0(
           "A wrong gradient gives a wrong log marginal likelihood, and can ",
           "move the mode and the covariance."
-        )
-      )
-    }
-    if (check == "vb_gain") {
-      out <- c(
-        out,
-        i = paste0(
-          "Compare with ",
-          advice$vb_full,
-          ", and treat the log marginal likelihood with care."
         )
       )
     }

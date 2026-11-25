@@ -303,7 +303,6 @@ vanilla_core <- function(
     # The fallback is a route of the solver, reported but not marked, as in
     # INLAvaan. A correction that did not settle is marked.
     vb_max <- max(abs(vbc$shift) / sds)
-    gain_ok <- !isTRUE(below_level(vbc$gain_ratio, warn_levels$vb_gain))
     # After the solve of a flagged one step, the step still to go is recorded
     # and not judged
     flagged <- isTRUE(vbc$solve)
@@ -319,12 +318,10 @@ vanilla_core <- function(
         hl(paste0(format(signif(vb_max, 2)), sd_unit())),
         if (vbc$fallback) " (fallback optimiser)" else "",
         if (!settled) ", not settled" else "",
-        if (!gain_ok) ", gain below its promise" else "",
         if (flagged) ", one-step check flagged" else ""
       ),
       elapsed() - t0,
       ok = settled &&
-        gain_ok &&
         !flagged &&
         is.finite(vb_max) &&
         vb_max <= warn_levels$vb_shift
@@ -485,7 +482,6 @@ vanilla_core <- function(
         iterations = vbc$iterations,
         fallback = vbc$fallback,
         one_pass = vbc$one_pass,
-        gain_ratio = vbc$gain_ratio,
         solve = vbc$solve,
         check = vbc$check,
         check_worst = vbc$check_worst,

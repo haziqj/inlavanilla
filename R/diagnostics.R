@@ -7,7 +7,6 @@
 inlavanilla_advice <- list(
   grad_gap = "{.arg grad} does not match {.arg logpost}",
   no_grad = "supply {.arg grad} if you can",
-  vb_full = "{.code vb_correction = \"full\"}",
   vb_none = "{.code vb_correction = \"none\"}",
   mode_limit = paste0(
     "Raise {.code mode_maxit} or {.code mode_maxeval} in ",

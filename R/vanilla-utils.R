@@ -173,8 +173,8 @@ warning_text <- function(w) {
 }
 
 # The checks that summary() flags, each TRUE when flagged: the gap between
-# grad and logpost, the mode, the VB step, the gain ratio and the check of the
-# one step, the Hessian condition number, the VB shift, and, for skew-normal
+# grad and logpost, the mode, the VB step and the check of the one step, the
+# Hessian condition number, the VB shift, and, for skew-normal
 # marginals, NMAD, the unscanned mass, the tails, the ridge bend and the mean
 # gap. `dg` is from diagnostics_internal(). The levels are those of the
 # fit-time warning (warn_levels), which raises every one of these but the ridge
@@ -189,10 +189,6 @@ check_flags <- function(dg, gaussian) {
     grad_gap = any(pf[, "grad_gap"]),
     mode = any(pf[, "mode_shift_sigma"]),
     vb_step = any(pf[, "vb_step_sigma"]),
-    vb_gain = isTRUE(below_level(
-      dg$global[["vb_gain_ratio"]],
-      warn_levels$vb_gain
-    )),
     vb_check = vb_solved(dg),
     hess_cond = off_level(
       dg$global[["hess_cond_cor"]],

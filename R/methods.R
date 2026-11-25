@@ -434,18 +434,6 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         .envir = env
       )
     }
-    if (flags[["vb_gain"]]) {
-      gain <- fmt_g3(glob[["vb_gain_ratio"]])
-      cat_status(
-        "warn",
-        paste0(
-          "VB correction in one step delivered {gain} of the gain it ",
-          "promised (warning < ",
-          warn_levels$vb_gain,
-          "): compare with {.code vb_correction = \"full\"}."
-        )
-      )
-    }
     if (flags[["vb_check"]]) {
       # The check of the one step failed, and the VB equation was solved
       # instead. Where the solve stopped is reported, not judged.
@@ -463,22 +451,12 @@ print.summary.inla_vanilla <- function(x, digits = 3, ...) {
         .envir = env
       )
     }
-    if (
-      !flags[["vb"]] &&
-        !flags[["vb_step"]] &&
-        !flags[["vb_gain"]] &&
-        !flags[["vb_check"]]
-    ) {
+    if (!flags[["vb"]] && !flags[["vb_step"]] && !flags[["vb_check"]]) {
       max_shift <- with_sd(glob[["vb_shift_max"]])
-      gain <- if (is.na(glob[["vb_gain_ratio"]])) {
-        ""
-      } else {
-        paste0(", gain ratio ", fmt_g3(glob[["vb_gain_ratio"]]))
-      }
       cat_status(
         "ok",
         if (isTRUE(x$vb$one_pass)) {
-          "VB correction in one step: max shift {max_shift}{gain}."
+          "VB correction in one step: max shift {max_shift}."
         } else {
           "VB correction settled in {x$vb$iterations} iteration{?s}{how}: max shift {max_shift}."
         }

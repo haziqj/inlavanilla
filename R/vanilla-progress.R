@@ -478,45 +478,31 @@ report_vb <- function(p, vbc, sds, logml_laplace, calls) {
           grey(
             "Solved the VB equation from the mode by Broyden's method: ",
             plural(vbc$iterations, "iteration"),
-            " in ",
+            ", ",
             plural(h$sweeps, "sweep"),
+            " with the two of the check",
             if (isTRUE(h$settled)) {
               ", converged"
             } else {
               paste0(
-                ", stopped at the budget of the mode and Hessian stage ",
-                "with ",
+                ", stopped with ",
                 with_sd(max(vbc$step_sigma)),
-                " still to go"
+                " still to go",
+                if (h$sweeps >= h$max_sweeps) {
+                  paste0(
+                    " at the cap of ",
+                    plural(h$max_sweeps, "sweep"),
+                    ", from the calls of the mode and Hessian stage"
+                  )
+                }
               )
             }
           )
         }
       )
-    } else if (isTRUE(vbc$one_pass) && !is.null(h$sweeps)) {
-      # With a gradient, a step below vb_tol has no second sweep
-      grey("One step, accepted (too small to check)")
     } else if (isTRUE(vbc$one_pass)) {
-      c(
-        grey("One step, accepted (guard > ", with_sd(vb_onestep_guard), ")"),
-        if (!is.na(vbc$gain_ratio)) {
-          paste0(
-            grey("Gain ratio ", fmt_num(vbc$gain_ratio)),
-            if (isTRUE(below_level(vbc$gain_ratio, warn_levels$vb_gain))) {
-              flag()
-            } else {
-              ""
-            },
-            grey(" (warning < ", warn_levels$vb_gain, ")")
-          )
-        }
-      )
-    } else if (isTRUE(h$ran_out)) {
-      grey(
-        "The first step was over the guard. Stopped after ",
-        plural(vbc$iterations, "iteration"),
-        ", at the budget of the mode and Hessian stage"
-      )
+      # A step below vb_tol has no second sweep
+      grey("One step, accepted (too small to check)")
     } else if (vbc$fallback) {
       # Where it landed: the step still to go there, marked when the
       # correction did not settle
