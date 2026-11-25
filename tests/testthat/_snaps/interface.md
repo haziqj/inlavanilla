@@ -88,8 +88,8 @@
         <n> logpost calls
       v VB mean correction, max shift # SD [<time>]
         Fixed-point steps, largest over the parameters (SD): <steps>
-        One step, accepted (guard > 2.5 SD)
-        Gain ratio # (warning < #)
+        One-step check: contraction ratio #, slope along the step # at the mode and # at the step (passes below 1 in size)
+        One step, accepted
         Largest shift # SD, for intercept (warning > 1 SD)
         KL term #, giving a log marginal likelihood of #
         <n> logpost calls
@@ -172,7 +172,7 @@
       
       v Mode found in <n> iteration(s) (Newton step <g> SD).
       v Hessian condition number 3.6, in SD units.
-      v VB correction in one step: max shift 0.24 SD, gain ratio 0.945.
+      v VB correction in one step: max shift 0.24 SD.
       v Skew-normal fits: max NMAD 0.015, unscanned mass 0.00078, ridge bend 0.14,
         mean gap 0.011 SD.
 

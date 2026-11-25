@@ -1156,7 +1156,10 @@ test_that("vb_correction = \"none\" keeps the mean at the mode and the Laplace m
     "kld_max",
     "vb_fallback",
     "vb_step_max",
-    "vb_gain_ratio"
+    "vb_lhat",
+    "vb_j0",
+    "vb_j1",
+    "vb_solve"
   )) {
     expect_identical(g[[nm]], NA_real_)
   }

@@ -81,7 +81,6 @@ test_that("a caller words the bullets and the advice with its own arguments", {
   advice <- list(
     grad_gap = "The gradient of the model does not match its log-posterior",
     no_grad = "",
-    vb_full = "{.code vb_correction = \"full\"}",
     vb_none = "{.code vb_correction = FALSE}",
     mode_limit = "Raise {.code mode_maxit} in {.fn inlavaan_control}.",
     mode_retry = "Try other starting values with {.arg start}.",
@@ -405,7 +404,13 @@ test_that("a random-intercept funnel gets the funnel hint", {
   init <- setNames(numeric(10), c("b0", "log_tau", paste0("u", 1:8)))
   fit <- inla_vanilla(lp, init, transform = FALSE, silent = TRUE)
   expect_lt(fit$mode[["log_tau"]], -20) # observed -29.5
-  expect_match(fit$warnings, "integrate them out of `logpost`", fixed = TRUE)
+  # The check of the one step is flagged too, in a warning of its own
+  expect_match(
+    fit$warnings,
+    "integrate them out of `logpost`",
+    fixed = TRUE,
+    all = FALSE
+  )
 })
 
 test_that("the ridge bend and the mean gap are flagged by summary() but never warn", {
@@ -584,7 +589,6 @@ test_that("diagnostics() returns INLAvaan's diagnostics, in its order", {
       "grad_gap_max",
       "vb_fallback",
       "vb_step_max",
-      "vb_gain_ratio",
       "vb_lhat",
       "vb_j0",
       "vb_j1",
