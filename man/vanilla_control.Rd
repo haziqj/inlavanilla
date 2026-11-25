@@ -30,8 +30,8 @@ posterior SDs, of the fixed-point iteration of the VB correction, with
 step over 1.5 posterior SDs is cut to 1.5. With \code{vb_correction = "full"},
 if two steps in a row are cut, or it has not converged after \code{vb_maxit}
 steps, \code{\link[stats:nlminb]{stats::nlminb()}} takes over. They also limit the solve that
-follows a failed check of a one-step correction with a gradient, and a
-first step below \code{vb_tol} in every parameter is not checked.}
+follows a failed check of a one-step correction, and a first step below
+\code{vb_tol} in every parameter is not checked.}
 
 \item{n_grid}{The number of points of each skew-normal scan, spread over
 \eqn{\pm 4} posterior SDs. At least 7.}

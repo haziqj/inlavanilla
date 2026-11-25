@@ -120,8 +120,8 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   stationarity condition; see [diagnostics()]). It is flagged above 0.1,
 #'   the level of the mode check, as a correction that did not settle. That
 #'   check is inlavanilla's own. So is the check of a one-step correction
-#'   with a gradient (`vb_lhat`, `vb_j0` and `vb_j1` in [diagnostics()]): a
-#'   second sweep of gradients tests that the map the step iterates is a
+#'   (`vb_lhat`, `vb_j0` and `vb_j1` in [diagnostics()]): a
+#'   second sweep at the step tests that the map the step iterates is a
 #'   contraction. Where it is not, the posterior is far from Gaussian along
 #'   the step, the VB equation is solved instead, and the check is flagged
 #'   here and by a warning of its own, with the parameter the one step moved
@@ -205,11 +205,11 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #' a parameter by more than 0.1 posterior SDs. It says nothing of how well
 #' the approximation fits the posterior, which the other checks judge. A
 #' flagged one-step check is one of those: the solve that follows it stops
-#' within a budget of calls, and where it stops does not count against
+#' at a cap on its sweeps, and where it stops does not count against
 #' convergence.
-#' Without a gradient a strongly skewed posterior can read "Not converged:
-#' VB did not settle": the VB mean from `logpost` values alone is then
-#' approximate, and supplying `grad` is the fix.
+#' With `vb_correction = "full"` and no gradient a strongly skewed posterior
+#' can read "Not converged: VB did not settle": the VB mean from `logpost`
+#' values alone is then approximate, and supplying `grad` is the fix.
 #' Printing the fit ends with a line for its warnings and one counting the
 #' checks flagged here, each shown only when there are any.
 #' `vignette("diagnostics", package = "inlavanilla")` explains every check

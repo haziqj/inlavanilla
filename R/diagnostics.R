@@ -114,28 +114,25 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   of the approximation.
 #' * `vb_step_max`: the largest `vb_step_sigma`. Like `mode_shift_max` it
 #'   should be close to 0.
-#' * `vb_gain_ratio`: how much of the promised rise in the expected
-#'   log-posterior a one-step correction delivered: the rise under the
-#'   Gaussian, over the \eqn{\frac12 \delta^\top H \delta}{1/2 d' H d} that
-#'   the step assumes. Near 1 is healthy, and it is flagged below 0.5. It
-#'   checks a one-step correction without a gradient, and is `NA` with one,
-#'   when the correction iterated, or when the step was too small to check.
-#' * `vb_lhat`, `vb_j0`, `vb_j1`: the check of a one-step correction with a
-#'   gradient, from a second sweep of gradients at the step. One step is the
-#'   first iterate of a fixed-point map, and holds only where that map is a
-#'   contraction. `vb_lhat` is the size of the residual of the VB equation
-#'   at the step over its size at the mode, which is the contraction ratio of
-#'   the map over the step. `vb_j0` and `vb_j1` are the slope of the map
-#'   along the step, at the mode and at the step. The check passes when
-#'   `vb_lhat` is below 1 and both slopes lie between -1 and 1. A value that
-#'   is not finite fails it. `NA` without a gradient, with
+#' * `vb_lhat`, `vb_j0`, `vb_j1`: the check of a one-step correction, from a
+#'   second sweep at the step. One step is the first iterate of a fixed-point
+#'   map, and holds only where that map is a contraction. `vb_lhat` is the
+#'   size of the residual of the VB equation at the step over its size at the
+#'   mode, which is the contraction ratio of the map over the step. `vb_j0`
+#'   and `vb_j1` are the slope of the map along the step, at the mode and at
+#'   the step. The check passes when `vb_lhat` is below 1 and both slopes lie
+#'   between -1 and 1. A value that is not finite fails it. They are the same
+#'   quantities with and without a gradient: a sweep is 2m + 1 gradients with
+#'   one, and a Stein pass on values of `logpost` without one, when the
+#'   slopes come from differences of `logpost`. `NA` with
 #'   `vb_correction = "full"`, and when the step was below `vb_tol` in every
 #'   parameter, which is too small to check.
 #' * `vb_solve`: 1 if that check failed, 0 if it passed, `NA` if it did not
 #'   run. After a failed check the fit solves the VB equation on the same
-#'   nodes, within the calls that the mode and Hessian took, and raises a
-#'   warning of its own: the posterior is far from Gaussian along the mean
-#'   correction, whether or not the solve converged.
+#'   sweeps, capped at the calls that the mode and Hessian took over 2m + 1
+#'   (see "The VB correction" in [inla_vanilla()]), and raises a warning of
+#'   its own: the posterior is far from Gaussian along the mean correction,
+#'   whether or not the solve converged.
 #' * `mean_gap_max`: the largest absolute `mean_gap`.
 #' * `ridge_bend_max`: the largest `ridge_bend`.
 #' * `n_heavy_tails`: the number of parameters whose `tails` is `FALSE`.
@@ -185,8 +182,8 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   should be close to 0 (`Inf` where the step is not finite). It is `NA`
 #'   after a one-step correction, which has no step still to go. When the
 #'   check of a one-step correction failed (`vb_solve`), it is the step still
-#'   to go where the solve stopped, at its convergence or at its budget of
-#'   calls. That value is recorded and not flagged, since the budget is not a
+#'   to go where the solve stopped, at its convergence or at its cap on the
+#'   sweeps. That value is recorded and not flagged, since the cap is not a
 #'   setting.
 #' * `mean_gap`, `gamma1`, `tails` and `ridge_bend`, which
 #'   [summary.inla_vanilla()] describes.

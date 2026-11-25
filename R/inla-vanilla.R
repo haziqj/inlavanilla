@@ -182,17 +182,18 @@
 #' of `logpost`, and the number of calls grows with the square of the number
 #' of parameters m. The mode and Hessian take about m^2 + 6m calls, and the
 #' marginals about m(`n_grid` + 2m + 6), with 2(m - 1) more for each parameter
-#' whose ridge bend is above 0.1. The VB correction takes (m + 1)(m + 2)
-#' calls, or that many per sweep with `vb_correction = "full"`: it needs no
-#' derivatives, because Stein's identity gives the expected gradient from values
-#' of `logpost` alone. With `vb_correction = "full"`, the VB mean is then exact
+#' whose ridge bend is above 0.1. The VB correction takes 2(m + 1)(m + 2) + 8m
+#' calls, or (m + 1)(m + 2) per sweep with `vb_correction = "full"`: it needs
+#' no derivatives, because Stein's identity gives the expected gradient from
+#' values of `logpost` alone. With `vb_correction = "full"`, the VB mean is then
+#' exact
 #' when the log-posterior is a polynomial of degree four in whitened
 #' coordinates, and up to degree six with `grad`. On test models it was about
 #' 0.01 posterior SDs from exact VB (0.003 with `grad`), and up to 0.1 on a
 #' strongly skewed posterior (0.03 with `grad`), against a VB error of 0.01 to
 #' 0.2 SDs from the posterior mean itself. On the most skewed posteriors the VB
-#' correction may then not settle, and the fit says it has not converged (see
-#' [summary.inla_vanilla()]); `grad` is the remedy.
+#' correction of `vb_correction = "full"` may then not settle, and the fit says
+#' it has not converged (see [summary.inla_vanilla()]); `grad` is the remedy.
 #'
 #' With `grad`, every stage is more accurate. The fit is also faster when a
 #' gradient call costs about as much as a `logpost` call, as a hand-written
@@ -257,33 +258,36 @@
 #' order.
 #'
 #' One step is the first iterate of a fixed-point map, and it approximates the
-#' solution only where that map is a contraction. With a gradient the fit
-#' checks this, with a second sweep of gradients at the step, so that the
-#' correction takes 4m + 2 gradient calls. The step must reduce the residual of
-#' the VB equation (`vb_lhat` in `diagnostics()`, the ratio of the residual at
-#' the step to the one at the mode, below 1), and the slope of the map along
-#' the step must lie between -1 and 1 at the mode and at the step (`vb_j0` and
-#' `vb_j1`). When the check passes, the one step is the correction. When it
-#' fails, the posterior is far from Gaussian along the step, and the fit solves
-#' the VB equation instead, on the same nodes and from the mode, by Broyden's
-#' method, within the number of calls that the mode and Hessian took. It then
-#' raises a warning that names the parameter the one step moved furthest. The
-#' warning comes whether or not the solve converged, since it is about the
-#' posterior and not the solver: treat the posterior means, the log marginal
-#' likelihood, [loo()] and [waic()] of such a fit with care, and compare with
-#' MCMC if they matter. `vb_solve` in `diagnostics()` says whether the solve
-#' ran, and `vb_step_sigma` is then the step still to go where it stopped,
-#' which is recorded and not flagged. If the gradient is not finite at a node
-#' around the mode there is no step to check, and the optimiser of
-#' `vb_correction = "full"` takes over.
+#' solution only where that map is a contraction. The fit checks this, with a
+#' second sweep at the step. The step must reduce the residual of the VB
+#' equation (`vb_lhat` in `diagnostics()`, the ratio of the residual at the step
+#' to the one at the mode, below 1), and the slope of the map along the step
+#' must lie between -1 and 1 at the mode and at the step (`vb_j0` and `vb_j1`).
+#' When the check passes, the one step is the correction. When it fails, the
+#' posterior is far from Gaussian along the step, and the fit solves the VB
+#' equation instead, on the same sweeps and from the mode, by Broyden's method.
+#' It then raises a warning that names the parameter the one step moved
+#' furthest. The warning comes whether or not the solve converged, since it is
+#' about the posterior and not the solver: treat the posterior means, the log
+#' marginal likelihood, [loo()] and [waic()] of such a fit with care, and
+#' compare with MCMC if they matter. `vb_solve` in `diagnostics()` says whether
+#' the solve ran, and `vb_step_sigma` is then the step still to go where it
+#' stopped, which is recorded and not flagged. If `logpost` or `grad` is not
+#' finite at a node around the mode there is no step to check, and the
+#' optimiser of `vb_correction = "full"` takes over.
 #'
-#' Without a gradient there is no such check. If the first step is over 2.5
-#' posterior SDs, or a node fails, the iteration carries on with capped steps,
-#' within the number of calls that the mode and Hessian took. `diagnostics()`
-#' then has `vb_step_sigma`, the step still to go, which is `NA` after a single
-#' step. After a single step the fit checks that it delivered what it promised:
-#' `vb_gain_ratio` in `diagnostics()` is the rise in the expected log-posterior
-#' over the rise the step assumed, and a ratio below 0.5 raises a warning.
+#' The check, the solve, the warning and the diagnostics are the same with and
+#' without a gradient. Only the sweep differs. With a gradient it is 2m + 1
+#' gradients, so the correction of a fit that passes takes 4m + 2 gradient
+#' calls. Without one it is a Stein pass of (m + 1)(m + 2) values of `logpost`,
+#' and the two slopes take 4m values each. The sweeps of a correction, the two
+#' of the check among them, are capped at the number of calls that the mode
+#' and Hessian took, divided by 2m + 1. With a gradient the correction
+#' therefore costs no more than the mode and Hessian did. Without one the cap
+#' is the same number of sweeps, each of which costs more: a fit that fails the
+#' check can then spend up to (m + 1)(m + 2) / (2m + 1) times the calls of its
+#' mode and Hessian, about m / 2 times, on the correction. That is the price of
+#' a fit without a gradient, and `grad` is the remedy.
 #'
 #' A large first step can also overstate the VB term of the log marginal
 #' likelihood, so after a shift above 1 posterior SD, which is flagged, compare
@@ -537,9 +541,8 @@
 #'     number of the Hessian, on the raw scale (`hess_cond`) and in posterior-SD
 #'     units (`hess_cond_cor`). `vb` holds the iterations of the VB correction,
 #'     whether it stopped at the first step (`one_pass`), whether it fell back
-#'     to [stats::nlminb()] (`fallback`), the gain ratio of a one-step
-#'     correction without a gradient (`gain_ratio`), the check of a one-step
-#'     correction with a gradient (its three numbers in `check`, whether it
+#'     to [stats::nlminb()] (`fallback`), the check of a one-step
+#'     correction (its three numbers in `check`, whether it
 #'     failed and the VB equation was solved in `solve`, and the parameter its
 #'     warning names in `check_worst`), and the Kullback-Leibler divergence of
 #'     the shift (`kld_global`); it is `NULL` when `vb_correction = "none"`.
