@@ -183,6 +183,62 @@ test_that("a single person over several lines is wrapped in c()", {
   )
 })
 
+test_that("a comment in Authors@R does not take the comma that is added", {
+  ann <- "person(\"Ann\", \"B\", role = c(\"aut\", \"cre\"))"
+  with_authors <- function(field) {
+    sub(
+      "Authors@R: person(\"Ann\", \"Example\", email = \"ann@example.org\", role = c(\"aut\", \"cre\"))\n",
+      field,
+      host_desc_minimal,
+      fixed = TRUE
+    )
+  }
+  check <- function(field, expected) {
+    desc <- with_authors(field)
+    plan <- plan_for(desc)
+    expect_true(plan$safe)
+    expect_match(plan$text, expected, fixed = TRUE)
+    persons <- persons_of(plan$text)
+    expect_length(persons, 3L)
+    expect_identical(format(persons[1]), format(persons_of(desc)))
+  }
+  # A comment after the last person, and the closing parenthesis on its own
+  # line
+  check(
+    paste0("Authors@R: c(\n    ", ann, " # the maintainer\n  )\n"),
+    paste0(
+      "    ",
+      ann,
+      ", # the maintainer\n    person(\"Haziq\", \"Jamil\", role = \"cph\","
+    )
+  )
+  # A line with a comment only, before the closing parenthesis
+  check(
+    paste0("Authors@R: c(\n    ", ann, "\n    # more to come\n  )\n"),
+    paste0(
+      "    ",
+      ann,
+      ",\n    # more to come\n    person(\"Haziq\", \"Jamil\""
+    )
+  )
+  # The closing parenthesis on the line of the last person, and a comment
+  check(
+    paste0("Authors@R: c(", ann, ") # me\n"),
+    paste0("Authors@R: c(", ann, ", # me\n    person(\"Haziq\"")
+  )
+  # A single person with a comment
+  check(
+    paste0("Authors@R: ", ann, " # me\n"),
+    paste0("Authors@R: c(\n    ", ann, ", # me\n    person(\"Haziq\"")
+  )
+  # A # inside a string is not a comment
+  sharp <- "person(\"Ann\", \"B\", role = \"aut\", comment = \"C# and R\")"
+  check(
+    paste0("Authors@R: c(\n    ", sharp, "\n  )\n"),
+    paste0("    ", sharp, ",\n    person(\"Haziq\"")
+  )
+})
+
 test_that("an old-style DESCRIPTION is raised in place, authors left to do", {
   plan <- plan_for(old_style)
   expected <- sub("R (>= 3.5.0)", "R (>= 4.1.0)", old_style, fixed = TRUE)

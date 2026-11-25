@@ -611,16 +611,31 @@ vendor_plan_authors <- function(d, holders) {
   }
   new <- unlist(new)
   if (form == "c") {
-    if (grepl("^[[:space:]]*\\)[[:space:]]*$", lines[f$end])) {
-      prev <- f$end - 1L
-      if (!grepl(",[[:space:]]*$", lines[prev])) {
-        lines[prev] <- paste0(sub("[[:space:]]*$", "", lines[prev]), ",")
-      }
-      lines <- append(lines, new, after = prev)
-    } else {
-      lines[f$end] <- paste0(sub("\\)[[:space:]]*$", "", lines[f$end]), ",")
+    rows <- f$start:f$end
+    ends <- vendor_code_ends(lines[rows])
+    last <- length(rows)
+    code <- substr(lines[f$end], 1L, ends[last])
+    if (grepl("^[[:space:]]*\\)$", code)) {
+      # The closing parenthesis on a line of its own: a comma after the code
+      # of the last line that has code, before any comment there, and the new
+      # persons just before the closing line.
+      k <- max(which(ends[-last] > 0L))
+      lines[rows[k]] <- vendor_add_comma(lines[rows[k]], ends[k])
+      lines <- append(lines, new, after = f$end - 1L)
+    } else if (endsWith(code, ")")) {
+      # The closing parenthesis on the line of the last person: it moves
+      # after the new persons, and a comment on that line stays there.
+      n <- nchar(code)
+      head <- sub("[[:space:]]*$", "", substr(code, 1L, n - 1L))
+      lines[f$end] <- paste0(head, ",", substring(lines[f$end], n + 1L))
       new[length(new)] <- paste0(new[length(new)], ")")
       lines <- append(lines, new, after = f$end)
+    } else {
+      todo(
+        "{.field Authors@R} does not end with the closing parenthesis of
+         {.code c()}: add {add_names} to it by hand, with the role {.val cph}."
+      )
+      return(out)
     }
   } else if (form %in% c("person", "utils::person")) {
     first <- lines[f$start]
@@ -637,7 +652,10 @@ vendor_plan_authors <- function(d, holders) {
       lines <- append(lines, "Authors@R: c(", after = f$start - 1L)
       f$end <- f$end + 1L
     }
-    lines[f$end] <- paste0(sub("[[:space:]]*$", "", lines[f$end]), ",")
+    rows <- f$start:f$end
+    ends <- vendor_code_ends(lines[rows])
+    k <- max(which(ends > 0L))
+    lines[rows[k]] <- vendor_add_comma(lines[rows[k]], ends[k])
     lines <- append(lines, c(new, "  )"), after = f$end)
   } else {
     todo(
@@ -650,6 +668,54 @@ vendor_plan_authors <- function(d, holders) {
   out$change <- list(kind = "authors", names = vendor_names_of(add))
   out$added <- add
   out
+}
+
+# Where the R code of each line ends: the number of characters up to the last
+# one that is code, with any comment and the spaces before it left out. A #
+# inside a string does not start a comment, and a string can run on over
+# several lines, so the lines are read in order from the start of the field.
+vendor_code_ends <- function(lines) {
+  ends <- integer(length(lines))
+  quote <- ""
+  escaped <- FALSE
+  for (i in seq_along(lines)) {
+    chars <- strsplit(lines[i], "", fixed = TRUE)[[1L]]
+    end <- 0L
+    for (k in seq_along(chars)) {
+      ch <- chars[k]
+      if (nzchar(quote)) {
+        if (escaped) {
+          escaped <- FALSE
+        } else if (ch == "\\") {
+          escaped <- TRUE
+        } else if (ch == quote) {
+          quote <- ""
+        }
+        end <- k
+      } else if (ch == "#") {
+        break
+      } else {
+        if (ch %in% c("\"", "'", "`")) {
+          quote <- ch
+        }
+        if (!ch %in% c(" ", "\t")) {
+          end <- k
+        }
+      }
+    }
+    ends[i] <- end
+  }
+  ends
+}
+
+# The line with a comma after its code, which ends at character `end`, unless
+# the code already ends with one.
+vendor_add_comma <- function(line, end) {
+  code <- substr(line, 1L, end)
+  if (endsWith(code, ",")) {
+    return(line)
+  }
+  paste0(code, ",", substring(line, end + 1L))
 }
 
 # The checks of the new lines before they are written: they read as DCF; the
