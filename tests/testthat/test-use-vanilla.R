@@ -304,6 +304,15 @@ test_that("use_vanilla_test() writes the test file once", {
   expect_identical(read_text(path), "# mine\n")
   quiet(use_vanilla_test(path = root, overwrite = TRUE))
   expect_identical(read_text(path), read_text(template))
+  # A checkout with CRLF line endings is up to date, and left as it is
+  crlf <- gsub("\n", "\r\n", read_text(template), fixed = TRUE)
+  write_text(path, crlf)
+  expect_match(
+    messages_of(use_vanilla_test(path = root)),
+    "is up to date",
+    fixed = TRUE
+  )
+  expect_identical(read_text(path), crlf)
 })
 
 test_that("the written test passes on good copies and fails on bad ones", {
@@ -364,6 +373,14 @@ test_that("use_vanilla_ci() writes the workflow and .Rbuildignore", {
   )
   quiet(use_vanilla_ci(path = root, overwrite = TRUE))
   expect_identical(read_text(path), read_text(template))
+  crlf <- gsub("\n", "\r\n", read_text(template), fixed = TRUE)
+  write_text(path, crlf)
+  expect_match(
+    messages_of(use_vanilla_ci(path = root)),
+    "is up to date",
+    fixed = TRUE
+  )
+  expect_identical(read_text(path), crlf)
   expect_identical(
     read_text(file.path(root, ".Rbuildignore")),
     "^README\\.Rmd$\n^\\.github$\n"

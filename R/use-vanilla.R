@@ -797,7 +797,9 @@ use_vanilla_ci <- function(path = ".", overwrite = FALSE) {
 }
 
 # Writes a template of inst/templates to `target` in the package, unless a file
-# that differs is there and `overwrite` is FALSE. Returns the path.
+# that differs is there and `overwrite` is FALSE. Carriage returns do not
+# count, so that a checkout with CRLF line endings is up to date. Returns the
+# path.
 vendor_template <- function(root, template, target, overwrite) {
   src <- system.file(
     "templates",
@@ -812,7 +814,7 @@ vendor_template <- function(root, template, target, overwrite) {
     dir.create(dirname(dest), showWarnings = FALSE, recursive = TRUE)
     writeBin(bytes, dest)
     vendor_say(list(vendor_msg("v", "Wrote {.file {shown}}.")))
-  } else if (identical(readBin(dest, "raw", n = file.size(dest)), bytes)) {
+  } else if (identical(vendor_lf(dest), bytes[bytes != as.raw(13L)])) {
     vendor_say(list(vendor_msg("v", "{.file {shown}} is up to date.")))
   } else if (overwrite) {
     writeBin(bytes, dest)
@@ -826,4 +828,10 @@ vendor_template <- function(root, template, target, overwrite) {
     )))
   }
   dest
+}
+
+# The bytes of a file with its carriage returns removed
+vendor_lf <- function(path) {
+  bytes <- readBin(path, "raw", n = file.size(path))
+  bytes[bytes != as.raw(13L)]
 }
