@@ -332,6 +332,11 @@ test_that("the written test passes on good copies and fails on bad ones", {
   good <- run()
   expect_identical(good[["failed"]], 0L)
   expect_identical(good[["skipped"]], 0L)
+  # A checkout with CRLF line endings passes
+  write_text(file.path(root, "R", "vanilla-a.R"), gsub("\n", "\r\n", engine_a))
+  crlf <- run()
+  expect_identical(crlf[["failed"]], 0L)
+  expect_identical(crlf[["passed"]], good[["passed"]])
   write_text(file.path(root, "R", "vanilla-a.R"), paste0(engine_a, "# mine\n"))
   expect_gt(run()[["failed"]], 0L)
   write_text(file.path(root, "R", "vanilla-a.R"), engine_a)
