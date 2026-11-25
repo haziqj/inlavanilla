@@ -483,6 +483,155 @@ test_that("a failed safety check leaves DESCRIPTION as it was", {
       "Add Haziq Jamil and Thomas Luu to Authors@R, with the role \"cph\"."
     )
   )
+  expect_identical(plan$left, c("dependencies", "Authors@R"))
+})
+
+test_that("the safety check catches an edit that went wrong", {
+  # Authors@R: the role of the old person is changed. The dependencies are
+  # still edited.
+  real_authors <- vendor_plan_authors
+  local_mocked_bindings(
+    vendor_plan_authors = function(d, holders) {
+      out <- real_authors(d, holders)
+      out$d$lines <- sub(
+        "role = c(\"aut\", \"cre\")",
+        "role = \"aut\"",
+        out$d$lines,
+        fixed = TRUE
+      )
+      out
+    }
+  )
+  plan <- plan_for(host_desc_minimal)
+  expect_identical(
+    plan$safe,
+    "Authors@R would not hold the old persons and then the new ones"
+  )
+  expect_identical(plan$left, "Authors@R")
+  expect_identical(
+    format(persons_of(plan$text)),
+    format(persons_of(host_desc_minimal))
+  )
+  expect_match(
+    plan$text,
+    "Imports: cli (>= 3.6.0), stats, utils\n",
+    fixed = TRUE
+  )
+  expect_identical(
+    plan$open_text,
+    "Add Haziq Jamil and Thomas Luu to Authors@R, with the role \"cph\"."
+  )
+  # The dependencies: another field changes. Authors@R is still edited.
+  local_mocked_bindings(vendor_plan_authors = real_authors)
+  real_add <- vendor_add_dep
+  local_mocked_bindings(
+    vendor_add_dep = function(d, field, pkg, entry, after) {
+      d <- real_add(d, field, pkg, entry, after)
+      d$lines <- sub("A Host", "A Ghost", d$lines, fixed = TRUE)
+      d
+    }
+  )
+  plan <- plan_for(host_desc_minimal)
+  expect_identical(plan$safe, "a field that should not change would change")
+  expect_identical(plan$left, "dependencies")
+  expect_match(plan$text, "Title: A Host of the Engine\n", fixed = TRUE)
+  expect_false(grepl("Imports", plan$text, fixed = TRUE))
+  expect_length(persons_of(plan$text), 3L)
+  expect_identical(
+    plan$open_text,
+    c(
+      "Add `R (>= 4.1.0)` to Depends.",
+      "Add cli (>= 3.6.0) to Imports.",
+      "Add stats to Imports.",
+      "Add utils to Imports.",
+      "Add future to Suggests.",
+      "Add parallelly to Suggests."
+    )
+  )
+})
+
+test_that("the safety check refuses each kind of bad edit", {
+  as_d <- function(text) {
+    list(lines = strsplit(text, "\n")[[1]], eol = "\n", final_nl = TRUE)
+  }
+  old <- as_d(minimal_expected)
+  edit <- function(from, to) as_d(sub(from, to, minimal_expected, fixed = TRUE))
+  add_x <- list(list(kind = "add", field = "Imports", entry = "x"))
+  raise_cli <- list(
+    list(kind = "raise", field = "Imports", pkg = "cli", new = "(>= 9)")
+  )
+  expect_true(vendor_desc_safe(old, old, list(), NULL))
+  # A field that the changes do not edit
+  expect_identical(
+    vendor_desc_safe(
+      old,
+      edit("Version: 0.1.0", "Version: 0.2.0"),
+      add_x,
+      NULL
+    ),
+    "a field that should not change would change"
+  )
+  expect_identical(
+    vendor_desc_safe(
+      old,
+      edit("stats, utils", "stats, utils, x"),
+      list(),
+      NULL
+    ),
+    "a field that should not change would change"
+  )
+  expect_identical(
+    vendor_desc_safe(old, edit("cph", "ctb"), add_x, NULL),
+    "a field that should not change would change"
+  )
+  expect_identical(
+    vendor_desc_safe(
+      old,
+      edit("Encoding", "LazyData: true\nEncoding"),
+      add_x,
+      NULL
+    ),
+    "a field would be added that should not be"
+  )
+  # The entries of an edited field
+  expect_true(
+    vendor_desc_safe(old, edit("stats, utils", "stats, utils, x"), add_x, NULL)
+  )
+  expect_identical(
+    vendor_desc_safe(old, edit("stats, utils", "x, utils"), add_x, NULL),
+    "the entries of Imports would not be as planned"
+  )
+  expect_true(
+    vendor_desc_safe(old, edit("cli (>= 3.6.0)", "cli (>= 9)"), raise_cli, NULL)
+  )
+  expect_identical(
+    vendor_desc_safe(
+      old,
+      edit("cli (>= 3.6.0)", "cli (>= 3.0)"),
+      raise_cli,
+      NULL
+    ),
+    "an entry of Imports would change other than by a raise"
+  )
+  expect_identical(
+    vendor_desc_safe(
+      old,
+      edit("cli (>= 3.6.0)", "cli (== 9)"),
+      raise_cli,
+      NULL
+    ),
+    "an entry of Imports would change other than by a raise"
+  )
+  # Text that does not read as DCF
+  expect_identical(
+    vendor_desc_safe(
+      old,
+      edit("Version: 0.1.0\n", "Version: 0.1.0\n  \n "),
+      list(),
+      NULL
+    ),
+    "the new text does not read as a DESCRIPTION file"
+  )
 })
 
 test_that("the license is graded against GPL (>= 3)", {

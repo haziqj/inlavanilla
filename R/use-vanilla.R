@@ -453,11 +453,23 @@ use_vanilla <- function(
     )
   }
   done <- c(done, vendor_change_msgs(plan$changes))
-  if (!isTRUE(plan$safe)) {
+  if (!isTRUE(plan$safe) && length(plan$changes) == 0L) {
     say(
       "!",
       "{.file DESCRIPTION} could not be edited safely, so it was left as it
        was: make the changes below by hand."
+    )
+  } else if (identical(plan$left, "Authors@R")) {
+    say(
+      "!",
+      "{.field Authors@R} could not be edited safely, so it was left as it
+       was: add the copyright holders by hand, as below."
+    )
+  } else if (identical(plan$left, "dependencies")) {
+    say(
+      "!",
+      "The dependencies in {.file DESCRIPTION} could not be edited safely, so
+       they were left as they were: make the changes below by hand."
     )
   } else if (length(plan$changes) == 0L && length(plan$open) == 0L) {
     say("v", "{.file DESCRIPTION} already has what the engine needs.")

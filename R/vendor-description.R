@@ -378,11 +378,13 @@ vendor_person_lines <- function(p, indent = "    ") {
 
 # The edits of a DESCRIPTION that the engine needs, in this order: R in
 # Depends, the Imports, the Suggests, and the rights holders in Authors@R.
-# Nothing is written here. Returns list(d, changes, open, safe): the new
+# Nothing is written here. Returns list(d, changes, open, safe, left): the new
 # lines, the changes made (a list of records), the items left for the user to
-# do (a list of vendor_msg()), and TRUE when the new lines passed the safety
-# checks, else the reason. When they fail, `d` holds the old lines, and every
-# change becomes an item left to do.
+# do (a list of vendor_msg()), TRUE when every edit passed the safety checks,
+# else the first reason, and the parts left as they were, "dependencies" or
+# "Authors@R". The edits of the dependencies and the edit of Authors@R are
+# checked apart. The edits of a part that fails are not made, and become
+# items left to do.
 vendor_plan_description <- function(root, holders) {
   path <- file.path(root, "DESCRIPTION")
   old <- vendor_desc_read(path)
@@ -494,24 +496,38 @@ vendor_plan_description <- function(root, holders) {
     }
   }
 
+  # The edits of the dependencies are checked apart from the edit of
+  # Authors@R, so that a problem with one does not stop the other.
+  safe <- TRUE
+  left <- character()
+  if (length(changes) > 0L) {
+    ok <- vendor_desc_safe(old, d, changes, NULL)
+    if (!isTRUE(ok)) {
+      safe <- ok
+      left <- "dependencies"
+      d <- old
+      open <- c(lapply(changes, vendor_change_todo), open)
+      changes <- list()
+    }
+  }
+
   # Authors@R
   authors <- vendor_plan_authors(d, holders)
-  d <- authors$d
-  if (!is.null(authors$change)) {
-    note(authors$change)
-  }
   open <- c(open, authors$open)
-
-  safe <- TRUE
-  if (length(changes) > 0L) {
-    safe <- vendor_desc_safe(old, d, changes, authors$added)
+  if (!is.null(authors$change)) {
+    ok <- vendor_desc_safe(d, authors$d, list(), authors$added)
+    if (isTRUE(ok)) {
+      d <- authors$d
+      note(authors$change)
+    } else {
+      if (isTRUE(safe)) {
+        safe <- ok
+      }
+      left <- c(left, "Authors@R")
+      open <- c(open, list(vendor_change_todo(authors$change)))
+    }
   }
-  if (!isTRUE(safe)) {
-    d <- old
-    open <- c(lapply(changes, vendor_change_todo), open)
-    changes <- list()
-  }
-  list(d = d, changes = changes, open = open, safe = safe)
+  list(d = d, changes = changes, open = open, safe = safe, left = left)
 }
 
 # R (>= r_min) as the first entry of Depends, or a new Depends field
@@ -735,11 +751,12 @@ vendor_add_comma <- function(line, end) {
   paste0(code, ",", substring(line, end + 1L))
 }
 
-# The checks of the new lines before they are written: they read as DCF; the
-# fields that use_vanilla() does not edit are unchanged; each edited
-# dependency field holds the old entries plus the additions, with versions
-# only raised; Authors@R holds the old persons unchanged, then the new ones.
-# TRUE, or the reason in plain text.
+# The checks of the new lines before they are written. They read as DCF. The
+# fields that the planned changes (`changes`, and the persons `added` to
+# Authors@R) do not edit are unchanged. Each edited dependency field holds the
+# old entries plus the additions, with versions only raised. Authors@R holds
+# the old persons unchanged, then the new ones. TRUE, or the reason in plain
+# text.
 vendor_desc_safe <- function(old, new, changes, added) {
   read <- function(d) {
     tmp <- tempfile("DESCRIPTION-")
@@ -756,21 +773,23 @@ vendor_desc_safe <- function(old, new, changes, added) {
   if (is.null(a) || is.null(b) || nrow(b) != 1L) {
     return("the new text does not read as a DESCRIPTION file")
   }
-  edited <- c("Depends", "Imports", "Suggests", "Authors@R")
+  edited <- unique(unlist(lapply(changes, function(ch) {
+    if (ch$kind %in% c("r_add", "r_raise")) "Depends" else ch$field
+  })))
+  if (!is.null(added)) {
+    edited <- c(edited, "Authors@R")
+  }
   kept <- setdiff(colnames(a), edited)
   if (!all(kept %in% colnames(b)) || !identical(a[1L, kept], b[1L, kept])) {
     return("a field that should not change would change")
   }
-  if (length(setdiff(colnames(b), colnames(a))) > 0L) {
-    extra <- setdiff(colnames(b), colnames(a))
-    if (!all(extra %in% edited)) {
-      return("a field would be added that should not be")
-    }
+  if (!all(setdiff(colnames(b), colnames(a)) %in% edited)) {
+    return("a field would be added that should not be")
   }
   value <- function(m, field) {
     if (field %in% colnames(m)) m[1L, field] else ""
   }
-  for (field in c("Depends", "Imports", "Suggests")) {
+  for (field in intersect(c("Depends", "Imports", "Suggests"), edited)) {
     was <- vendor_parse_deps(value(a, field))
     now <- vendor_parse_deps(value(b, field))
     adds <- unlist(lapply(changes, function(ch) {
@@ -788,9 +807,12 @@ vendor_desc_safe <- function(old, new, changes, added) {
       if (identical(was$entry[k], now$entry[j])) {
         next
       }
-      raised <- identical(now$op[j], ">=") &&
-        (is.na(was$version[k]) ||
-          numeric_version(now$version[j]) > numeric_version(was$version[k]))
+      raised <- tryCatch(
+        identical(now$op[j], ">=") &&
+          (is.na(was$version[k]) ||
+            numeric_version(now$version[j]) > numeric_version(was$version[k])),
+        error = function(e) FALSE
+      )
       if (!isTRUE(raised)) {
         return(paste0(
           "an entry of ",

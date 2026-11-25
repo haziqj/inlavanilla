@@ -189,6 +189,36 @@ test_that("a failed safety check leaves DESCRIPTION and copies the engine", {
   expect_true(file.exists(file.path(root, "inst", "inlavanilla.lock")))
 })
 
+test_that("an Authors@R that fails the check leaves the other edits", {
+  local_vendor()
+  real_authors <- vendor_plan_authors
+  local_mocked_bindings(
+    vendor_plan_authors = function(d, holders) {
+      out <- real_authors(d, holders)
+      out$d$lines <- sub("\"Ann\"", "\"Anne\"", out$d$lines, fixed = TRUE)
+      out
+    }
+  )
+  root <- local_host()
+  text <- messages_of(out <- use_vanilla(path = root))
+  expect_match(
+    text,
+    "Authors@R could not be edited safely, so it was left as it was",
+    fixed = TRUE
+  )
+  desc <- read_text(file.path(root, "DESCRIPTION"))
+  expect_match(desc, "Imports: cli (>= 3.6.0), stats, utils\n", fixed = TRUE)
+  expect_match(
+    desc,
+    "Authors@R: person(\"Ann\", \"Example\", email",
+    fixed = TRUE
+  )
+  expect_identical(
+    attr(out, "open"),
+    "Add Haziq Jamil and Thomas Luu to Authors@R, with the role \"cph\"."
+  )
+})
+
 test_that("clashes, a license and a Collate field are left to do", {
   local_vendor()
   desc <- sub(
