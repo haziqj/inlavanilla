@@ -784,7 +784,7 @@ logpost <- function(theta) {
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
 #> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [5ms]
+#> ✔ Fitted 2 skew-normal marginals [4ms]
 fit
 #> ── INLAvanilla v26.11.25-1 ──────────────────── Skew-normal + one-step VB ──
 #> 
@@ -815,7 +815,7 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #> ℹ 2 parameters: mu and log_sigma
 #>   Derivatives by finite differences of logpost
 #>   logpost at init -481.47
-#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #>   nlminb: relative convergence (4), after 10 iterations (14 function and 26
 #>     gradient evaluations)
 #>   logpost at the mode -65.06, whitened gradient 9e-08σ, Newton step 9e-08σ
@@ -842,7 +842,7 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 159 logpost calls in 26ms
+#> ℹ Done: 159 logpost calls in 23ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)

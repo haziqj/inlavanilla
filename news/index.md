@@ -1,6 +1,6 @@
 # Changelog
 
-## inlavanilla (development version)
+## inlavanilla 26.11.25-1
 
 - The default VB correction (`vb_correction = "onestep"`) now checks its
   one step, and solves the VB equation where the check fails. A second
