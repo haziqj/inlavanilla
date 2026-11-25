@@ -209,7 +209,7 @@ test_that("a clone set to check out CRLF gives the files with LF", {
   skip_if_not(has_git(), "needs git")
   clone <- local_clone()
   # core.autocrlf as Git for Windows sets it, and the other two ways to ask
-  # for CRLF that are not in the commit
+  # for CRLF that are not in the commit.
   attributes <- file.path(clone$dir, ".git", "crlf-attributes")
   write_text(attributes, "* text eol=crlf\n")
   git_run(clone$dir, "config", "core.autocrlf", "true")
