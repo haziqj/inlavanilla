@@ -34,6 +34,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # the default release falls back to the newest before the installed
 
@@ -73,6 +75,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # a subset of files is copied, and the set grows with files
 
@@ -115,6 +119,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # the same release again changes nothing
 
@@ -136,6 +142,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # an update copies the changed files and rewrites the lock
 
@@ -169,6 +177,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # a release with roxygen tags or without a locked file is refused
 
@@ -204,6 +214,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # a failed safety check leaves DESCRIPTION and copies the engine
 
@@ -245,6 +257,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # clashes, a license and a Collate field are left to do
 
@@ -295,6 +309,8 @@
         file differs from the lock.
       * `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
         `vanilla_status()` on every push.
+      * `inlavanilla::use_vanilla_badge()` adds a README badge that shows the release
+        of the engine, and follows the lock.
 
 # use_vanilla_test() writes the test file once
 

@@ -399,3 +399,80 @@ test_that("a host whose DESCRIPTION is in latin1 is copied and checked", {
   expect_identical(out$status[out$check == "authors"], "pass")
   expect_identical(out$status[out$check == "dependencies"], "pass")
 })
+
+test_that("use_vanilla_badge() writes the badge, and use_vanilla() keeps it", {
+  local_vendor()
+  root <- local_host(
+    desc = paste0(
+      host_desc_minimal,
+      "URL: https://ann.example.org, https://github.com/ann/myhost\n"
+    )
+  )
+  expect_error(
+    use_vanilla_badge(path = root),
+    class = "inlavanilla_vendor_error"
+  )
+  expect_error(
+    use_vanilla_badge(path = root, branch = ""),
+    class = "inlavanilla_vendor_error"
+  )
+  quiet(use_vanilla(release = "v26.11.24", path = root))
+  line <- quiet(use_vanilla_badge(path = root))
+  badge <- file.path(root, ".github", "inlavanilla-badge.json")
+  expect_identical(
+    read_text(badge),
+    paste0(
+      "{\n",
+      "  \"schemaVersion\": 1,\n",
+      "  \"label\": \"vanilla\",\n",
+      "  \"message\": \"v26.11.24\",\n",
+      "  \"labelColor\": \"#4B3621\",\n",
+      "  \"color\": \"#F3E5AB\"\n",
+      "}\n"
+    )
+  )
+  expect_match(line, "https://img.shields.io/endpoint?url=", fixed = TRUE)
+  expect_match(
+    line,
+    "githubusercontent.com%2Fann%2Fmyhost%2Fmain%2F.github%2Finlavanilla",
+    fixed = TRUE
+  )
+  expect_identical(read_text(file.path(root, ".Rbuildignore")), "^\\.github$\n")
+  expect_match(
+    messages_of(use_vanilla_badge(path = root)),
+    "Kept",
+    fixed = TRUE
+  )
+  # An update of the copy updates the badge
+  expect_match(
+    messages_of(use_vanilla(release = "v26.11.24-1", path = root)),
+    "Updated the badge",
+    fixed = TRUE
+  )
+  expect_match(read_text(badge), "\"message\": \"v26.11.24-1\"", fixed = TRUE)
+})
+
+test_that("use_vanilla_badge() leaves OWNER/REPO with no GitHub URL", {
+  local_vendor()
+  root <- local_host()
+  quiet(use_vanilla(release = "v26.11.24", path = root))
+  out <- messages_of(line <- use_vanilla_badge(path = root, branch = "dev"))
+  expect_match(out, "replace `OWNER/REPO`", fixed = TRUE)
+  expect_match(line, "%2FOWNER%2FREPO%2Fdev%2F", fixed = TRUE)
+})
+
+test_that("use_vanilla() offers the badge until there is one", {
+  local_vendor()
+  root <- local_host()
+  expect_match(
+    messages_of(use_vanilla(release = "v26.11.24", path = root)),
+    "use_vanilla_badge()",
+    fixed = TRUE
+  )
+  quiet(use_vanilla_badge(path = root))
+  expect_no_match(
+    messages_of(use_vanilla(release = "v26.11.24", path = root)),
+    "use_vanilla_badge()",
+    fixed = TRUE
+  )
+})

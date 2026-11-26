@@ -46,6 +46,12 @@ vendor_test_file <- file.path("tests", "testthat", "test-vanilla-engine.R")
 vendor_ci_file <- file.path(".github", "workflows", "vanilla-status.yaml")
 vendor_vignette_url <- "https://haziqj.ml/inlavanilla/articles/engine.html"
 
+# The badge of the engine release in a host's README (use_vanilla_badge()): a
+# shields.io endpoint file, in vanilla colours, a bean-brown label and a cream
+# value
+vendor_badge_file <- file.path(".github", "inlavanilla-badge.json")
+vendor_badge_colours <- c(label = "#4B3621", value = "#F3E5AB")
+
 ## ----- The lock --------------------------------------------------------------
 
 # The lock is DCF: a header record, then one record per copied file with the

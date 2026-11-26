@@ -371,6 +371,12 @@ use_vanilla <- function(
     vendor_desc_write(plan$d, file.path(root, "DESCRIPTION"))
   }
   written <- length(copy) > 0L || !same_lock || desc_written
+  # A badge of the engine release follows the lock
+  badge_state <- if (file.exists(file.path(root, vendor_badge_file))) {
+    vendor_write_badge(root, release)
+  } else {
+    "none"
+  }
 
   ## ----- After ---------------------------------------------------------------
   new_lock <- vendor_read_lock(lock_path)
@@ -516,6 +522,9 @@ use_vanilla <- function(
        {.run inlavanilla::use_vanilla(\"{newest}\")} updates to it."
     )
   }
+  if (badge_state == "replaced") {
+    say("v", "Updated the badge in {.file {vendor_badge_file}} to {release}.")
+  }
   vendor_say(done)
 
   todo <- list()
@@ -633,6 +642,16 @@ use_vanilla <- function(
         "*",
         "{.run inlavanilla::use_vanilla_ci()} adds a GitHub Actions workflow
          that runs {.fn vanilla_status} on every push."
+      ))
+    )
+  }
+  if (!file.exists(file.path(root, vendor_badge_file))) {
+    optional <- c(
+      optional,
+      list(vendor_msg(
+        "*",
+        "{.run inlavanilla::use_vanilla_badge()} adds a README badge that
+         shows the release of the engine, and follows the lock."
       ))
     )
   }
@@ -765,27 +784,7 @@ use_vanilla_ci <- function(path = ".", overwrite = FALSE) {
     vendor_ci_file,
     overwrite
   )
-  ignore <- file.path(root, ".Rbuildignore")
-  line <- "^\\.github$"
-  lines <- if (file.exists(ignore)) {
-    readLines(ignore, warn = FALSE)
-  } else {
-    character()
-  }
-  if (!line %in% lines) {
-    if (file.exists(ignore)) {
-      d <- vendor_desc_read(ignore)
-      d$lines <- c(d$lines, line)
-      d$final_nl <- TRUE
-    } else {
-      d <- list(lines = line, eol = "\n", final_nl = TRUE)
-    }
-    vendor_desc_write(d, ignore)
-    vendor_say(list(vendor_msg(
-      "v",
-      "Added {.code {line}} to {.file .Rbuildignore}."
-    )))
-  }
+  vendor_ignore_github(root)
   if (!file.exists(file.path(root, vendor_lock_file))) {
     vendor_say(list(vendor_msg(
       "!",
@@ -834,4 +833,187 @@ vendor_template <- function(root, template, target, overwrite) {
 vendor_lf <- function(path) {
   bytes <- readBin(path, "raw", n = file.size(path))
   bytes[bytes != as.raw(13L)]
+}
+
+# Add `^\.github$` to the .Rbuildignore of the package at `root` where that
+# line is missing, so that R CMD build leaves the folder out
+vendor_ignore_github <- function(root) {
+  ignore <- file.path(root, ".Rbuildignore")
+  line <- "^\\.github$"
+  lines <- if (file.exists(ignore)) {
+    readLines(ignore, warn = FALSE)
+  } else {
+    character()
+  }
+  if (!line %in% lines) {
+    if (file.exists(ignore)) {
+      d <- vendor_desc_read(ignore)
+      d$lines <- c(d$lines, line)
+      d$final_nl <- TRUE
+    } else {
+      d <- list(lines = line, eol = "\n", final_nl = TRUE)
+    }
+    vendor_desc_write(d, ignore)
+    vendor_say(list(vendor_msg(
+      "v",
+      "Added {.code {line}} to {.file .Rbuildignore}."
+    )))
+  }
+  invisible(line)
+}
+
+#' Add a README badge of the engine release
+#'
+#' @description
+#' Writes the file `.github/inlavanilla-badge.json` in the package whose root
+#' is `path`, and prints the line to add to its README. The badge reads
+#' "vanilla", with the release of inlavanilla that the lock
+#' `inst/inlavanilla.lock` names, such as "v26.11.25-2", in vanilla colours.
+#'
+#' The badge is not a fixed image. The README line asks
+#' [shields.io](https://shields.io/badges/endpoint-badge) to draw it from the
+#' file on GitHub, so it shows the release of the copy on the branch `branch`
+#' as soon as that file is pushed. [use_vanilla()] rewrites the file whenever
+#' it updates the copy, so the badge follows the lock. Commit the file with
+#' the lock.
+#'
+#' It also adds `^\.github$` to `.Rbuildignore` where that line is missing,
+#' so that R CMD build leaves the folder out.
+#'
+#' It is optional: [use_vanilla()] does not add it, and offers it at the end of
+#' its list.
+#'
+#' @param path The root of the package, or a folder inside it. By default the
+#'   working directory.
+#' @param branch The branch of the package on GitHub whose file the badge
+#'   reads. By default `"main"`.
+#'
+#' @returns Invisibly, the README line, as Markdown. It takes the GitHub
+#'   repository of the package from the `URL` or `BugReports` field of its
+#'   `DESCRIPTION`. Where neither names one, the line holds `OWNER/REPO`, to
+#'   be replaced by hand.
+#'
+#' @seealso [use_vanilla()], which keeps the badge in step with the lock.
+#'
+#' @examples
+#' \dontrun{
+#' # From the root of a package that holds a copy of the engine
+#' use_vanilla_badge()
+#' }
+#' @export
+use_vanilla_badge <- function(path = ".", branch = "main") {
+  ok <- is.character(branch) &&
+    length(branch) == 1L &&
+    !is.na(branch) &&
+    nzchar(branch)
+  if (!ok) {
+    abort(
+      "{.arg branch} must be a single string, such as {.val main}.",
+      class = "inlavanilla_vendor_error"
+    )
+  }
+  root <- vendor_root(path)
+  desc <- vendor_desc(root)
+  pkg <- vendor_package(root, desc)
+  vendor_start()
+  lock_path <- file.path(root, vendor_lock_file)
+  if (!file.exists(lock_path)) {
+    abort(
+      c(
+        "{pkg} has no lock {.file {vendor_lock_file}}, so there is no
+         release to show.",
+        i = "Copy the engine first, with {.run inlavanilla::use_vanilla()}."
+      ),
+      class = "inlavanilla_vendor_error"
+    )
+  }
+  release <- vendor_read_lock(lock_path)$header[["Release"]]
+  state <- vendor_write_badge(root, release)
+  shown <- gsub("\\", "/", vendor_badge_file, fixed = TRUE)
+  verb <- c(
+    written = "Wrote",
+    replaced = "Updated",
+    unchanged = "Kept"
+  )[[state]]
+  vendor_say(list(vendor_msg(
+    "v",
+    "{verb} {.file {shown}}, for the release {release}."
+  )))
+  vendor_ignore_github(root)
+  repo <- vendor_github_repo(root)
+  line <- vendor_badge_line(if (is.na(repo)) "OWNER/REPO" else repo, branch)
+  if (is.na(repo)) {
+    vendor_say(list(vendor_msg(
+      "!",
+      "{.file DESCRIPTION} names no GitHub repository in {.field URL} or
+       {.field BugReports}: replace {.code OWNER/REPO} in the line below."
+    )))
+  }
+  cli::cli_text(
+    "Add this line to the badges of your README, and commit
+     {.file {shown}}:"
+  )
+  cli::cli_code(line)
+  invisible(line)
+}
+
+# Write the badge file of the release `release` in the package at `root`.
+# Returns "written" for a new file, "replaced" when it changed, and
+# "unchanged".
+vendor_write_badge <- function(root, release) {
+  lines <- c(
+    "{",
+    '  "schemaVersion": 1,',
+    '  "label": "vanilla",',
+    paste0('  "message": "', release, '",'),
+    paste0('  "labelColor": "', vendor_badge_colours[["label"]], '",'),
+    paste0('  "color": "', vendor_badge_colours[["value"]], '"'),
+    "}"
+  )
+  dest <- file.path(root, vendor_badge_file)
+  old <- if (file.exists(dest)) readLines(dest, warn = FALSE) else NULL
+  if (identical(old, lines)) {
+    return("unchanged")
+  }
+  dir.create(dirname(dest), showWarnings = FALSE, recursive = TRUE)
+  con <- file(dest, open = "wb")
+  on.exit(close(con))
+  writeLines(lines, con, sep = "\n")
+  if (is.null(old)) "written" else "replaced"
+}
+
+# The GitHub repository "owner/name" of the package at `root`, from the URL
+# and BugReports fields of its DESCRIPTION, or NA
+vendor_github_repo <- function(root) {
+  dcf <- read.dcf(
+    file.path(root, "DESCRIPTION"),
+    fields = c("URL", "BugReports")
+  )
+  fields <- dcf[1L, ]
+  fields <- fields[!is.na(fields)]
+  hit <- regmatches(
+    fields,
+    regexpr("github\\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", fields)
+  )
+  if (length(hit) == 0L) {
+    return(NA_character_)
+  }
+  repo <- sub("^github\\.com/", "", hit[[1L]])
+  sub("\\.git$", "", repo)
+}
+
+# The README line of the badge, for the repository `repo` and branch `branch`
+vendor_badge_line <- function(repo, branch) {
+  json <- paste0(
+    "https://raw.githubusercontent.com/",
+    repo,
+    "/",
+    branch,
+    "/.github/inlavanilla-badge.json"
+  )
+  img <- paste0(
+    "https://img.shields.io/endpoint?url=",
+    utils::URLencode(json, reserved = TRUE)
+  )
+  paste0("[![inlavanilla](", img, ")](", vendor_upstream, ")")
 }
