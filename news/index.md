@@ -1,5 +1,19 @@
 # Changelog
 
+## inlavanilla (development version)
+
+- New
+  [`use_vanilla_badge()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_badge.md)
+  adds a README badge to a package that holds a copy of the engine. It
+  writes `.github/inlavanilla-badge.json`, which shields.io reads to
+  draw a badge with “vanilla” and the release in the lock, such as
+  “v26.11.25-2”, and prints the line for the README.
+  [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+  rewrites the file whenever it updates the copy, so the badge follows
+  the lock, and offers
+  [`use_vanilla_badge()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_badge.md)
+  at the end of its list until the file exists.
+
 ## inlavanilla 26.11.25-2
 
 - A fit that fails the one-step check of the default VB correction can

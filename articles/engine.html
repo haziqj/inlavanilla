@@ -88,7 +88,7 @@
 
 
 
-      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.25-2/vignettes/engine.qmd" class="external-link"><code>vignettes/engine.qmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/vignettes/engine.qmd" class="external-link"><code>vignettes/engine.qmd</code></a></small>
       <div class="d-none name"><code></code></div>
     </div>
 
@@ -208,7 +208,9 @@
 • `inlavanilla::use_vanilla_test()` writes a test that fails when an engine
   file differs from the lock.
 • `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
-  `vanilla_status()` on every push.</code></pre>
+  `vanilla_status()` on every push.
+• `inlavanilla::use_vanilla_badge()` adds a README badge that shows the
+  release of the engine, and follows the lock.</code></pre>
 <p><code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> copies the engine files of a release byte for byte into <code>R/</code>, and lists them in the lock <code>inst/inlavanilla.lock</code>. It also adds to <code>DESCRIPTION</code> what the engine needs, where it is missing: the copyright holders of the engine in <code>Authors@R</code>, with the role <code>"cph"</code>; <code>cli (&gt;= 3.6.0)</code>, <code>stats</code> and <code>utils</code> in <code>Imports</code>; <code>future</code> and <code>parallelly</code> in <code>Suggests</code>; and <code>R (&gt;= 4.1.0)</code> in <code>Depends</code>. It edits only the lines of those fields, and never removes anything. A copyright holder who is already in <code>Authors@R</code> is not added again, and an entry without the role <code>"cph"</code> is left as it is, with an item in the list of what is still to do.</p>
 <p>By default the release is that of the inlavanilla installed on your computer, or, when that version is not a release, the newest release before it. Give <code>release</code> to copy another one. The files come from the release on GitHub, which needs the internet but not git. To copy without the internet, give <code>clone</code>, the path of a local clone of inlavanilla, which needs git.</p>
 <p>Some rules keep the copy safe to update:</p>
@@ -329,6 +331,7 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> Check the engine copy</span></span>
 <span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">shell</span><span class="kw">:</span><span class="at"> Rscript {0}</span></span>
 <span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">run</span><span class="kw">:</span><span class="at"> inlavanilla::vanilla_status(error = TRUE)</span></span></code></pre></div>
+<p>A third helper shows the release in your README. <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> writes <code>.github/inlavanilla-badge.json</code> and prints the line to add to the badges of the README. The badge reads “vanilla” and the release, such as “v26.11.25-2”, in vanilla colours. shields.io draws it from the file on GitHub, and <code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> rewrites the file whenever it updates the copy, so the badge follows the lock once you push.</p>
 </section><section class="level2"><h2 id="updating">Updating<a class="anchor" aria-label="anchor" href="#updating"></a>
 </h2>
 <p>When <code><a href="../reference/vanilla_status.html">vanilla_status()</a></code> reports a newer release, update the copy with <code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> and that release:</p>
@@ -465,9 +468,9 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">core</span> <span class="op">&lt;-</span> <span class="fu">vanilla_core</span><span class="op">(</span><span class="va">lp</span>, <span class="va">gr</span>, init <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>b0 <span class="op">=</span> <span class="fl">0</span>, b1 <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; ✔ Found the posterior mode in 8 iterations [9ms]</span></span>
-<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.25σ [11ms]</span></span>
-<span><span class="co">#&gt; ✔ Fitted 2 skew-normal marginals [6ms]</span></span></code></pre></div>
+<span><span class="co">#&gt; ✔ Found the posterior mode in 8 iterations [7ms]</span></span>
+<span><span class="co">#&gt; ✔ VB mean correction, max shift 0.25σ [8ms]</span></span>
+<span><span class="co">#&gt; ✔ Fitted 2 skew-normal marginals [5ms]</span></span></code></pre></div>
 </div>
 </section><section class="level3"><h3 id="what-it-returns">What it returns<a class="anchor" aria-label="anchor" href="#what-it-returns"></a>
 </h3>
@@ -487,7 +490,7 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span><span class="co">#&gt;  $ restart      : NULL</span></span>
 <span><span class="co">#&gt;  $ diagnostics  :List of 3</span></span>
 <span><span class="co">#&gt;  $ scan         :List of 4</span></span>
-<span><span class="co">#&gt;  $ timing       : Named num [1:6] 0 0.01 0.012 0.006 0.001 ...</span></span>
+<span><span class="co">#&gt;  $ timing       : Named num [1:6] 0.001 0.008 0.008 0.006 0 ...</span></span>
 <span><span class="co">#&gt;  $ counts       : Named int [1:3] 65 37 0</span></span>
 <span><span class="co">#&gt;  $ vb_correction: chr "onestep"</span></span>
 <span><span class="co">#&gt;  $ marginals    : chr "skewnorm"</span></span>
@@ -678,7 +681,7 @@ MD5: aa682883cae63b63b2f41b94c94f019d</code></pre>
 <span><span class="fu">diagnostic_problems</span><span class="op">(</span><span class="va">dg</span>, <span class="cn">FALSE</span>, <span class="va">core</span><span class="op">$</span><span class="va">has_grad</span>, <span class="va">poisson_advice</span><span class="op">)</span></span>
 <span><span class="co">#&gt; character(0)</span></span>
 <span><span class="co">#&gt; attr(,"envir")</span></span>
-<span><span class="co">#&gt; &lt;environment: 0x56535ec98bc8&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; &lt;environment: 0x59b7b7de1030&gt;</span></span></code></pre></div>
 </div>
 <p>A healthy fit has no problems. When there are some, raise them with <code>warn(c(header, problems), class = ..., .envir = attr(problems, "envir"))</code>, as the example below does. inlavanilla’s own wording is <code>inlavanilla_advice</code> in its file <code>R/diagnostics.R</code>.</p>
 </section><section class="level3"><h3 id="draws-and-the-skew-normal-functions">Draws and the skew-normal functions<a class="anchor" aria-label="anchor" href="#draws-and-the-skew-normal-functions"></a>

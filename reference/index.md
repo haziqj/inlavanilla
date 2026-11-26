@@ -23,6 +23,8 @@
   taken by each stage of an INLAvanilla fit
 - [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
   : Copy the engine of inlavanilla into a package
+- [`use_vanilla_badge()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_badge.md)
+  : Add a README badge of the engine release
 - [`use_vanilla_ci()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_ci.md)
   : Check the engine copy on GitHub Actions
 - [`use_vanilla_test()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_test.md)

@@ -55,9 +55,13 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/v26.11.25-2/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/haziqj/inlavanilla/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="development version" id="inlavanilla-development-version">inlavanilla (development version)<a class="anchor" aria-label="anchor" href="#inlavanilla-development-version"></a></h2>
+<ul><li>New <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> adds a README badge to a package that holds a copy of the engine. It writes <code>.github/inlavanilla-badge.json</code>, which shields.io reads to draw a badge with “vanilla” and the release in the lock, such as “v26.11.25-2”, and prints the line for the README. <code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> rewrites the file whenever it updates the copy, so the badge follows the lock, and offers <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> at the end of its list until the file exists.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="26.11.25-2" id="inlavanilla-261125-2">inlavanilla 26.11.25-2<a class="anchor" aria-label="anchor" href="#inlavanilla-261125-2"></a></h2>
 <ul><li><p>A fit that fails the one-step check of the default VB correction can now take twice as many sweeps to solve the VB equation: the cap is twice the calls of the mode and Hessian over 2m + 1, where it was those calls over 2m + 1. At the old cap the solve of a hard fit often stopped short of its root. With a gradient the VB stage of such a fit now costs at most twice what the mode and Hessian did, and without one up to 2(m + 1)(m + 2) / (2m + 1) times, about m times. A fit that passes the check is unchanged, to the last bit. A fit that fails it, and whose solve stopped at the old cap, has a different VB mean and log marginal likelihood.</p></li>

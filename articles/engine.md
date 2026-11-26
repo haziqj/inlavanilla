@@ -86,6 +86,8 @@ inlavanilla::use_vanilla(release = "v26.11.24")
       file differs from the lock.
     • `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
       `vanilla_status()` on every push.
+    • `inlavanilla::use_vanilla_badge()` adds a README badge that shows the
+      release of the engine, and follows the lock.
 
 [`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
 copies the engine files of a release byte for byte into `R/`, and lists
@@ -235,6 +237,16 @@ push:
         run: inlavanilla::vanilla_status(error = TRUE)
 ```
 
+A third helper shows the release in your README.
+[`use_vanilla_badge()`](https://haziqj.ml/inlavanilla/reference/use_vanilla_badge.md)
+writes `.github/inlavanilla-badge.json` and prints the line to add to
+the badges of the README. The badge reads “vanilla” and the release,
+such as “v26.11.25-2”, in vanilla colours. shields.io draws it from the
+file on GitHub, and
+[`use_vanilla()`](https://haziqj.ml/inlavanilla/reference/use_vanilla.md)
+rewrites the file whenever it updates the copy, so the badge follows the
+lock once you push.
+
 ## Updating
 
 When
@@ -372,9 +384,9 @@ gr <- function(theta) {
 ``` r
 
 core <- vanilla_core(lp, gr, init = c(b0 = 0, b1 = 0))
-#> ✔ Found the posterior mode in 8 iterations [9ms]
-#> ✔ VB mean correction, max shift 0.25σ [11ms]
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Found the posterior mode in 8 iterations [7ms]
+#> ✔ VB mean correction, max shift 0.25σ [8ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 ```
 
 ### What it returns
@@ -396,7 +408,7 @@ str(core, max.level = 1, give.attr = FALSE)
 #>  $ restart      : NULL
 #>  $ diagnostics  :List of 3
 #>  $ scan         :List of 4
-#>  $ timing       : Named num [1:6] 0 0.01 0.012 0.006 0.001 ...
+#>  $ timing       : Named num [1:6] 0.001 0.008 0.008 0.006 0 ...
 #>  $ counts       : Named int [1:3] 65 37 0
 #>  $ vb_correction: chr "onestep"
 #>  $ marginals    : chr "skewnorm"
@@ -595,7 +607,7 @@ poisson_advice <- list(
 diagnostic_problems(dg, FALSE, core$has_grad, poisson_advice)
 #> character(0)
 #> attr(,"envir")
-#> <environment: 0x56535ec98bc8>
+#> <environment: 0x59b7b7de1030>
 ```
 
 A healthy fit has no problems. When there are some, raise them with

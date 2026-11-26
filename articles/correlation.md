@@ -226,12 +226,12 @@ init <- c(
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
 fit <- inla_vanilla(logpost, init)
-#> ✔ Found the posterior mode in 34 iterations [1.1s]
-#> ✔ VB mean correction, max shift 0.39σ [1.1s]
-#> ✔ Fitted 54 skew-normal marginals [1.4s]
+#> ✔ Found the posterior mode in 34 iterations [933ms]
+#> ✔ VB mean correction, max shift 0.39σ [957ms]
+#> ✔ Fitted 54 skew-normal marginals [1.3s]
 ```
 
-The fit takes about 4 seconds, and `summary(fit)` flags nothing. The
+The fit takes about 3 seconds, and `summary(fit)` flags nothing. The
 parameters are named for the scale they are on, `log_sigma_x1` and
 `atanh_z21`, so the fit reports the standard deviations and the CPCs
 themselves (see the article on [natural-scale
