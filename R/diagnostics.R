@@ -171,8 +171,9 @@ warn_diagnostics <- function(dg, gaussian, has_grad = TRUE) {
 #'   that of the Hessian at the mode, the supplied `hess` when there is one. It
 #'   comes from central differences of `logpost` at the mode, up to a posterior
 #'   SD or so apart: without `hess` the fit takes them anyway, so it costs no
-#'   calls, and with `hess` it takes them for this check alone, about 6m to 8m
-#'   `logpost` calls (see "Gradients and Hessians" in [inla_vanilla()]). It
+#'   calls, and with `hess` it takes them for this check alone, at steps set
+#'   from the diagonal of `hess`, about 2m `logpost` calls (see "Gradients and
+#'   Hessians" in [inla_vanilla()]). It
 #'   should be close to 0, and is flagged above 0.1.
 #' * `vb_step_sigma`: the step still to go at the VB mean, in posterior SDs:
 #'   the fixed-point step there, the Newton step of the VB stationarity

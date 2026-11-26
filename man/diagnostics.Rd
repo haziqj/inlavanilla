@@ -156,8 +156,9 @@ curvature (about the relative error it makes in an SD), the curvature being
 that of the Hessian at the mode, the supplied \code{hess} when there is one. It
 comes from central differences of \code{logpost} at the mode, up to a posterior
 SD or so apart: without \code{hess} the fit takes them anyway, so it costs no
-calls, and with \code{hess} it takes them for this check alone, about 6m to 8m
-\code{logpost} calls (see "Gradients and Hessians" in \code{\link[=inla_vanilla]{inla_vanilla()}}). It
+calls, and with \code{hess} it takes them for this check alone, at steps set
+from the diagonal of \code{hess}, about 2m \code{logpost} calls (see "Gradients and
+Hessians" in \code{\link[=inla_vanilla]{inla_vanilla()}}). It
 should be close to 0, and is flagged above 0.1.
 \item \code{vb_step_sigma}: the step still to go at the VB mean, in posterior SDs:
 the fixed-point step there, the Newton step of the VB stationarity
