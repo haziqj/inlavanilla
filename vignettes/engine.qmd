@@ -103,6 +103,8 @@ inlavanilla::use_vanilla(release = "v26.11.24")
   file differs from the lock.
 • `inlavanilla::use_vanilla_ci()` adds a GitHub Actions workflow that runs
   `vanilla_status()` on every push.
+• `inlavanilla::use_vanilla_badge()` adds a README badge that shows the
+  release of the engine, and follows the lock.
 ```
 
 `use_vanilla()` copies the engine files of a release byte for byte into
@@ -246,6 +248,13 @@ which runs the checks on every push:
         shell: Rscript {0}
         run: inlavanilla::vanilla_status(error = TRUE)
 ```
+
+A third helper shows the release in your README. `use_vanilla_badge()` writes
+`.github/inlavanilla-badge.json` and prints the line to add to the badges of
+the README. The badge reads "vanilla" and the release, such as
+"v26.11.25-2", in vanilla colours. shields.io draws it from the file on
+GitHub, and `use_vanilla()` rewrites the file whenever it updates the copy,
+so the badge follows the lock once you push.
 
 ## Updating
 
