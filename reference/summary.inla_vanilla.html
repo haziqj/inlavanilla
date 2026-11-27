@@ -27,7 +27,7 @@ parameters as init does."><meta property="og:image" content="https://haziqj.ml/i
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.27</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -153,7 +153,7 @@ the mode: the larger of the difference in slope per conditional posterior
 SD and half the relative difference in curvature, so about how far it moves
 the mode in SDs and the relative error it makes in an SD. It is flagged
 above 0.1, and is <code>NA</code> without <code>grad</code>. It costs no calls without <code>hess</code>,
-and about 6m to 8m <code>logpost</code> calls with it (see "Gradients and Hessians" in
+and about 2m <code>logpost</code> calls with it (see "Gradients and Hessians" in
 <code><a href="inla_vanilla.html">inla_vanilla()</a></code>). With <code>hess</code>, the curvature is that of <code>hess</code>. A wrong
 gradient mostly harms the log marginal likelihood and the covariance, since
 the scans use <code>logpost</code> itself.</p></li>

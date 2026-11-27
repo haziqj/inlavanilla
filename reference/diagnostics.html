@@ -41,7 +41,7 @@ and ridge_bend are inlavanilla's own."><meta property="og:image" content="https:
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.27</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -238,8 +238,9 @@ curvature (about the relative error it makes in an SD), the curvature being
 that of the Hessian at the mode, the supplied <code>hess</code> when there is one. It
 comes from central differences of <code>logpost</code> at the mode, up to a posterior
 SD or so apart: without <code>hess</code> the fit takes them anyway, so it costs no
-calls, and with <code>hess</code> it takes them for this check alone, about 6m to 8m
-<code>logpost</code> calls (see "Gradients and Hessians" in <code><a href="inla_vanilla.html">inla_vanilla()</a></code>). It
+calls, and with <code>hess</code> it takes them for this check alone, at steps set
+from the diagonal of <code>hess</code>, about 2m <code>logpost</code> calls (see "Gradients and
+Hessians" in <code><a href="inla_vanilla.html">inla_vanilla()</a></code>). It
 should be close to 0, and is flagged above 0.1.</p></li>
 <li><p><code>vb_step_sigma</code>: the step still to go at the VB mean, in posterior SDs:
 the fixed-point step there, the Newton step of the VB stationarity

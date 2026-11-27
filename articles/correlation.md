@@ -226,8 +226,8 @@ init <- c(
   setNames(rep(0, 36), paste0("atanh_z", rep(2:9, 1:8), sequence(1:8)))
 )
 fit <- inla_vanilla(logpost, init)
-#> ✔ Found the posterior mode in 34 iterations [933ms]
-#> ✔ VB mean correction, max shift 0.39σ [957ms]
+#> ✔ Found the posterior mode in 34 iterations [978ms]
+#> ✔ VB mean correction, max shift 0.39σ [995ms]
 #> ✔ Fitted 54 skew-normal marginals [1.3s]
 ```
 

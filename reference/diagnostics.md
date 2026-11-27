@@ -196,8 +196,9 @@ and then inlavanilla's own:
   `hess` when there is one. It comes from central differences of
   `logpost` at the mode, up to a posterior SD or so apart: without
   `hess` the fit takes them anyway, so it costs no calls, and with
-  `hess` it takes them for this check alone, about 6m to 8m `logpost`
-  calls (see "Gradients and Hessians" in
+  `hess` it takes them for this check alone, at steps set from the
+  diagonal of `hess`, about 2m `logpost` calls (see "Gradients and
+  Hessians" in
   [`inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/inla_vanilla.md)).
   It should be close to 0, and is flagged above 0.1.
 

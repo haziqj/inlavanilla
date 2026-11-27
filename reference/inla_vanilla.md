@@ -523,11 +523,12 @@ with a warning if either check fails (see `grad_gap` in
 [`summary.inla_vanilla()`](https://haziqj.ml/inlavanilla/reference/summary.inla_vanilla.md)).
 Without `hess`, the comparison reads differences the fit takes there
 anyway to set its steps, at no cost in calls. With `hess` it takes them
-for the check alone: 2 `logpost` calls per try of the step search,
-usually 3 or 4 tries per parameter, so about 6m to 8m calls, and up to
-60m when the search fails. A supplied `hess` is also checked at the mode
-against central differences of `grad`, along two directions, with a
-warning if it does not match, and its diagonal is part of what
+for the check alone, at steps set from the diagonal of `hess`: 2
+`logpost` calls per parameter, so about 2m calls, and more for a
+parameter whose diagonal is far off, where the step search goes on (up
+to 60 calls for that parameter). A supplied `hess` is also checked at
+the mode against central differences of `grad`, along two directions,
+with a warning if it does not match, and its diagonal is part of what
 `grad_gap` compares with `logpost`. Any R function works for `logpost`,
 `grad` and `hess`, including compiled code (Rcpp, TMB) and RTMB, which
 differentiates R code. An RTMB function can return the log-posterior
@@ -786,13 +787,13 @@ logpost <- function(theta) {
 
 # The parameter named log_sigma is reported as sigma
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0))
-#> ✔ Found the posterior mode in 10 iterations [1ms]
+#> ✔ Found the posterior mode in 10 iterations [2ms]
 #> ✔ VB mean correction, max shift 0.25σ [1ms]
-#> ✔ Fitted 2 skew-normal marginals [4ms]
+#> ✔ Fitted 2 skew-normal marginals [5ms]
 fit
-#> ── INLAvanilla v26.11.25-2 ──────────────────── Skew-normal + one-step VB ──
+#> ── INLAvanilla v26.11.27 ────────────────────── Skew-normal + one-step VB ──
 #> 
-#> Log marginal likelihood: -66.38 · Converged in 10 iterations (8ms)
+#> Log marginal likelihood: -66.38 · Converged in 10 iterations (10ms)
 #> 
 #>           Mean     SD   2.5%    50%  97.5%   Mode
 #> 1 mu     5.159  0.327  4.517  5.159  5.800  5.159
@@ -839,14 +840,14 @@ fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), verbose = TRUE)
 #>   Largest shift 0.25σ, for log_sigma (warning > 1σ)
 #>   KL term 0.031, giving a log marginal likelihood of -66.38
 #>   28 logpost calls
-#> ✔ Fitted 2 skew-normal marginals [6ms]
+#> ✔ Fitted 2 skew-normal marginals [7ms]
 #>              Shape     NMAD  Ridge bend  Tails  Unscanned    gamma1
 #>   mu         -0.25  4.2e-05        0.13     ok    6.4e-05  -0.00014
 #>   log_sigma   1.32   0.0076     3.6e-06     ok    0.00057      0.13
 #>   ! marks what summary() flags: NMAD > 0.1, ridge bend > 0.25, heavy tails,
 #>     unscanned mass > 0.05
 #>   68 logpost calls
-#> ℹ Done: 159 logpost calls in 18ms
+#> ℹ Done: 159 logpost calls in 24ms
 
 # Nothing printed, as in a simulation; any warnings are kept in the fit
 fit <- inla_vanilla(logpost, init = c(mu = 0, log_sigma = 0), silent = TRUE)

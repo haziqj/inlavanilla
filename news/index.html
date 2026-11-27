@@ -13,7 +13,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">inlavanilla</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.25-2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">26.11.27</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,8 +59,9 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="inlavanilla-development-version">inlavanilla (development version)<a class="anchor" aria-label="anchor" href="#inlavanilla-development-version"></a></h2>
-<ul><li>New <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> adds a README badge to a package that holds a copy of the engine. It writes <code>.github/inlavanilla-badge.json</code>, which shields.io reads to draw a badge with “vanilla” and the release in the lock, such as “v26.11.25-2”, and prints the line for the README. <code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> rewrites the file whenever it updates the copy, so the badge follows the lock, and offers <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> at the end of its list until the file exists.</li>
+<h2 class="pkg-version" data-toc-text="26.11.27" id="inlavanilla-261127">inlavanilla 26.11.27<a class="anchor" aria-label="anchor" href="#inlavanilla-261127"></a></h2>
+<ul><li><p>New <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> adds a README badge to a package that holds a copy of the engine. It writes <code>.github/inlavanilla-badge.json</code>, which shields.io reads to draw a badge with “vanilla” and the release in the lock, such as “v26.11.25-2”, and prints the line for the README. <code><a href="../reference/use_vanilla.html">use_vanilla()</a></code> rewrites the file whenever it updates the copy, so the badge follows the lock, and offers <code><a href="../reference/use_vanilla_badge.html">use_vanilla_badge()</a></code> at the end of its list until the file exists.</p></li>
+<li><p>A fit with <code>hess</code> takes fewer calls of <code>logpost</code> to check <code>grad</code> and <code>hess</code> at the mode (<code>grad_gap</code>): about 2m, where it took about 6m to 8m. The check takes its steps from the diagonal of <code>hess</code>, which gives each conditional posterior SD, where it searched for them from a tiny step. <code>grad_gap</code> still compares the slope and the curvature along each axis with <code>logpost</code>, one parameter at a time, as it does without <code>hess</code>, and a diagonal that is far off still costs a search and is still flagged. Every other number of the fit is unchanged, to the last bit. On the Political Democracy model in RTMB with a Hessian tape (m = 39) a fit takes 873 calls of <code>logpost</code>, where it took 1029.</p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="26.11.25-2" id="inlavanilla-261125-2">inlavanilla 26.11.25-2<a class="anchor" aria-label="anchor" href="#inlavanilla-261125-2"></a></h2>

@@ -18,13 +18,13 @@ Source:
 [`DESCRIPTION`](https://github.com/haziqj/inlavanilla/blob/main/DESCRIPTION)
 
 Jamil H (2026). *inlavanilla: INLA-Style Skew-Normal Marginals for Any
-Log-Posterior*. R package version 26.11.25-2,
+Log-Posterior*. R package version 26.11.27,
 <https://haziqj.ml/inlavanilla/>.
 
     @Manual{,
       title = {inlavanilla: INLA-Style Skew-Normal Marginals for Any Log-Posterior},
       author = {Haziq Jamil},
       year = {2026},
-      note = {R package version 26.11.25-2},
+      note = {R package version 26.11.27},
       url = {https://haziqj.ml/inlavanilla/},
     }
