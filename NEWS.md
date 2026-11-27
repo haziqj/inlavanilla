@@ -1,4 +1,4 @@
-# inlavanilla (development version)
+# inlavanilla 26.11.27
 
 * New `use_vanilla_badge()` adds a README badge to a package that holds a
   copy of the engine. It writes `.github/inlavanilla-badge.json`, which
