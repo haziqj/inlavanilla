@@ -8,6 +8,17 @@
   lock, and offers `use_vanilla_badge()` at the end of its list until the file
   exists.
 
+* A fit with `hess` takes fewer calls of `logpost` to check `grad` and `hess`
+  at the mode (`grad_gap`): about 2m, where it took about 6m to 8m. The check
+  takes its steps from the diagonal of `hess`, which gives each conditional
+  posterior SD, where it searched for them from a tiny step. `grad_gap` still
+  compares the slope and the curvature along each axis with `logpost`, one
+  parameter at a time, as it does without `hess`, and a diagonal that is far
+  off still costs a search and is still flagged. Every other number of the
+  fit is unchanged, to the last bit. On the Political Democracy model in RTMB
+  with a Hessian tape (m = 39) a fit takes 873 calls of `logpost`, where it
+  took 1029.
+
 # inlavanilla 26.11.25-2
 
 * A fit that fails the one-step check of the default VB correction can now

@@ -435,9 +435,10 @@ is compared with \code{logpost} at the mode, and the Hessian there, whether take
 from \code{grad} or supplied, is checked for symmetry, with a warning if either
 check fails (see \code{grad_gap} in \code{\link[=summary.inla_vanilla]{summary.inla_vanilla()}}). Without \code{hess}, the
 comparison reads differences the fit takes there anyway to set its steps, at
-no cost in calls. With \code{hess} it takes them for the check alone: 2 \code{logpost}
-calls per try of the step search, usually 3 or 4 tries per parameter, so
-about 6m to 8m calls, and up to 60m when the search fails. A supplied \code{hess}
+no cost in calls. With \code{hess} it takes them for the check alone, at steps
+set from the diagonal of \code{hess}: 2 \code{logpost} calls per parameter, so about
+2m calls, and more for a parameter whose diagonal is far off, where the step
+search goes on (up to 60 calls for that parameter). A supplied \code{hess}
 is also checked at the mode against central differences of \code{grad}, along two
 directions, with a warning if it does not match, and its diagonal is part of
 what \code{grad_gap} compares with \code{logpost}. Any R function works for \code{logpost},

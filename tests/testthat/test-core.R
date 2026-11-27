@@ -218,6 +218,38 @@ test_that("the VB budget leaves out the calls that check grad against hess", {
   expect_identical(lap$gap_calls, 0L)
 })
 
+test_that("with a supplied Hessian the step search starts from its diagonal", {
+  ctrl <- check_control(list())
+  fns <- wrap_fns(lp_core, gr_core, he_core, init_core)
+  lap_g <- laplace_fit(fns$lp, fns$gr, init_core, ctrl)
+  at <- function(he) {
+    laplace_at(
+      fns$lp,
+      fns$gr,
+      lap_g$mode,
+      lap_g$lp_max,
+      names(init_core),
+      he = he
+    )
+  }
+  # A right diagonal ends the search at the first try, 2 calls per parameter,
+  # where the default start takes more (8 here), and grad_gap reads the same
+  # to within the error of the differences (about 0.001 on this model)
+  lap_h <- at(fns$he)
+  m <- length(init_core)
+  expect_identical(lap_h$hessian$step_calls, 2L * m)
+  expect_gt(attr(fd_scales(fns$lp, lap_g$mode, lap_g$lp_max), "calls"), 2L * m)
+  expect_true(all(lap_h$grad_gap < 0.01))
+  expect_lt(max(abs(lap_h$grad_gap - lap_g$grad_gap)), 0.005)
+  # A diagonal 1e4 times too large in b2 starts that search 100 times too
+  # close, so it searches on from there, and grad_gap flags the curvature
+  d <- c(1, 1, 100)
+  lap_far <- at(function(theta) d * t(d * he_core(theta)))
+  expect_gt(lap_far$hessian$step_calls, 2L * m)
+  expect_true(all(lap_far$grad_gap[1:2] < 0.01))
+  expect_gt(lap_far$grad_gap[[3]], 0.1)
+})
+
 test_that("verbose output says where the Hessian at the mode came from", {
   msgs <- cli::ansi_strip(capture_messages(
     vanilla_core(

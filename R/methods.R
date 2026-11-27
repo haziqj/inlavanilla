@@ -94,7 +94,7 @@ print.inla_vanilla <- function(x, digits = 3, ...) {
 #'   SD and half the relative difference in curvature, so about how far it moves
 #'   the mode in SDs and the relative error it makes in an SD. It is flagged
 #'   above 0.1, and is `NA` without `grad`. It costs no calls without `hess`,
-#'   and about 6m to 8m `logpost` calls with it (see "Gradients and Hessians" in
+#'   and about 2m `logpost` calls with it (see "Gradients and Hessians" in
 #'   [inla_vanilla()]). With `hess`, the curvature is that of `hess`. A wrong
 #'   gradient mostly harms the log marginal likelihood and the covariance, since
 #'   the scans use `logpost` itself.
